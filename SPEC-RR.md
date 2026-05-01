@@ -3,10 +3,10 @@
 > **For future chats:** This document is the source of truth for the project. Read it before making changes. Update it in the same commit as any code change.
 
 **Live app:** https://rrnormalizer.streamlit.app/
-**Repo:** https://github.com/ErikJ-Stack/rent-roll-normalizer (private)
+**Repo:** https://github.com/ErikJ-Stack/rent-roll-normalizer (public)
 **Owner:** Erik J (`Erikjayj@gmail.com`, GitHub: `ErikJ-Stack`)
 **Stack:** Python · Streamlit · pandas · openpyxl · Streamlit Community Cloud (free tier)
-**Current version:** v1.10.0 (2026-04-30)
+**Current version:** v1.11.0 (2026-05-01)
 
 ---
 
@@ -15,9 +15,9 @@
 A senior-housing underwriting tool. Analysts upload a raw rent roll exported from any operator (Oaks, Briar Glen, Sunrise, Brookdale, etc.) and the app produces:
 
 1. A standalone **Normalized RR workbook** — six tabs, professionally formatted, ready for analyst review
-2. A populated **T12 Intake workbook** — the analyst's own T12 template with rent roll data injected into its `Rent Roll Input` sheet starting at row 7
+2. A populated **Analyzer workbook** — the analyst's own ALF Financial Analyzer template with rent roll data injected into its `Rent Roll Input` sheet starting at row 7
 
-The T12 then drives the underwriting analysis (P&L, scenarios, returns) — those tabs already existed; this project just feeds them automatically.
+The Analyzer then drives the underwriting analysis (P&L, scenarios, returns) — those tabs already existed; this project just feeds them automatically.
 
 ---
 
@@ -56,11 +56,13 @@ Local Windows machine: C:\Users\erikj\Downloads\rent_roll_app
 | `mappings.py` | 9.5 KB | Default mapping rules + override loader |
 | `reports.py` | 6.7 KB | Builders for RR_Summary, RR_By_Type, RR_Exceptions |
 | `writer.py` | 14.0 KB | Excel writer with full formatting |
-| `t12_translator.py` | 3.6 KB | Translates Condensed_RR vocabulary → T12 vocabulary |
-| `t12_writer.py` | 5.8 KB | Loads user's T12, writes A:S row 7+, preserves all else |
+| `t12_translator.py` | 3.6 KB | Translates Condensed_RR vocabulary → Analyzer vocabulary |
+| `t12_writer.py` | 5.8 KB | Loads user's Analyzer, writes A:S row 7+, preserves all else |
 | `period_date.py` | 4.5 KB | Extracts period date from filename |
 | `mapping_template.xlsx` | 11.7 KB | Editable mapping override workbook for analysts |
 | `requirements.txt` | 42 B | streamlit, pandas, openpyxl |
+
+**Module naming history:** `t12_writer.py` and `t12_translator.py` are named historically — they now write RR data into the **Analyzer's** `Rent Roll Input` sheet. The "t12" in the filenames refers to the original (now legacy) T12 Intake destination, not to T12 data. A future cross-cutting commit may rename to `rr_to_analyzer_writer.py` / `rr_to_analyzer_translator.py`. (This same note also exists in `SPEC-T12.md`.)
 
 ---
 
@@ -104,9 +106,9 @@ Care/ancillary monthly columns are auto-grouped by **two paths**:
 
 Tabs: Condensed_RR, Normalized_Beds, RR_Summary, RR_By_Type, RR_Exceptions, Mapping_Reference, Run_Info.
 
-### Stage 3 — Condensed_RR → T12 Rent Roll Input
+### Stage 3 — Condensed_RR → Analyzer Rent Roll Input
 
-When user uploads a T12, the app translates vocabulary and writes A:S row 7+ to the T12's `Rent Roll Input` sheet, preserving everything else.
+When user uploads an Analyzer workbook, the app translates vocabulary and writes A:S row 7+ to the Analyzer's `Rent Roll Input` sheet, preserving everything else.
 
 ---
 
@@ -157,13 +159,13 @@ Provenance recorded in `Care Type Source` column.
 
 ### Care Level — Level 1-5 plus Level 6+ bucket
 
-User chose this over capping. Level 6, 7, 8+ all flow into `Level 6+`. For T12 paste, Level 6+ → Level 7, Level 1 → Basic.
+User chose this over capping. Level 6, 7, 8+ all flow into `Level 6+`. For Analyzer paste, Level 6+ → Level 7, Level 1 → Basic.
 
 For operators whose source has no acuity tiers (Briar Glen): Care Level is left **blank**. The Care Type column still resolves correctly.
 
 ### Shared apartment detection (second pass)
 
-After parsing all bed rows, count beds per (Building, Room #) pair. Any room with 2+ beds gets ` - Shared` appended to its Apt Type on every row of that room. ` - Shared` suffix is stripped for T12 paste.
+After parsing all bed rows, count beds per (Building, Room #) pair. Any room with 2+ beds gets ` - Shared` appended to its Apt Type on every row of that room. ` - Shared` suffix is stripped for Analyzer paste.
 
 ### Unit # composite
 
@@ -201,7 +203,7 @@ Heuristic: the column must contain a care-related keyword (charge, service, care
 - `One-Time Incentive(s)` (Briar Glen)
 - Generic `Discount` with a `(month)` suffix
 
-**Sign convention: source values preserved (typically negative).** `Concession $ = -500` means a $500 reduction. `Total Monthly Revenue` adds the concession (`actual + LOC + concession`), which correctly applies a negative as a reduction. The T12 paste passes through column I as-is; the analyst sees `−500` in the standalone RR which reads naturally as "discount."
+**Sign convention: source values preserved (typically negative).** `Concession $ = -500` means a $500 reduction. `Total Monthly Revenue` adds the concession (`actual + LOC + concession`), which correctly applies a negative as a reduction. The Analyzer paste passes through column I as-is; the analyst sees `−500` in the standalone RR which reads naturally as "discount."
 
 The care-group detector explicitly skips columns matching the concession patterns to prevent any future double-counting.
 
@@ -230,9 +232,9 @@ A vacant bed in Briar Glen now has all 10 of these columns blank — visually di
 
 Multi-sheet workbooks (like Briar Glen with `Document map` + data sheet + legend) get an automatic best-sheet pick based on row × col + header signal scoring. Avoids tiny metadata sheets.
 
-### Vocabulary translations for T12 paste
+### Vocabulary translations for Analyzer paste
 
-| Column | Condensed_RR → T12 |
+| Column | Condensed_RR → Analyzer |
 |---|---|
 | Apt Type | "1BR" → "1 Bedroom"; "2BR" → "2 Bedroom"; ` - Shared` suffix stripped; "Companion" → "Other" |
 | Status | "Hold" / "Model" / "Down" → "Other" |
@@ -246,7 +248,7 @@ Six patterns in priority order: `YYYY-MM-DD`, `MM-DD-YYYY`, `M_D_YY`, `YYYY_MM`/
 ### Output filenames
 
 - Standalone RR: `<source_stem> Normalized YYYY-MM-DD.xlsx`
-- Populated T12: `<t12_stem> with <rr_stem> YYYY-MM-DD.xlsx`
+- Populated Analyzer: `<analyzer_stem> with <rr_stem> YYYY-MM-DD.xlsx`
 
 ### Excel formatting
 
@@ -258,9 +260,17 @@ Charcoal + white theme: header `#2B2B2B`, white bold Calibri, banded rows, color
 
 ---
 
-## T12 file expected structure
+## Analyzer / T12 destination workbook structure
 
-The user's `ALF_T12_Intake_Final.xlsx` contains 11 sheets. Only `Rent Roll Input` is touched. Rows 1-6 untouched, rows 7-606 are the data area, cols T-U have IFERROR formulas to row 606, data validations on cols D/E/F/K/P. Max 600 bed rows per run.
+The canonical destination is now `ALF_Financial_Analyzer_Only.xlsx`. The legacy `ALF_T12_Intake_Final.xlsx` template is still compatible (same `Rent Roll Input!A7+` schema) but is deprecated for new use.
+
+Both workbooks share the same expected layout for the destination sheet:
+- Sheet named `Rent Roll Input` (the only sheet touched)
+- Rows 1-6 untouched (header / instructions area)
+- Rows 7-606 are the data area (max 600 bed rows per run)
+- Cols T-U have IFERROR formulas to row 606 — left untouched
+- Data validations on cols D / E / F / K / P
+- All other tabs in the workbook are preserved exactly as uploaded
 
 **Conditional formatting note:** openpyxl drops modern conditional formatting extensions on save (~49 KB lost from a 202 KB file). User accepted.
 
@@ -279,9 +289,9 @@ Both verified end-to-end on every release. Concession totals added to baseline i
 
 ## Known issues / limitations
 
-1. **Conditional formatting drops on T12 save.** openpyxl limitation. User accepted.
+1. **Conditional formatting drops on Analyzer save.** openpyxl limitation. User accepted.
 2. **Sq Ft is blank** when source RR doesn't have it. Decision: don't fabricate.
-3. **600-row T12 cap.** Hard limit by formula extent.
+3. **600-row Analyzer cap.** Hard limit by formula extent.
 4. **No T12 normalizer yet** — separate component, not yet built. Next major piece of work.
 5. **Streamlit Cloud free tier sleeps apps after 7 days idle.** First request after sleep takes ~30 seconds.
 6. **Mobile upload not supported** — by design choice.
@@ -293,11 +303,11 @@ Both verified end-to-end on every release. Concession totals added to baseline i
 1. Open https://rrnormalizer.streamlit.app/
 2. Upload rent roll (sidebar, required)
 3. Optional: upload mapping override workbook
-4. Optional: upload T12 intake template
+4. Optional: upload ALF Financial Analyzer template
 5. Optional: set Property Care Type default
 6. App processes immediately
 7. Click **Download Normalized Rent Roll** for the 6-tab analyst workbook
-8. Click **Download T12 with Rent Roll** for the populated T12 (only available if T12 was uploaded)
+8. Click **Download Analyzer with Rent Roll** for the populated Analyzer (only available if an Analyzer was uploaded)
 
 ---
 
@@ -307,7 +317,7 @@ Still unbuilt. See CHANGELOG and the original handoff for context.
 
 **Input:** raw T12 export (Yardi, RealPage, AppFolio, custom GL).
 
-**Output:** populates `T12 Input` tab of the user's T12 template.
+**Output:** populates `T12 Input` tab of the user's Analyzer template.
 
 **Required logic:** account name normalization, month column detection, sign convention handling, annualization, mapping override workbook.
 

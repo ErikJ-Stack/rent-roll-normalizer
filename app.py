@@ -25,8 +25,8 @@ from t12_writer import T12CapacityError, populate_t12
 from writer import write_output
 
 
-APP_VERSION = "1.10.0"
-APP_LAST_UPDATED = "2026-04-30"
+APP_VERSION = "1.11.0"
+APP_LAST_UPDATED = "2026-05-01"
 
 
 def _build_output_name(source_filename: str) -> str:
@@ -131,16 +131,18 @@ with st.sidebar:
         care_type_default = ""  # treat "(none)" as no default
     st.divider()
 
-    st.subheader("T12 integration (optional)")
+    st.subheader("Analyzer integration (optional)")
     t12_file = st.file_uploader(
-        "T12 Intake Template (.xlsx)",
+        "ALF Financial Analyzer (.xlsx)",
         type=["xlsx"],
         key="t12_uploader",
         help=(
-            "Optional. Upload your T12 intake workbook to receive a second "
-            "output file with the rent roll auto-populated into its "
-            "'Rent Roll Input' sheet starting at row 7. The T12's other tabs, "
-            "formulas, and data validations are left untouched."
+            "Optional. Upload your ALF Financial Analyzer workbook to receive a "
+            "second output file with the rent roll auto-populated into its "
+            "'Rent Roll Input' sheet starting at row 7. Other tabs, formulas, "
+            "and data validations are left untouched. The legacy "
+            "ALF_T12_Intake_Final.xlsx template is also still compatible "
+            "(same Rent Roll Input!A7+ schema)."
         ),
     )
 
@@ -150,10 +152,10 @@ with st.sidebar:
         auto_detected_date = detect_period_date(getattr(rr_file, "name", ""))
 
     period_date_input = st.date_input(
-        "Rent Roll Period Date (for T12 col S)",
+        "Rent Roll Period Date (for Analyzer col S)",
         value=auto_detected_date or dt.date.today(),
         help=(
-            "Written to column S of the T12's Rent Roll Input sheet on every "
+            "Written to column S of the Analyzer's Rent Roll Input sheet on every "
             "row. Auto-detected from the rent roll filename when possible. "
             "Override if needed."
         ),
@@ -342,11 +344,11 @@ with dl_col1:
     )
 
 with dl_col2:
-    st.markdown("**T12 with Rent Roll**")
+    st.markdown("**Analyzer with Rent Roll**")
     if t12_file is None:
-        st.caption("Upload a T12 intake template in the sidebar to enable.")
+        st.caption("Upload an ALF Financial Analyzer in the sidebar to enable.")
         st.button(
-            "⬇️  T12 not uploaded",
+            "⬇️  Analyzer not uploaded",
             disabled=True,
             use_container_width=True,
             key="dl_t12_disabled",
@@ -364,7 +366,7 @@ with dl_col2:
                 translated,
                 period_date_input,
             )
-            t12_stem = Path(getattr(t12_file, "name", "T12.xlsx")).stem
+            t12_stem = Path(getattr(t12_file, "name", "Analyzer.xlsx")).stem
             rr_stem = Path(getattr(rr_file, "name", "rent_roll.xlsx")).stem
             t12_out_name = (
                 f"{t12_stem} with {rr_stem} "
@@ -379,8 +381,8 @@ with dl_col2:
                 key="dl_t12",
             )
         except T12CapacityError as e:
-            st.error(f"T12 capacity exceeded: {e}")
+            st.error(f"Analyzer capacity exceeded: {e}")
         except ValueError as e:
-            st.error(f"T12 error: {e}")
+            st.error(f"Analyzer error: {e}")
         except Exception as e:
-            st.error(f"Could not populate T12: {e}")
+            st.error(f"Could not populate Analyzer: {e}")

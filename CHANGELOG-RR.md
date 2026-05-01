@@ -8,6 +8,37 @@ When making a code change in a chat, add an entry here in the same commit.
 
 ---
 
+## [1.11.0] — 2026-05-01
+
+### Summary
+Analyzer rename. UI label and SPEC updates only. No behavioral change. Confirmed end-to-end working on prior release: Salem RR + `ALF_Financial_Analyzer_Only.xlsx` produced identical output to the prior T12-named workflow (writer is target-agnostic).
+
+### Changed
+- `app.py` — Sidebar section header renamed `T12 integration (optional)` → `Analyzer integration (optional)`.
+- `app.py` — Uploader label renamed `T12 Intake Template (.xlsx)` → `ALF Financial Analyzer (.xlsx)`. Help tooltip updated to reference Analyzer terminology and call out that the legacy `ALF_T12_Intake_Final.xlsx` template is still compatible (same `Rent Roll Input!A7+` schema).
+- `app.py` — Period Date label `Rent Roll Period Date (for T12 col S)` → `Rent Roll Period Date (for Analyzer col S)` and corresponding help text.
+- `app.py` — Download button section header `T12 with Rent Roll` → `Analyzer with Rent Roll`. Disabled-state caption / button text and the three error-message strings (`T12 capacity exceeded`, `T12 error`, `Could not populate T12`) all retitled to `Analyzer ...`.
+- `SPEC-RR.md` — Section "T12 file expected structure" retitled to "Analyzer / T12 destination workbook structure". Calls out `ALF_Financial_Analyzer_Only.xlsx` as the canonical destination and notes legacy `ALF_T12_Intake_Final.xlsx` compatibility / deprecation.
+- `SPEC-RR.md` — Added "Module naming history" note under File inventory: `t12_writer.py` / `t12_translator.py` are named historically; they now write into the Analyzer's `Rent Roll Input` sheet. A future cross-cutting commit may rename to `rr_to_analyzer_*.py`. Same note already exists in `SPEC-T12.md`.
+- `SPEC-RR.md` — User-facing language throughout updated: "T12" → "Analyzer" in Stage 3, vocabulary translation table title, output filename pattern, "How the analyst uses the app", and known issues. The literal string "T12" is preserved in the T12 Normalizer roadmap section (that work still concerns actual T12 GL data) and in module filenames.
+- `app.py` — `APP_VERSION` 1.9.0 → 1.11.0; `APP_LAST_UPDATED` → 2026-05-01.
+
+### Unchanged (intentional)
+- `t12_translator.py`, `t12_writer.py` — module filenames retained per "future cross-cutting rename" note. No code changes.
+- `key="t12_uploader"`, `key="dl_t12"`, `key="dl_t12_disabled"` — Streamlit widget keys preserved to avoid invalidating any in-flight session state. Internal identifiers; not user-visible.
+- All writer logic. The destination-workbook contract (`Rent Roll Input!A7+`, cols T-U formulas, max 600 rows) is identical between `ALF_Financial_Analyzer_Only.xlsx` and the legacy `ALF_T12_Intake_Final.xlsx`, so the same writer produces the same output for both.
+- Output filename pattern (`<destination_stem> with <rr_stem> YYYY-MM-DD.xlsx`) — works correctly with either Analyzer or legacy T12 stems.
+- README.md — out of scope per task boundaries. Will be refreshed in a later sweep.
+
+### Verified
+- User confirmed end-to-end on prior release: `ALF_Financial_Analyzer_Only.xlsx` uploaded into the (then-named) "T12 Intake Template" slot against the Salem rent roll, all 50 beds populated correctly into `Rent Roll Input`, `Rent Roll Recon` tab numbers spot-checked. This commit is purely cosmetic — same inputs should yield byte-identical output.
+- Post-deploy verification (analyst): screenshot the live app sidebar showing the new label, then re-run Salem RR + Analyzer template and confirm output matches.
+
+### Note on prior release state
+- The deployed `app.py` was running `APP_VERSION = "1.9.0"` despite v1.10.0 docs being published — the v1.10.0 code/version-bump push didn't fully land. This commit jumps the deployed version pill from 1.9.0 to 1.11.0. The v1.10.0 zero-vs-blank behavior in `normalizer.py` should be re-verified separately on prod after this deploy; if the live app still shows `0` instead of blanks for empty charge cells, that's a v1.10.0 regression to address in a follow-up commit.
+
+---
+
 ## [1.10.0] — 2026-04-30
 
 ### Summary
@@ -47,7 +78,7 @@ When making a code change in a chat, add an entry here in the same commit.
 - Vacant beds now visually distinct: all dollar columns blank instead of `0` / `-`.
 
 ### Note for downstream consumers
-- T12 paste: blank Condensed_RR cells write as truly empty into T12 cols D-S. T12 SUM() formulas continue to total correctly (empty = 0). T12 COUNT() now returns accurate populated-cell counts.
+- Analyzer paste: blank Condensed_RR cells write as truly empty into Analyzer cols D-S. Analyzer SUM() formulas continue to total correctly (empty = 0). Analyzer COUNT() now returns accurate populated-cell counts.
 - Filtering: to find "occupied beds" use `Status == "Occupied"` (categorical), not `Actual Rate > 0` (which would now exclude legitimate zero-rate edge cases).
 
 ---
@@ -67,7 +98,7 @@ Concession detection extended to broker-format columns + fixed a sign bug in Tot
 - **Total Monthly Revenue sign bug.** Concessions are stored as negative source values (e.g. −500). Previous formula `actual + LOC - conc_amt` subtracted a negative, inflating revenue by 2× the concession on those rows. Changed to `actual + LOC + conc_amt`. Affected 7 rows on Salem (TMR was overstated by ~$2,841 across those rows).
 
 ### Sign convention (decision recorded)
-- `Concession $` is stored **negative** in output (preserves source convention; T12 column I sees the value as-is). The math now correctly applies a discount as a reduction.
+- `Concession $` is stored **negative** in output (preserves source convention; Analyzer column I sees the value as-is). The math now correctly applies a discount as a reduction.
 
 ### Verified
 - Salem regression (raw): 50 rows, $28,125.81 Care Level $, $36,675 Total LOC $ — unchanged from v1.8.0
@@ -98,7 +129,7 @@ Broker rent roll support: pre-cleaner module + smart sheet selection + self-cont
 - Single-Unit-column format support: when there's no separate Apartment column, Unit is treated as the room number directly. Salem's two-column format still works.
 
 ### Changed
-- **Renamed `AL Care Level $` column → `Care Level $`** throughout codebase: app.py, mappings.py, normalizer.py, reports.py, t12_writer.py, writer.py, README.md. T12 paste is positional so this rename is purely cosmetic on rent roll output.
+- **Renamed `AL Care Level $` column → `Care Level $`** throughout codebase: app.py, mappings.py, normalizer.py, reports.py, t12_writer.py, writer.py, README.md. Analyzer paste is positional so this rename is purely cosmetic on rent roll output.
 - `mappings.py` `DEFAULT_CARE_TYPE`: added entries for Briar Glen-style codes (DM, DU7, LTC, Special Care, Long-Term Care, Alzheimer's). Memory Care patterns ordered before AL to ensure correct precedence.
 - `mappings.py` `DEFAULT_APT_TYPE`: added Briar Glen-style codes (DLXSTD, STD, 1BED, 2BED, S SUI, D SUI).
 - `mappings.py` `DEFAULT_CARE_BUCKETS`: added "Care Charges" / "Care Services" patterns.
@@ -116,18 +147,18 @@ Broker rent roll support: pre-cleaner module + smart sheet selection + self-cont
 ## [1.7.0] — 2026-04-29
 
 ### Summary
-T12 integration shipped. The app now optionally produces a second output: the user's T12 Intake template populated with the rent roll data on the `Rent Roll Input` sheet starting at row 7.
+Analyzer integration shipped. The app now optionally produces a second output: the user's Analyzer template populated with the rent roll data on the `Rent Roll Input` sheet starting at row 7. (Originally shipped with the legacy T12 Intake template as the destination; same writer code now also accepts `ALF_Financial_Analyzer_Only.xlsx` per v1.11.0 rename.)
 
 ### Added
-- `t12_translator.py` — converts Condensed_RR vocabulary to T12's data validation vocabulary
-- `t12_writer.py` — loads user's T12, writes A:S row 7+, preserves cols T-U formulas and all other tabs/formatting/validations
+- `t12_translator.py` — converts Condensed_RR vocabulary to the Analyzer's data validation vocabulary
+- `t12_writer.py` — loads user's Analyzer, writes A:S row 7+, preserves cols T-U formulas and all other tabs/formatting/validations
 - `period_date.py` — extracts period date from rent roll filename across 6 patterns
 
 ### Changed
-- `app.py` — added T12 upload slot, period date picker (auto-fills from filename), two-button download section
+- `app.py` — added Analyzer upload slot, period date picker (auto-fills from filename), two-button download section
 
 ### Verified
-- Salem: 50 rows written to T12 rows 7-56, period date `2026-01-31` on every row, zero data validation violations, formulas in cols T-U intact at rows 7/100/606, all 11 sheets preserved.
+- Salem: 50 rows written to Analyzer rows 7-56, period date `2026-01-31` on every row, zero data validation violations, formulas in cols T-U intact at rows 7/100/606, all 11 sheets preserved.
 
 ---
 
