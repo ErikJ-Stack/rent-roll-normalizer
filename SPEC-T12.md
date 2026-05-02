@@ -6,8 +6,8 @@
 **Repo:** https://github.com/ErikJ-Stack/rent-roll-normalizer (shared, public)
 **Owner:** Erik J (`Erikjayj@gmail.com`, GitHub: `ErikJ-Stack`)
 **Stack:** Python · Streamlit · pandas · openpyxl · Streamlit Community Cloud (free tier)
-**Current version:** Unreleased — template work complete (template at v0.1.4), parser/writer code not yet built. First code release will be T12 v0.1.0.
-**Status:** Template substrate verified end-to-end against both Yardi (Salem) and MRI (Briar Glen) formats. Parser and writer code is the next step.
+**Current version:** v0.1.0 (2026-05-02) — first code release. Template substrate at v0.1.4.
+**Status:** Released. `t12_normalizer.py` + `t12_normalizer_writer.py` shipped. End-to-end verified against Yardi (Salem) and MRI (Briar Glen) — 72 / 91 GL rows, 0 UNMATCHED, EGI / EBITDARM match to the penny, zero dollar leakage on both.
 
 ---
 
@@ -24,7 +24,7 @@ The T12 Normalizer never writes a standalone T12 workbook of its own. The user's
 This repo houses two normalizer modules and one combined output:
 
 - **Rent Roll Normalizer** (Track 1) — see `SPEC-RR.md` / `CHANGELOG-RR.md`. Currently v1.11.0.
-- **T12 Normalizer** (Track 2) — this document. Currently unreleased; first code release will be v0.1.0.
+- **T12 Normalizer** (Track 2) — this document. Currently v0.1.0 (first code release).
 - **Combined Analyzer output** — both modules write into the user-provided `ALF_Financial_Analyzer_Only.xlsx` workbook. RR data → `Rent Roll Input!A7+`. T12 data → `T12 Input!A12+`. The reconciliation, monthly trending, and UW Output staging all live in the workbook's formulas, not in our Python.
 
 `app.py` orchestrates both. A single run can produce: standalone Normalized RR workbook + populated Analyzer (RR + T12 data both written) when both required uploads are present.
@@ -36,7 +36,7 @@ This repo houses two normalizer modules and one combined output:
 There are two writer modules in this repo with confusingly similar names. The naming is historical, not redesigned:
 
 - **`t12_writer.py`** — Track 1 module. Writes **rent roll** data (Condensed_RR) into the `Rent Roll Input` sheet of a T12-shaped destination workbook. Named "t12" because the destination is a T12 template, not because the input is T12 data.
-- **`t12_normalizer_writer.py`** — Track 2 module (planned for v0.1.0). Writes **T12 GL detail** data into the `T12 Input` sheet of the same destination workbook.
+- **`t12_normalizer_writer.py`** — Track 2 module (shipped in v0.1.0). Writes **T12 GL detail** data into the `T12 Input` sheet of the same destination workbook.
 
 Both write into a T12 template / Analyzer workbook, but they handle different inputs and different sheets. A future cross-cutting commit may rename `t12_writer.py` to `rr_to_analyzer_writer.py` for clarity. Deferred until that cleanup is its own task. Note: this naming-history note also belongs in `SPEC-RR.md` — flagged but not yet added.
 
@@ -67,11 +67,13 @@ Same auto-rebuild on push (~30-60 sec). Same Ctrl+Shift+R hard refresh. Same Str
 
 | File | Status | Purpose |
 | --- | --- | --- |
-| `t12_normalizer.py` | planned for v0.1.0 | T12 parser. Reads raw T12, returns clean GL detail DataFrame plus detected month labels, plus a list of unmatched descriptions (looked up against the destination workbook's `Description_Map`). Format-registry pattern (Yardi + MRI extractors at v0.1.0). |
-| `t12_normalizer_writer.py` | planned for v0.1.0 | Loads user's Analyzer / T12 Normalizer template. Writes A:O at row 12+ of `T12 Input` sheet, plus detected month labels at C11:N11. Preserves col P formula (P12:P511) and all other tabs. |
-| `app.py` | shared (existing) | Will gain optional Raw T12 uploader, an UNMATCHED interactive matcher, and a single combined download button "Analyzer with both data". |
+| `t12_normalizer.py` | shipped in v0.1.0 | T12 parser. Reads raw T12, returns clean GL detail DataFrame plus detected month labels, plus a list of unmatched descriptions (looked up against the destination workbook's `Description_Map`). Format-registry pattern (Yardi + MRI extractors at v0.1.0). |
+| `t12_normalizer_writer.py` | shipped in v0.1.0 | Loads user's Analyzer / T12 Normalizer template. Writes A:O at row 12+ of `T12 Input` sheet, plus detected month labels at C11:N11. Preserves col P formula (P12:P511), helper col N in `T12_Calc`, named ranges, and all other tabs. Idempotent re-run. Capacity 500 GL rows; raises `T12NormalizerCapacityError` if exceeded. Optionally appends UNMATCHED-resolution mappings to `Description_Map` (row 317+ on a fresh v0.1.4 substrate). Adds a `Run_Info` tab with T12 version + run timestamp + source filename + format detected. |
+| `app.py` | shared (v0.1.0 adds T12 hooks) | Gained optional Raw T12 uploader, an UNMATCHED interactive matcher (Streamlit form with Label / Section / CareType / Flag dropdowns), and a single combined download button "Analyzer with both data". Version pill shows `RR v1.11.0 · T12 v0.1.0`. |
 | `period_date.py` | shared (existing, reused as-is) | Filename → period date extraction. Same six patterns work for T12 filenames. |
-| `ALF_T12-_Normalizer.xlsx` | template at v0.1.4 (verified) | The standalone T12 Normalizer template. Master copy will be replaced by v0.1.4 when v0.1.0 ships. The user's Analyzer workbook also needs the same edits applied (formula change, named ranges, helper col, etc.). |
+| `ALF_Financial_Analyzer_Only.xlsx` | template at v0.1.4 (verified) | Master Analyzer. Migrated to v0.1.4 substrate on 2026-05-02 (commits 612c2ac and 13c9736). |
+| `tools/migration/migrate_analyzer.py` | one-shot, archived | Applies the five template iterations to a pre-v0.1.0 Analyzer. Used for the master Analyzer migration; runs warnings rather than blind re-applies if executed against an already-migrated workbook. |
+| `tools/migration/verify_e2e.py` | one-shot, archived | Pre-v0.1.0 verification harness with throwaway extractors that established the 72 / 91 GL targets. Superseded by the format-registry in `t12_normalizer.py`; retained as a sanity-check reference. |
 
 Filenames are conventions; rename in code if the implementation calls for it, then update this table.
 
@@ -236,7 +238,7 @@ These shaped the v0.1.0 ship and should not be relitigated without explicit reas
 
 ---
 
-## How the analyst uses the app (proposed UI for v0.1.0)
+## How the analyst uses the app
 
 1. Open https://rrnormalizer.streamlit.app/
 2. Upload rent roll (existing, required).

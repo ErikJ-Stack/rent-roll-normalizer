@@ -8,9 +8,45 @@ When making a code change in a T12-related chat, add an entry here in the same c
 
 ---
 
-## [Unreleased] — toward v0.1.0
+## [0.1.0] — 2026-05-02
 
-The first T12 code release will be v0.1.0. Substantial template substrate work landed in the kickoff chat before any Python code is written — these are documented as template iterations below, all part of the v0.1.0 ship scope.
+First T12 code release. Substantial template substrate work landed in the kickoff chat before any Python code was written — those iterations are documented below as part of the v0.1.0 ship scope. The code release on 2026-05-02 adds parser, writer, and `app.py` integration on top of that substrate.
+
+### Added
+
+- **`t12_normalizer.py`** — Format-registry parser. `T12Format` ABC with `detect(wb)` / `extract(wb, sheet)` methods. `YardiIncomeToBudgetFormat` (detects sheet named `Income to Budget` first, falls back to scanning for ≥3 numeric account-# rows) and `MriR12mincsFormat` (sheet name match) registered. Three drop-rules applied in order during extraction: no-$-value, grand-total pattern (TOTAL/NET prefixes, EBITDA/EBITDAR/EBITDARM keywords, exact NET INCOME / NET OPERATING INCOME), explicit drop-list (initially `Other Non Operating Revenue & Expense`). Returns `T12ParseResult` (gl_rows, month_labels normalized to `MMM YYYY`, unmatched, format_name, sheet_name). Raises `UnknownT12FormatError` if no format matches. UNMATCHED detection runs against the destination workbook's `Description_Map` set.
+- **`t12_normalizer_writer.py`** — Idempotent destination writer. Loads the user's Analyzer / standalone Normalizer template (v0.1.4 substrate). Clears `T12 Input!A12:O511` + `T12 Input!C11:N11` before writing (prevents ghost rows on re-upload). Writes 12 month labels to C11:N11 with text format, then GL detail rows to A:O. Col P (Coverage Check formula), `T12_Calc!N` helper col, named ranges (`DescMap_Description`, `DescMap_Label`), and all other tabs untouched. Capacity 500 GL rows; raises `T12NormalizerCapacityError` if exceeded. Optionally appends UNMATCHED-resolution mappings to `Description_Map` after the last data row — the dynamic named ranges pick them up via COUNTA without formula edits. Upserts a `Run_Info` tab with T12 version, run timestamp, source filename, format detected, GL rows written, and Description_Map appends.
+- T12-side version constants in `app.py`: `T12_VERSION = "0.1.0"`, `T12_LAST_UPDATED = "2026-05-02"`, alongside the existing `RR_VERSION` / `RR_LAST_UPDATED`.
+
+### Changed
+
+- **`app.py`** — Raw T12 uploader added to sidebar (optional). Interactive UNMATCHED matcher form appears when the parser returns unresolved descriptions: per-row Label combobox (sourced from the Analyzer's existing 54-entry vocabulary), Section dropdown (Revenue / Labor / Non-Labor / Excluded), CareType dropdown (`-` / IL / AL / MC), Flag dropdown (8 substrate values + blank). Resolutions persist in `st.session_state.t12_resolutions` and survive Streamlit reruns; submission validates that Label and Section are filled. Single combined download "Analyzer with both data" replaces v1.7.0's RR-only Analyzer paste; disabled until rent roll AND Analyzer AND raw T12 are uploaded AND all UNMATCHED are resolved. Combined flow writes RR data to `Rent Roll Input!A7+` first via the existing `t12_writer.populate_t12()` (historical name; see SPEC-T12 §"Module naming history"), then layers T12 data on top via the new `t12_normalizer_writer.populate_t12_input()`. Standalone Normalized RR download stays available whenever a rent roll is uploaded. Version pill renders both versions: `RR v1.11.0 · T12 v0.1.0`. Page title updated to "Rent Roll & T12 Normalizer".
+- **Behavior change worth flagging.** v1.11.0's "Analyzer with Rent Roll" download (RR data only into Analyzer) is **retired** in this release per SPEC-T12 §"How the analyst uses the app". The single Analyzer download now always carries both RR and T12 data. Existing users who upload only an RR + Analyzer (no T12) will see the combined download stay disabled and only get the standalone Normalized Rent Roll. This is deliberate — the Analyzer is now defined as a both-data deliverable.
+
+### Verified end-to-end (2026-05-02)
+
+Numbers reconcile to the penny on both reference samples. Tested via parser → writer → LibreOffice recalc (`scripts/recalc.py`) → read post-recalc cell values.
+
+| Metric | Salem (Yardi) | Briar Glen (MRI) |
+| --- | ---: | ---: |
+| GL rows written | 72 / 72 ✓ | 91 / 91 ✓ |
+| UNMATCHED at parse | 0 ✓ | 0 ✓ |
+| Source $ (`T12 Input!O` sum) | $4,117,468.33 | $8,306,657.64 |
+| Operating $ (`T12 Raw Data` total) | $4,074,179.49 | $8,310,006.39 |
+| Depreciation — EXCLUDED $ (`T12 Input` col P filter) | $43,288.84 | -$3,348.75 |
+| Leakage = source − operating − excluded | $0.00 ✓ ZERO | $0.00 ✓ ZERO |
+| EGI (`Monthly Trending!N20`) | $2,201,864.71 ✓ | $3,763,228.77 ✓ |
+| EBITDARM (`Monthly Trending!N68`) | $329,549.93 ✓ | -$595,387.41 ✓ |
+
+Additional verifications:
+
+- **Idempotent re-run** — Wrote Salem (72 rows), then Briar Glen (91 rows) on top of the same workbook. Result: exactly 91 rows in `T12 Input`, no ghost Salem rows, month labels swapped to Briar Glen's Jan–Dec 2025.
+- **Capacity guard** — `T12NormalizerCapacityError` fires correctly on 501 synthetic rows; exactly 500 rows accepted (boundary OK).
+- **UNMATCHED resolution loop** — Synthetic test injected a fake description (`Pickleball League Sponsorship Income`) with mapping {Other community revenue / Revenue / `-` / blank}. Mapping appended to `Description_Map` row 316. Post-recalc, T12 Input col P resolved the fake description to its label correctly via the dynamic named range — confirming `DescMap_Description` / `DescMap_Label` auto-extension works as designed.
+- **Substrate preservation** — All 11 sheets, both named ranges, the hidden `T12_Calc!N` helper col, the 612 SUMIF formulas in `T12 Raw Data`, and rows 1-10 of `T12 Input` (title, instructions, layout note) confirmed intact post-write.
+- **Run_Info tab** — Created with all 10 T12-side keys present (version, last-updated, run timestamp, source filename, format detected, source sheet, GL rows written, months detected, UNMATCHED at parse, Description_Map appends).
+
+**Pre-existing substrate issue, not introduced by v0.1.0.** Recalc reports a single `#NAME?` error at `Rent Roll Recon!H20` on every output. Identical pre-write and post-write across both Salem and Briar Glen runs, so this is a substrate-level issue in the migrated master Analyzer (introduced during the master Analyzer migration on 2026-05-02), not anything this release added. Worth a separate substrate-cleanup pass; outside v0.1.0 scope.
 
 ### Template iterations (all ship with v0.1.0)
 
@@ -94,7 +130,7 @@ Rewrote 500 col P formulas in `T12 Input` from hardcoded `Description_Map!$A$5:$
 
 The `MAX(5, ...)` floor prevents Excel from rejecting an empty-data-area range (`A5:A4` is invalid; `MAX(5,0+4)=5` keeps it valid even pathologically).
 
-### Architectural decisions (will be implemented in v0.1.0 code)
+### Architectural decisions (implemented in v0.1.0 code)
 
 These pin down the implementation scope before code is written:
 
@@ -115,32 +151,6 @@ Track 1's Path B (Analyzer-as-paste-target rename) shipped as RR v1.11.0 in comm
 - This changelog and `SPEC-T12.md` join `SPEC-RR.md` and `CHANGELOG-RR.md`.
 - `T12_NORMALIZER_KICKOFF.md` is superseded by `SPEC-T12.md`. Move to `docs/archive/` once v0.1.0 ships, or earlier if root tidiness matters.
 - `README.md` to be updated when v0.1.0 ships: top-level "Repo contents" section explaining the two tracks + the Analyzer destination.
-
----
-
-## Planned for [0.1.0]
-
-First code release. Targets:
-
-### Add
-
-- `t12_normalizer.py` — parser with format-registry pattern. `YardiIncomeToBudgetFormat` and `MriR12mincsFormat` extractors. Three drop-rules applied. Returns clean DataFrame + detected month labels (normalized to `MMM YYYY`) + UNMATCHED list.
-- `t12_normalizer_writer.py` — writes to `T12 Input!A12:O511` plus `T12 Input!C11:N11` (month labels). Idempotent re-run. Capacity check raises `T12NormalizerCapacityError` if >500 GL rows. Preserves col P formulas, helper col N, named ranges, all other tabs.
-- T12-side version constants (`T12_VERSION = "0.1.0"`, `T12_LAST_UPDATED = "<ship date>"`) alongside RR's existing constants in `app.py`.
-
-### Change
-
-- `app.py` — Raw T12 uploader (NEW), interactive UNMATCHED matcher (NEW), single combined download button "Analyzer with both data" (NEW; replaces v1.7.0's RR-only Analyzer paste). Version pill shows both versions when both modules ran (e.g., `RR v1.11.0 · T12 v0.1.0`).
-- `Run_Info` tab in any output the T12 module touched gets T12 version + run timestamp + source filename + format detected.
-
-### Verify
-
-- Salem end-to-end: 72 GL rows written to `T12 Input!A12:A83`, 0 UNMATCHED, T12 Raw Data aggregations match Salem source subtotals row-by-row, Monthly Trending EGI = $2,201,865, EBITDARM = $329,550. (Row count corrected from 73 to 72 during master Analyzer migration — `Other Non Operating Revenue & Expense` is on the parser drop-list.)
-- Briar Glen end-to-end: 91 GL rows written to `T12 Input!A12:A102`, 0 UNMATCHED, T12 Raw Data aggregations match expected, Monthly Trending EGI = $3,763,229, EBITDARM = -$595,387, L2L correctly subtracted from EGI.
-- Both: zero dollar leakage. Total $ in source = total $ aggregated to operating + total $ routed to `Depreciation — EXCLUDED`.
-- Hidden helper sheets (`T12_Calc`) preserved with col N formulas intact.
-- Visible aggregator sheets preserved with all formulas intact.
-- Named ranges intact and dynamic (verified by adding a Description_Map row and watching col P pick it up without formula edits).
 
 ---
 
