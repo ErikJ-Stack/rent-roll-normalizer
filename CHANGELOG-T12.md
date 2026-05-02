@@ -14,6 +14,27 @@ The first T12 code release will be v0.1.0. Substantial template substrate work l
 
 ### Template iterations (all ship with v0.1.0)
 
+#### Master Analyzer migration — applied 2026-05-02
+
+The five template iterations below were originally landed on the standalone T12 Normalizer template (`ALF_T12-_Normalizer.xlsx`). The user's master Analyzer (`ALF_Financial_Analyzer_Only.xlsx`) was at the pre-v0.1.0 substrate state and needed the same edits applied so that v0.1.0's parser/writer code can target either workbook.
+
+Migration applied via `migrate_analyzer.py` (one-shot script, archived under `tools/migration/`). All five batches landed cleanly, end-to-end verification matched targets to the penny:
+
+| Format | GL rows | UNMATCHED | EGI | EBITDARM |
+| --- | ---: | ---: | ---: | ---: |
+| Yardi (Salem) | 72 | 0 | $2,201,864.71 | $329,549.93 |
+| MRI (Briar Glen) | 91 | 0 | $3,763,228.77 | -$595,387.41 |
+
+Both dollar values reconcile exactly against the standalone T12 template's verification numbers, confirming the migrated master is structurally identical to the standalone v0.1.4 substrate.
+
+**Salem GL-row count correction:** the standalone-template verification table reads "73 GL rows" for Salem. The accurate count after applying parser drop-rule #3 (`Other Non Operating Revenue & Expense` on the explicit drop-list) is 72. The "73" figure was the count before the drop-list filter ran. Corrected in the verification tables in SPEC-T12.md. Total dollars and EGI/EBITDARM unaffected — that one row was already routed to `Depreciation — EXCLUDED` either way.
+
+**openpyxl side effects on save** (known limitations, no formula impact): conditional formatting rules dropped, data validation rules dropped. Both are visual/structural only. Mentioned here for traceability; same limitation as RR's existing T12 paste flow.
+
+**RR-side sheets untouched.** `Rent Roll Input`, `Rent Roll Recon`, `T12 Analytics`, `UW Output`, `RR_Calc` were not modified by the migration. RR v1.11.0 functionality preserved.
+
+**Re-running the migration is safe with caveats** — script checks pre-state and warns rather than blindly applying edits. If run on an already-migrated workbook, it would emit warnings on every batch. Idempotent on Description_Map duplicate removal, named ranges, helper col, and label-row inserts; the row-shift in Monthly Trending is the one batch that would not be idempotent, so don't re-run on already-migrated workbooks without checking.
+
 #### Template v0.1.4 — Monthly Trending fixes
 
 The architectural Path B fix (template v0.1.3) made T12 Raw Data work correctly, but Monthly Trending had pre-existing bugs that were exposed once aggregation started flowing real numbers. Five fixes:
@@ -114,7 +135,7 @@ First code release. Targets:
 
 ### Verify
 
-- Salem end-to-end: 73 GL rows written to `T12 Input!A12:A84`, 0 UNMATCHED, T12 Raw Data aggregations match Salem source subtotals row-by-row, Monthly Trending EGI = $2,201,865, EBITDARM = $329,550.
+- Salem end-to-end: 72 GL rows written to `T12 Input!A12:A83`, 0 UNMATCHED, T12 Raw Data aggregations match Salem source subtotals row-by-row, Monthly Trending EGI = $2,201,865, EBITDARM = $329,550. (Row count corrected from 73 to 72 during master Analyzer migration — `Other Non Operating Revenue & Expense` is on the parser drop-list.)
 - Briar Glen end-to-end: 91 GL rows written to `T12 Input!A12:A102`, 0 UNMATCHED, T12 Raw Data aggregations match expected, Monthly Trending EGI = $3,763,229, EBITDARM = -$595,387, L2L correctly subtracted from EGI.
 - Both: zero dollar leakage. Total $ in source = total $ aggregated to operating + total $ routed to `Depreciation — EXCLUDED`.
 - Hidden helper sheets (`T12_Calc`) preserved with col N formulas intact.

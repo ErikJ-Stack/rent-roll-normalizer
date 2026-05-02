@@ -91,8 +91,10 @@ The destination workbook is a critical part of the v0.1.0 release. The template 
 
 | Format | Source rows | Mapped | UNMATCHED (after parser filters) | EGI | EBITDARM |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Yardi (Salem) | 73 GL detail | 73 | 0 | $2,201,865 | $329,550 |
+| Yardi (Salem) | 72 GL detail¹ | 72 | 0 | $2,201,865 | $329,550 |
 | MRI (Briar Glen) | 91 GL detail | 91 | 0 | $3,763,229 | -$595,387 |
+
+¹ Pre-drop-list count is 73; `Other Non Operating Revenue & Expense` (the one drop-list entry shipping at v0.1.0) accounts for the difference. Corrected from "73 GL detail" during the master Analyzer migration on 2026-05-02.
 
 Both formats reconcile to the penny: total $ in source GL = total $ aggregated to operating P&L + total $ routed to `Depreciation — EXCLUDED`. No silent leakage.
 
@@ -201,7 +203,7 @@ App raises `T12NormalizerCapacityError` with a clear message if exceeded.
 
 | Format | GL detail rows (after filters) | Period | UNMATCHED at v0.1.0 ship | Notes |
 | --- | ---: | --- | ---: | --- |
-| Yardi "Income to Budget" — Salem (Oaks at Salem Road) | 73 | T12 ending 1/31/2026 | 0 | AL-only. Indented hierarchy. Standard signs. Account numbers in col A. |
+| Yardi "Income to Budget" — Salem (Oaks at Salem Road) | 72 | T12 ending 1/31/2026 | 0 | AL-only. Indented hierarchy. Standard signs. Account numbers in col A. Pre-drop-list count is 73; `Other Non Operating Revenue & Expense` accounts for the difference. |
 | MRI "R12MINCS" — Briar Glen | 91 | T12 ending 12/31/2025 | 0 | MC-focused. Flat structure. Standard signs. No account numbers (col A blank). 82 vocabulary entries added to Description_Map. |
 
 More formats added as encountered. Each format earns a verification line plus any quirks documented under "Key decisions."
@@ -230,7 +232,7 @@ These shaped the v0.1.0 ship and should not be relitigated without explicit reas
 4. **No partial-year detection.** A 6-month T12 would silently land as 6 months in cols C-H with cols I-N blank. Downstream formulas would still SUM correctly, but no annualization.
 5. **`Description_Map` updates land in user's downloaded workbook.** Mappings added via the in-app matcher persist only in that download. If the user starts a fresh deal from a clean template, they re-do the mapping for any vocabulary not in the v0.1.0 baseline.
 6. **Conditional formatting drop on save.** Same openpyxl limitation as RR's existing T12 paste. Visual-only impact.
-7. **Template-edit propagation.** If the user has existing populated Analyzers from before v0.1.0, those won't have the named ranges, helper col N, or Path B SUMIF rewrites. They'll need to be migrated (or accept that aggregations only work on freshly-templated workbooks).
+7. **Template-edit propagation — RESOLVED for the master Analyzer.** The user's master `ALF_Financial_Analyzer_Only.xlsx` was migrated to the v0.1.4 substrate on 2026-05-02 (see CHANGELOG-T12 entry). Any *other* pre-v0.1.0 populated Analyzers in circulation (e.g., from prior deals) still lack the named ranges, helper col N, and Path B SUMIF rewrites — those would need the same migration applied (`tools/migration/migrate_analyzer.py`), or to be rebuilt from a fresh template.
 
 ---
 
