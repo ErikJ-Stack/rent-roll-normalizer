@@ -6,8 +6,8 @@
 **Repo:** https://github.com/ErikJ-Stack/rent-roll-normalizer (shared, public)
 **Owner:** Erik J (`Erikjayj@gmail.com`, GitHub: `ErikJ-Stack`)
 **Stack:** Python · Streamlit · pandas · openpyxl · Streamlit Community Cloud (free tier)
-**Current version:** v0.1.0 (2026-05-02) — first code release. Template substrate at v0.1.4.
-**Status:** Released. `t12_normalizer.py` + `t12_normalizer_writer.py` shipped. End-to-end verified against Yardi (Salem) and MRI (Briar Glen) — 72 / 91 GL rows, 0 UNMATCHED, EGI / EBITDARM match to the penny, zero dollar leakage on both.
+**Current version:** v0.1.1 (2026-05-02) — Salem Management Fees fix. Template substrate at v0.1.4.
+**Status:** Released. `t12_normalizer.py` + `t12_normalizer_writer.py` shipped. End-to-end verified against Yardi (Salem, 73 GL) and MRI (Briar Glen, 91 GL) — 0 UNMATCHED, EGI / EBITDARM / EBITDAR match to the penny, zero dollar leakage on both.
 
 ---
 
@@ -91,12 +91,12 @@ The destination workbook is a critical part of the v0.1.0 release. The template 
 
 ### Verified end-to-end at template v0.1.4
 
-| Format | Source rows | Mapped | UNMATCHED (after parser filters) | EGI | EBITDARM |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Yardi (Salem) | 72 GL detail¹ | 72 | 0 | $2,201,865 | $329,550 |
-| MRI (Briar Glen) | 91 GL detail | 91 | 0 | $3,763,229 | -$595,387 |
+Numbers reflect parser v0.1.1 (Salem Management Fees fix). v0.1.0 numbers are preserved in CHANGELOG-T12 [0.1.0] for historical reference.
 
-¹ Pre-drop-list count is 73; `Other Non Operating Revenue & Expense` (the one drop-list entry shipping at v0.1.0) accounts for the difference. Corrected from "73 GL detail" during the master Analyzer migration on 2026-05-02.
+| Format | GL detail rows | Mapped | UNMATCHED | EGI | EBITDARM | EBITDAR |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Yardi (Salem) | 73 | 73 | 0 | $2,201,865 | $329,550 | $197,970 |
+| MRI (Briar Glen) | 91 | 91 | 0 | $3,763,229 | -$595,387 | -$783,549 |
 
 Both formats reconcile to the penny: total $ in source GL = total $ aggregated to operating P&L + total $ routed to `Depreciation — EXCLUDED`. No silent leakage.
 
@@ -110,7 +110,7 @@ The parser uses a **format-registry pattern**: each supported format is a class 
 
 **Registered formats (v0.1.0):**
 
-- **YardiIncomeToBudgetFormat** — Detects sheet whose name doesn't match other formats and where col A row 11+ contains numeric account numbers. Body starts at row 11. Months in cols C-N (12 of them), T12 total in col O. Reads month labels from row 9 (e.g., `02/28/2025`) and normalizes to `MMM YYYY` format.
+- **YardiIncomeToBudgetFormat** — Detects sheet whose name doesn't match other formats and where col A row 11+ contains numeric account numbers (≥3 hits — heuristic for format detection only, not row-level filtering). Body starts at row 11. Months in cols C-N (12 of them), T12 total in col O. Reads month labels from row 9 (e.g., `02/28/2025`) and normalizes to `MMM YYYY` format. Account # is preserved when present in col A (most GL rows) but **not** required for inclusion — Yardi reports some single-line expenses as banner-style rows with no account number; the three drop-rules below filter section headers and subtotals on their own. (v0.1.0 had a strict account-# pre-filter that silently dropped Salem's $131,579.65 Management Fees line — fixed in v0.1.1.)
 - **MriR12mincsFormat** — Detects a sheet named `MRI_R12MINCS`. Body starts at row 14. No account numbers. Description in col A, months in cols B-M, T12 total in col N. Reads month labels from row 11 (e.g., `01/25`) and normalizes to `MMM YYYY` format.
 
 If no format detector matches, the parser raises `UnknownT12FormatError` with the sheet name and a hint that this format isn't yet supported.
@@ -121,9 +121,11 @@ Each format's `extract()` walks the body rows and produces clean GL detail. Thre
 
 1. **Drop rows with no $ value.** A row passes only if at least one of the 12 monthly columns or the T12 total column is non-zero numeric. Filters out blank spacer rows and section-banner rows that have a description but no values.
 2. **Drop rows whose description matches a grand-total pattern.** Patterns: descriptions starting with `TOTAL ` (case-insensitive), `NET `, `EBITDA`, `EBITDAR`, `EBITDARM`, or matching `NET INCOME`, `NET OPERATING INCOME` exactly. Filters out subtotals embedded in the source like `Total Effective Gross Rents` and `NET OPERATING INCOME`.
-3. **Drop rows whose description appears in the explicit drop-list.** Initially: `Other Non Operating Revenue & Expense` (a Yardi non-operating line that's small enough not to need its own Label, and clearly excluded from operating analysis). New non-operating descriptions added to this list when encountered.
+3. **Drop rows whose description appears in the explicit drop-list.** Currently: `Other Non Operating Revenue & Expense` (a Yardi non-operating line that's small enough not to need its own Label, and clearly excluded from operating analysis), `Non-Operating Expenses` (the Yardi banner-style subtotal that repeats the section header text and would double-count rows already captured as GL detail — added in v0.1.1). New non-operating descriptions added to this list when encountered.
 
 After filtering, each remaining row is cleaned: TRIM applied to account # (col A) and description (col B); values passed through unchanged; sign convention preserved (revenue +, expense +, concessions -).
+
+**Note on the Yardi extractor (v0.1.1).** Yardi GL rows usually carry a numeric account # in col A, but Yardi sometimes reports single-line expenses (e.g., Salem's `Management Fees` of $131,579.65 between EBITDARM and EBITDAR) as section-banner-style rows with no account number. The Yardi extractor does not pre-filter on account # presence; instead, the three drop-rules above are sufficient on their own. Account # is preserved when present and stored as `""` when absent. v0.1.0 had a strict "must have numeric account #" pre-filter that silently dropped Salem's management fee — fixed in v0.1.1.
 
 ### Stage 3 — UNMATCHED detection (Python-side)
 
@@ -203,9 +205,9 @@ App raises `T12NormalizerCapacityError` with a clear message if exceeded.
 
 ## Verified formats
 
-| Format | GL detail rows (after filters) | Period | UNMATCHED at v0.1.0 ship | Notes |
+| Format | GL detail rows (after filters) | Period | UNMATCHED at v0.1.1 ship | Notes |
 | --- | ---: | --- | ---: | --- |
-| Yardi "Income to Budget" — Salem (Oaks at Salem Road) | 72 | T12 ending 1/31/2026 | 0 | AL-only. Indented hierarchy. Standard signs. Account numbers in col A. Pre-drop-list count is 73; `Other Non Operating Revenue & Expense` accounts for the difference. |
+| Yardi "Income to Budget" — Salem (Oaks at Salem Road) | 73 | T12 ending 1/31/2026 | 0 | AL-only. Indented hierarchy. Standard signs. Account numbers in col A on most GL rows but **not all** — Yardi reports some single-line expenses (e.g., Management Fees) as section-banner-style rows with no account number. The parser handles both via the three drop-rules. |
 | MRI "R12MINCS" — Briar Glen | 91 | T12 ending 12/31/2025 | 0 | MC-focused. Flat structure. Standard signs. No account numbers (col A blank). 82 vocabulary entries added to Description_Map. |
 
 More formats added as encountered. Each format earns a verification line plus any quirks documented under "Key decisions."

@@ -8,6 +8,49 @@ When making a code change in a T12-related chat, add an entry here in the same c
 
 ---
 
+## [0.1.1] — 2026-05-02
+
+Patch release. Fixes a Yardi-extractor bug that silently dropped Salem's $131,579.65 Management Fees line. Briar Glen and the rest of the v0.1.0 verification numbers are unaffected.
+
+### Fixed
+
+- **`t12_normalizer.py` — Yardi extractor no longer requires a numeric account #.** v0.1.0's `YardiIncomeToBudgetFormat.extract()` required col A to contain a numeric account number on every GL row, applied *before* the three drop-rules. This was a defensive guard against picking up section headers and subtotals, but it was too strict: Yardi sometimes reports single-line expenses (notably property-management fees) as section-banner-style rows with no account number, and v0.1.0 silently dropped them. The check is removed; the three drop-rules (no $, grand-total pattern, explicit drop-list) are sufficient on their own. Account # is still preserved when present (most rows) and stored as `""` when absent. Format **detection** in `YardiIncomeToBudgetFormat.detect()` still uses the "≥3 numeric account #s in body" heuristic — that's about identifying which file is a Yardi T12, not which rows to keep.
+- **`t12_normalizer.py` — added `Non-Operating Expenses` to the explicit drop-list.** Yardi's "Non-Operating Expenses" appears twice in Salem's source: once at row 134 as a section header (col O blank, caught by drop-rule 1) and once at row 137 as a subtotal of the preceding GL rows (col O = $45,161.67, but no `TOTAL` prefix so drop-rule 2 misses it). Without this fix, removing the account-# filter would have caused row 137 to double-count rows 135 (`Depreciation Expense`) and 136 (`Other Non Operating Revenue & Expense`). Added per the spec's documented pattern: "New non-operating descriptions added to this list when encountered."
+
+### Verified end-to-end (2026-05-02)
+
+Salem now reconciles to source on every line. Briar Glen unchanged.
+
+| Metric | Salem (Yardi) | Briar Glen (MRI) |
+| --- | ---: | ---: |
+| GL rows written | 73 (was 72 at v0.1.0) | 91 (unchanged) |
+| UNMATCHED at parse | 0 ✓ | 0 ✓ |
+| Source $ | $4,249,047.98 (v0.1.0: $4,117,468.33; +$131,579.65 management fee) | $8,306,657.64 (unchanged) |
+| Operating $ (T12 Raw Data total) | $4,205,759.14 (v0.1.0: $4,074,179.49; +$131,579.65) | $8,310,006.39 (unchanged) |
+| Depreciation — EXCLUDED $ | $43,288.84 (unchanged) | -$3,348.75 (unchanged) |
+| Leakage | $0.00 ✓ ZERO | $0.00 ✓ ZERO |
+| EGI (`Monthly Trending!N20`) | $2,201,864.71 ✓ (unchanged — management fee doesn't affect revenue) | $3,763,228.77 ✓ (unchanged) |
+| TOTAL OPEX excl. mgmt (`Monthly Trending!N66`) | $1,872,314.78 ✓ (unchanged — substrate's R66 already excludes mgmt) | $4,358,616.18 ✓ (unchanged) |
+| Management fee (`Monthly Trending!N67`) | $131,579.65 ✓ (was $0.00 at v0.1.0 — bug fixed) | $188,161.44 ✓ (already correct in v0.1.0) |
+| EBITDARM (`Monthly Trending!N68`) | $329,549.93 ✓ (unchanged — substrate excludes mgmt by accounting standard) | -$595,387.41 ✓ (unchanged) |
+| EBITDAR (`Monthly Trending!N69`) | $197,970.28 ✓ (was $329,549.93 at v0.1.0 — now correctly subtracts management fee) | -$783,548.85 ✓ (unchanged) |
+
+**Salem source-side cross-check.** Source row 126 EBITDARM = $329,549.93 → matches Salem R68 ✓. Source row 128 Management Fees = $131,579.65 → matches Salem R67 ✓. Source row 130 EBITDAR = $197,970.28 → matches Salem R69 ✓. Salem now ties to source on all four rows.
+
+**Why EBITDARM didn't change.** The substrate's R66 (`TOTAL OPEX (excl. mgmt)`) deliberately excludes the management-fee line, and R68 EBITDARM = EGI − R66. So Management fee not appearing at all (v0.1.0 bug) versus appearing in R67 separately (v0.1.1 fix) makes no difference to EBITDARM by design — that's the accounting-standard definition. The bug surfaced at R69 EBITDAR, which is EBITDARM − R67. v0.1.0's R69 was wrong by exactly the missing management fee.
+
+### How this was caught
+
+Reported by user during post-v0.1.0 testing: "There was an omitted expense item in the Salem Road T12. Management fee was not included." User pointed to Description_Map row 122 (`Management Fees → Management fee`, ready and waiting) and Salem source row 128 (the actual line in the raw T12). Diagnosis traced to the Yardi extractor's strict account-# pre-filter dropping Salem's row 128 before drop-rules ran.
+
+### Notes
+
+- v0.1.0's verification table (72 GL rows, all-zero leakage already) was internally consistent — the missing management fee was getting dropped at parse time, so neither the source-side total nor the aggregated total counted it. The bug was a *missing line item*, not a *miscalculated line item*. This is why the v0.1.0 leakage check passed despite the bug.
+- No app.py UI behavior changes. T12_VERSION constant bumped to `"0.1.1"`.
+- No template substrate changes. Description_Map already had the mappings; the bug was upstream of the workbook.
+
+---
+
 ## [0.1.0] — 2026-05-02
 
 First T12 code release. Substantial template substrate work landed in the kickoff chat before any Python code was written — those iterations are documented below as part of the v0.1.0 ship scope. The code release on 2026-05-02 adds parser, writer, and `app.py` integration on top of that substrate.

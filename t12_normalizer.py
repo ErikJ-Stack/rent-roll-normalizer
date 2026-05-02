@@ -74,6 +74,12 @@ GRAND_TOTAL_EXACT: Tuple[str, ...] = (
 # Rule 3: explicit drop-list. Compared case-insensitive after TRIM.
 EXPLICIT_DROP_LIST: Tuple[str, ...] = (
     "Other Non Operating Revenue & Expense",
+    # Yardi reports a "Non-Operating Expenses" subtotal banner that repeats
+    # the section-header text and sums the GL rows immediately above it.
+    # Without this entry the parser would double-count those rows once they
+    # appear individually as GL detail and again as the banner subtotal.
+    # Added in v0.1.1 (Salem Management Fees fix). See CHANGELOG-T12 [0.1.1].
+    "Non-Operating Expenses",
 )
 
 
@@ -305,24 +311,26 @@ class YardiIncomeToBudgetFormat(T12Format):
             labels.append(_normalize_yardi_date_string(ws.cell(self.LABEL_ROW, c).value))
 
         # --- GL detail body ---
+        # NOTE: We do NOT filter on numeric account # here. Yardi sometimes
+        # reports legitimate single-line expenses (e.g., Salem's "Management
+        # Fees" line at row 128) as section-banner-style rows with no account
+        # number. The three drop-rules below are sufficient to filter section
+        # headers (rule 1: no $), TOTAL/NET/EBITDA subtotals (rule 2), and
+        # the banner-subtotal pattern (rule 3 explicit drop-list). v0.1.0
+        # had this filter and dropped Salem's $131,579.65 management fee
+        # silently — fixed in v0.1.1.
         rows: List[GLRow] = []
         for r in range(self.BODY_START_ROW, ws.max_row + 1):
             a_raw = ws.cell(r, 1).value
             b_raw = ws.cell(r, 2).value
 
-            # Yardi GL detail: must have a numeric account # in col A.
-            # Section headers and embedded subtotals are filtered out by this
-            # check before the three drop-rules even run.
-            if a_raw is None:
-                continue
-            a_str = str(a_raw).strip()
-            if not a_str.isdigit():
-                continue
-
             if b_raw is None:
                 continue
             desc = str(b_raw).strip()
             if not desc:
+                continue
+            # Yardi sometimes ships literal "None" in spacer rows
+            if desc.lower() == "none":
                 continue
 
             monthly = [
@@ -341,8 +349,17 @@ class YardiIncomeToBudgetFormat(T12Format):
             if _matches_drop_list(desc):
                 continue
 
+            # Account # is preserved when present (Yardi reports it for
+            # standard GL rows) and stored as "" when absent (banner-style
+            # expense rows that survived the drop-rules).
+            account = ""
+            if a_raw is not None:
+                a_str = str(a_raw).strip()
+                if a_str.isdigit():
+                    account = a_str
+
             rows.append(GLRow(
-                account=a_str,
+                account=account,
                 description=desc,
                 monthly=monthly,
                 total=total,
