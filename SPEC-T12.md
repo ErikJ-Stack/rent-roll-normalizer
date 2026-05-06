@@ -6,8 +6,8 @@
 **Repo:** https://github.com/ErikJ-Stack/rent-roll-normalizer (shared, public)
 **Owner:** Erik J (`Erikjayj@gmail.com`, GitHub: `ErikJ-Stack`)
 **Stack:** Python · Streamlit · pandas · openpyxl · Streamlit Community Cloud (free tier)
-**Current version:** Unreleased — template work complete (template at v0.1.4), parser/writer code not yet built. First code release will be T12 v0.1.0.
-**Status:** Template substrate verified end-to-end against both Yardi (Salem) and MRI (Briar Glen) formats. Parser and writer code is the next step.
+**Current version:** v0.1.1 (2026-05-02) — Salem Management Fees fix. Template substrate at v0.1.5 (added "2nd Person Revenue" Label, 2026-05-04).
+**Status:** Released. `t12_normalizer.py` + `t12_normalizer_writer.py` shipped. End-to-end verified against Yardi (Salem, 73 GL) and MRI (Briar Glen, 91 GL) — 0 UNMATCHED, EGI / EBITDARM / EBITDAR match to the penny, zero dollar leakage on both.
 
 ---
 
@@ -24,7 +24,7 @@ The T12 Normalizer never writes a standalone T12 workbook of its own. The user's
 This repo houses two normalizer modules and one combined output:
 
 - **Rent Roll Normalizer** (Track 1) — see `SPEC-RR.md` / `CHANGELOG-RR.md`. Currently v1.11.0.
-- **T12 Normalizer** (Track 2) — this document. Currently unreleased; first code release will be v0.1.0.
+- **T12 Normalizer** (Track 2) — this document. Currently v0.1.0 (first code release).
 - **Combined Analyzer output** — both modules write into the user-provided `ALF_Financial_Analyzer_Only.xlsx` workbook. RR data → `Rent Roll Input!A7+`. T12 data → `T12 Input!A12+`. The reconciliation, monthly trending, and UW Output staging all live in the workbook's formulas, not in our Python.
 
 `app.py` orchestrates both. A single run can produce: standalone Normalized RR workbook + populated Analyzer (RR + T12 data both written) when both required uploads are present.
@@ -36,7 +36,7 @@ This repo houses two normalizer modules and one combined output:
 There are two writer modules in this repo with confusingly similar names. The naming is historical, not redesigned:
 
 - **`t12_writer.py`** — Track 1 module. Writes **rent roll** data (Condensed_RR) into the `Rent Roll Input` sheet of a T12-shaped destination workbook. Named "t12" because the destination is a T12 template, not because the input is T12 data.
-- **`t12_normalizer_writer.py`** — Track 2 module (planned for v0.1.0). Writes **T12 GL detail** data into the `T12 Input` sheet of the same destination workbook.
+- **`t12_normalizer_writer.py`** — Track 2 module (shipped in v0.1.0). Writes **T12 GL detail** data into the `T12 Input` sheet of the same destination workbook.
 
 Both write into a T12 template / Analyzer workbook, but they handle different inputs and different sheets. A future cross-cutting commit may rename `t12_writer.py` to `rr_to_analyzer_writer.py` for clarity. Deferred until that cleanup is its own task. Note: this naming-history note also belongs in `SPEC-RR.md` — flagged but not yet added.
 
@@ -67,11 +67,13 @@ Same auto-rebuild on push (~30-60 sec). Same Ctrl+Shift+R hard refresh. Same Str
 
 | File | Status | Purpose |
 | --- | --- | --- |
-| `t12_normalizer.py` | planned for v0.1.0 | T12 parser. Reads raw T12, returns clean GL detail DataFrame plus detected month labels, plus a list of unmatched descriptions (looked up against the destination workbook's `Description_Map`). Format-registry pattern (Yardi + MRI extractors at v0.1.0). |
-| `t12_normalizer_writer.py` | planned for v0.1.0 | Loads user's Analyzer / T12 Normalizer template. Writes A:O at row 12+ of `T12 Input` sheet, plus detected month labels at C11:N11. Preserves col P formula (P12:P511) and all other tabs. |
-| `app.py` | shared (existing) | Will gain optional Raw T12 uploader, an UNMATCHED interactive matcher, and a single combined download button "Analyzer with both data". |
+| `t12_normalizer.py` | shipped in v0.1.0 | T12 parser. Reads raw T12, returns clean GL detail DataFrame plus detected month labels, plus a list of unmatched descriptions (looked up against the destination workbook's `Description_Map`). Format-registry pattern (Yardi + MRI extractors at v0.1.0). |
+| `t12_normalizer_writer.py` | shipped in v0.1.0 | Loads user's Analyzer / T12 Normalizer template. Writes A:O at row 12+ of `T12 Input` sheet, plus detected month labels at C11:N11. Preserves col P formula (P12:P511), helper col N in `T12_Calc`, named ranges, and all other tabs. Idempotent re-run. Capacity 500 GL rows; raises `T12NormalizerCapacityError` if exceeded. Optionally appends UNMATCHED-resolution mappings to `Description_Map` (row 317+ on a fresh v0.1.4 substrate). Adds a `Run_Info` tab with T12 version + run timestamp + source filename + format detected. |
+| `app.py` | shared (v0.1.0 adds T12 hooks) | Gained optional Raw T12 uploader, an UNMATCHED interactive matcher (Streamlit form with Label / Section / CareType / Flag dropdowns), and a single combined download button "Analyzer with both data". Version pill shows `RR v1.11.0 · T12 v0.1.0`. |
 | `period_date.py` | shared (existing, reused as-is) | Filename → period date extraction. Same six patterns work for T12 filenames. |
-| `ALF_T12-_Normalizer.xlsx` | template at v0.1.4 (verified) | The standalone T12 Normalizer template. Master copy will be replaced by v0.1.4 when v0.1.0 ships. The user's Analyzer workbook also needs the same edits applied (formula change, named ranges, helper col, etc.). |
+| `ALF_Financial_Analyzer_Only.xlsx` | template at v0.1.4 (verified) | Master Analyzer. Migrated to v0.1.4 substrate on 2026-05-02 (commits 612c2ac and 13c9736). |
+| `tools/migration/migrate_analyzer.py` | one-shot, archived | Applies the five template iterations to a pre-v0.1.0 Analyzer. Used for the master Analyzer migration; runs warnings rather than blind re-applies if executed against an already-migrated workbook. |
+| `tools/migration/verify_e2e.py` | one-shot, archived | Pre-v0.1.0 verification harness with throwaway extractors that established the 72 / 91 GL targets. Superseded by the format-registry in `t12_normalizer.py`; retained as a sanity-check reference. |
 
 Filenames are conventions; rename in code if the implementation calls for it, then update this table.
 
@@ -86,13 +88,16 @@ The destination workbook is a critical part of the v0.1.0 release. The template 
 - **Template v0.1.2** — Appended 82 new MRI-vocabulary entries to `Description_Map` (rows 235-316). Briar Glen GL descriptions now resolve to existing labels. Hard constraint: no new Labels invented, only existing ones used.
 - **Template v0.1.3** — Architectural Path B fix. Added helper col N to `T12_Calc` (`=IFERROR(INDEX(DescMap_Label, MATCH(A{r}, DescMap_Description, 0)), "")` per row). Rewrote 612 SUMIF formulas in `T12 Raw Data` (51 label rows × 12 month columns) from chained `SUMIF + SUMIF + SUMIF` against hardcoded raw descriptions to single `SUMIF(T12_Calc!N, label, T12_Calc!<month>)`. Result: any new operator vocabulary added to `Description_Map` flows through aggregation automatically. Also: removed duplicate `Auto Expenses` entry from `Description_Map` (kept R125, deleted R152). Added `Auto Expense` and `Lease / ground lease` rows to `T12 Raw Data` to fix orphan-label leakage.
 - **Template v0.1.4** — Monthly Trending fixes. R10/R11 (Vacancy, L2L) drop ABS and return 0 when source is empty. R20 (EGI) extended to `=B8+B10+B11+B15+B16+B17+B18+B19` — self-applying rule: if Vacancy/L2L lines are present in source, they're subtracted (treating base rent as gross); if absent, they evaluate to 0 (treating base rent as net). New row R53 (`Auto Expense`) inserted with full INDEX/MATCH formula, all rows R53-R68 shifted to R54-R69, all section-totaling formulas updated to point at the new row positions. R64 (Lease) replaces `=0` placeholder with proper INDEX/MATCH. R65 sum range rebuilt to span B40:B64 (covers all 25 non-labor rows including new Auto and now-functional Lease). N-column formulas all corrected to self-reference correctly post-shift.
+- **Template v0.1.5** — Added new revenue Label `2nd Person Revenue`. Inserted as new row in `T12 Raw Data` at R15 (before "Other community revenue") with `=SUMIF(T12_Calc!$N$1:$N$501,"2nd Person Revenue",T12_Calc!$B$1:$B$501)` formulas across F:Q and `=SUM(F15:Q15)` at R. Inserted as new row in `Monthly Trending` at R19 (before "Other community revenue") with `=IFERROR(INDEX('T12 Raw Data'!F:F,MATCH("2nd Person Revenue",'T12 Raw Data'!B:B,0)),0)` formulas across B:M and `=SUM(B19:M19)` at N. Existing rows R19+ shifted down by 1 (Other community revenue → R20, EFFECTIVE GROSS INCOME → R21, all downstream subtotals shift accordingly). EGI formula at new R21 rewritten to `=B8+B10+B11+B15+B16+B17+B18+B19+B20` — adds the new R19 (2nd Person Revenue) to the sum without disturbing R8 (Total base rent) which stays clean. T12 Analytics formulas at E38/H38/E39/E40 patched to follow Physical Vacancy and Loss to Lease as they shifted from R55/R56 → R56/R57. Migration applied via `migrate_to_v015.py`. Closed Label vocabulary grows from 54 → 55. Surfaced as a need on the Homestead Pensacola broker file (2026-05-04) where second-person revenue was reported as separate line items by care type, but the substrate had no Label to receive it without inflating Base rent. **Per-bed base rate calculations (Base rent ÷ ADC) now stay clean.** Three Homestead `Second Persons Revenue` description entries (one each for IL/AL/MC) all map to the single `2nd Person Revenue` Label — preserving source-text fidelity in T12 Input while collapsing to one Label in T12 Raw Data and Monthly Trending.
 
 ### Verified end-to-end at template v0.1.4
 
-| Format | Source rows | Mapped | UNMATCHED (after parser filters) | EGI | EBITDARM |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Yardi (Salem) | 73 GL detail | 73 | 0 | $2,201,865 | $329,550 |
-| MRI (Briar Glen) | 91 GL detail | 91 | 0 | $3,763,229 | -$595,387 |
+Numbers reflect parser v0.1.1 (Salem Management Fees fix). v0.1.0 numbers are preserved in CHANGELOG-T12 [0.1.0] for historical reference.
+
+| Format | GL detail rows | Mapped | UNMATCHED | EGI | EBITDARM | EBITDAR |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Yardi (Salem) | 73 | 73 | 0 | $2,201,865 | $329,550 | $197,970 |
+| MRI (Briar Glen) | 91 | 91 | 0 | $3,763,229 | -$595,387 | -$783,549 |
 
 Both formats reconcile to the penny: total $ in source GL = total $ aggregated to operating P&L + total $ routed to `Depreciation — EXCLUDED`. No silent leakage.
 
@@ -106,7 +111,7 @@ The parser uses a **format-registry pattern**: each supported format is a class 
 
 **Registered formats (v0.1.0):**
 
-- **YardiIncomeToBudgetFormat** — Detects sheet whose name doesn't match other formats and where col A row 11+ contains numeric account numbers. Body starts at row 11. Months in cols C-N (12 of them), T12 total in col O. Reads month labels from row 9 (e.g., `02/28/2025`) and normalizes to `MMM YYYY` format.
+- **YardiIncomeToBudgetFormat** — Detects sheet whose name doesn't match other formats and where col A row 11+ contains numeric account numbers (≥3 hits — heuristic for format detection only, not row-level filtering). Body starts at row 11. Months in cols C-N (12 of them), T12 total in col O. Reads month labels from row 9 (e.g., `02/28/2025`) and normalizes to `MMM YYYY` format. Account # is preserved when present in col A (most GL rows) but **not** required for inclusion — Yardi reports some single-line expenses as banner-style rows with no account number; the three drop-rules below filter section headers and subtotals on their own. (v0.1.0 had a strict account-# pre-filter that silently dropped Salem's $131,579.65 Management Fees line — fixed in v0.1.1.)
 - **MriR12mincsFormat** — Detects a sheet named `MRI_R12MINCS`. Body starts at row 14. No account numbers. Description in col A, months in cols B-M, T12 total in col N. Reads month labels from row 11 (e.g., `01/25`) and normalizes to `MMM YYYY` format.
 
 If no format detector matches, the parser raises `UnknownT12FormatError` with the sheet name and a hint that this format isn't yet supported.
@@ -117,9 +122,11 @@ Each format's `extract()` walks the body rows and produces clean GL detail. Thre
 
 1. **Drop rows with no $ value.** A row passes only if at least one of the 12 monthly columns or the T12 total column is non-zero numeric. Filters out blank spacer rows and section-banner rows that have a description but no values.
 2. **Drop rows whose description matches a grand-total pattern.** Patterns: descriptions starting with `TOTAL ` (case-insensitive), `NET `, `EBITDA`, `EBITDAR`, `EBITDARM`, or matching `NET INCOME`, `NET OPERATING INCOME` exactly. Filters out subtotals embedded in the source like `Total Effective Gross Rents` and `NET OPERATING INCOME`.
-3. **Drop rows whose description appears in the explicit drop-list.** Initially: `Other Non Operating Revenue & Expense` (a Yardi non-operating line that's small enough not to need its own Label, and clearly excluded from operating analysis). New non-operating descriptions added to this list when encountered.
+3. **Drop rows whose description appears in the explicit drop-list.** Currently: `Other Non Operating Revenue & Expense` (a Yardi non-operating line that's small enough not to need its own Label, and clearly excluded from operating analysis), `Non-Operating Expenses` (the Yardi banner-style subtotal that repeats the section header text and would double-count rows already captured as GL detail — added in v0.1.1). New non-operating descriptions added to this list when encountered.
 
 After filtering, each remaining row is cleaned: TRIM applied to account # (col A) and description (col B); values passed through unchanged; sign convention preserved (revenue +, expense +, concessions -).
+
+**Note on the Yardi extractor (v0.1.1).** Yardi GL rows usually carry a numeric account # in col A, but Yardi sometimes reports single-line expenses (e.g., Salem's `Management Fees` of $131,579.65 between EBITDARM and EBITDAR) as section-banner-style rows with no account number. The Yardi extractor does not pre-filter on account # presence; instead, the three drop-rules above are sufficient on their own. Account # is preserved when present and stored as `""` when absent. v0.1.0 had a strict "must have numeric account #" pre-filter that silently dropped Salem's management fee — fixed in v0.1.1.
 
 ### Stage 3 — UNMATCHED detection (Python-side)
 
@@ -199,9 +206,9 @@ App raises `T12NormalizerCapacityError` with a clear message if exceeded.
 
 ## Verified formats
 
-| Format | GL detail rows (after filters) | Period | UNMATCHED at v0.1.0 ship | Notes |
+| Format | GL detail rows (after filters) | Period | UNMATCHED at v0.1.1 ship | Notes |
 | --- | ---: | --- | ---: | --- |
-| Yardi "Income to Budget" — Salem (Oaks at Salem Road) | 73 | T12 ending 1/31/2026 | 0 | AL-only. Indented hierarchy. Standard signs. Account numbers in col A. |
+| Yardi "Income to Budget" — Salem (Oaks at Salem Road) | 73 | T12 ending 1/31/2026 | 0 | AL-only. Indented hierarchy. Standard signs. Account numbers in col A on most GL rows but **not all** — Yardi reports some single-line expenses (e.g., Management Fees) as section-banner-style rows with no account number. The parser handles both via the three drop-rules. |
 | MRI "R12MINCS" — Briar Glen | 91 | T12 ending 12/31/2025 | 0 | MC-focused. Flat structure. Standard signs. No account numbers (col A blank). 82 vocabulary entries added to Description_Map. |
 
 More formats added as encountered. Each format earns a verification line plus any quirks documented under "Key decisions."
@@ -230,11 +237,11 @@ These shaped the v0.1.0 ship and should not be relitigated without explicit reas
 4. **No partial-year detection.** A 6-month T12 would silently land as 6 months in cols C-H with cols I-N blank. Downstream formulas would still SUM correctly, but no annualization.
 5. **`Description_Map` updates land in user's downloaded workbook.** Mappings added via the in-app matcher persist only in that download. If the user starts a fresh deal from a clean template, they re-do the mapping for any vocabulary not in the v0.1.0 baseline.
 6. **Conditional formatting drop on save.** Same openpyxl limitation as RR's existing T12 paste. Visual-only impact.
-7. **Template-edit propagation.** If the user has existing populated Analyzers from before v0.1.0, those won't have the named ranges, helper col N, or Path B SUMIF rewrites. They'll need to be migrated (or accept that aggregations only work on freshly-templated workbooks).
+7. **Template-edit propagation — RESOLVED for the master Analyzer.** The user's master `ALF_Financial_Analyzer_Only.xlsx` was migrated to the v0.1.4 substrate on 2026-05-02 (see CHANGELOG-T12 entry). Any *other* pre-v0.1.0 populated Analyzers in circulation (e.g., from prior deals) still lack the named ranges, helper col N, and Path B SUMIF rewrites — those would need the same migration applied (`tools/migration/migrate_analyzer.py`), or to be rebuilt from a fresh template.
 
 ---
 
-## How the analyst uses the app (proposed UI for v0.1.0)
+## How the analyst uses the app
 
 1. Open https://rrnormalizer.streamlit.app/
 2. Upload rent roll (existing, required).
@@ -291,5 +298,7 @@ Things to avoid:
 **Cross-cutting changes** (`app.py`, `period_date.py`, `requirements.txt`, the version-pill UI, anything that touches both tracks) reference both:
 
 > "Read SPEC-RR.md, SPEC-T12.md, and README.md at https://github.com/ErikJ-Stack/rent-roll-normalizer. Then [task]."
+
+**Mid-chat scope changes — stop and confirm.** If a T12 chat is asked to touch RR territory (or vice versa), the chat must stop and ask: *"This is [other track] scope. Open a fresh chat, or proceed knowing this becomes a cross-cutting session?"* Don't quietly drift. Drift produces sessions whose commits straddle both changelogs in ways that are hard to disentangle later — see `journal.md` 2026-05-06 for an example. Common drift triggers: a T12 chat being asked about `app.py` UI behavior, an RR chat being asked about `Description_Map` vocabulary or substrate edits, either chat being asked to "also update the README".
 
 This keeps each chat's context bounded. RR-only chats don't drag in T12 history; T12-only chats don't drag in RR's quirks. Cross-cutting work is rare enough that the wider context is acceptable when it happens.
