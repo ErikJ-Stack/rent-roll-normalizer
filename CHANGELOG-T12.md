@@ -8,111 +8,11 @@ When making a code change in a T12-related chat, add an entry here in the same c
 
 ---
 
-## [0.1.1] — 2026-05-02
+## [Unreleased] — toward v0.1.0
 
-Patch release. Fixes a Yardi-extractor bug that silently dropped Salem's $131,579.65 Management Fees line. Briar Glen and the rest of the v0.1.0 verification numbers are unaffected.
-
-### Fixed
-
-- **`t12_normalizer.py` — Yardi extractor no longer requires a numeric account #.** v0.1.0's `YardiIncomeToBudgetFormat.extract()` required col A to contain a numeric account number on every GL row, applied *before* the three drop-rules. This was a defensive guard against picking up section headers and subtotals, but it was too strict: Yardi sometimes reports single-line expenses (notably property-management fees) as section-banner-style rows with no account number, and v0.1.0 silently dropped them. The check is removed; the three drop-rules (no $, grand-total pattern, explicit drop-list) are sufficient on their own. Account # is still preserved when present (most rows) and stored as `""` when absent. Format **detection** in `YardiIncomeToBudgetFormat.detect()` still uses the "≥3 numeric account #s in body" heuristic — that's about identifying which file is a Yardi T12, not which rows to keep.
-- **`t12_normalizer.py` — added `Non-Operating Expenses` to the explicit drop-list.** Yardi's "Non-Operating Expenses" appears twice in Salem's source: once at row 134 as a section header (col O blank, caught by drop-rule 1) and once at row 137 as a subtotal of the preceding GL rows (col O = $45,161.67, but no `TOTAL` prefix so drop-rule 2 misses it). Without this fix, removing the account-# filter would have caused row 137 to double-count rows 135 (`Depreciation Expense`) and 136 (`Other Non Operating Revenue & Expense`). Added per the spec's documented pattern: "New non-operating descriptions added to this list when encountered."
-
-### Verified end-to-end (2026-05-02)
-
-Salem now reconciles to source on every line. Briar Glen unchanged.
-
-| Metric | Salem (Yardi) | Briar Glen (MRI) |
-| --- | ---: | ---: |
-| GL rows written | 73 (was 72 at v0.1.0) | 91 (unchanged) |
-| UNMATCHED at parse | 0 ✓ | 0 ✓ |
-| Source $ | $4,249,047.98 (v0.1.0: $4,117,468.33; +$131,579.65 management fee) | $8,306,657.64 (unchanged) |
-| Operating $ (T12 Raw Data total) | $4,205,759.14 (v0.1.0: $4,074,179.49; +$131,579.65) | $8,310,006.39 (unchanged) |
-| Depreciation — EXCLUDED $ | $43,288.84 (unchanged) | -$3,348.75 (unchanged) |
-| Leakage | $0.00 ✓ ZERO | $0.00 ✓ ZERO |
-| EGI (`Monthly Trending!N20`) | $2,201,864.71 ✓ (unchanged — management fee doesn't affect revenue) | $3,763,228.77 ✓ (unchanged) |
-| TOTAL OPEX excl. mgmt (`Monthly Trending!N66`) | $1,872,314.78 ✓ (unchanged — substrate's R66 already excludes mgmt) | $4,358,616.18 ✓ (unchanged) |
-| Management fee (`Monthly Trending!N67`) | $131,579.65 ✓ (was $0.00 at v0.1.0 — bug fixed) | $188,161.44 ✓ (already correct in v0.1.0) |
-| EBITDARM (`Monthly Trending!N68`) | $329,549.93 ✓ (unchanged — substrate excludes mgmt by accounting standard) | -$595,387.41 ✓ (unchanged) |
-| EBITDAR (`Monthly Trending!N69`) | $197,970.28 ✓ (was $329,549.93 at v0.1.0 — now correctly subtracts management fee) | -$783,548.85 ✓ (unchanged) |
-
-**Salem source-side cross-check.** Source row 126 EBITDARM = $329,549.93 → matches Salem R68 ✓. Source row 128 Management Fees = $131,579.65 → matches Salem R67 ✓. Source row 130 EBITDAR = $197,970.28 → matches Salem R69 ✓. Salem now ties to source on all four rows.
-
-**Why EBITDARM didn't change.** The substrate's R66 (`TOTAL OPEX (excl. mgmt)`) deliberately excludes the management-fee line, and R68 EBITDARM = EGI − R66. So Management fee not appearing at all (v0.1.0 bug) versus appearing in R67 separately (v0.1.1 fix) makes no difference to EBITDARM by design — that's the accounting-standard definition. The bug surfaced at R69 EBITDAR, which is EBITDARM − R67. v0.1.0's R69 was wrong by exactly the missing management fee.
-
-### How this was caught
-
-Reported by user during post-v0.1.0 testing: "There was an omitted expense item in the Salem Road T12. Management fee was not included." User pointed to Description_Map row 122 (`Management Fees → Management fee`, ready and waiting) and Salem source row 128 (the actual line in the raw T12). Diagnosis traced to the Yardi extractor's strict account-# pre-filter dropping Salem's row 128 before drop-rules ran.
-
-### Notes
-
-- v0.1.0's verification table (72 GL rows, all-zero leakage already) was internally consistent — the missing management fee was getting dropped at parse time, so neither the source-side total nor the aggregated total counted it. The bug was a *missing line item*, not a *miscalculated line item*. This is why the v0.1.0 leakage check passed despite the bug.
-- No app.py UI behavior changes. T12_VERSION constant bumped to `"0.1.1"`.
-- No template substrate changes. Description_Map already had the mappings; the bug was upstream of the workbook.
-
----
-
-## [0.1.0] — 2026-05-02
-
-First T12 code release. Substantial template substrate work landed in the kickoff chat before any Python code was written — those iterations are documented below as part of the v0.1.0 ship scope. The code release on 2026-05-02 adds parser, writer, and `app.py` integration on top of that substrate.
-
-### Added
-
-- **`t12_normalizer.py`** — Format-registry parser. `T12Format` ABC with `detect(wb)` / `extract(wb, sheet)` methods. `YardiIncomeToBudgetFormat` (detects sheet named `Income to Budget` first, falls back to scanning for ≥3 numeric account-# rows) and `MriR12mincsFormat` (sheet name match) registered. Three drop-rules applied in order during extraction: no-$-value, grand-total pattern (TOTAL/NET prefixes, EBITDA/EBITDAR/EBITDARM keywords, exact NET INCOME / NET OPERATING INCOME), explicit drop-list (initially `Other Non Operating Revenue & Expense`). Returns `T12ParseResult` (gl_rows, month_labels normalized to `MMM YYYY`, unmatched, format_name, sheet_name). Raises `UnknownT12FormatError` if no format matches. UNMATCHED detection runs against the destination workbook's `Description_Map` set.
-- **`t12_normalizer_writer.py`** — Idempotent destination writer. Loads the user's Analyzer / standalone Normalizer template (v0.1.4 substrate). Clears `T12 Input!A12:O511` + `T12 Input!C11:N11` before writing (prevents ghost rows on re-upload). Writes 12 month labels to C11:N11 with text format, then GL detail rows to A:O. Col P (Coverage Check formula), `T12_Calc!N` helper col, named ranges (`DescMap_Description`, `DescMap_Label`), and all other tabs untouched. Capacity 500 GL rows; raises `T12NormalizerCapacityError` if exceeded. Optionally appends UNMATCHED-resolution mappings to `Description_Map` after the last data row — the dynamic named ranges pick them up via COUNTA without formula edits. Upserts a `Run_Info` tab with T12 version, run timestamp, source filename, format detected, GL rows written, and Description_Map appends.
-- T12-side version constants in `app.py`: `T12_VERSION = "0.1.0"`, `T12_LAST_UPDATED = "2026-05-02"`, alongside the existing `RR_VERSION` / `RR_LAST_UPDATED`.
-
-### Changed
-
-- **`app.py`** — Raw T12 uploader added to sidebar (optional). Interactive UNMATCHED matcher form appears when the parser returns unresolved descriptions: per-row Label combobox (sourced from the Analyzer's existing 54-entry vocabulary), Section dropdown (Revenue / Labor / Non-Labor / Excluded), CareType dropdown (`-` / IL / AL / MC), Flag dropdown (8 substrate values + blank). Resolutions persist in `st.session_state.t12_resolutions` and survive Streamlit reruns; submission validates that Label and Section are filled. Single combined download "Analyzer with both data" replaces v1.7.0's RR-only Analyzer paste; disabled until rent roll AND Analyzer AND raw T12 are uploaded AND all UNMATCHED are resolved. Combined flow writes RR data to `Rent Roll Input!A7+` first via the existing `t12_writer.populate_t12()` (historical name; see SPEC-T12 §"Module naming history"), then layers T12 data on top via the new `t12_normalizer_writer.populate_t12_input()`. Standalone Normalized RR download stays available whenever a rent roll is uploaded. Version pill renders both versions: `RR v1.11.0 · T12 v0.1.0`. Page title updated to "Rent Roll & T12 Normalizer".
-- **Behavior change worth flagging.** v1.11.0's "Analyzer with Rent Roll" download (RR data only into Analyzer) is **retired** in this release per SPEC-T12 §"How the analyst uses the app". The single Analyzer download now always carries both RR and T12 data. Existing users who upload only an RR + Analyzer (no T12) will see the combined download stay disabled and only get the standalone Normalized Rent Roll. This is deliberate — the Analyzer is now defined as a both-data deliverable.
-
-### Verified end-to-end (2026-05-02)
-
-Numbers reconcile to the penny on both reference samples. Tested via parser → writer → LibreOffice recalc (`scripts/recalc.py`) → read post-recalc cell values.
-
-| Metric | Salem (Yardi) | Briar Glen (MRI) |
-| --- | ---: | ---: |
-| GL rows written | 72 / 72 ✓ | 91 / 91 ✓ |
-| UNMATCHED at parse | 0 ✓ | 0 ✓ |
-| Source $ (`T12 Input!O` sum) | $4,117,468.33 | $8,306,657.64 |
-| Operating $ (`T12 Raw Data` total) | $4,074,179.49 | $8,310,006.39 |
-| Depreciation — EXCLUDED $ (`T12 Input` col P filter) | $43,288.84 | -$3,348.75 |
-| Leakage = source − operating − excluded | $0.00 ✓ ZERO | $0.00 ✓ ZERO |
-| EGI (`Monthly Trending!N20`) | $2,201,864.71 ✓ | $3,763,228.77 ✓ |
-| EBITDARM (`Monthly Trending!N68`) | $329,549.93 ✓ | -$595,387.41 ✓ |
-
-Additional verifications:
-
-- **Idempotent re-run** — Wrote Salem (72 rows), then Briar Glen (91 rows) on top of the same workbook. Result: exactly 91 rows in `T12 Input`, no ghost Salem rows, month labels swapped to Briar Glen's Jan–Dec 2025.
-- **Capacity guard** — `T12NormalizerCapacityError` fires correctly on 501 synthetic rows; exactly 500 rows accepted (boundary OK).
-- **UNMATCHED resolution loop** — Synthetic test injected a fake description (`Pickleball League Sponsorship Income`) with mapping {Other community revenue / Revenue / `-` / blank}. Mapping appended to `Description_Map` row 316. Post-recalc, T12 Input col P resolved the fake description to its label correctly via the dynamic named range — confirming `DescMap_Description` / `DescMap_Label` auto-extension works as designed.
-- **Substrate preservation** — All 11 sheets, both named ranges, the hidden `T12_Calc!N` helper col, the 612 SUMIF formulas in `T12 Raw Data`, and rows 1-10 of `T12 Input` (title, instructions, layout note) confirmed intact post-write.
-- **Run_Info tab** — Created with all 10 T12-side keys present (version, last-updated, run timestamp, source filename, format detected, source sheet, GL rows written, months detected, UNMATCHED at parse, Description_Map appends).
-
-**Pre-existing substrate issue, not introduced by v0.1.0.** Recalc reports a single `#NAME?` error at `Rent Roll Recon!H20` on every output. Identical pre-write and post-write across both Salem and Briar Glen runs, so this is a substrate-level issue in the migrated master Analyzer (introduced during the master Analyzer migration on 2026-05-02), not anything this release added. Worth a separate substrate-cleanup pass; outside v0.1.0 scope.
+The first T12 code release will be v0.1.0. Substantial template substrate work landed in the kickoff chat before any Python code is written — these are documented as template iterations below, all part of the v0.1.0 ship scope.
 
 ### Template iterations (all ship with v0.1.0)
-
-#### Master Analyzer migration — applied 2026-05-02
-
-The five template iterations below were originally landed on the standalone T12 Normalizer template (`ALF_T12-_Normalizer.xlsx`). The user's master Analyzer (`ALF_Financial_Analyzer_Only.xlsx`) was at the pre-v0.1.0 substrate state and needed the same edits applied so that v0.1.0's parser/writer code can target either workbook.
-
-Migration applied via `migrate_analyzer.py` (one-shot script, archived under `tools/migration/`). All five batches landed cleanly, end-to-end verification matched targets to the penny:
-
-| Format | GL rows | UNMATCHED | EGI | EBITDARM |
-| --- | ---: | ---: | ---: | ---: |
-| Yardi (Salem) | 72 | 0 | $2,201,864.71 | $329,549.93 |
-| MRI (Briar Glen) | 91 | 0 | $3,763,228.77 | -$595,387.41 |
-
-Both dollar values reconcile exactly against the standalone T12 template's verification numbers, confirming the migrated master is structurally identical to the standalone v0.1.4 substrate.
-
-**Salem GL-row count correction:** the standalone-template verification table reads "73 GL rows" for Salem. The accurate count after applying parser drop-rule #3 (`Other Non Operating Revenue & Expense` on the explicit drop-list) is 72. The "73" figure was the count before the drop-list filter ran. Corrected in the verification tables in SPEC-T12.md. Total dollars and EGI/EBITDARM unaffected — that one row was already routed to `Depreciation — EXCLUDED` either way.
-
-**openpyxl side effects on save** (known limitations, no formula impact): conditional formatting rules dropped, data validation rules dropped. Both are visual/structural only. Mentioned here for traceability; same limitation as RR's existing T12 paste flow.
-
-**RR-side sheets untouched.** `Rent Roll Input`, `Rent Roll Recon`, `T12 Analytics`, `UW Output`, `RR_Calc` were not modified by the migration. RR v1.11.0 functionality preserved.
-
-**Re-running the migration is safe with caveats** — script checks pre-state and warns rather than blindly applying edits. If run on an already-migrated workbook, it would emit warnings on every batch. Idempotent on Description_Map duplicate removal, named ranges, helper col, and label-row inserts; the row-shift in Monthly Trending is the one batch that would not be idempotent, so don't re-run on already-migrated workbooks without checking.
 
 #### Template v0.1.4 — Monthly Trending fixes
 
@@ -173,7 +73,7 @@ Rewrote 500 col P formulas in `T12 Input` from hardcoded `Description_Map!$A$5:$
 
 The `MAX(5, ...)` floor prevents Excel from rejecting an empty-data-area range (`A5:A4` is invalid; `MAX(5,0+4)=5` keeps it valid even pathologically).
 
-### Architectural decisions (implemented in v0.1.0 code)
+### Architectural decisions (will be implemented in v0.1.0 code)
 
 These pin down the implementation scope before code is written:
 
@@ -194,6 +94,32 @@ Track 1's Path B (Analyzer-as-paste-target rename) shipped as RR v1.11.0 in comm
 - This changelog and `SPEC-T12.md` join `SPEC-RR.md` and `CHANGELOG-RR.md`.
 - `T12_NORMALIZER_KICKOFF.md` is superseded by `SPEC-T12.md`. Move to `docs/archive/` once v0.1.0 ships, or earlier if root tidiness matters.
 - `README.md` to be updated when v0.1.0 ships: top-level "Repo contents" section explaining the two tracks + the Analyzer destination.
+
+---
+
+## Planned for [0.1.0]
+
+First code release. Targets:
+
+### Add
+
+- `t12_normalizer.py` — parser with format-registry pattern. `YardiIncomeToBudgetFormat` and `MriR12mincsFormat` extractors. Three drop-rules applied. Returns clean DataFrame + detected month labels (normalized to `MMM YYYY`) + UNMATCHED list.
+- `t12_normalizer_writer.py` — writes to `T12 Input!A12:O511` plus `T12 Input!C11:N11` (month labels). Idempotent re-run. Capacity check raises `T12NormalizerCapacityError` if >500 GL rows. Preserves col P formulas, helper col N, named ranges, all other tabs.
+- T12-side version constants (`T12_VERSION = "0.1.0"`, `T12_LAST_UPDATED = "<ship date>"`) alongside RR's existing constants in `app.py`.
+
+### Change
+
+- `app.py` — Raw T12 uploader (NEW), interactive UNMATCHED matcher (NEW), single combined download button "Analyzer with both data" (NEW; replaces v1.7.0's RR-only Analyzer paste). Version pill shows both versions when both modules ran (e.g., `RR v1.11.0 · T12 v0.1.0`).
+- `Run_Info` tab in any output the T12 module touched gets T12 version + run timestamp + source filename + format detected.
+
+### Verify
+
+- Salem end-to-end: 73 GL rows written to `T12 Input!A12:A84`, 0 UNMATCHED, T12 Raw Data aggregations match Salem source subtotals row-by-row, Monthly Trending EGI = $2,201,865, EBITDARM = $329,550.
+- Briar Glen end-to-end: 91 GL rows written to `T12 Input!A12:A102`, 0 UNMATCHED, T12 Raw Data aggregations match expected, Monthly Trending EGI = $3,763,229, EBITDARM = -$595,387, L2L correctly subtracted from EGI.
+- Both: zero dollar leakage. Total $ in source = total $ aggregated to operating + total $ routed to `Depreciation — EXCLUDED`.
+- Hidden helper sheets (`T12_Calc`) preserved with col N formulas intact.
+- Visible aggregator sheets preserved with all formulas intact.
+- Named ranges intact and dynamic (verified by adding a Description_Map row and watching col P pick it up without formula edits).
 
 ---
 
