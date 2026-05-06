@@ -12,6 +12,15 @@ workbook:
   - RR Normalizer (Track 1, see SPEC-RR.md) — writes to `Rent Roll Input`
   - T12 Normalizer (Track 2, see SPEC-T12.md) — writes to `T12 Input`
 
+Analyzer template loading (v1.12.0):
+  - The bundled `ALF_Financial_Analyzer_Only.xlsx` from the repo root is
+    loaded silently as the default destination workbook on every run.
+  - Users can override via the "Advanced — override Analyzer template"
+    expander at the bottom of the sidebar; uploaded files win when present.
+  - The bundled file is the canonical source of `Description_Map` for
+    UNMATCHED matching. Resolutions are baked into each download but do
+    NOT propagate back to the repo; bundled-file edits go through git.
+
 A single run can produce: standalone Normalized RR workbook + populated
 Analyzer with both RR and T12 data, when both required uploads are present.
 """
@@ -43,25 +52,32 @@ from t12_writer import T12CapacityError, populate_t12
 from writer import write_output
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
 # Version constants — independent streams per SPEC-T12 §"How the version
 # stream relates to Track 1"
-# ─────────────────────────────────────────────────────────────────────────────
-APP_VERSION = "1.11.0"            # alias for RR_VERSION; kept for back-compat
-APP_LAST_UPDATED = "2026-05-01"   # alias for RR_LAST_UPDATED
+# ---------------------------------------------------------------------------
+APP_VERSION = "1.12.0"            # alias for RR_VERSION; kept for back-compat
+APP_LAST_UPDATED = "2026-05-06"   # alias for RR_LAST_UPDATED
 
-RR_VERSION = "1.11.0"
-RR_LAST_UPDATED = "2026-05-01"
+RR_VERSION = "1.12.0"
+RR_LAST_UPDATED = "2026-05-06"
 
 T12_VERSION = "0.1.1"
 T12_LAST_UPDATED = "2026-05-02"
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Description_Map dropdown options — sourced from the v0.1.4 substrate
-# ─────────────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# Bundled Analyzer — loaded silently from repo root by default
+# ---------------------------------------------------------------------------
+BUNDLED_ANALYZER_PATH = Path(__file__).parent / "ALF_Financial_Analyzer_Only.xlsx"
+
+
+# ---------------------------------------------------------------------------
+# Description_Map dropdown options — sourced from the v0.1.5 substrate
+# ---------------------------------------------------------------------------
 # Section is bounded; CareType is bounded; Flag has 8 substrate values + blank;
-# Label is the existing 54-vocabulary (free-text override allowed but discouraged).
+# Label is the existing 55-vocabulary as of v0.1.5 (free-text override allowed
+# but discouraged — see SPEC-T12 §"Closed Label vocabulary").
 DESCMAP_SECTIONS = ["Revenue", "Labor", "Non-Labor", "Excluded"]
 DESCMAP_CARETYPES = ["-", "IL", "AL", "MC"]
 DESCMAP_FLAGS = [
@@ -87,7 +103,7 @@ def _build_output_name(source_filename: str) -> str:
 
 
 def _read_descmap_labels(analyzer_bytes: bytes) -> list[str]:
-    """Pull the existing 54 Labels from the Analyzer's Description_Map for the
+    """Pull the existing Labels from the Analyzer's Description_Map for the
     matcher's Label combobox. Falls back to an empty list on any read error.
     """
     try:
@@ -103,9 +119,60 @@ def _read_descmap_labels(analyzer_bytes: bytes) -> list[str]:
         return []
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+def _detect_substrate_version(analyzer_bytes: bytes) -> str:
+    """Heuristically detect the substrate version of an Analyzer by looking
+    for canonical Labels in Description_Map.
+
+    v0.1.5 marker: "2nd Person Revenue" Label exists.
+    v0.1.4 marker: "Auto Expense" + "Lease / ground lease" exist; no "2nd Person Revenue".
+    Pre-v0.1.4: neither marker present.
+
+    Returns a string like "v0.1.5", "v0.1.4", or "(unknown)" on any read error.
+    Used for the sidebar caption only — never gates functionality.
+    """
+    try:
+        wb = openpyxl.load_workbook(pd.io.common.BytesIO(analyzer_bytes), data_only=True)
+        ws = wb["Description_Map"]
+        labels: set[str] = set()
+        for r in range(5, ws.max_row + 1):
+            v = ws.cell(r, 2).value
+            if v and str(v).strip():
+                labels.add(str(v).strip())
+        if "2nd Person Revenue" in labels:
+            return "v0.1.5"
+        if "Auto Expense" in labels and "Lease / ground lease" in labels:
+            return "v0.1.4"
+        return "pre-v0.1.4"
+    except Exception:
+        return "(unknown)"
+
+
+def _load_analyzer(uploaded_file) -> tuple[bytes, str, str]:
+    """Resolve the Analyzer source — uploaded file wins over bundled default.
+
+    Returns: (analyzer_bytes, source_label, substrate_version)
+      - analyzer_bytes: the raw .xlsx bytes
+      - source_label: "uploaded: <filename>" or "bundled (repo)"
+      - substrate_version: detected version string (e.g., "v0.1.5")
+
+    Raises FileNotFoundError if neither uploaded file nor bundled file exists.
+    """
+    if uploaded_file is not None:
+        b = uploaded_file.getvalue()
+        return b, f"uploaded: {getattr(uploaded_file, 'name', 'analyzer.xlsx')}", _detect_substrate_version(b)
+    if BUNDLED_ANALYZER_PATH.exists():
+        b = BUNDLED_ANALYZER_PATH.read_bytes()
+        return b, "bundled (repo)", _detect_substrate_version(b)
+    raise FileNotFoundError(
+        f"Bundled Analyzer not found at {BUNDLED_ANALYZER_PATH}. "
+        "Either restore the file in the repo root or upload a custom Analyzer "
+        "via the Advanced expander in the sidebar."
+    )
+
+
+# ---------------------------------------------------------------------------
 # Page setup
-# ─────────────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
 st.set_page_config(
     page_title="Senior Housing Normalizer (RR + T12)",
     page_icon="🏢",
@@ -113,9 +180,6 @@ st.set_page_config(
 )
 
 # Title row with version badge on the right.
-# Version pill shows both versions; per SPEC-T12, T12 portion lights up only
-# when T12 actually ran. We render both unconditionally because the constants
-# are static and the user appreciates seeing what's available.
 title_col, version_col = st.columns([5, 1])
 with title_col:
     st.title("Rent Roll & T12 Normalizer")
@@ -148,14 +212,14 @@ with version_col:
 st.caption(
     "Upload a senior-housing rent roll. The app detects the header, parses "
     "the parent-apartment / child-bed structure, normalizes to one-row-per-bed, "
-    "and produces a 6-tab Excel workbook. Optionally upload your ALF Financial "
-    "Analyzer plus a raw T12 to receive a populated Analyzer with both data sets."
+    "and produces a 6-tab Excel workbook. Optionally upload a raw T12 to "
+    "receive a populated Analyzer with both data sets baked in."
 )
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
 # Sidebar
-# ─────────────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
 with st.sidebar:
     st.header("Inputs")
 
@@ -165,8 +229,58 @@ with st.sidebar:
         help="Any senior housing rent roll. Header doesn't need to be on row 1.",
     )
 
+    auto_detected_date = None
+    if rr_file is not None:
+        auto_detected_date = detect_period_date(getattr(rr_file, "name", ""))
+
+    period_date_input = st.date_input(
+        "Rent Roll Period Date",
+        value=auto_detected_date or dt.date.today(),
+        help=(
+            "Written to column S of the Analyzer's Rent Roll Input sheet on "
+            "every row. Auto-detected from the rent roll filename when "
+            "possible. Override if needed."
+        ),
+    )
+    if auto_detected_date:
+        st.caption(f"Auto-detected from filename: **{auto_detected_date.isoformat()}**")
+    elif rr_file is not None:
+        st.caption("Could not auto-detect a date from the filename — set manually.")
+
+    raw_t12_file = st.file_uploader(
+        "Raw T12 (.xlsx) — optional",
+        type=["xlsx", "xlsm"],
+        key="raw_t12_uploader",
+        help=(
+            "Optional. Upload a raw T12 export from Yardi (Income to Budget) or "
+            "MRI (R12MINCS). The app parses it, detects month labels, applies "
+            "drop-rules, and writes the GL detail into the Analyzer's "
+            "'T12 Input' sheet. Mappings for any UNMATCHED descriptions can be "
+            "filled in below before download."
+        ),
+    )
+
+    st.divider()
+    st.subheader("Property Defaults")
+    care_type_default = st.selectbox(
+        "Care Type",
+        options=["(none — flag missing)", "IL", "AL", "MC"],
+        index=0,
+        help=(
+            "Applied when the rent roll source has no Care Type / Wing / "
+            "Building column. For single-care-setting properties (e.g., a "
+            "100% AL building) this fills in the Care Type for every bed. "
+            "Source values always win — explicit Care Type columns in the "
+            "rent roll override this default."
+        ),
+    )
+    if care_type_default.startswith("("):
+        care_type_default = ""
+
+    st.divider()
+    st.subheader("Optional")
     mapping_file = st.file_uploader(
-        "Mapping workbook (.xlsx) — optional",
+        "Rent Roll Mapping (.xlsx)",
         type=["xlsx"],
         help=(
             "Override defaults for Apartment_Type_Rules, Bed_Status_Rules, "
@@ -176,6 +290,7 @@ with st.sidebar:
     )
 
     st.divider()
+    st.subheader("Output")
     sheet_override = st.text_input(
         "Sheet name (leave blank to auto-detect)",
         value="",
@@ -183,87 +298,51 @@ with st.sidebar:
     )
 
     st.divider()
-    st.subheader("Property defaults")
-    care_type_default = st.selectbox(
-        "Property Care Type (applied when source has no Care Type column)",
-        options=["(none — flag missing)", "IL", "AL", "MC"],
-        index=0,
-        help=(
-            "If the rent roll has no Care Type / Wing / Building column, every "
-            "occupied bed is normally flagged as missing Care Type. Use this "
-            "for single-care-setting properties (e.g., a 100% AL building) to "
-            "apply one value to all beds. Source values always win — explicit "
-            "Care Type columns in the rent roll override this default."
-        ),
-    )
-    if care_type_default.startswith("("):
-        care_type_default = ""
-
-    st.divider()
-    st.subheader("Analyzer integration (optional)")
-
-    t12_file = st.file_uploader(
-        "ALF Financial Analyzer (.xlsx)",
-        type=["xlsx"],
-        key="t12_uploader",
-        help=(
-            "Optional. Upload your ALF Financial Analyzer workbook to receive a "
-            "populated copy with rent roll data in 'Rent Roll Input' and (if "
-            "you also upload a raw T12 below) GL detail in 'T12 Input'."
-        ),
-    )
-
-    raw_t12_file = st.file_uploader(
-        "Raw T12 (.xlsx) — optional",
-        type=["xlsx", "xlsm"],
-        key="raw_t12_uploader",
-        help=(
-            "Optional. Upload a raw T12 export from Yardi (Income to Budget) or "
-            "MRI (R12MINCS). The app parses it, detects month labels, applies "
-            "drop-rules, and writes the GL detail into your Analyzer's "
-            "'T12 Input' sheet. Mappings for any UNMATCHED descriptions can be "
-            "filled in below before download."
-        ),
-    )
-
-    auto_detected_date = None
-    if rr_file is not None:
-        auto_detected_date = detect_period_date(getattr(rr_file, "name", ""))
-
-    period_date_input = st.date_input(
-        "Rent Roll Period Date (for Analyzer col S)",
-        value=auto_detected_date or dt.date.today(),
-        help=(
-            "Written to column S of the Analyzer's Rent Roll Input sheet on every "
-            "row. Auto-detected from the rent roll filename when possible. "
-            "Override if needed."
-        ),
-    )
-    if auto_detected_date:
-        st.caption(f"Auto-detected from filename: **{auto_detected_date.isoformat()}**")
-    elif rr_file is not None:
-        st.caption("Could not auto-detect a date from the filename — set manually.")
+    with st.expander("Advanced — override Analyzer template"):
+        st.caption(
+            "By default the app uses the bundled Analyzer (`ALF_Financial_"
+            "Analyzer_Only.xlsx` in the repo root). Upload a custom Analyzer "
+            "here to override for this session only — uploads do not modify "
+            "the bundled file."
+        )
+        analyzer_override_file = st.file_uploader(
+            "ALF Financial Analyzer (.xlsx)",
+            type=["xlsx"],
+            key="analyzer_override_uploader",
+        )
 
     st.divider()
     st.caption(f"RR v{RR_VERSION} · T12 v{T12_VERSION}")
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# Resolve Analyzer source — bundled by default, override wins when present
+# ---------------------------------------------------------------------------
+try:
+    analyzer_bytes_cached, analyzer_source_label, analyzer_substrate_ver = _load_analyzer(
+        analyzer_override_file
+    )
+except FileNotFoundError as e:
+    st.error(str(e))
+    st.stop()
+
+
+# ---------------------------------------------------------------------------
 # Main — empty state
-# ─────────────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
 if rr_file is None:
-    st.info("Upload a rent roll to begin.")
+    st.info(f"Using Analyzer: **{analyzer_source_label}** (substrate {analyzer_substrate_ver}). Upload a rent roll to begin.")
     with st.expander("What the app does"):
         st.markdown(
             """
             **Track 1 — Rent Roll Normalizer**
 
             - Detects the header row in the first ~20 rows.
-            - Parses parent-apartment / child-bed layouts: apartment rows establish
-              context, child rows become normalized beds.
+            - Parses parent-apartment / child-bed layouts: apartment rows
+              establish context, child rows become normalized beds.
             - Auto-groups care charges by header prefix. Recognized buckets
-              (AL, Med Mgmt, Pharmacy) get their own columns; others roll into
-              **Other LOC $**.
+              (AL, Med Mgmt, Pharmacy) get their own columns; others roll
+              into **Other LOC $**.
             - Normalizes apt type, bed status, payer type, and care level.
             - Preserves vacant beds.
             - Exports a 6-tab Excel.
@@ -273,21 +352,26 @@ if rr_file is None:
             - Detects T12 format (Yardi `Income to Budget`, MRI `R12MINCS`).
             - Reads month labels from the source and normalizes to `MMM YYYY`.
             - Drops grand-total rows and explicit non-operating lines.
-            - Writes GL detail to your Analyzer's `T12 Input` sheet.
-            - Surfaces UNMATCHED descriptions for in-app mapping; new mappings
-              persist in your downloaded Analyzer.
+            - Writes GL detail to the Analyzer's `T12 Input` sheet.
+            - Surfaces UNMATCHED descriptions for in-app mapping; new
+              mappings persist in your downloaded Analyzer.
 
-            **Combined output:** When you upload a rent roll, an Analyzer, and a
-            raw T12, you get a single populated Analyzer with both data sets plus
-            any new mappings you supplied.
+            **Combined output:** When you upload a rent roll plus a raw T12,
+            you get a single populated Analyzer with both data sets, plus
+            any new mappings you supplied through the matcher form.
+
+            **Analyzer source:** The app uses the bundled Analyzer
+            (`ALF_Financial_Analyzer_Only.xlsx`) by default. To use a
+            different Analyzer for one session, expand
+            "Advanced — override Analyzer template" in the sidebar.
             """
         )
     st.stop()
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
 # Process — Rent Roll
-# ─────────────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
 try:
     mappings = load_mapping_workbook(mapping_file) if mapping_file else MappingSet()
     result = normalize_rent_roll(
@@ -305,8 +389,9 @@ c = result.condensed
 
 if n.empty:
     st.warning(
-        "No bed rows detected. Check that the file has a parent-apartment / child-bed "
-        "layout and that 'Bed' (or a similar column) identifies child rows."
+        "No bed rows detected. Check that the file has a parent-apartment / "
+        "child-bed layout and that 'Bed' (or a similar column) identifies "
+        "child rows."
     )
     st.stop()
 
@@ -315,21 +400,18 @@ by_type    = build_by_type(n)
 exceptions = build_exceptions(n, result.unmapped)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Process — T12 (if uploaded AND Analyzer also uploaded — descmap lives there)
-# ─────────────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# Process — T12 (if uploaded)
+# ---------------------------------------------------------------------------
+# T12 parsing requires the Analyzer's Description_Map. Since the Analyzer is
+# always available now (bundled default + optional override), T12 parsing
+# proceeds whenever a raw T12 is uploaded — no Analyzer-upload prerequisite.
 t12_parse_result = None
 t12_parse_error = None
-analyzer_bytes_cached: bytes | None = None
 descmap_labels_cached: list[str] = []
 
-# T12 parsing requires the Analyzer because Description_Map (the source of
-# truth for matching) lives in the Analyzer. If the user uploaded a raw T12
-# but not an Analyzer, we surface an explanatory message rather than parsing
-# blind.
-if raw_t12_file is not None and t12_file is not None:
+if raw_t12_file is not None:
     try:
-        analyzer_bytes_cached = t12_file.getvalue()
         analyzer_wb_for_descmap = openpyxl.load_workbook(
             pd.io.common.BytesIO(analyzer_bytes_cached), data_only=True
         )
@@ -349,12 +431,9 @@ if raw_t12_file is not None and t12_file is not None:
         t12_parse_error = f"Could not parse T12: {e}"
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
 # UNMATCHED matcher form — session-state driven
-# ─────────────────────────────────────────────────────────────────────────────
-# Resolutions persist across reruns, keyed by description string. When the
-# user uploads a different T12 with different unmatched descriptions, the
-# unrelated keys naturally fall out of `unresolved`.
+# ---------------------------------------------------------------------------
 if "t12_resolutions" not in st.session_state:
     st.session_state.t12_resolutions = {}
 
@@ -366,9 +445,9 @@ if t12_parse_result is not None:
     ]
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
 # Headline KPIs
-# ─────────────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
 colA, colB, colC, colD, colE = st.columns(5)
 total_beds = len(n)
 occ_beds = int((n["Status"] == "Occupied").sum())
@@ -386,7 +465,8 @@ colE.metric("In-Place Monthly Rev", f"${n['Total Monthly Revenue'].sum():,.0f}")
 
 st.caption(
     f"Header detected on row {result.header_row_idx + 1} (1-indexed). "
-    f"{len(result.care_groups)} care/ancillary column group(s) identified."
+    f"{len(result.care_groups)} care/ancillary column group(s) identified. "
+    f"Analyzer: {analyzer_source_label} (substrate {analyzer_substrate_ver})."
 )
 
 if result.property_care_type_default:
@@ -399,27 +479,23 @@ if result.property_care_type_default:
     )
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
 # T12 status panel (only when relevant)
-# ─────────────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
 if raw_t12_file is not None:
     st.divider()
     st.subheader("T12 Normalizer")
     if t12_parse_error is not None:
         st.error(t12_parse_error)
-    elif t12_file is None:
-        st.info(
-            "Raw T12 uploaded, but no Analyzer uploaded. The T12 parser needs "
-            "the Analyzer's Description_Map to detect UNMATCHED rows. Upload "
-            "your Analyzer in the sidebar."
-        )
     elif t12_parse_result is not None:
-        ta, tb, tc, td = st.columns(4)
+        # 5-column layout (was 4, with a duplicate-tc bug). Each metric in its
+        # own column so all five display.
+        ta, tb, tc, td, te = st.columns(5)
         ta.metric("Format", t12_parse_result.format_name)
         tb.metric("GL Rows Extracted", len(t12_parse_result.gl_rows))
         tc.metric("Period (first month)", t12_parse_result.month_labels[0])
-        tc.metric("Period (last month)",  t12_parse_result.month_labels[-1])
-        td.metric(
+        td.metric("Period (last month)",  t12_parse_result.month_labels[-1])
+        te.metric(
             "UNMATCHED",
             len(t12_parse_result.unmatched),
             help="Descriptions not found in the Analyzer's Description_Map.",
@@ -489,8 +565,6 @@ if raw_t12_file is not None:
                         use_container_width=True,
                     )
                     if submitted:
-                        # Validate that every unresolved row has Label + Section
-                        # (CareType defaults to "-", Flag is optional).
                         bad = [
                             d for d, m in new_resolutions.items()
                             if not m["label"] or not m["section"]
@@ -514,9 +588,9 @@ if raw_t12_file is not None:
                        "maps to a Label.")
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
 # Tabs
-# ─────────────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
 st.divider()
 tab_condensed, tab_full, tab_summary, tab_bytype, tab_excep, tab_audit = st.tabs([
     "Condensed RR",
@@ -530,8 +604,8 @@ tab_condensed, tab_full, tab_summary, tab_bytype, tab_excep, tab_audit = st.tabs
 with tab_condensed:
     st.subheader("Condensed RR — underwriting view")
     st.caption(
-        "Filter and sort columns before exporting. Use the three-dot menu on any "
-        "column header to sort. Use the search box above the table to filter."
+        "Filter and sort columns before exporting. Use the three-dot menu on "
+        "any column header to sort. Use the search box above the table to filter."
     )
     st.dataframe(
         c,
@@ -577,9 +651,9 @@ with tab_audit:
         st.json(result.unmapped)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
 # Download buttons
-# ─────────────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
 st.divider()
 st.subheader("Export")
 
@@ -591,6 +665,8 @@ run_meta = {
     "Run Timestamp":       dt.datetime.now().isoformat(timespec="seconds"),
     "Source File":         getattr(rr_file, "name", "uploaded"),
     "Mapping File":        getattr(mapping_file, "name", "(defaults only)"),
+    "Analyzer Source":     analyzer_source_label,
+    "Analyzer Substrate":  analyzer_substrate_ver,
     "Property Care Type Default": result.property_care_type_default or "(none)",
     "Header Row (1-idx)":  result.header_row_idx + 1,
     "Care Groups Detected": len(result.care_groups),
@@ -620,7 +696,7 @@ with dl_col1:
     st.markdown("**Normalized Rent Roll**")
     st.caption("6-tab analyst workbook with formatting.")
     st.download_button(
-        label=f"⬇️  Download {out_name}",
+        label=f"⬇️ Download {out_name}",
         data=xlsx_bytes,
         file_name=out_name,
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -628,82 +704,79 @@ with dl_col1:
         key="dl_rr",
     )
 
-# --- Download 2: Combined Analyzer (RR + T12) ---
+# --- Download 2: Combined Analyzer (RR + optional T12) ---
 with dl_col2:
-    st.markdown("**Analyzer with both data**")
+    st.markdown("**Analyzer with data**")
 
-    # Gating per SPEC-T12 §"How the analyst uses the app"
-    has_analyzer = t12_file is not None
+    # Gating: rent roll always required. T12 is optional. If T12 is uploaded,
+    # all UNMATCHED descriptions must be resolved before download.
     has_t12 = raw_t12_file is not None
     t12_parsed_ok = t12_parse_result is not None
-    all_unmatched_resolved = (
-        t12_parsed_ok
-        and len([
+    t12_unmatched_remaining = (
+        len([
             d for d in t12_parse_result.unmatched
             if d not in st.session_state.t12_resolutions
-        ]) == 0
+        ]) if t12_parsed_ok else 0
     )
+    t12_blocking = has_t12 and (not t12_parsed_ok or t12_unmatched_remaining > 0)
 
-    can_download = (
-        rr_file is not None
-        and has_analyzer
-        and has_t12
-        and t12_parsed_ok
-        and all_unmatched_resolved
-    )
+    can_download = rr_file is not None and not t12_blocking
 
-    if not has_analyzer:
-        st.caption("Upload an ALF Financial Analyzer in the sidebar to enable.")
-    elif not has_t12:
-        st.caption("Upload a raw T12 in the sidebar to enable.")
-    elif not t12_parsed_ok:
-        st.caption("T12 parse failed — see error above.")
-    elif not all_unmatched_resolved:
-        n_remaining = len([
-            d for d in t12_parse_result.unmatched
-            if d not in st.session_state.t12_resolutions
-        ])
-        st.caption(f"Resolve {n_remaining} UNMATCHED description(s) above to enable.")
+    if t12_blocking:
+        if not t12_parsed_ok:
+            st.caption("T12 parse failed — see error above.")
+        else:
+            st.caption(f"Resolve {t12_unmatched_remaining} UNMATCHED description(s) above to enable.")
     else:
+        t12_caption = (
+            f"T12 data → `T12 Input!A12+`. " if has_t12 else ""
+        )
         st.caption(
             f"RR data → `Rent Roll Input!A7+`. "
-            f"T12 data → `T12 Input!A12+`. "
+            f"{t12_caption}"
             f"Period {period_date_input.isoformat()} written to RR col S."
         )
 
     if can_download:
         try:
-            # Step 1: Write RR data into the user's Analyzer (uses existing
-            # t12_writer module; "t12_writer" name is historical — see
-            # SPEC-T12 §"Module naming history").
+            # Step 1: Write RR data into the resolved Analyzer.
             translated = translate_for_t12(c)
             populated_after_rr = populate_t12(
-                analyzer_bytes_cached or t12_file.getvalue(),
+                analyzer_bytes_cached,
                 translated,
                 period_date_input,
             )
 
-            # Step 2: Append session-state UNMATCHED resolutions (if any) and
-            # write T12 GL detail on top of the RR-populated Analyzer.
-            new_descmap_entries = list(st.session_state.t12_resolutions.values())
-            final_bytes = populate_t12_input(
-                populated_after_rr,
-                t12_parse_result,
-                new_descmap_entries=new_descmap_entries,
-                source_filename=getattr(raw_t12_file, "name", "raw_t12.xlsx"),
-                t12_version=T12_VERSION,
-                t12_last_updated=T12_LAST_UPDATED,
-            )
+            # Step 2: If T12 was uploaded, append session-state UNMATCHED
+            # resolutions and write GL detail on top of the RR-populated Analyzer.
+            if has_t12 and t12_parse_result is not None:
+                new_descmap_entries = list(st.session_state.t12_resolutions.values())
+                final_bytes = populate_t12_input(
+                    populated_after_rr,
+                    t12_parse_result,
+                    new_descmap_entries=new_descmap_entries,
+                    source_filename=getattr(raw_t12_file, "name", "raw_t12.xlsx"),
+                    t12_version=T12_VERSION,
+                    t12_last_updated=T12_LAST_UPDATED,
+                )
+            else:
+                final_bytes = populated_after_rr
 
-            t12_stem = Path(getattr(t12_file, "name", "Analyzer.xlsx")).stem
             rr_stem = Path(getattr(rr_file, "name", "rent_roll.xlsx")).stem
-            combined_out_name = (
-                f"{t12_stem} with {rr_stem} + T12 "
-                f"{period_date_input.isoformat()}.xlsx"
-            )
+            if has_t12:
+                t12_stem = Path(getattr(raw_t12_file, "name", "raw_t12.xlsx")).stem
+                combined_out_name = (
+                    f"Analyzer with {rr_stem} + {t12_stem} "
+                    f"{period_date_input.isoformat()}.xlsx"
+                )
+            else:
+                combined_out_name = (
+                    f"Analyzer with {rr_stem} "
+                    f"{period_date_input.isoformat()}.xlsx"
+                )
 
             st.download_button(
-                label=f"⬇️  Download {combined_out_name[:60]}{'…' if len(combined_out_name) > 60 else ''}",
+                label=f"⬇️ Download {combined_out_name[:60]}{'…' if len(combined_out_name) > 60 else ''}",
                 data=final_bytes,
                 file_name=combined_out_name,
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -720,7 +793,7 @@ with dl_col2:
             st.error(f"Could not produce combined output: {e}")
     else:
         st.button(
-            "⬇️  Combined download not yet available",
+            "⬇️ Combined download not yet available",
             disabled=True,
             use_container_width=True,
             key="dl_combined_disabled",

@@ -1,10 +1,75 @@
-# Changelog
+# Changelog — Rent Roll Normalizer
 
 All notable changes to the Rent Roll Normalizer.
 
 Format: each version has a section with date, summary, and per-file change notes. Newest at top.
 
 When making a code change in a chat, add an entry here in the same commit.
+
+---
+
+## [1.12.0] — 2026-05-06
+
+### Summary
+
+UI rearrangement, bundled-Analyzer default, override expander, T12 status panel bug fix. **No behavioral changes** to RR parsing, T12 parsing, or any writer module — `app.py` is the only file touched (plus a `git mv` rename of `CHANGELOG.md` / `SPEC.md` for symmetry with the T12 docs).
+
+### Added
+
+- **Bundled Analyzer by default.** The repo's `ALF_Financial_Analyzer_Only.xlsx` is loaded silently as the destination workbook on every run. Users no longer need to upload an Analyzer for the standard flow — single-click rent roll → populated Analyzer download. The bundled file is the canonical source of `Description_Map` for UNMATCHED matching during T12 parsing.
+- **Override path.** New "Advanced — override Analyzer template" expander at the bottom of the sidebar (collapsed by default). Uploading a custom Analyzer here overrides the bundled file for the session only — uploads do not modify the bundled file. Use cases: adding new data to a populated Analyzer from a prior deal, working with a v0.1.4 (or earlier) substrate Analyzer that hasn't been migrated yet, or testing a candidate substrate edit before promoting it.
+- **Substrate version detection.** New `_detect_substrate_version()` helper reads the loaded Analyzer's `Description_Map` and reports `v0.1.5`, `v0.1.4`, or `pre-v0.1.4` based on canonical Label markers (`2nd Person Revenue` for v0.1.5; `Auto Expense` + `Lease / ground lease` for v0.1.4). Surfaced in the empty-state info banner, in the post-process header caption, and in `Run_Info` metadata. Display-only — never gates functionality.
+- **Analyzer source label** in run metadata: `bundled (repo)` or `uploaded: <filename>`, alongside the detected substrate version. Helps audit which Analyzer was used after the fact.
+
+### Changed
+
+- **Sidebar reorganization.** Sections in order: `Inputs` (Rent Roll → Period Date → Raw T12), `Property Defaults` (Care Type), `Optional` (Mapping workbook), `Output` (Sheet name), and the Advanced expander at the bottom. The previous "Analyzer integration (optional)" section header is removed; Raw T12 sits alongside the rent roll and period-date as a peer optional input.
+- **T12 parsing no longer requires uploaded Analyzer.** Previous logic gated T12 parsing on having both a Raw T12 AND an uploaded Analyzer in the sidebar, because `Description_Map` was needed for UNMATCHED detection. Now that the bundled Analyzer is always available, the gate is just "Raw T12 uploaded." Removed the explanatory "Raw T12 uploaded, but no Analyzer uploaded" branch from the T12 status panel.
+- **Combined download flow.** Now produces a populated Analyzer from rent roll alone (no T12 required). When T12 is also uploaded and resolved, both data sets are baked in. Output filename adapts: `Analyzer with <rr_stem> <date>.xlsx` for RR-only, `Analyzer with <rr_stem> + <t12_stem> <date>.xlsx` for combined.
+
+### Fixed
+
+- **T12 status panel: dead-display bug.** Previous layout was 4 columns (`ta`, `tb`, `tc`, `td`) but had two `tc.metric()` calls — "Period (first month)" and "Period (last month)" — the second overwrote the first, so first-month never displayed. Layout is now 5 columns with each metric in its own column. All five display.
+
+### Versions
+
+- `APP_VERSION` / `RR_VERSION`: `1.11.0` → `1.12.0`
+- `T12_VERSION`: `0.1.1` (unchanged)
+- Bundled Analyzer substrate: v0.1.5 (unchanged from prior commit `18f55bc`)
+
+### Files changed
+
+- `app.py` — UI rearrangement, bundled-default loading, override expander, version bump, bug fix
+- `CHANGELOG.md` → `CHANGELOG-RR.md` (rename via `git mv` for symmetry with `CHANGELOG-T12.md`)
+- `SPEC.md` → `SPEC-RR.md` (rename via `git mv` for symmetry with `SPEC-T12.md`)
+- `SPEC-RR.md` — current-version line, file inventory, Analyzer-source section, T12-cross-reference, doc-rename history note, versioning convention guidance
+- This entry added
+
+### Maintenance note
+
+Editing the bundled `ALF_Financial_Analyzer_Only.xlsx` (cosmetic formatting, column widths, conditional formatting) is now a normal git workflow:
+
+1. Edit the file in Excel
+2. `git add ALF_Financial_Analyzer_Only.xlsx`
+3. `git commit -m "Analyzer: <describe edit>"`
+4. `git push`
+
+Streamlit Cloud auto-redeploys; users pick up the new bundled file on next session. **Do not edit cell formulas, named ranges, helper col `T12_Calc!N`, sheet structure, or `Description_Map` rows 5-315 (canonical 55-Label vocabulary) without bumping the substrate version and shipping a migration script** — see `CHANGELOG-T12.md` `[Substrate template v0.1.5]` for the pattern.
+
+---
+
+## [T12 Normalizer cross-reference] — 2026-05-01 to 2026-05-04
+
+The T12 Normalizer (Track 2) is an independent version stream with its own changelog at `CHANGELOG-T12.md`. The following T12-stream releases landed in this repo during the v1.10.0–v1.12.0 timeframe and affected `app.py` integration but are NOT logged in detail here:
+
+- **T12 v0.1.0** (2026-05-01, commit `ae03d61`) — Parser (`t12_normalizer.py`), writer (`t12_normalizer_writer.py`), and `app.py` integration (Raw T12 uploader, UNMATCHED matcher form, combined Analyzer download). See `CHANGELOG-T12.md` `[0.1.0]`.
+- **T12 v0.1.1** (2026-05-02, commit `f92717a`) — Yardi extractor patch: capture banner-style expenses (notably Salem's $131,579.65 Management Fees row that v0.1.0 silently dropped). See `CHANGELOG-T12.md` `[0.1.1]`.
+- **Substrate template v0.1.4** (2026-05-02, commits `272e876`, `13c9736`, `612c2ac`) — Master Analyzer migrated to v0.1.4 substrate. See `CHANGELOG-T12.md` `[Substrate template v0.1.4]` and `[Master Analyzer migration — applied 2026-05-02]`.
+- **Substrate template v0.1.5** (2026-05-04, commit `18f55bc`) — Added `2nd Person Revenue` Label. Per-bed base rate calculations now stay clean. See `CHANGELOG-T12.md` `[Substrate template v0.1.5]`.
+
+### Why this cross-reference exists
+
+`CHANGELOG-RR.md` is the source of truth for `app.py` releases (RR parsing, RR writer, RR-side UI). `CHANGELOG-T12.md` is the source of truth for T12 parser/writer/substrate changes. The two streams are independent (per `SPEC-T12.md` "How the version stream relates to Track 1"). However, T12 work that touches `app.py` shows up in both `git log app.py` and `CHANGELOG-T12.md` — this can be confusing when reading the RR changelog and seeing a gap between v1.11.0 and v1.12.0. This cross-reference closes the gap by acknowledging the parallel T12 work without duplicating its detail.
 
 ---
 
