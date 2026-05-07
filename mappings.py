@@ -89,6 +89,13 @@ DEFAULT_CARE_LEVEL = [
     (r"\blevel\s*7\b",              "Level 6+"),
     (r"\blevel\s*[89]\b",           "Level 6+"),
     (r"\blevel\s*1[0-9]\b",         "Level 6+"),
+    # Oaks Memory Care acuity tiers — "Comfort Care 1/2/3/4" parallels Level 1-4
+    (r"\bcomfort\s*care\s*1\b",     "Level 1"),
+    (r"\bcomfort\s*care\s*2\b",     "Level 2"),
+    (r"\bcomfort\s*care\s*3\b",     "Level 3"),
+    (r"\bcomfort\s*care\s*4\b",     "Level 4"),
+    (r"\bcomfort\s*care\s*5\b",     "Level 5"),
+    (r"\bcomfort\s*care\s*[6-9]\b", "Level 6+"),
     # Word-based tiers
     (r"\bbasic\b",                  "Level 1"),
     (r"\blow\b",                    "Level 2"),
@@ -120,6 +127,8 @@ DEFAULT_CARE_TYPE = [
     (r"\bdm\b",                     "MC"),    # Briar Glen code: Alzheimer's Care
     (r"\bdu7?\b",                   "MC"),    # Briar Glen code: Special Care
     (r"\bspecial\s*care\b",         "MC"),
+    (r"\bhorizons\b",               "MC"),    # Oaks at Beaufort: Memory Care wing
+    (r"\bcomfort\s*care\b",         "MC"),    # Oaks Memory Care acuity vocabulary
     # Assisted Living variants
     (r"\bassisted\s*living\b",      "AL"),
     (r"\bal\b",                     "AL"),
@@ -136,6 +145,7 @@ DEFAULT_CARE_TYPE = [
 # Any monthly-total column not matched here flows into "Other LOC $".
 DEFAULT_CARE_BUCKETS = [
     (r"assisted\s*living",          "Care Level $"),
+    (r"memory\s*care",              "Care Level $"),  # Oaks: MC level $ is care revenue, not ancillary
     (r"\bal\s*care\b",              "Care Level $"),
     (r"^care\s*charges?\b",         "Care Level $"),  # Briar Glen-style
     (r"^care\s*services?\b",        "Care Level $"),

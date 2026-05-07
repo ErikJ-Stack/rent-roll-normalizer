@@ -8,6 +8,55 @@ When making a code change in a chat, add an entry here in the same commit.
 
 ---
 
+## [1.13.0] — 2026-05-07
+
+### Summary
+
+Memory Care detection for Oaks-style rent rolls (Oaks at Beaufort verified). Three categories of source vocabulary the parser previously didn't understand are now mapped: the `Horizons` wing label (Oaks's name for the Memory Care wing), the `Comfort Care 1/2/3/4` acuity tier vocabulary used inside MC, and a second `Care Level $` column group on each row dedicated to MC charges. Surface area: `mappings.py` rule additions + a one-block change in `normalizer.py` for the Care Level extraction loop.
+
+### Added
+
+- **`mappings.py` Care Type rules.** `\bhorizons\b` → MC and `\bcomfort\s*care\b` → MC. The Horizons rule resolves the building/wing fallback for any resident in that wing; the Comfort Care rule lets a resident's Care Type resolve from the level value alone (the Care Level fallback in the chain), e.g. when neither the Care Type column nor the Building column carries a recognizable code but the level cell reads "Comfort Care 3."
+- **`mappings.py` Care Level rules.** `Comfort Care 1/2/3/4/5` → `Level 1-5`; `Comfort Care 6+` → `Level 6+`. Same Level scheme as Assisted Living, just under a different label.
+- **`mappings.py` Care Bucket rule.** `memory\s*care` → `Care Level $`. Makes any column whose header contains "Memory Care" (e.g. `OAKS SENIOR LIVING MEMORY CARE (January 2026)`) flow into the Care Level revenue bucket alongside the parallel `OAKS SENIOR LIVING ASSISTED LIVING (January 2026)` column. Pre-fix, MC charges fell into the `Other LOC $` auto-catch.
+
+### Changed
+
+- **`normalizer.py` Care Level extraction.** Previous logic broke out of the Care Level group scan after the first hit, regardless of whether that group's level column was actually populated on the row. For Oaks at Beaufort the AL group's level column is *always blank* on MC residents (because the AL column is reserved for AL residents), so the loop locked onto a NaN cell and never read the MC level. Now the loop iterates ALL groups whose bucket is `Care Level $` and picks the first one with a non-blank level value on this row. NaN cells (numpy float NaN, "nan" strings) are treated as blank during this scan.
+
+### Verified
+
+- **Oaks at Beaufort rent roll** (104 beds, 51 occupied — 28 AL + 23 MC):
+  - 50 Horizons rows now resolve as Care Type = MC (was: blank, all 50 flagged in Exceptions).
+  - MC Care Level distribution: 9× Level 3, 9× Level 2, 3× Level 1, 2× Level 4 (was: blank for all).
+  - MC charges: $14,716.13 in `Care Level $` (was: in `Other LOC $`).
+  - AL Care Level $ now $18,720.00 — $400 higher than pre-fix because room 207A (an AL resident with both AL Basic + a Comfort Care 1 add-on) now correctly sums both Level $ columns.
+  - Zero unmapped values across all five tracked categories.
+- **Salem (Oaks)** baseline: 50 beds, Care Level $ $28,125.81 — unchanged. *(Salem's concession total reads $-5,682.90 vs. SPEC baseline $-2,841.45 — a 2× factor that appears to predate this release. Not introduced by this change. Tracked for a separate fix; see Known issues.)*
+- **Briar Glen** baseline: 79 beds, Care Level $ $234,360.00, Concession $ $-14,132.00 (16 rows) — all unchanged.
+
+### Known issues
+
+- **Salem concession doubling (pre-existing, not introduced here).** Salem's `Concession (January 2026)` column and the underlying `Concession` column both match the generic `\bconcession\b` pattern in `_CONCESSION_PATTERNS`, so concessions sum twice. SPEC-RR baseline says $-2,841.45 (7 rows); current parser returns $-5,682.90 (still 7 rows). Pending separate fix — likely `(month)` suffix should win over the bare-prefix match, or the bare-prefix variant should be excluded when a `(month)` variant exists in the same source. Surfaced during v1.13.0 baseline verification but out of scope for this release.
+- **Resident with charges in BOTH AL and MC level columns.** Care Level $ correctly sums; Care Level (label) shows only the first non-blank label encountered (typically AL's). Edge case — observed once across the 104 Beaufort rows. Acceptable.
+
+### Versions
+
+- `APP_VERSION` / `RR_VERSION`: `1.12.0` → `1.13.0`
+- `APP_LAST_UPDATED` / `RR_LAST_UPDATED`: `2026-05-06` → `2026-05-07`
+- `T12_VERSION`: `0.1.1` (unchanged)
+- Bundled Analyzer substrate: v0.1.5 (unchanged)
+
+### Files changed
+
+- `mappings.py` — Care Type, Care Level, Care Bucket rule additions
+- `normalizer.py` — Care Level extraction loop scans all `Care Level $` groups, NaN-aware blank check
+- `app.py` — version bump
+- `SPEC-RR.md` — current-version line, Verified-formats table (Oaks at Beaufort row), Care Type rule patterns list, new "Multiple Care Level $ groups" decision section, Comfort Care vocabulary note
+- `CHANGELOG-RR.md` — this entry
+
+---
+
 ## [1.12.0] — 2026-05-06
 
 ### Summary

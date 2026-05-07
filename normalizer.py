@@ -626,14 +626,28 @@ def normalize_rent_roll(
                 # Vacant / Hold / Notice / Model / Down — no payer
                 payer_norm = ""
 
+            def _is_blank(x):
+                if x is None:
+                    return True
+                if isinstance(x, float) and pd.isna(x):
+                    return True
+                s = str(x).strip()
+                return s == "" or s.lower() == "nan"
+
             # Care Level (source-style raw value, e.g. "Assisted Living Level 6")
             al_care_level_raw = row.get(field_map.get("al_care_level")) if field_map.get("al_care_level") else None
-            # Also check inside detected care groups if we don't have a clean field hit
-            if (al_care_level_raw is None or str(al_care_level_raw).strip() == "") and care_groups:
+            # Also check inside detected care groups if we don't have a clean field hit.
+            # When an operator has *multiple* Care Level $ groups (Oaks at Beaufort splits
+            # AL Level + MC Level into separate columns), pick the first one that actually
+            # has a non-empty value on this row — otherwise we'd lock onto AL's blank cell
+            # and miss the MC resident's "Comfort Care 3" entirely.
+            if _is_blank(al_care_level_raw) and care_groups:
                 for g in care_groups:
                     if g.bucket == "Care Level $" and g.level_col:
-                        al_care_level_raw = row.get(g.level_col)
-                        break
+                        cand = row.get(g.level_col)
+                        if not _is_blank(cand):
+                            al_care_level_raw = cand
+                            break
             care_level_norm, care_rule = normalize_care_level(al_care_level_raw, mappings)
             if (al_care_level_raw is not None
                 and str(al_care_level_raw).strip()

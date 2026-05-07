@@ -6,7 +6,7 @@
 **Repo:** <https://github.com/ErikJ-Stack/rent-roll-normalizer> (public)
 **Owner:** Erik J (`Erikjayj@gmail.com`, GitHub: `ErikJ-Stack`)
 **Stack:** Python · Streamlit · pandas · openpyxl · Streamlit Community Cloud (free tier)
-**Current version:** v1.12.0 (2026-05-06) — UI reorganization, bundled-Analyzer default, override expander.
+**Current version:** v1.13.0 (2026-05-07) — Memory Care detection for Oaks-style rent rolls (Horizons wing, Comfort Care 1-4 acuity, split AL/MC level columns).
 
 ---
 
@@ -24,7 +24,7 @@ The Analyzer then drives the underwriting analysis (P&L, scenarios, returns) —
 * **Track 1 — Rent Roll Normalizer** (this document) — RR parsing, RR writer, Streamlit UI shell, Analyzer source resolution, period-date detection.
 * **Track 2 — T12 Normalizer** (`SPEC-T12.md`) — T12 parser (Yardi + MRI format registry), T12 writer (`T12 Input` sheet), `Description_Map` lookup, UNMATCHED matcher form.
 
-Both tracks ship in the same `app.py` and write into the same Analyzer workbook, but they have independent version streams. **Track 1 is at v1.12.0; Track 2 is at v0.1.1; bundled Analyzer substrate is at v0.1.5.**
+Both tracks ship in the same `app.py` and write into the same Analyzer workbook, but they have independent version streams. **Track 1 is at v1.13.0; Track 2 is at v0.1.1; bundled Analyzer substrate is at v0.1.5.**
 
 ---
 
@@ -214,12 +214,27 @@ Provenance recorded in `Care Type Source` column.
 * `DU7` → MC (Briar Glen: Special Care)
 * `LTC` → AL (Long-Term Care setting)
 * `Alzheimer*`, `dementia` → MC
+* `Horizons` → MC (Oaks at Beaufort: MC wing label, used as Building/Unit value)
+* `Comfort Care` → MC (Oaks Memory Care acuity vocabulary; also resolves Care Type when only the level value is populated)
 
 ### Care Level — Level 1-5 plus Level 6+ bucket
 
 User chose this over capping. Level 6, 7, 8+ all flow into `Level 6+`. For Analyzer paste, Level 6+ → Level 7, Level 1 → Basic.
 
 For operators whose source has no acuity tiers (Briar Glen): Care Level is left **blank**. The Care Type column still resolves correctly.
+
+**Comfort Care vocabulary (Oaks Memory Care).** "Comfort Care 1/2/3/4" maps to Level 1-4; Comfort Care 5 → Level 5; Comfort Care 6+ → Level 6+. Same Level 1-5 / Level 6+ scheme as Assisted Living, just under a different label.
+
+### Multiple Care Level $ groups on one operator (Oaks split AL+MC columns)
+
+Some operators (Oaks at Beaufort) split care charges into two parallel column groups on the same row:
+
+* `OAKS SENIOR LIVING ASSISTED LIVING Level / Amount / Discount / (month)`
+* `OAKS SENIOR LIVING MEMORY CARE Level / Amount / Discount / (month)`
+
+For any given resident, only one of the two has values; the other side is blank. Both groups now bucket as `Care Level $` (the `memory care` rule was added to `DEFAULT_CARE_BUCKETS` in v1.13.0). Care Level extraction iterates ALL detected `Care Level $` groups and picks the first non-blank level value, so MC residents read from the MC column even though the AL column is also detected. NaN cells are treated as blank during this scan.
+
+Edge case: if a single resident has values in BOTH groups (e.g. AL Basic + Comfort Care 1 — happens occasionally for AL residents using a memory-care add-on), `Care Level $` correctly sums both, but `Care Level` shows only the first non-blank label encountered (typically AL's). Acceptable for now — rare in practice.
 
 ### Shared apartment detection (second pass)
 
@@ -326,6 +341,7 @@ The bundled `ALF_Financial_Analyzer_Only.xlsx` (substrate v0.1.5) contains these
 | --- | --- | --- | --- | --- |
 | Salem (Oaks) | 50 | $28,125.81 | $-2,841.45 (7 rows) | Original test case. Multi-column unit+apartment, Level 1-7 acuity, three care buckets. |
 | Briar Glen | 79 (71 units, 8 shared) | $234,360.00 | $-14,132.00 (16 rows) | Single-column unit, two-letter care codes, *Vacant marker, monthly columns without suffixes, blank padding rows, totals block. Recurring Discounts + One-Time Incentives mapped (v1.9.0). |
+| Oaks at Beaufort | 104 (54 AL + 50 MC) | AL $18,720 + MC $14,716.13 | (covered by Salem) | Mixed AL+MC building. AL wing labeled `Assisted Living`, MC wing labeled `Horizons`. Two parallel care-level column groups on every row (one for AL, one for MC). Comfort Care 1-4 acuity vocabulary on the MC side. Verified end-to-end in v1.13.0. |
 
 Both verified end-to-end on every release. Concession totals added to baseline in v1.9.0 to catch sign regressions.
 
