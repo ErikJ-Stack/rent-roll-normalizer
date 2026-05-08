@@ -3,3 +3,6 @@ __pycache__/
 .claude/
 # Local-only test fixtures — contain real property financials. Never commit.
 Sample Files/
+# RR pipeline outputs — analyst-specific, not source data. The RR Normalizer
+# writes files matching this pattern; they don't belong in the repo.
+*Normalized [0-9]*.xlsx
