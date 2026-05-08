@@ -62,8 +62,8 @@ APP_LAST_UPDATED = "2026-05-07"   # alias for RR_LAST_UPDATED
 RR_VERSION = "1.13.0"
 RR_LAST_UPDATED = "2026-05-07"
 
-T12_VERSION = "0.1.1"
-T12_LAST_UPDATED = "2026-05-02"
+T12_VERSION = "0.2.0"
+T12_LAST_UPDATED = "2026-05-08"
 
 
 # ---------------------------------------------------------------------------
@@ -252,11 +252,28 @@ with st.sidebar:
         type=["xlsx", "xlsm"],
         key="raw_t12_uploader",
         help=(
-            "Optional. Upload a raw T12 export from Yardi (Income to Budget) or "
-            "MRI (R12MINCS). The app parses it, detects month labels, applies "
-            "drop-rules, and writes the GL detail into the Analyzer's "
-            "'T12 Input' sheet. Mappings for any UNMATCHED descriptions can be "
-            "filled in below before download."
+            "Optional. Upload a raw T12 export from Yardi (Income to Budget), "
+            "MRI (R12MINCS), or a broker Financial Summary (`Historical "
+            "Performance` header at A4). The app parses it, detects month "
+            "labels, applies drop-rules, and writes the GL detail into the "
+            "Analyzer's 'T12 Input' sheet. Mappings for any UNMATCHED "
+            "descriptions can be filled in below before download."
+        ),
+    )
+
+    # Cluster B (T12 v0.2.0): annualize toggle for partial-year T12 files. The
+    # parser reads the value below; default OFF surfaces a warning instead of
+    # silently scaling. Disabled in UI when no T12 is uploaded.
+    annualize_partial_year = st.checkbox(
+        "Annualize partial-year T12",
+        value=False,
+        key="annualize_partial_year",
+        disabled=raw_t12_file is None,
+        help=(
+            "When the uploaded T12 covers fewer than 12 months, multiply every "
+            "monthly value by 12/N (where N is months populated). Off by "
+            "default — partial-year T12s surface as a warning so you decide "
+            "explicitly. Use with caution: assumes flat seasonality."
         ),
     )
 
@@ -417,11 +434,16 @@ if raw_t12_file is not None:
         )
         descmap = read_descmap_descriptions(analyzer_wb_for_descmap)
         descmap_labels_cached = _read_descmap_labels(analyzer_bytes_cached)
-        t12_parse_result = parse_t12(raw_t12_file.getvalue(), descmap)
+        t12_parse_result = parse_t12(
+            raw_t12_file.getvalue(),
+            descmap,
+            annualize_partial_year=annualize_partial_year,
+        )
     except UnknownT12FormatError as e:
         t12_parse_error = (
             f"T12 format not recognized: {e}\n\n"
-            "Currently supported: Yardi (Income to Budget), MRI (R12MINCS). "
+            "Currently supported: Yardi (Income to Budget), MRI (R12MINCS), "
+            "Broker Financial Summary (`Historical Performance` header at A4). "
             "Adding a new format requires extending the format-registry in "
             "t12_normalizer.py — see SPEC-T12.md §\"Parser data flow\"."
         )
@@ -493,13 +515,43 @@ if raw_t12_file is not None:
         ta, tb, tc, td, te = st.columns(5)
         ta.metric("Format", t12_parse_result.format_name)
         tb.metric("GL Rows Extracted", len(t12_parse_result.gl_rows))
-        tc.metric("Period (first month)", t12_parse_result.month_labels[0])
-        td.metric("Period (last month)",  t12_parse_result.month_labels[-1])
+        # Use the most-recent populated label as period. Partial-year files may
+        # have leading "" labels (padded); skip those when picking display.
+        labels = [lbl for lbl in t12_parse_result.month_labels if lbl]
+        first_label = labels[0] if labels else "—"
+        last_label = labels[-1] if labels else "—"
+        tc.metric("Period (first month)", first_label)
+        td.metric("Period (last month)", last_label)
         te.metric(
             "UNMATCHED",
             len(t12_parse_result.unmatched),
             help="Descriptions not found in the Analyzer's Description_Map.",
         )
+
+        # Cluster B (B-2): partial-year detection. Surface as a warning when
+        # < 12 months are populated. Annualization (if requested in the sidebar)
+        # has already been applied by parse_t12; the warning text reflects that.
+        if t12_parse_result.populated_months < 12:
+            n = t12_parse_result.populated_months
+            if t12_parse_result.was_annualized:
+                st.warning(
+                    f"⚠ T12 is partial-year ({n} months populated). Values were "
+                    f"scaled by 12/{n} per the sidebar checkbox. Ratios assume "
+                    f"flat seasonality — review against rent roll occupancy."
+                )
+            else:
+                st.warning(
+                    f"⚠ T12 is partial-year ({n} months populated). Ratios will "
+                    f"be misleading without annualization. Toggle "
+                    f"'Annualize partial-year T12' in the sidebar to scale "
+                    f"values by 12/{n}, or proceed knowing downstream metrics "
+                    f"reflect a {n}-month period."
+                )
+
+        # Cluster B (B-1): sign-convention guards. Defensive — none of the
+        # current verified fixtures trip these on standard signs.
+        for warning in t12_parse_result.sign_warnings:
+            st.warning(warning)
 
         if t12_parse_result.unmatched:
             n_resolved = len(t12_parse_result.unmatched) - len(unresolved_descriptions)
