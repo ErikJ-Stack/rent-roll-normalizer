@@ -9,6 +9,117 @@ Newest at top.
 
 ---
 
+## 2026-05-08 — T12 v0.2.0 + Substrate v0.1.7 (BrokerFinancialSummaryFormat + Cluster B + R102 close-out)
+
+**Started as:** Track 2 chat with handoff doc `HANDOFF-T12-v0.2.0.md` specifying five phases: parser code, verification harness, app.py wiring, substrate migration, docs. Three carry-forwards rolled in together — `BrokerFinancialSummaryFormat` (high-pri from journal 2026-05-06 + 2026-05-07), Cluster B sign/partial-year (medium-pri from D-12), and `T12 Analytics!R102` lease formula (medium-pri from F-2 / A-5).
+
+**Stayed as:** A T12 chat throughout. Worked in git worktree `claude/flamboyant-golick-7205bb`. RR-side files (`normalizer.py`, `mappings.py`, `pre_cleaner.py`, `period_date.py`, `reports.py`, `writer.py`, `mapping_template.xlsx`) untouched.
+
+### Frame
+
+Five phases per handoff. Loaded existing parser, app, migration template, optimization decisions, both changelogs. Spent the first part grounding broker-format file structure (Homestead Summary's 39-datetime row 4 across CY/T12/T6M/T2M/T1M sections vs March_2026's clean 12 contiguous monthlies) and inspecting the populated_analyzer for the Description_Map vocabulary precedent that v0.1.5 Option-C work established.
+
+The handoff was tightly specified — most design decisions were locked. Main implementation calls made during the session:
+- **"Rightmost contiguous monotonic monthly run" algorithm** for broker column selection — the handoff's "rightmost 12 datetimes" rule didn't survive Homestead Summary's repeated period-end dates (Mar 2026 appears at cols 39, 40, 49, 50, 56, 59, 60). Reformulated to "rightmost contiguous run where each cell is exactly 1 col AND 1 month after the previous." Picks AB:AM cleanly.
+- **Always-prefix banner rule** with subtotal-pop and top-level-Revenues no-prefix exception. After studying the populated_analyzer's mixed prefixed/unprefixed entries, settled on: parser always prefixes when current banner is a sub-banner of the top-level "Revenues" banner; pops back on Subtotal,; and does not prefix when current_banner == top_banner. Matches populated_analyzer's structure (siblings like `Concessions`, `Respite Revenue`, `Move-In Fees` come out unprefixed under top-level Revenues; sub-section rows like `Direct Care | Payroll - Wages` carry the banner).
+- **Post-P&L cutoff**. Initial parser run produced 132 rows including Wages Analysis ratios and Non-Operating items. Added `TERMINATE_BANNER_RE = "non-?operating|wages\s+analysis|payroll\s+summary"` to stop extraction when those banners hit. Drops to 101 rows, matching the populated_analyzer's count exactly.
+- **Sign-warning narrowing**. First implementation flagged `Bad Debt` and `Vacancy` / `L2L` because those keywords are sometimes negative-sign-convention. But broker format reports Bad Debt as a positive expense ($37,329.31), and substrate v0.1.4's Monthly Trending R10/R11 already handles either-sign Vacancy/L2L. Reduced guard set to just `CONCESSION` (suffix-aware to avoid false positives from banners like `Management Fee & Bad Debt`). All four fixtures emit zero sign warnings.
+- **Cluster B annualization API**. `parse_t12(..., annualize_partial_year=False)` keyword. App owns the toggle (sidebar checkbox), parser does the math. `T12ParseResult.was_annualized` flag for UI labeling.
+
+### What shipped
+
+**Parser (T12 v0.1.1 → v0.2.0)** — `t12_normalizer.py`:
+
+- `BrokerFinancialSummaryFormat` class (~150 lines including its dedicated rightmost-monthly-run helper). Detects `Historical Performance` at A4. `extract()` walks body with a banner-stack, applies pre-financial preamble drop (skip until Revenues banner), post-P&L cutoff (stop at Non-Operating / Wages Analysis / Payroll Summary), drop rules (no-$, grand-total now extended with `Subtotal,`, explicit-list now including `NOI on Statement` / `Check`). Banner prefix applied conditionally (no-prefix when at top-level).
+- `_check_sign_convention()`, `_count_populated_months()`, `_annualize_rows()` — Cluster B helpers.
+- `T12ParseResult` extended with `sign_warnings`, `populated_months`, `was_annualized` (default-valued, backwards-compatible).
+- `parse_t12()` accepts `annualize_partial_year: bool = False`.
+- `GRAND_TOTAL_PREFIXES` += `SUBTOTAL,` / `SUBTOTAL `; `EXPLICIT_DROP_LIST` += `NOI on Statement` / `Check`.
+
+**App (RR v1.13.0, T12 v0.1.1 → v0.2.0)** — `app.py`:
+
+- `T12_VERSION = "0.2.0"`, `T12_LAST_UPDATED = "2026-05-08"`.
+- Sidebar: "Annualize partial-year T12" checkbox (disabled until raw T12 uploaded). Help text on T12 uploader extended to mention Broker Financial Summary.
+- `parse_t12()` call wires the `annualize_partial_year` kwarg.
+- T12 status panel: partial-year warning when `populated_months < 12` (different message based on whether annualized); sign-warning loop displays each `T12ParseResult.sign_warnings` entry. Period labels tolerate partial-year padded-empty entries by skipping them in display.
+- `UnknownT12FormatError` message extended to include broker format in supported-list.
+
+**Verification harness** — `tools/verify_t12_v020.py`:
+
+Parser-side end-to-end checks for all four fixtures. Asserts: format detection, GL row count, populated months, sign warnings, source $ (deterministic ±$0.01), implied NOI for broker (revenue-keyword subset minus expense subset). Prints a per-fixture report and exits 0/1. ASCII status markers (Windows console default cp1252 doesn't render ✓/✗). Substrate-level EGI / EBITDARM unchanged from v0.1.6 — workbook formulas untouched, source $ matching v0.1.1 figures implies downstream values still hold; manual interactive check via Streamlit covers this.
+
+**Substrate (v0.1.6 → v0.1.7)** — `tools/migration/migrate_to_v017.py`:
+
+Five operations, idempotent:
+1. T12 Analytics E102 = `=IFERROR(INDEX('T12 Raw Data'!R:R,MATCH("Lease / ground lease",'T12 Raw Data'!B:B,0)),0)`; F102 = `=E102` — closes A-5 / R102 carry-forward from v0.1.6.
+2. Sweep 636 SUMIFS in T12 Raw Data from `T12_Calc!$X$1:$X$501` → `$X$1:$X$500` (cosmetic, T12_Calc has 500 data rows).
+3. Workbook Health row 30 (formerly blank gutter): V8 partial-year T12 row, `=COUNTA('T12 Input'!C11:N11)` paired with ✓/⚠.
+4. Append 99 prefixed Description_Map entries (Homestead vocabulary) — all derive their Label from suffix-lookups against the populated_analyzer's v0.1.5 Option-C work, mapping mechanically to the existing 54-Label closed vocabulary. Idempotent: skips entries whose key already exists.
+5. Stamp `Cover!B8` and all 13 sheets' `AZ4` to `v0.1.7`.
+
+7 verification checks at the end. Both Homestead and March_2026 fixtures parse with **0 UNMATCHED** at v0.1.7. Description_Map row count grows 311 → 410.
+
+**Docs** — SPEC-T12.md (current-version line, Verified formats table, Template substrate v0.1.7 entry, new Cluster B subsection in Parser data flow), CHANGELOG-T12.md ([0.2.0] + [Substrate template v0.1.7] entries at top), CLAUDE.md (version lines, last-updated date, "Closed in this session" carry-forward section), this journal entry.
+
+### Discovered facts worth carrying forward
+
+- **Homestead Summary has 39 datetime cells in row 4**, distributed across multiple time-window sections (CY 2022-2025 + T12 monthly + T6M monthly + T2M + T1M) plus their period-end "Ending" total columns. The "rightmost 12 datetime cells" naive interpretation includes duplicate Mar 2026 cells from the totals/annualized columns. Right algorithm is **"rightmost contiguous run where each cell is exactly 1 col AND 1 month after the previous"** — robust to multi-section dashboards.
+- **Broker T12 published NOI is reported twice in the source**: once as `Total Net Operating Income` (caught by `TOTAL ` drop prefix) and once as `NOI on Statement` (added to EXPLICIT_DROP_LIST). Without the latter the parser would emit a synthetic GL row at the broker's NOI value, polluting downstream aggregation.
+- **The populated_analyzer's mixed prefixed/unprefixed Description_Map** (17 prefixed + 42 unprefixed Homestead entries from Option C) reflects a Label-aware judgment: prefix only when banner determines Label (`Payroll - Wages` → 8 different Labels by department). The parser can't make that judgment without descmap input. Resolution: parser always prefixes for broker; substrate carries prefixed entries for everything (mechanical doubling for "same Label regardless of banner" descriptions). All 99 Phase-4 entries derived from suffix lookups are mechanical and lossless.
+- **Workdir mistake worth noting**: my Edit/Write/Bash calls used absolute paths to the main repo (`C:\Users\erikj\Downloads\rent_roll_app\...`) instead of the worktree (`...\.claude\worktrees\flamboyant-golick-7205bb\...`). Caught mid-Phase 4. Migrated work back into the worktree via `cp` + `git checkout --` revert on main. **Lesson: always prefer relative paths (or paths rooted at the system-message-stated worktree directory) when operating in a worktree, even when absolute paths look identical to the parent repo.**
+
+### Process lessons from this session
+
+1. **Reading the populated_analyzer first paid off.** Before writing the parser, I inspected the destination state — what descriptions were prefixed, what was unprefixed, what UNMATCHED count was achievable, and what Label vocabulary already existed. That investigation determined the parser's banner-prefix rule, the post-P&L cutoff, and the Phase 4 substrate scope. Without it, the parser would have produced 132 rows with confusingly-prefixed siblings, and Phase 4 substrate would have been guesswork.
+2. **Smoke-testing after every parser change kept iterations short.** First run produced 132 GL rows (with `Wages Analysis` ratios + `NOI on Statement`). Inspecting the source and populated_analyzer at the same time made the cutoff design self-evident. Second run produced 101 — the populated_analyzer's count to the row.
+3. **The verification harness paid for itself**. Running it after copying files into the worktree confirmed nothing got lost in transit. Running it after migration confirmed 0 UNMATCHED on all four fixtures, end-to-end. Cheap to write, expensive to skip.
+4. **Per the v0.1.6 retrospective, idempotent migration verification blocks earn their weight.** `migrate_to_v017.py`'s 7-check verifier ran clean on first try, but the value of having it isn't catching bugs you don't introduce — it's establishing that the destination state is what the script claims, in 7 boolean assertions printed inline with the migration log. Worth more than its line count every time the substrate ships.
+
+### Commits this session
+
+To produce after pulling the worktree changes onto a feature branch:
+
+- `<hash>` — `T12 v0.1.1 -> v0.2.0: BrokerFinancialSummaryFormat + Cluster B (sign guards, partial-year)` *(parser code + verify_t12_v020.py)*
+- `<hash>` — `RR v1.13.0 (app.py): wire partial-year warning, annualize toggle, broker-format help text` *(app.py only — no RR Track 1 code touched)*
+- `<hash>` — `Substrate v0.1.6 -> v0.1.7: R102 lease formula, $501 sweep, V8 partial-year row, 99 Homestead descmap entries` *(migrate_to_v017.py + bundled Analyzer regen + docs)*
+
+Per handoff alternative, can collapse to a single commit `T12 v0.1.1 -> v0.2.0 + Substrate v0.1.6 -> v0.1.7` covering everything. Pick when ready to commit.
+
+### Files at session end
+
+- New: `tools/migration/migrate_to_v017.py`
+- New: `tools/verify_t12_v020.py`
+- Updated: `t12_normalizer.py` (BrokerFinancialSummaryFormat + Cluster B helpers + parse_t12 signature)
+- Updated: `app.py` (T12_VERSION 0.2.0; sidebar annualize checkbox; T12 status panel partial-year + sign warnings)
+- Updated: `ALF_Financial_Analyzer_Only.xlsx` (substrate v0.1.7, regenerated via `migrate_to_v017.py`; Description_Map 311 → 410 entries)
+- Updated: `SPEC-T12.md` (current-version line, Verified formats, Template substrate v0.1.7, Cluster B subsection)
+- Updated: `CHANGELOG-T12.md` ([0.2.0] + [Substrate template v0.1.7] entries at top)
+- Updated: `CLAUDE.md` (version lines, last-updated, Closed-in-this-session section)
+- Updated: `journal.md` (this entry)
+- Untouched: `SPEC-RR.md`, `CHANGELOG-RR.md`, `normalizer.py`, `mappings.py`, `pre_cleaner.py`, `period_date.py`, `reports.py`, `writer.py`, `mapping_template.xlsx`, `README.md`
+
+### Known follow-ups for future chats
+
+- **Branch 3 (Analytical coverage)** — sensitivities, scenarios, debt + returns, IL/AL/MC expense splits. Per OPTIMIZATION-DECISIONS.md sequencing. **Track 3 chat.** Largest open carry-forward.
+- **Branch 2 (Handoff readiness)** — pre-export gate, UW Export sheet (values-only mirror), metadata header, source trail. **Track 3 chat, after Branch 3.**
+- **README.md** — still RR-only framing per prior journal notes. Independent task; bumps about every other commit on the deferred list.
+- **Substrate version-detection cosmetic**. App's `_detect_substrate_version()` returns `v0.1.5` for any v0.1.5+ bundle (its marker is the `2nd Person Revenue` Label that v0.1.5 added; v0.1.6 / v0.1.7 don't add Labels). Cosmetic; widen the marker list when the next bundle change adds a Label.
+- **Format #4 (RealPage / AppFolio / etc.)** — when sample arrives. Format-registry pattern keeps this small.
+- **`claude/mystifying-wu-33a0f6` branch** — Memory Care detection (Oaks at Beaufort) commit `667fd67` parked there; either close out or merge. Independent of this session.
+
+### Verified end-to-end at session close
+
+| Fixture | Format | GL rows | UNMATCHED | Months | Reconciliation |
+| --- | --- | ---: | ---: | ---: | --- |
+| Salem | Yardi (Income to Budget) | 73 | 0 | 12 | source = $4,249,047.98 (matches v0.1.1) |
+| Briar Glen | MRI R12MINCS | 91 | 0 | 12 | source = $8,306,657.64 (matches v0.1.0) |
+| Homestead Pensacola | Broker Financial Summary | 101 | 0 | 12 | implied NOI = $1,411,323.58 (broker NOI to the penny) |
+| March 2026 | Broker Financial Summary | 101 | 0 | 12 | implied NOI = $1,411,323.58 |
+
+Migration `migrate_to_v017.py` ran clean on `ALF_Financial_Analyzer_Only.xlsx` (v0.1.6 → v0.1.7) — all 7 verification checks pass, idempotent re-run is a no-op. Description_Map row count: 311 → 410.
+
+---
+
 ## 2026-05-07 — T12 Substrate v0.1.6 (Analyzer optimization, Branches 1+4)
 
 **Started as:** "Optimize the analyzer before it goes into the full underwriting sheet." Read SPEC-RR, SPEC-T12, both changelogs, README, and the prior journal entry. Walked the bundled `ALF_Financial_Analyzer_Only.xlsx` to ground the work.

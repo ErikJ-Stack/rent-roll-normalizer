@@ -8,6 +8,85 @@ When making a code change in a T12-related chat, add an entry here in the same c
 
 ---
 
+## [0.2.0] — 2026-05-08
+
+Adds `BrokerFinancialSummaryFormat` (third T12 format) and Cluster B robustness hooks (sign-convention guards + partial-year T12 detection). Closes the v0.1.6 carry-forward documented in OPTIMIZATION-DECISIONS.md D-12 and the BrokerFinancialSummaryFormat carry-forward from journal 2026-05-06.
+
+### Added
+
+- **`BrokerFinancialSummaryFormat`** — third T12 format alongside Yardi and MRI.
+  - **Detection:** A4 contains `Historical Performance` (case-insensitive). When multiple sheets match, picks the first (matches Homestead's `Summary` over `P&L-Dumps`).
+  - **Column selection:** broker files may have 12 to 54+ datetime cells in row 4 (Homestead has 39 across CY / T12 / T6M / T2M / T1M sections). Parser walks row 4 right-to-left and returns the **rightmost contiguous monotonic monthly run** (≤12 cells). For Homestead Summary that picks cols AB:AM (Apr 2025 → Mar 2026, the T12 block); for March_2026 single-sheet it picks B:M.
+  - **Banner-prefix disambiguation.** Each section banner (col A text + all 12 monthly cells truly None) becomes the prefix for the next GL rows: `Direct Care | Payroll - Wages` vs `Marketing | Payroll - Wages`. Subtotal rows pop the sub-banner back to the top-level "Revenues" so siblings (`Concessions`, `Respite Revenue`, `Move-In Fees`, `Other Income`) emit unprefixed.
+  - **Pre-financial preamble drop.** Drops everything before the first banner matching `Revenue` / `Revenues` (filters Census / ADC / Room Rates summaries).
+  - **Post-P&L cutoff.** Stops on banners matching `Non-Operating` / `Wages Analysis` / `Payroll Summary` (drops below-NOI items + broker analytical sections).
+  - **Standard signs.** No per-format sign override; revenue +, expense +, concessions − (matches Yardi/MRI).
+  - **Total computed locally.** Broker "Totals" column (when present at col 14 of March_2026 or col 40 of Homestead) is ignored; parser sums the 12 monthly values.
+- **`_check_sign_convention(gl_rows)`** — Cluster B B-1. Returns warnings for descriptions containing `CONCESSION` (suffix-only match — banner-name keyword false-positives suppressed) with positive totals. Defensive; doesn't fire on any of the four verified fixtures.
+- **`_count_populated_months(gl_rows)`** — Cluster B B-2. Counts how many of the 12 month columns have at least one non-zero GL value across all rows. Drives partial-year detection downstream.
+- **`_annualize_rows(gl_rows, populated_months)`** — pure-Python annualizer. Multiplies monthly + total by 12/N.
+- **`parse_t12(..., annualize_partial_year: bool = False)`** — new optional kwarg. Controlled by the app's sidebar checkbox; when `True` and `populated_months < 12`, parser scales values before returning.
+- **`T12ParseResult` fields** — `sign_warnings: List[str]`, `populated_months: int`, `was_annualized: bool`. Backwards-compatible (positional args unchanged).
+- **`tools/verify_t12_v020.py`** — parser-side end-to-end harness covering all four reference fixtures with deterministic checks (format detection, GL row count, source $, populated months, implied NOI for broker, sign-warning + UNMATCHED counts). Substrate-level EGI / EBITDARM unchanged from v0.1.6 — workbook formulas are untouched, so v0.1.1's verified $2,201,865 (Salem) / $3,763,229 (Briar Glen) continue to hold.
+
+### Changed
+
+- **`GRAND_TOTAL_PREFIXES`** extended with `SUBTOTAL,` and `SUBTOTAL ` (broker convention catches `Subtotal, Room & Board`, `Subtotal, Care Level`, etc.).
+- **`EXPLICIT_DROP_LIST`** extended with `NOI on Statement` and `Check` (broker-specific summary lines that aren't GL detail).
+- **`app.py`** — sidebar gets an "Annualize partial-year T12" checkbox (disabled until a T12 is uploaded). T12 status panel surfaces partial-year warning when `populated_months < 12`, and lists every `sign_warning`. Period-label display tolerates partial-year padded-empty labels. Version pill shows `T12 v0.2.0`.
+
+### Verified end-to-end (2026-05-08)
+
+All four fixtures parse against the v0.1.7 Description_Map (after Phase 4 substrate appends):
+
+| Fixture | Format | GL rows | UNMATCHED | Months | Implied NOI / Source $ |
+| --- | --- | ---: | ---: | ---: | ---: |
+| Salem | Yardi (Income to Budget) | 73 | 0 | 12 | source = $4,249,047.98 |
+| Briar Glen | MRI R12MINCS | 91 | 0 | 12 | source = $8,306,657.64 |
+| Homestead Pensacola | Broker Financial Summary | 101 | 0 | 12 | implied NOI = $1,411,323.58 (broker NOI to the penny) |
+| March 2026 | Broker Financial Summary | 101 | 0 | 12 | implied NOI = $1,411,323.58 |
+
+Both broker fixtures share identical T12 data (101 unique parser-produced descriptions, $12,592,590 source); they differ only in workbook layout (Homestead is multi-section dashboard, March_2026 is single-sheet T12).
+
+### Notes
+
+- **Banner-prefix is always-on for broker files.** The parser does not consult Description_Map to decide whether to prefix. Phase 4 substrate v0.1.7 ships 99 prefixed Description_Map entries to make Homestead/March_2026 zero-UNMATCHED end-to-end. Future operators may need similar substrate vocabulary additions.
+- **Salem's source $ now includes Management Fees** ($131,579.65 — fixed in v0.1.1) — unchanged at v0.2.0.
+- **Cluster B partial-year detection counts MONTH columns with any non-zero GL value.** A row of zeros in March doesn't count March as populated, but a row of -$1 in March does.
+
+---
+
+## [Substrate template v0.1.7] — 2026-05-08
+
+Workbook-side companion to T12 code v0.2.0. Closes the substrate carry-forwards from v0.1.6 (R102 lease formula, N501→N500 cosmetic, Cluster B partial-year row) and ships the Description_Map vocabulary needed to make Homestead / March_2026 broker fixtures zero-UNMATCHED end-to-end.
+
+### Fixed
+
+- **`T12 Analytics!E102` (Lease / ground lease)** — was `=0` placeholder per v0.1.4 plan that never landed. Replaced with `=IFERROR(INDEX('T12 Raw Data'!R:R,MATCH("Lease / ground lease",'T12 Raw Data'!B:B,0)),0)`. Sibling `F102` set to `=E102`. UW Output R61 (Lease) now displays real values when source has lease data, instead of $0.
+- **`T12 Raw Data` SUMIFS range mismatch** — 636 formula cells had `T12_Calc!$X$1:$X$501` (legacy from v0.1.5 row insert). Swept to `$X$1:$X$500` to match T12_Calc's actual 500-row data area. Cosmetic; T12_Calc row 501 reads empty either way, so no $ effect.
+
+### Added
+
+- **`Workbook Health!A30` — V8 partial-year T12 validation row.** Formula: `=COUNTA('T12 Input'!C11:N11)` paired with `=IF(B30=12,"✓","⚠")`. Surfaces partial-year T12s alongside V1-V7 in the existing Validation section (replaces the formerly-blank gutter row 30 between Validation and Diagnostics).
+- **99 Description_Map entries (Homestead vocabulary).** Mechanically derived from the populated_analyzer's v0.1.5 Option-C work: for each parser-produced unique broker description, its suffix-Label mapping is inherited (e.g., `Direct Care | Payroll - Overtime → Overtime wages`, `Utilities | Electric → Utilities`, `Marketing | Payroll - Wages → Administrative labor`). All 99 map cleanly to the existing 54-Label closed vocabulary. After this addition, both Homestead Pensacola and March_2026 broker fixtures parse with **zero UNMATCHED descriptions**.
+
+### Changed
+
+- **Substrate version stamp** `v0.1.6 → v0.1.7` (Cover!B8, all 13 anchor `AZ4` cells).
+
+### Migration script
+
+- **`tools/migration/migrate_to_v017.py`** — idempotent. Operations: apply lease formula at E102/F102 → sweep $501→$500 across T12 Raw Data → add V8 partial-year validation row → append 99 Description_Map entries (skipping any already-present keys) → stamp version cells → run 7 verification checks.
+
+### Verified end-to-end (2026-05-08)
+
+- Migration ran clean against v0.1.6 bundled `ALF_Financial_Analyzer_Only.xlsx`. All 7 verification checks pass.
+- Re-run (v0.1.7 → v0.1.7) is a no-op via the `is_already_v017` guard.
+- Description_Map row count grows from 311 → 410 (311 existing + 99 new).
+- All four reference fixtures (Salem, Briar Glen, Homestead, March_2026) produce 0 UNMATCHED when parsed against the v0.1.7 substrate.
+
+---
+
 ## [Substrate template v0.1.6] — 2026-05-07
 
 Workbook-side optimization round per OPTIMIZATION-DECISIONS.md (Branches 1 + 4 of the optimization mind map). Cluster B (sign-convention guards, partial-year T12 handling) is code-side and ships separately on Track 2.
