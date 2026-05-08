@@ -1,3 +1,5 @@
 ﻿.venv/
 __pycache__/
 .claude/
+# Local-only test fixtures — contain real property financials. Never commit.
+Sample Files/

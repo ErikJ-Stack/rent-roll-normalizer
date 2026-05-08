@@ -2,7 +2,7 @@
 
 > Onboarding doc for any Claude session (chat or Claude Code) working on this repo. Read this first — it points to canonical truth and surfaces facts that previously had to be grubbed for.
 
-**Last updated:** 2026-05-08 (after Substrate v0.1.6 ship)
+**Last updated:** 2026-05-08 (after T12 v0.2.0 + Substrate v0.1.7 ship)
 
 ---
 
@@ -49,8 +49,9 @@ The repo runs three parallel tracks. They share an Analyzer but are otherwise in
 | Changelog | `CHANGELOG-T12.md` |
 | Bundled workbook | `ALF_Financial_Analyzer_Only.xlsx` |
 | Migration scripts | `tools/migration/migrate_to_v01N.py` (one per substrate version) |
-| Current code version | T12 v0.1.1 |
-| Current substrate version | v0.1.6 |
+| Verification harness | `tools/verify_t12_v020.py` (parser-side; runs all four reference fixtures) |
+| Current code version | T12 v0.2.0 |
+| Current substrate version | v0.1.7 |
 
 **Naming history:** `t12_translator.py` was renamed to `t12_normalizer.py` at some point. If a chat references `t12_translator`, it's old terminology — confirm in the live file tree.
 
@@ -85,26 +86,26 @@ Conversational examples should label placeholder text as `<REPLACE THIS>` so the
 
 ---
 
-## Open carry-forwards (as of 2026-05-08)
+## Open carry-forwards (as of 2026-05-08, post-T12 v0.2.0)
 
 These are real backlogged items that previous chats deferred. They have a home; they're just not staffed yet.
 
-### High priority
+### Closed in this session (T12 v0.2.0 + Substrate v0.1.7)
 
-- **`BrokerFinancialSummaryFormat` parser class (T12 v0.2.0).** Third T12 format alongside Yardi and MRI, structurally distinct (single sheet, "Historical Performance" header at row 4, monthly columns + Totals column). Surfaced on Homestead Pensacola broker file 2026-05-04 and processed via "Option C: one-off paste validation" workaround. Re-surfaced 2026-05-08 with a `March_2026_T12.xlsx` upload that has the same fingerprint. **Track 2 chat.** Carry-forward inputs: that file + Homestead reference file + journal 2026-05-06.
+- ✓ **`BrokerFinancialSummaryFormat` parser class** — shipped. Third T12 format detects via `Historical Performance` at A4, walks row 4 for the rightmost contiguous monthly run, applies banner-prefix disambiguation (`Direct Care | Payroll - Wages`) with subtotal-pop, and stops at `Non-Operating` / `Wages Analysis` / `Payroll Summary` banners. Reconciles Homestead to NOI $1,411,323.58 to the penny.
+- ✓ **Cluster B — sign-convention guards + partial-year T12 handling** — shipped. `_check_sign_convention()` flags positive-sum CONCESSION rows (suffix-aware so banner names aren't false-positives). `_count_populated_months()` + optional `annualize_partial_year` flag. App surfaces a partial-year warning + sidebar checkbox.
+- ✓ **`T12 Analytics!R102` lease formula** — fixed in substrate v0.1.7 with INDEX/MATCH against `T12 Raw Data!R:R`. UW Output R61 Lease will now display real values when source has lease data.
+- ✓ **`T12 Raw Data` SUMIFS N501 vs N500 cosmetic** — swept (636 cells) in v0.1.7 migration.
 
-### Medium priority
+### Medium priority (still open)
 
-- **Cluster B — sign-convention guards + partial-year T12 handling.** Code-side robustness work in `t12_normalizer.py` and `app.py`. Deferred from the v0.1.6 optimization round per OPTIMIZATION-DECISIONS.md D-12. **Track 2 chat.**
 - **Branch 3 — Analytical coverage.** Sensitivities, scenarios, debt + returns tab, IL/AL/MC expense splits. Per OPTIMIZATION-DECISIONS.md sequencing. **Track 3 chat.**
-- **`T12 Analytics!R102` lease formula** — still `=0` placeholder. Substrate v0.1.7 work; rewires an existing aggregator so was out of scope for v0.1.6. **Track 2 chat.**
 - **Branch 2 — Handoff readiness.** Pre-export gate, UW Export sheet (values-only mirror), metadata header, source trail. **Track 3 chat, after Branch 3.**
 
 ### Low priority
 
-- **`T12 Raw Data` SUMIFS range cosmetic mismatch** (N501 vs N500). Bundle with whatever next migration touches that range.
 - **README.md update** — bring it from RR-only framing to current dual-pipeline state.
-- **Substrate version-detection bug suspected.** App's `_detect_substrate_version()` showed v0.1.4 in a screenshot 2026-05-08 even though the deployed bundle was supposed to be v0.1.5. May resolve itself on next deploy after v0.1.6 lands; if not, worth a small Track 1 chat.
+- **Substrate version-detection bug suspected.** App's `_detect_substrate_version()` looks for `2nd Person Revenue` (v0.1.5 marker) in the Description_Map column B; v0.1.6/v0.1.7 add no new Labels there, so the detector returns `v0.1.5` for any of v0.1.5+. Cosmetic — worth widening the marker list when the bundle next changes Label vocabulary.
 
 ### Hanging branch (not a backlog item, but worth knowing)
 
