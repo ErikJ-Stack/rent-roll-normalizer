@@ -226,6 +226,19 @@ App raises `T12NormalizerCapacityError` with a clear message if exceeded.
 
 More formats added as encountered. Each format earns a verification line plus any quirks documented under "Key decisions."
 
+### Test fixtures — `Sample Files/` (local-only)
+
+The four reference T12s above live in a repo-root directory `Sample Files/`. The directory is **gitignored** (the .xlsx files contain real property financials and must not be committed to a public repo). Canonical filenames consumed by `tools/verify_t12_v020.py`:
+
+- `Salem Road T-12 1.31.26.xlsx`
+- `Briar Glen T12 P&L Statement_2025.12.xlsx`
+- `2026-03 Homestead Village Pensacola Financial Summary.xlsx`
+- `Homestead - March 2026 T12.xlsx`
+
+A new developer needs to populate `Sample Files/` from their own copy before running the verify harness. The Streamlit app accepts the same files as uploads; no hard dependency on the directory.
+
+Run from repo root: `python tools/verify_t12_v020.py` — exits 0 with four `[OK] PASS` blocks when all fixtures are present and the parser is healthy.
+
 ---
 
 ## Key decisions captured during template work

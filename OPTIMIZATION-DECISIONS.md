@@ -409,13 +409,13 @@ All in-scope design questions resolved. The full content of substrate v0.1.6:
 | D | Add 5 named ranges | Plus `T12 Analytics!B2 = =Property_Name` (additive fill) |
 | D | Cell comments (light) | T12 Raw Data SUMIFS pattern, T12 Analytics core, EGI calc, EBITDAR calc, H20 chain |
 
-### Out of this round (logged)
+### Out of this round (logged) — ALL CLOSED 2026-05-08
 
-| Item | Why | Where to revisit |
+| Item | Status | Resolution |
 | --- | --- | --- |
-| T12 Analytics R102 lease formula (A-5) | Rewires existing aggregator | Substrate v0.1.7 or whenever next migration touches that range |
-| T12 Raw Data N501 vs N500 SUMIFS range mismatch | Same — rewires aggregator | Same |
-| Cluster B (sign guards, partial-year T12) | Code-side, separate Track 2 chat | New chat, ref this MD's D-12 |
+| T12 Analytics R102 lease formula (A-5) | ✓ **Closed** | Substrate v0.1.7 (commit `36e1659`). E102 now `=IFERROR(INDEX('T12 Raw Data'!R:R,MATCH("Lease / ground lease",'T12 Raw Data'!B:B,0)),0)`; F102 = `=E102`. |
+| T12 Raw Data N501 vs N500 SUMIFS range mismatch | ✓ **Closed** | Substrate v0.1.7 — swept 636 cells from `:$X$501` → `:$X$500`. |
+| Cluster B (sign guards, partial-year T12) | ✓ **Closed** | T12 v0.2.0 (commit `555f4e4`). `_check_sign_convention` (CONCESSION-only, suffix-aware), `_count_populated_months`, `parse_t12(..., annualize_partial_year=False)`. App wires the sidebar checkbox + status-panel warnings. |
 
 ---
 
@@ -461,21 +461,15 @@ The script should:
 
 ---
 
-## Cluster B carry-forward (deferred per D-12)
+## Cluster B — CLOSED 2026-05-08 (T12 v0.2.0, commit `555f4e4`)
 
-These remain on the Branch 1 to-do list but ship in a separate Track 2 chat:
+Originally deferred per D-12 to a separate Track 2 chat to honor the one-track-at-a-time principle. That chat happened on 2026-05-08 and shipped both items as part of the T12 v0.2.0 release. Implementation deltas vs. the original plan:
 
-**B-1. Sign-convention guards** (`t12_normalizer.py`, `app.py`)
-- Detect positive-signed concession rows
-- Per-format sign-rule slot (currently uses `is_negative_expense` heuristic)
-- Vacancy / L2L sanity check on parser output
+**B-1. Sign-convention guards** — shipped as `_check_sign_convention(gl_rows)` in `t12_normalizer.py`. **Narrower than originally scoped:** the guard fires only on `CONCESSION` (the universally-negative line item), not on Vacancy / L2L / Bad Debt. Those three are operator-discretionary signs (contra-revenue vs. expense) and the substrate's Monthly Trending R10/R11 already absorbs either polarity. Bad Debt as positive expense is the broker convention. Suffix-only matching (`row.description.split(" | ")[-1]`) avoids false positives when a banner like `Management Fee & Bad Debt` happens to contain a guarded keyword. No per-format `is_negative_expense` slot was added — wasn't needed for any of the four verified fixtures.
 
-**B-2. Partial-year T12 handling** (`t12_normalizer.py`, `app.py`, possibly Workbook Health)
-- Detection: count populated month columns in T12 Input
-- Warning surface: app.py status panel, plus a Validation row on Workbook Health
-- Optional annualization toggle (multiplier = 12/N)
+**B-2. Partial-year T12 handling** — shipped as `_count_populated_months(gl_rows)` + optional `parse_t12(..., annualize_partial_year=False)` kwarg in `t12_normalizer.py`. App.py wires a sidebar checkbox (disabled until a T12 is uploaded) and surfaces a partial-year warning in the T12 status panel when `populated_months < 12`. Workbook Health gets a V8 partial-year row at substrate v0.1.7 (`=COUNTA('T12 Input'!C11:N11)` paired with ✓/⚠ — see commit `36e1659`).
 
-When that chat opens, `SPEC-T12.md` and `CHANGELOG-T12.md` are the docs to update. This MD's Q-B-defer entry can be referenced as the boundary of where this session left things.
+Verification covers all four reference fixtures via `tools/verify_t12_v020.py`. None trip sign warnings on standard signs (the guard is genuinely defensive, not actively used by any current fixture).
 
 ---
 

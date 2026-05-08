@@ -77,24 +77,27 @@ Five operations, idempotent:
 
 ### Commits this session
 
-To produce after pulling the worktree changes onto a feature branch:
+Shipped via PR [#1](https://github.com/ErikJ-Stack/rent-roll-normalizer/pull/1) (merged 2026-05-08 19:48 UTC, merge commit `03f9df1`):
 
-- `<hash>` — `T12 v0.1.1 -> v0.2.0: BrokerFinancialSummaryFormat + Cluster B (sign guards, partial-year)` *(parser code + verify_t12_v020.py)*
-- `<hash>` — `RR v1.13.0 (app.py): wire partial-year warning, annualize toggle, broker-format help text` *(app.py only — no RR Track 1 code touched)*
-- `<hash>` — `Substrate v0.1.6 -> v0.1.7: R102 lease formula, $501 sweep, V8 partial-year row, 99 Homestead descmap entries` *(migrate_to_v017.py + bundled Analyzer regen + docs)*
+- `555f4e4` — `T12 v0.1.1 -> v0.2.0: BrokerFinancialSummaryFormat + Cluster B` *(parser code + tools/verify_t12_v020.py)*
+- `0649ae5` — `app.py: T12 v0.2.0 wiring (partial-year toggle, sign warnings, broker)` *(app.py only — no RR Track 1 code touched; RR_VERSION unchanged at 1.13.0)*
+- `36e1659` — `Substrate v0.1.6 -> v0.1.7: R102 lease, $501 sweep, Homestead descmap, V8 row` *(migrate_to_v017.py + bundled Analyzer regen + docs)*
+- `6037671` — `verify_t12_v020: switch fixture paths to repo-root Sample Files/` *(post-PR-open follow-up after the user staged Sample Files; .gitignore updated)*
 
-Per handoff alternative, can collapse to a single commit `T12 v0.1.1 -> v0.2.0 + Substrate v0.1.6 -> v0.1.7` covering everything. Pick when ready to commit.
+Three-commit split (parser / app / substrate+docs) plus the late-arriving Sample Files path swap. Each commit is a coherent unit, picked over the handoff's "single commit" alternative for cleaner per-track separation in main's history.
 
 ### Files at session end
 
 - New: `tools/migration/migrate_to_v017.py`
 - New: `tools/verify_t12_v020.py`
+- New convention: `Sample Files/` directory at repo root for local-only T12 fixtures (gitignored — files contain real property financials and must not be published). The four fixtures: `Salem Road T-12 1.31.26.xlsx`, `Briar Glen T12 P&L Statement_2025.12.xlsx`, `2026-03 Homestead Village Pensacola Financial Summary.xlsx`, `Homestead - March 2026 T12.xlsx`.
+- Updated: `.gitignore` (added `Sample Files/`)
 - Updated: `t12_normalizer.py` (BrokerFinancialSummaryFormat + Cluster B helpers + parse_t12 signature)
 - Updated: `app.py` (T12_VERSION 0.2.0; sidebar annualize checkbox; T12 status panel partial-year + sign warnings)
 - Updated: `ALF_Financial_Analyzer_Only.xlsx` (substrate v0.1.7, regenerated via `migrate_to_v017.py`; Description_Map 311 → 410 entries)
 - Updated: `SPEC-T12.md` (current-version line, Verified formats, Template substrate v0.1.7, Cluster B subsection)
 - Updated: `CHANGELOG-T12.md` ([0.2.0] + [Substrate template v0.1.7] entries at top)
-- Updated: `CLAUDE.md` (version lines, last-updated, Closed-in-this-session section)
+- Updated: `CLAUDE.md` (version lines, last-updated, "Closed 2026-05-08" carry-forward section)
 - Updated: `journal.md` (this entry)
 - Untouched: `SPEC-RR.md`, `CHANGELOG-RR.md`, `normalizer.py`, `mappings.py`, `pre_cleaner.py`, `period_date.py`, `reports.py`, `writer.py`, `mapping_template.xlsx`, `README.md`
 
