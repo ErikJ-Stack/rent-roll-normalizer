@@ -56,11 +56,11 @@ from writer import write_output
 # Version constants — independent streams per SPEC-T12 §"How the version
 # stream relates to Track 1"
 # ---------------------------------------------------------------------------
-APP_VERSION = "1.13.0"            # alias for RR_VERSION; kept for back-compat
-APP_LAST_UPDATED = "2026-05-07"   # alias for RR_LAST_UPDATED
+APP_VERSION = "1.14.0"            # alias for RR_VERSION; kept for back-compat
+APP_LAST_UPDATED = "2026-05-08"   # alias for RR_LAST_UPDATED
 
-RR_VERSION = "1.13.0"
-RR_LAST_UPDATED = "2026-05-07"
+RR_VERSION = "1.14.0"
+RR_LAST_UPDATED = "2026-05-08"
 
 T12_VERSION = "0.2.0"
 T12_LAST_UPDATED = "2026-05-08"

@@ -8,6 +8,68 @@ When making a code change in a chat, add an entry here in the same commit.
 
 ---
 
+## [1.14.0] — 2026-05-08
+
+### Summary
+
+Homestead-style broker-condensed rent roll format support (Homestead Village Pensacola verified — 176 units across IL/AL/MC). Three categories of source vocabulary the parser previously didn't understand are now mapped: a new set of column header labels (`Unit ID`, `Cottage`, `Area`, `Category`, `BR/BA`, `Market / Mo YYYY`, `Actual / Mo YYYY`, `Status`), the `STU` apt_type code, and the `NTV` (Notice To Vacate) status code. Self-contained vacant rows with no resident name now emit instead of being silently dropped (the previous behavior cost 40 of 176 units on the Homestead file). Pre-cleaner extended to drop the Homestead end-of-sheet pricing-summary table and the `ERRORS!!!` / `Current Date:` chrome at the top.
+
+### Added
+
+- **`normalizer.py` FIELD_PATTERNS additions.** Header-classification patterns for the Homestead-style broker-condensed format:
+  - `unit`: `^unit\s*id$` (Homestead's unique cottage+room identifier, e.g. `A1`). Placed first so it wins over the generic `^unit$` fallback. With first-wins semantics in the build loop, the per-cottage `Unit` column (which would otherwise overwrite this) falls through unmapped — leaving `unit_id` set to the unique `Unit ID` value.
+  - `apt_type`: `^br\s*/\s*ba$` (Homestead's `BR/BA` column with `STU` / `1BR` / `2BR` values).
+  - `market_rate`: `^market\s*/\s*mo(\s*\d{4})?$` (Homestead's `Market / Mo 2026`-style year-suffixed column).
+  - `actual_rate`: `^actual\s*/\s*mo(\s*\d{4})?$` (matching pair).
+  - `bed_status`: `^status$` (Homestead self-contained: one row per unit with `Status` column carrying the per-unit status).
+  - `sqft`: `^area$` (Homestead's square-footage column label).
+  - `care_type`: `^category$` (Homestead's IL / AL / MC-I / MC-JK column — values resolve via existing `\bil\b` / `\bal\b` / `\bmc\b` rules).
+- **`mappings.py` apt_type rule.** `\bstu\b` → `Studio` (Homestead-style code, parallel to existing `\bstd\b` Briar Glen rule).
+- **`mappings.py` bed_status rule.** `\bntv\b` → `Notice`, ordered before `\boccupied\b` so Homestead's `Occ w/ NTV` value resolves to `Notice` rather than falling through unmapped. NTV is "Notice To Vacate" — semantically the unit is currently occupied but on notice; the bed-status taxonomy collapses that to `Notice`.
+- **`pre_cleaner.py` banner prefixes.** `errors!!!` and `current date:` — Homestead's row-2 chrome cells.
+- **`pre_cleaner.py` totals signals.** `il subtotal`, `al subtotal`, `mc subtotal`, `double-check`, `avg area` — all anchored markers for the Homestead end-of-sheet pricing-summary table that follows the unit list. The first match (`avg area` on the second-table header row) cuts the entire summary block, including the secondary `Unit ID` / `# Units` header that would otherwise leak through as 6 garbage records (4 IL-cottage rows + a "Monthly Total" row + a "Double-Check" row).
+
+### Changed
+
+- **`normalizer.py` `_row_is_self_contained_unit()`.** Previously required a resident name (or `*Vacant` marker) on the row to qualify as self-contained. Now also accepts a recognized `bed_status` value, gated on the value matching one of the known status keywords (`occupied`, `vacant`, `notice`, `hold`, `ntv`, etc.). Rationale: Homestead reports `VACANT` per row in the Status column even when the resident slot is empty, and the prior logic silently dropped 40 of the 176 truly-vacant rows because they had no resident name to qualify them. The keyword gate prevents summary-block rows where the Status column happens to hold a number or a label like "Monthly Total" from emitting as junk records. SPEC-RR §"Self-contained row detection" updated to reflect the dual signal.
+
+### Verified
+
+- **Homestead Village Pensacola rent roll** (176 units across IL=62 / AL=62 / MC=52):
+  - 176 rows out, exact match to source pricing-summary subtotals (was: 136 rows, 40 missing — every truly-vacant unit dropped silently).
+  - Care Type breakdown: IL=62 / AL=62 / MC=52 — exact match to source (was: every row blank; broke `Rent Roll Recon` COUNTIFS).
+  - Status breakdown: 128 Occupied + 43 Vacant + 5 Notice = 176 (was: every row stamped `Occupied` via the no-bed_status fallback inference).
+  - Apt Type, Sq Ft, Market Rate, Actual Rate columns all populated (were: blank for every row).
+  - Unit IDs preserved as unique `A1` / `B1` / etc. (was: just the per-cottage number `1`, causing 10× collisions).
+  - Zero unmapped values across all five tracked categories (apt_type, bed_status, payer, care_level, care_type).
+  - Pre-cleaner stats: 216 input rows → 184 output rows; cuts at input row 189 (the `Avg Area` header of the secondary table); drops 26 rows after totals (the entire pricing-summary block).
+- **Salem (Oaks)**, **Briar Glen**, **Oaks at Beaufort** baselines: no regression expected — none of the new patterns overlap with their existing header vocabulary, the new bed_status fallback is gated on recognized status keywords (Briar Glen's `*Vacant` resident marker still flows through the existing resident-name path with the inline status strip at lines 602-607), and the new pre-cleaner signals are operator-specific phrases. **Worth a smoke test on the next run of any Salem/Briar/Beaufort file.**
+
+### Known issues
+
+- **`CLAUDE.md` "hanging branch" carry-forward note is stale.** The note flags `claude/mystifying-wu-33a0f6` as containing unmerged v1.13.0 work, but commit `667fd67` ("RR v1.12.0 -> v1.13.0: Memory Care detection (Oaks at Beaufort)") IS on main. CLAUDE.md updated in the same commit as this release to remove the note and refresh `Current version` to v1.14.0.
+- **`README.md`** still has the RR-only framing and doesn't mention the Homestead format. Same low-pri carry-forward as before.
+
+### Versions
+
+- `APP_VERSION` / `RR_VERSION`: `1.13.0` → `1.14.0`
+- `APP_LAST_UPDATED` / `RR_LAST_UPDATED`: `2026-05-07` → `2026-05-08`
+- `T12_VERSION`: `0.2.0` (unchanged)
+- Bundled Analyzer substrate: v0.1.7 (unchanged)
+
+### Files changed
+
+- `normalizer.py` — FIELD_PATTERNS additions for Homestead headers; `_row_is_self_contained_unit()` accepts bed_status as an alternate signal
+- `mappings.py` — `\bstu\b` → Studio; `\bntv\b` → Notice (ordered before `\boccupied\b`)
+- `pre_cleaner.py` — banner prefix and totals-signal additions for Homestead chrome and pricing-summary block
+- `app.py` — version bump
+- `SPEC-RR.md` — current-version line, Verified-formats table (Homestead Pensacola row), Self-contained row detection section
+- `CHANGELOG-RR.md` — this entry
+- `journal.md` — session entry
+- `CLAUDE.md` — Last-updated date, RR current-version line, hanging-branch carry-forward removed
+
+---
+
 ## [1.13.0] — 2026-05-07
 
 ### Summary

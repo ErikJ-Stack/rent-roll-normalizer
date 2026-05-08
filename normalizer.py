@@ -54,12 +54,14 @@ HEADER_SIGNALS = {
 # First match wins. Patterns are matched against a lower-cased, whitespace-
 # collapsed version of the header string.
 FIELD_PATTERNS: Dict[str, List[str]] = {
-    "unit":            [r"^unit(\s*#|\s*number)?$", r"^unit$", r"^building$"],
+    "unit":            [r"^unit\s*id$",                       # Homestead-style: unique cottage+room ID (e.g. "A1")
+                        r"^unit(\s*#|\s*number)?$", r"^unit$", r"^building$"],
     "apartment":       [r"^apartment$", r"^apt(\s*#|\s*number)?$",
                         r"^room(\s*#|\s*number)?$", r"^suite$",
                         r"^unit\s*$"],  # trailing-space "Unit " (Briar Glen)
     "apt_type":        [r"^apartment\s*type$", r"^apt\s*type$",
-                        r"^unit\s*type$", r"^floor\s*plan$"],
+                        r"^unit\s*type$", r"^floor\s*plan$",
+                        r"^br\s*/\s*ba$"],   # Homestead: "BR/BA" (STU / 1BR)
     "bed":             [r"^bed$", r"^bed\s*#$", r"^bed\s*letter$",
                         r"^privacy\s*level$"],   # Briar Glen: PRI/SPA/SPB
     "potential_occ":   [r"^potential\s*occupancy$", r"^max\s*occupancy$",
@@ -71,26 +73,31 @@ FIELD_PATTERNS: Dict[str, List[str]] = {
     "payer":           [r"^payer$", r"^payer\s*type$", r"^payor$"],
     "market_rate":     [r"^market\s*rate$", r"^gross\s*rent$",
                         r"^scheduled\s*rent$",
-                        r"^unit\s*market\s*rate$"],   # Briar Glen
+                        r"^unit\s*market\s*rate$",   # Briar Glen
+                        r"^market\s*/\s*mo(\s*\d{4})?$"],   # Homestead: "Market / Mo 2026"
     "actual_rate":     [r"^actual\s*rate$", r"^net\s*rent$",
                         r"^contract\s*rent$", r"^current\s*rent$",
-                        r"^accommodation(\s*service)?$"],   # Briar Glen
+                        r"^accommodation(\s*service)?$",   # Briar Glen
+                        r"^actual\s*/\s*mo(\s*\d{4})?$"],   # Homestead: "Actual / Mo 2026"
     "discount":        [r"^discount$"],
     "move_in":         [r"^move\s*in$", r"^move[\- ]in\s*date$",
                         r"^lease\s*start$",
                         r"^resident\s*move\s*in\s*date$"],   # Briar Glen
     "move_out":        [r"^estimated\s*move\s*out$", r"^move\s*out$",
                         r"^lease\s*end$"],
-    "bed_status":      [r"^bed\s*status$"],
+    "bed_status":      [r"^bed\s*status$",
+                        r"^status$"],   # Homestead self-contained: one row per unit, "Status" = bed status
     "apt_status":      [r"^apartment\s*status$", r"^unit\s*status$"],
     "sqft":            [r"^sq\s*ft$", r"^square\s*feet$", r"^size$",
-                        r"^unit\s*sqft$"],   # Briar Glen
+                        r"^unit\s*sqft$",   # Briar Glen
+                        r"^area$"],   # Homestead
     "al_care_level":   [r"^al\s*care\s*level$",
                         r".*assisted\s*living.*level$",
                         r"^care\s*level$"],   # Briar Glen has 2-letter codes here
     "care_type":       [r"^care\s*type$", r"^level\s*of\s*care$", r"^loc$",
                         r"^wing$", r"^community\s*type$", r"^building$",
-                        r"^license\s*type$", r"^care\s*setting$"],
+                        r"^license\s*type$", r"^care\s*setting$",
+                        r"^category$"],   # Homestead: "Category" (IL / AL / MC-I / MC-JK)
 }
 
 
@@ -363,9 +370,15 @@ def _row_is_self_contained_unit(row: pd.Series, field_map: Dict[str, str]) -> bo
     This is the Briar Glen single-bed pattern: one row per unit with everything
     populated, no separate child bed row.
 
-    Strict definition: requires a RESIDENT name (or *Vacant marker) on the same
-    row as the unit. Rates alone are NOT enough because Salem-style formats
-    legitimately put rates on parent rows above the bed children.
+    A row qualifies if it has unit/apt info AND either:
+      - a RESIDENT name (or *Vacant marker), OR
+      - a bed_status signal whose value is a recognized status word (e.g.
+        "VACANT" / "Occupied"). Numeric or otherwise-unrecognized status values
+        are rejected to avoid emitting summary-block garbage where the Status
+        column happens to hold a "Monthly Total" label or a sum.
+
+    Rates alone are NOT enough because Salem-style formats legitimately put
+    rates on parent rows above the bed children.
     """
     has_apt_id = (
         (field_map.get("apartment") and
@@ -379,15 +392,31 @@ def _row_is_self_contained_unit(row: pd.Series, field_map: Dict[str, str]) -> bo
     if not has_apt_id:
         return False
 
-    # Self-contained ONLY if resident-identifying data is present.
-    # NOT considered: rates (Salem puts rates on parent rows), bed letter
-    # (that's the child-bed signal we use elsewhere).
+    # Resident-identifying signal — original Briar Glen path.
     resident_signals = ["resident_full", "first_name", "last_name"]
     for sig in resident_signals:
         col = field_map.get(sig)
         if col and pd.notna(row.get(col)):
             v = str(row.get(col)).strip()
             if v and v.lower() != "nan":
+                return True
+
+    # Bed-status fallback — Homestead-style self-contained vacants. The Status
+    # column carries "VACANT" / "Occupied" / "Notice" etc. on every row, even
+    # when the resident slot is empty. Accept the row only if the status value
+    # is a recognized status word (not a numeric subtotal or sentinel).
+    bs_col = field_map.get("bed_status")
+    if bs_col and pd.notna(row.get(bs_col)):
+        v = str(row.get(bs_col)).strip()
+        if v and v.lower() != "nan":
+            v_low = v.lower()
+            # Recognized status keywords — match the same vocabulary the
+            # bed_status normalizer in mappings.py understands.
+            status_keywords = (
+                "occupied", "vacant", "empty", "available", "hold", "reserved",
+                "notice", "model", "down", "out of service", "ntv", "prelease",
+            )
+            if any(kw in v_low for kw in status_keywords):
                 return True
     return False
 

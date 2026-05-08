@@ -9,6 +9,68 @@ Newest at top.
 
 ---
 
+## 2026-05-08 — RR v1.14.0 (Homestead-style broker-condensed format)
+
+**Started as:** Track 1 chat. User flagged that the Homestead Village Pensacola rent roll parsed incompletely — they shared the source RR (`2026-04-24 Homestead Village Rent Roll v2.xlsx`) and the populated Analyzer (`Analyzer with 2026-04-24 Homestead Village Rent Roll v2 + March 2026 T12 2026-04-24.xlsx`) and asked for a diagnosis.
+
+**Stayed as:** A Track 1 chat throughout. Worked in git worktree `claude/infallible-grothendieck-b542dd`. T12-side files (`t12_normalizer.py`, `t12_writer.py`, T12 sections of `app.py`, the Analyzer substrate, migration scripts) untouched.
+
+### Frame
+
+Diagnosed the incomplete parse first. Loaded both files with openpyxl, dumped the source headers (row 6: `Unit ID`, `Cottage`, `Unit`, `Area`, `Category`, `BR/BA`, `Market / Mo 2026`, `Market PSF`, `Actual / Mo 2026`, `Actual PSF`, `Status`, `Resident`, ...) and walked the populated `Rent Roll Input` sheet (136 rows out of expected 176; columns 3-8 (Sq Ft, Care Type, Apt Type, Market, Actual) blank for every row; every Status read `Occupied`). Cross-checked against `normalizer.py` FIELD_PATTERNS — none of Homestead's column headers matched any pattern. The 40-unit gap traced to `_row_is_self_contained_unit()` requiring a resident name; truly-vacant Homestead rows (no resident) were silently dropped. The "everything is Occupied" came from the inference fallback at `normalizer.py:608-611` when no `bed_status` column is mapped.
+
+User chose path **(a) extend FIELD_PATTERNS** + **(b) pre-cleaner pass for the format-specific chrome** + RR version bump + MD updates.
+
+### Implementation calls made
+
+- **First-wins build loop preserved.** Already in the code (`normalizer.py:507`: `if field and field not in field_map`). Adding `^unit\s*id$` as the first `unit` pattern lets Homestead's unique `Unit ID` win over the generic `^unit$` pattern, and the per-cottage `Unit` column falls through unmapped — keeping `unit_id` set to the unique `A1`/`B1`/etc. value rather than overwriting it with the per-cottage `1`. No refactor needed.
+- **Bed_status as a self-contained signal**, gated on recognized status keywords. The original `_row_is_self_contained_unit()` required a resident name. Adding bed_status unconditionally would emit garbage for the Homestead end-of-sheet pricing-summary table where the Status column happens to hold "Monthly Total" or numeric subtotals. The keyword gate (`occupied`, `vacant`, `notice`, `hold`, `ntv`, etc. — same vocabulary as `mappings.py` `DEFAULT_BED_STATUS`) accepts real status values and rejects garbage.
+- **Pre-cleaner cut at `avg area`.** The Homestead pricing-summary block follows the unit list with a fresh `Unit ID` / `# Units` / `Avg Area` header at row 190, then per-cottage subtotals (`A`, `B`, `H`, `G`, `V`), then `IL Subtotal` / `AL Subtotal` / `MC Subtotal` / `Total` / `Double-Check`. Added `il subtotal` / `al subtotal` / `mc subtotal` / `double-check` / `avg area` to `_TOTALS_SIGNALS`. The first match (`avg area` on row 190) cuts the entire block in one shot — no need for state-tracking logic across the per-cottage rows that fall between the second header and the first subtotal.
+- **NTV → Notice rule** ordered BEFORE `\boccupied\b` in `DEFAULT_BED_STATUS`. Homestead reports `Occ w/ NTV` for residents on notice; without the explicit rule it would have fallen through unmapped (the substring `Occ` doesn't match `\boccupied\b` because of the word boundary). Mapped to `Notice` because the bed-status taxonomy collapses "occupied but on notice" to `Notice`.
+- **Did not add a Hold/Prelease distinction.** Source has both `VACANT` and `Vacant w/ Prelease`. Both currently resolve to `Vacant` via `\bvacant\b`. The Hold semantic (preleased / reserved) is defensible but the user didn't ask for it; keeping behavior conservative. Easy follow-up if needed.
+
+### What shipped
+
+**Parser (RR v1.13.0 → v1.14.0)** — `normalizer.py`:
+- FIELD_PATTERNS additions for Homestead headers (unit, apt_type, market_rate, actual_rate, bed_status, sqft, care_type).
+- `_row_is_self_contained_unit()` accepts `bed_status` as a second signal alongside resident name, gated on the value matching a recognized status keyword.
+
+**Mappings** — `mappings.py`:
+- `\bstu\b` → `Studio` (DEFAULT_APT_TYPE).
+- `\bntv\b` → `Notice` (DEFAULT_BED_STATUS, ordered before `\boccupied\b`).
+
+**Pre-cleaner** — `pre_cleaner.py`:
+- `errors!!!` and `current date:` added to `_BANNER_PREFIXES` (Homestead row-2 chrome).
+- `il subtotal` / `al subtotal` / `mc subtotal` / `double-check` / `avg area` added to `_TOTALS_SIGNALS` (Homestead end-of-sheet pricing-summary block).
+
+**App** — `app.py`:
+- Version bump RR v1.13.0 → v1.14.0; `RR_LAST_UPDATED` 2026-05-07 → 2026-05-08.
+
+### Verification
+
+Spot-built a throwaway harness (`_verify_homestead.py`, deleted after use — not part of repo) that called `normalize_rent_roll()` on the Homestead source and dumped row count, status/care-type/apt-type breakdowns, sample rows, and unmapped-value summary. Final state: **176 rows out (matches source unit count exactly), Care Type IL=62 / AL=62 / MC=52 (matches source pricing-summary subtotals exactly), Status 128 Occupied + 43 Vacant + 5 Notice = 176, zero unmapped across all five tracked categories**. Spot-checked rows A1, A4 (preleased vacant — resident `Q Puckett`, status `Vacant`), A5 (true vacant, no resident), A7, V9, E1, E3 (NTV → Notice), K20 against the source — all match.
+
+No automated regression coverage in the repo (`Sample Files/` is gitignored, no `tests/` dir). Salem / Briar Glen / Oaks at Beaufort were not re-run; the new patterns shouldn't intersect their header vocabulary and the bed_status fallback only kicks in when no resident signal is present (Briar Glen's `*Vacant` resident marker continues to flow through the existing resident-path with the inline status strip at lines 602-607). Worth a smoke test on the next run of any Salem/Briar/Beaufort file.
+
+### Doc / metadata updates
+
+- `CHANGELOG-RR.md` — new `[1.14.0]` entry at top.
+- `SPEC-RR.md` — `Current version` line, version-stream summary, "Self-contained row detection" section (now mentions bed_status alternate signal), Verified formats table (added Homestead Pensacola row).
+- `CLAUDE.md` — `Last updated`, RR current version (v1.12.0 → v1.14.0; the doc was stale on this — v1.13.0 was on main from the 2026-05-07 Memory Care work), removed the "hanging branch" carry-forward note about `claude/mystifying-wu-33a0f6` (commit `667fd67` IS on main per `git log`).
+- `journal.md` — this entry.
+
+### Carry-forwards
+
+- **Smoke-test Salem / Briar Glen / Oaks at Beaufort** on the next run of any of those files. No regression suspected, but the bed_status self-contained signal is the kind of change worth a real-fixture sanity check.
+- **`README.md`** still has the RR-only framing and doesn't mention the Homestead format. Same low-pri carry-forward as flagged in CLAUDE.md.
+- **Hold/Prelease distinction** for `Vacant w/ Prelease` rows. Currently resolves to `Vacant`. Defensible but a `Hold` mapping would be more semantically precise. User didn't ask; leaving for follow-up.
+
+### Commits produced
+
+(To be filled in at commit time.)
+
+---
+
 ## 2026-05-08 — T12 v0.2.0 + Substrate v0.1.7 (BrokerFinancialSummaryFormat + Cluster B + R102 close-out)
 
 **Started as:** Track 2 chat with handoff doc `HANDOFF-T12-v0.2.0.md` specifying five phases: parser code, verification harness, app.py wiring, substrate migration, docs. Three carry-forwards rolled in together — `BrokerFinancialSummaryFormat` (high-pri from journal 2026-05-06 + 2026-05-07), Cluster B sign/partial-year (medium-pri from D-12), and `T12 Analytics!R102` lease formula (medium-pri from F-2 / A-5).

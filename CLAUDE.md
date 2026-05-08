@@ -2,7 +2,7 @@
 
 > Onboarding doc for any Claude session (chat or Claude Code) working on this repo. Read this first — it points to canonical truth and surfaces facts that previously had to be grubbed for.
 
-**Last updated:** 2026-05-08 (after T12 v0.2.0 + Substrate v0.1.7 ship)
+**Last updated:** 2026-05-08 (after RR v1.14.0 — Homestead-style format support)
 
 ---
 
@@ -38,7 +38,7 @@ The repo runs three parallel tracks. They share an Analyzer but are otherwise in
 | Code | `app.py`, `normalizer.py`, `mappings.py`, `pre_cleaner.py`, `period_date.py`, `reports.py`, `writer.py` |
 | Spec | `SPEC-RR.md` |
 | Changelog | `CHANGELOG-RR.md` |
-| Current version | RR v1.12.0 |
+| Current version | RR v1.14.0 |
 
 ### Track 2 — T12 Normalizer (T12-side code + Analyzer substrate)
 
@@ -86,9 +86,13 @@ Conversational examples should label placeholder text as `<REPLACE THIS>` so the
 
 ---
 
-## Open carry-forwards (as of 2026-05-08, post-T12 v0.2.0)
+## Open carry-forwards (as of 2026-05-08, post-RR v1.14.0)
 
 These are real backlogged items that previous chats deferred. They have a home; they're just not staffed yet.
+
+### Closed 2026-05-08 (RR v1.14.0 — Homestead-style format)
+
+- ✓ **Homestead Village Pensacola broker-condensed RR support** — shipped. Source headers `Unit ID` / `Cottage` / `Area` / `Category` / `BR/BA` / `Market / Mo YYYY` / `Actual / Mo YYYY` / `Status` now classify into the right canonical fields. Self-contained vacant rows (no resident name, but `Status=VACANT`) emit instead of being silently dropped — recovered 40 of 176 units that the prior parser was losing. Pre-cleaner cuts the end-of-sheet pricing-summary table at the `Avg Area` second-table header. `Occ w/ NTV` resolves to `Notice` (NTV rule ordered before `\boccupied\b`). Verified end-to-end: 176 rows out, IL=62/AL=62/MC=52 exact match, 0 unmapped.
 
 ### Closed 2026-05-08 (T12 v0.2.0 + Substrate v0.1.7, [PR #1](https://github.com/ErikJ-Stack/rent-roll-normalizer/pull/1))
 
@@ -106,10 +110,6 @@ These are real backlogged items that previous chats deferred. They have a home; 
 
 - **README.md update** — bring it from RR-only framing to current dual-pipeline state.
 - **Substrate version-detection bug suspected.** App's `_detect_substrate_version()` looks for `2nd Person Revenue` (v0.1.5 marker) in the Description_Map column B; v0.1.6/v0.1.7 add no new Labels there, so the detector returns `v0.1.5` for any of v0.1.5+. Cosmetic — worth widening the marker list when the bundle next changes Label vocabulary.
-
-### Hanging branch (not a backlog item, but worth knowing)
-
-- **`claude/mystifying-wu-33a0f6` branch** has commit `667fd67` ("RR v1.12.0 -> v1.13.0: Memory Care detection (Oaks at Beaufort)") that never landed on main. Either intentionally parked (then close out the branch) or accidentally orphaned (then merge or cherry-pick). Worth a sentence of context the next time someone touches RR.
 
 ---
 

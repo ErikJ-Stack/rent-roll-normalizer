@@ -33,6 +33,7 @@ DEFAULT_APT_TYPE = [
     # Briar Glen-style codes
     (r"\bdlxstd\b",                 "Studio"),   # Deluxe Studio
     (r"\bstd\b",                    "Studio"),
+    (r"\bstu\b",                    "Studio"),   # Homestead-style: "STU"
     (r"\b1bed\b",                   "1BR"),
     (r"\b2bed\b",                   "2BR"),
     (r"\bs\s*sui\b",                "1BR"),     # Single Suite
@@ -42,6 +43,10 @@ DEFAULT_APT_TYPE = [
 # -- Bed status --------------------------------------------------------------
 # Normalized targets: Occupied, Vacant, Hold, Notice, Model, Down
 DEFAULT_BED_STATUS = [
+    # NTV (Notice To Vacate) must come before "occupied" — Homestead reports
+    # "Occ w/ NTV" for residents on notice and we want that flagged as Notice,
+    # not silently rolled into Occupied.
+    (r"\bntv\b",                    "Notice"),
     (r"\boccupied\b",               "Occupied"),
     (r"\bvacant\b",                 "Vacant"),
     (r"\bempty\b",                  "Vacant"),
