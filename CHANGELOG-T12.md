@@ -8,6 +8,57 @@ When making a code change in a T12-related chat, add an entry here in the same c
 
 ---
 
+## [Substrate template v0.1.6] — 2026-05-07
+
+Workbook-side optimization round per OPTIMIZATION-DECISIONS.md (Branches 1 + 4 of the optimization mind map). Cluster B (sign-convention guards, partial-year T12 handling) is code-side and ships separately on Track 2.
+
+### Added
+
+- **Cover sheet** at first tab position. Carries property name, substrate version, RR / T12 normalizer version pills, repo + app links, and a short About block. Property name lives canonically at `Cover!B5` and propagates via the new `Property_Name` named range.
+- **Workbook Health sheet** at last position, hidden by default. Three sections: Workbook Map (formula-driven from per-sheet anchor cells), Validation (7 live $ checks), Diagnostics (capacity utilization, version pills, last-open timestamp).
+- **Per-sheet anchor cells** at `AZ1:AZ5` on all 13 sheets — purpose / category / visibility / version / notes. Drives the Workbook Map section. AZ5 (notes) left empty by default.
+- **5 named ranges**: `RR_Period_Date` (`Rent Roll Recon!B2`), `T12_Period_Date` (`T12 Analytics!E2`), `RR_Input_Data` (`Rent Roll Input!A7:S606`), `T12_Input_Data` (`T12 Input!A12:O511`), `Property_Name` (`Cover!B5`). Joins the existing two (`DescMap_Description`, `DescMap_Label`).
+- **Light cell comments** on 5 hardest-to-decode formula cells: `Monthly Trending!B5` (T12 rollup INDEX/MATCH pattern), `T12 Analytics!E37` (GPR), `T12 Analytics!E52` (EGI), `T12 Analytics!E110` (EBITDAR after mgmt fee), `Rent Roll Recon!H20` (RR↔T12 gap diagnostic).
+
+### Fixed
+
+- **`Rent Roll Recon!H20` `#NAME?` error** — the diagnostic message cell that interprets the RR-vs-T12 base rent gap was broken in every populated workbook because its 5-item investigation lists exceeded Excel's 255-char-per-literal cap and got serialized as `_xlfn._LONGTEXT(...)` calls Excel doesn't recognize. Rewritten with chunked literals (each ≤255 chars, joined with `&`). Same four-case logic, same message content, parses clean. Cell now displays its intended diagnostic instead of `#NAME?`.
+- **UW Output R29 (Bonus wages)** — formula gap. `B29:D29` set to `"-"`, `E29` and `F29` now point at `T12 Analytics!E64`/`F64` (sibling-pattern fill).
+- **UW Output R57 (Bad debt expense)** — same gap pattern. Filled to point at `T12 Analytics!E98`/`F98`.
+- **UW Output R61 (Lease / ground lease)** — was fully empty including `G61` variance. Filled to point at `T12 Analytics!E102`/`F102` (currently `=0` placeholder; see deferred bug below). Indent fixed (0.0 → 1.0) to match siblings R60 / R62.
+- **`T12 Analytics!B2` (Property name)** — wired to `=Property_Name`. Was empty; now propagates from Cover sheet input.
+
+### Changed
+
+- **Substrate version** stamp `v0.1.5 → v0.1.6` (Cover!B8, all 13 anchor AZ4 cells).
+
+### Deferred
+
+- **`T12 Analytics!R102`** still `=0` placeholder. Replacing with the planned INDEX/MATCH against `T12 Raw Data!B:B` for "Lease / ground lease" requires rewiring an existing aggregator, which was out of scope for this round per the architectural constraint. Result: `UW Output!R61 Lease` displays `$0` until v0.1.7 picks this up. Tracked in OPTIMIZATION-DECISIONS.md A-5.
+- **`T12 Raw Data` SUMIFS range cosmetic mismatch** — some shifted rows still reference `$N$1:$N$501` instead of `$N$1:$N$500` (artifact of the v0.1.5 migration). Harmless; same-as-before. Logged for next migration that touches the range.
+
+### Migration script
+
+- **`tools/migration/migrate_to_v016.py`** — idempotent. Operates in order: add Cover sheet → apply Cluster A formula fixes → add Workbook Health sheet → populate AZ anchor cells on all 13 sheets → add 5 named ranges → wire `T12 Analytics!B2` → add cell comments → verify (11 checks).
+
+### Verified end-to-end (2026-05-07)
+
+- Migration runs clean on `ALF_Financial_Analyzer_Only.xlsx` (empty v0.1.5 template).
+- Re-running on a v0.1.6 file is a no-op (idempotency works).
+- LibreOffice recalc of the migrated empty template produces **0 formula errors** across all 13 sheets.
+- `Rent Roll Recon!H20` resolves to `"Gap = $0 — RR and T12 are perfectly aligned."` (case 1 of 4) on the empty template — was `#NAME?` before.
+- Workbook Health Map section pulls correctly from all 13 anchor cells via formula refs.
+- Validation section fires `⚠` on missing RR/T12 period dates and Property name (correct behavior on an empty template).
+
+### Notes
+
+- Three openpyxl quirks worth flagging for future migrations on this workbook:
+  1. `wb.defined_names[name] = DefinedName(...)` is the v3.x assignment form — `defined_names.append()` was removed.
+  2. Empty-string cell values render as `0` in Excel/Calc when read back. Preferred: leave the cell truly unset (skip the assignment) rather than write `""`. Workaround in formula context: wrap with `=IF(ref="","",ref)`.
+  3. `Cell.alignment` is read-only; to mutate one attribute (e.g. indent) re-assign the whole `Alignment(...)` object preserving the others.
+
+---
+
 ## [Substrate template v0.1.5] — 2026-05-04
 
 Substrate-only change (no code release). Adds one new Label, `2nd Person Revenue`, to the closed vocabulary (54 → 55 Labels). Migration script `migrate_to_v015.py` applies idempotently to any v0.1.4 Analyzer.

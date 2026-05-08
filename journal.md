@@ -9,6 +9,82 @@ Newest at top.
 
 ---
 
+## 2026-05-07 — T12 Substrate v0.1.6 (Analyzer optimization, Branches 1+4)
+
+**Started as:** "Optimize the analyzer before it goes into the full underwriting sheet." Read SPEC-RR, SPEC-T12, both changelogs, README, and the prior journal entry. Walked the bundled `ALF_Financial_Analyzer_Only.xlsx` to ground the work.
+
+**Stayed as:** A T12 chat throughout. The architectural constraint set up front ("additive only — new sheets / sections / cells / named ranges OK; existing aggregators untouched") held cleanly. RR-side files not touched.
+
+### Frame
+
+Drew a 4-branch optimization mind map: correctness, handoff readiness, analytical coverage, substrate. User picked Branches 1 + 4 first (foundation), then 3 (depth), then 2 (handoff). Spun up `OPTIMIZATION-DECISIONS.md` in the chat as the running decisions log per "if context is going to thin, recommend an MD" preference. Net 14 decisions logged, 8 "discovered facts" sections from grounding investigation.
+
+The journal's "one track at a time" lesson from 2026-05-06 informed an explicit boundary call mid-design: Cluster B (sign guards + partial-year T12) was identified as code-side work and deferred to a future Track 2 chat (D-12) rather than crossing tracks within this session.
+
+### What shipped
+
+**Substrate v0.1.5 → v0.1.6.** All workbook-side. Built and validated end-to-end inside this chat:
+
+- **`tools/migration/migrate_to_v016.py`** — idempotent migration script, ~500 lines. Operates in order: add Cover (front) → Cluster A formula fixes → add Workbook Health (back, hidden) → populate AZ1:AZ5 anchors on all 13 sheets → add 5 named ranges → wire `T12 Analytics!B2` to `=Property_Name` → add 5 cell comments → run 11 verification checks. Smoke-tested on the actual bundled Analyzer, then LibreOffice-recalc'd to confirm 0 formula errors across all 13 sheets.
+
+- **Cluster A — Correctness fixes (4 ships):**
+  - `Rent Roll Recon!H20` chunked-literals rewrite. The `_xlfn._LONGTEXT` artifact was the headline bug — caused by Excel's per-literal 255-char cap blowing up the 5-item investigation lists in cases 3 and 4 of the diagnostic. New formula has 6 literals max-255-chars, joined with `&`. Total formula 1068 chars; round-trips clean through openpyxl with no `_xlfn._LONGTEXT` and resolves to the right diagnostic message on a populated workbook.
+  - `UW Output!R29` (Bonus wages) sibling-pattern fill against `T12 Analytics!E64`/`F64`.
+  - `UW Output!R57` (Bad debt expense) sibling-pattern fill against `T12 Analytics!E98`/`F98`.
+  - `UW Output!R61` (Lease / ground lease) — paper-over fill per D-04. Points at `T12 Analytics!E102`/`F102` even though those still return `=0`. Indent fixed (0.0 → 1.0) to match siblings R60 / R62.
+
+- **Cluster C — Workbook Health (1 new sheet):**
+  - Hidden, last position. Three sections: Workbook Map (formula-driven, 13 rows pulling from per-sheet `AZ1:AZ5`), Validation (7 live $ checks with ✓/⚠ status, ±$1 leakage tolerance per D-08), Diagnostics (capacity utilization from existing UW Output cells, 3 version pills from Cover, last-open timestamp).
+
+- **Cluster D — Cover + supporting work:**
+  - Cover sheet (first tab, visible). 4 blocks: Property / Versions / Links / About. Property name at B5 is the canonical home of the new `Property_Name` named range.
+  - Anchor cells `AZ1:AZ5` populated on all 13 sheets — predictable location, verified empty pre-migration on every existing sheet (rightmost data column on any sheet is U; AZ is column 52).
+  - 5 named ranges: `RR_Period_Date`, `T12_Period_Date`, `RR_Input_Data`, `T12_Input_Data`, `Property_Name`. Joins existing `DescMap_Description` and `DescMap_Label`.
+  - `T12 Analytics!B2` (was empty) wired to `=Property_Name`.
+  - 5 light cell comments on the hardest-to-decode formulas: `Monthly Trending!B5` (T12 rollup INDEX/MATCH pattern), `T12 Analytics!E37` (GPR), `T12 Analytics!E52` (EGI), `T12 Analytics!E110` (EBITDAR after mgmt fee), `Rent Roll Recon!H20` (RR↔T12 gap diagnostic).
+
+### Discovered facts worth carrying forward
+
+Logged in `OPTIMIZATION-DECISIONS.md` as F-1 through F-8. Highlights:
+
+- **`Rent Roll Recon!H20 _xlfn._LONGTEXT` root cause** (F-1) — Excel's per-literal 255-char cap, not a missing function or anything more exotic. The fix is mechanical once you see it.
+- **UW Output R65 was misclassified as a bug initially** (D-03) — turned out to be a visual section separator (bold + navy `FF2F5597` fill, identical to R69). Correct call after inspecting the formatting was to drop it from the bug list, not invent an NOI definition.
+- **The bundled Analyzer was missing the Cover sheet** that `SPEC-RR.md` lists as part of the expected structure (F-3). Spec was right; bundle had drifted. Now fixed.
+- **`T12 Analytics!R102` is still `=0`** (F-2 / A-5) — was supposed to get an INDEX/MATCH per the v0.1.4 substrate plan, but never landed. Logged as deferred for v0.1.7+; it's the only reason `UW Output!R61 Lease` will display `$0` after this migration.
+
+### Process lessons from this session
+
+1. **Showing trumps explaining when a question lands wrong.** When the user asked "where is H20?" instead of picking a fix path, the right move was to draw the spreadsheet grid showing exactly which cell was broken and what its four output cases are, before re-asking. Worked. Also worth doing the same when "what's a named range?" landed — minimal Excel literacy assumption is safer than maximal.
+2. **Verifying anchor location empirically before committing the convention.** The `AZ1:AZ5` choice was checked against every sheet's `max_column` before being proposed; otherwise it could have collided with one of the analytical sheets that legitimately uses high column letters.
+3. **The migration script's verification block is worth its weight.** 11 boolean checks at the end of `migrate_to_v016.py` caught the AZ5-empty-string-renders-as-0 issue immediately on first run — fix took one minute. Without the verification, that would have shown up as a cosmetic bug an analyst spotted later.
+
+### Commits this session
+
+To produce after pulling the migration script and docs into the repo:
+
+- `<hash>` — `Substrate v0.1.5 -> v0.1.6: Cover + Workbook Health, named ranges, H20 fix, UW Output gaps, anchor cells, light comments`
+
+(One commit covers everything. Alternative: split into "Cluster A bug fixes" + "Clusters C/D new sheets and convention" + "Cell comments and named ranges" if granular history is preferred — three commits, same diff total.)
+
+### Files at session end
+
+- New: `tools/migration/migrate_to_v016.py`
+- New: `OPTIMIZATION-DECISIONS.md` (carry-forward decision log; lives at repo root)
+- Updated: `ALF_Financial_Analyzer_Only.xlsx` (substrate v0.1.6, regenerated by running the migration on the v0.1.5 file). **Filename unchanged** — `app.py` v1.12.0 references this exact path in `_load_analyzer()`. The chat-output `analyzer_v016.xlsx` was a within-chat naming artifact only; final filename in the repo is `ALF_Financial_Analyzer_Only.xlsx`.
+- Updated: `SPEC-T12.md` (current-version bump + new v0.1.6 entry in Template substrate section)
+- Updated: `CHANGELOG-T12.md` (new `[Substrate template v0.1.6]` entry at top)
+- Untouched: `SPEC-RR.md`, `CHANGELOG-RR.md`, `app.py`, `t12_normalizer.py`, `README.md`
+
+### Known follow-ups for future chats
+
+- **Cluster B (Track 2 chat)** — sign-convention guards + partial-year T12 handling. Code-side work in `t12_normalizer.py` and `app.py`. Should reference `OPTIMIZATION-DECISIONS.md` D-12 boundary as the carry-forward pointer.
+- **Branch 3 (Analytical coverage)** — sensitivities, scenarios, debt/returns, IL/AL/MC expense splits. The next optimization round per the mind map sequencing.
+- **Branch 2 (Handoff readiness)** — designed last, since it depends on what Branch 3 adds to UW Output.
+- **`T12 Analytics!R102` lease formula fix** (substrate v0.1.7) — small, scoped, eligible to bundle with whatever other aggregator work earns its keep next.
+- **README.md** — still RR-only framing per the prior journal note. Independent task.
+
+---
+
 ## 2026-05-06 — T12 Substrate v0.1.5 (Homestead Pensacola) + RR v1.12.0 (scope drift)
 
 **Started as:** T12 chat. Read SPEC-T12.md + CHANGELOG-T12.md. Task: process the Homestead Pensacola broker financial summary file as a one-off.
