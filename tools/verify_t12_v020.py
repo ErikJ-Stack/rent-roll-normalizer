@@ -43,32 +43,16 @@ from t12_normalizer import parse_t12, read_descmap_descriptions  # noqa: E402
 
 ANALYZER_PATH = REPO_ROOT / "ALF_Financial_Analyzer_Only.xlsx"
 
-DROPBOX = Path(
-    r"C:\Users\erikj\Dropbox\Erik Javellana - Deal Review\Deals under review"
-)
+# Test fixtures live in the repo-root `Sample Files/` directory (gitignored;
+# the .xlsx files contain real property financials). Drop the four files in
+# there before running this harness. See SPEC-T12.md §"Verified formats" for
+# the source-of-truth filenames.
+SAMPLE_FILES = REPO_ROOT / "Sample Files"
 FIXTURES = {
-    "Salem": DROPBOX
-        / "ALF - SC_West Columbia - Beaufort"
-        / "Broker Docs"
-        / "The Retreat at Beaufort - Salem"
-        / "Salem Road T-12 1.31.26.xlsx",
-    "Briar Glen": DROPBOX
-        / "ALF - AL_Hoover - 71 Senior Housing"
-        / "Broker Docs"
-        / "Property Information"
-        / "Financials"
-        / "2025"
-        / "Briar Glen T12 P&L Statement_2025.12.xlsx",
-    "Homestead": DROPBOX
-        / "ALF - Pensacola_Fl - Homestead Village"
-        / "Broker Docs"
-        / "Financials and Census"
-        / "2026-03 Homestead Village Pensacola Financial Summary.xlsx",
-    "March_2026": DROPBOX
-        / "ALF - Pensacola_Fl - Homestead Village"
-        / "Broker Docs"
-        / "Financials and Census"
-        / "March 2026 T12.xlsx",
+    "Salem":      SAMPLE_FILES / "Salem Road T-12 1.31.26.xlsx",
+    "Briar Glen": SAMPLE_FILES / "Briar Glen T12 P&L Statement_2025.12.xlsx",
+    "Homestead":  SAMPLE_FILES / "2026-03 Homestead Village Pensacola Financial Summary.xlsx",
+    "March_2026": SAMPLE_FILES / "Homestead - March 2026 T12.xlsx",
 }
 
 
