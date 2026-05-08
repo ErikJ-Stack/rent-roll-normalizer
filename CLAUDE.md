@@ -1,0 +1,143 @@
+# CLAUDE.md
+
+> Onboarding doc for any Claude session (chat or Claude Code) working on this repo. Read this first — it points to canonical truth and surfaces facts that previously had to be grubbed for.
+
+**Last updated:** 2026-05-08 (after Substrate v0.1.6 ship)
+
+---
+
+## What this repo is
+
+Two parallel pipelines feeding one underwriting workbook:
+
+1. **Rent Roll Normalizer (RR)** — Streamlit app that turns any operator's rent roll into a normalized bed-level Excel output.
+2. **T12 Normalizer (T12)** — parser + writer that turns various T12 financial-statement formats into a normalized monthly trending Excel.
+
+Both pipelines populate a shared destination workbook: `ALF_Financial_Analyzer_Only.xlsx` (the "Analyzer"). The Analyzer is the underwriting substrate — RR drives Rent Roll Input, T12 drives T12 Input, and the analytical sheets reconcile + roll up to UW Output.
+
+A separate downstream full-underwriting sheet (not in this repo) consumes UW Output. Optimizing the Analyzer to be a clean handoff to that sheet is an active workstream.
+
+## Local clone path
+
+`C:\Users\erikj\Downloads\rent_roll_app` — Windows machine, PowerShell.
+
+## Live deploy
+
+https://rrnormalizer.streamlit.app/ — Streamlit Community Cloud, auto-deploys from `origin/main` on push (~30-60 sec lag). **Reboot-first rule:** if live behavior diverges from a verified local run on the same file, assume stale module cache and reboot from share.streamlit.io before debugging.
+
+---
+
+## Three workstream tracks
+
+The repo runs three parallel tracks. They share an Analyzer but are otherwise independent. **Track 1 chats do not edit Track 2 or Track 3 files** — see "Scope discipline" below.
+
+### Track 1 — RR Normalizer (RR-side code)
+
+| What | Where |
+| --- | --- |
+| Code | `app.py`, `normalizer.py`, `mappings.py`, `pre_cleaner.py`, `period_date.py`, `reports.py`, `writer.py` |
+| Spec | `SPEC-RR.md` |
+| Changelog | `CHANGELOG-RR.md` |
+| Current version | RR v1.12.0 |
+
+### Track 2 — T12 Normalizer (T12-side code + Analyzer substrate)
+
+| What | Where |
+| --- | --- |
+| Code | `t12_normalizer.py`, `t12_writer.py`, plus T12 sections of `app.py` |
+| Spec | `SPEC-T12.md` |
+| Changelog | `CHANGELOG-T12.md` |
+| Bundled workbook | `ALF_Financial_Analyzer_Only.xlsx` |
+| Migration scripts | `tools/migration/migrate_to_v01N.py` (one per substrate version) |
+| Current code version | T12 v0.1.1 |
+| Current substrate version | v0.1.6 |
+
+**Naming history:** `t12_translator.py` was renamed to `t12_normalizer.py` at some point. If a chat references `t12_translator`, it's old terminology — confirm in the live file tree.
+
+### Track 3 — Analyzer optimization (workbook-only, no code)
+
+Optimizing the Analyzer's structure for the downstream UW handoff. Workbook edits, new sheets, named ranges, cell comments. Does not touch RR or T12 code. Workstream began 2026-05-07.
+
+| What | Where |
+| --- | --- |
+| Decisions log | `OPTIMIZATION-DECISIONS.md` |
+| Roadmap | 4 branches: 1 Correctness, 2 Handoff, 3 Analytical coverage, 4 Substrate. Branches 1+4 closed in v0.1.6. Branch 3 next. Branch 2 last. |
+
+---
+
+## Cross-cutting docs
+
+| File | What it is |
+| --- | --- |
+| `journal.md` | Per-chat session log, newest at top. **Read the top entry before starting a new chat** — it usually has carry-forwards and known follow-ups. |
+| `README.md` | Public-facing. Stale: still RR-only framing, doesn't mention T12 or the bundled-Analyzer flow. Update is a known follow-up but not a priority. |
+| `CLAUDE.md` | This file. |
+
+---
+
+## Scope discipline (matters)
+
+Per the journal 2026-05-06 retrospective, the project enforces "one track at a time" per chat. **A T12 chat does not edit RR files. An RR chat does not edit T12 files. A Track 3 chat does not touch any code.**
+
+When a chat starts on track A and the user pivots toward track B, the assistant should stop and confirm: "We're now in [track B] territory. Fresh chat, or proceed knowing we're cross-cutting?" — rather than silently crossing.
+
+Conversational examples should label placeholder text as `<REPLACE THIS>` so the user doesn't paste literal placeholders into commit messages (see `be3b134` for the cautionary tale).
+
+---
+
+## Open carry-forwards (as of 2026-05-08)
+
+These are real backlogged items that previous chats deferred. They have a home; they're just not staffed yet.
+
+### High priority
+
+- **`BrokerFinancialSummaryFormat` parser class (T12 v0.2.0).** Third T12 format alongside Yardi and MRI, structurally distinct (single sheet, "Historical Performance" header at row 4, monthly columns + Totals column). Surfaced on Homestead Pensacola broker file 2026-05-04 and processed via "Option C: one-off paste validation" workaround. Re-surfaced 2026-05-08 with a `March_2026_T12.xlsx` upload that has the same fingerprint. **Track 2 chat.** Carry-forward inputs: that file + Homestead reference file + journal 2026-05-06.
+
+### Medium priority
+
+- **Cluster B — sign-convention guards + partial-year T12 handling.** Code-side robustness work in `t12_normalizer.py` and `app.py`. Deferred from the v0.1.6 optimization round per OPTIMIZATION-DECISIONS.md D-12. **Track 2 chat.**
+- **Branch 3 — Analytical coverage.** Sensitivities, scenarios, debt + returns tab, IL/AL/MC expense splits. Per OPTIMIZATION-DECISIONS.md sequencing. **Track 3 chat.**
+- **`T12 Analytics!R102` lease formula** — still `=0` placeholder. Substrate v0.1.7 work; rewires an existing aggregator so was out of scope for v0.1.6. **Track 2 chat.**
+- **Branch 2 — Handoff readiness.** Pre-export gate, UW Export sheet (values-only mirror), metadata header, source trail. **Track 3 chat, after Branch 3.**
+
+### Low priority
+
+- **`T12 Raw Data` SUMIFS range cosmetic mismatch** (N501 vs N500). Bundle with whatever next migration touches that range.
+- **README.md update** — bring it from RR-only framing to current dual-pipeline state.
+- **Substrate version-detection bug suspected.** App's `_detect_substrate_version()` showed v0.1.4 in a screenshot 2026-05-08 even though the deployed bundle was supposed to be v0.1.5. May resolve itself on next deploy after v0.1.6 lands; if not, worth a small Track 1 chat.
+
+### Hanging branch (not a backlog item, but worth knowing)
+
+- **`claude/mystifying-wu-33a0f6` branch** has commit `667fd67` ("RR v1.12.0 -> v1.13.0: Memory Care detection (Oaks at Beaufort)") that never landed on main. Either intentionally parked (then close out the branch) or accidentally orphaned (then merge or cherry-pick). Worth a sentence of context the next time someone touches RR.
+
+---
+
+## Conventions worth knowing
+
+- **Versioning:** RR app version (`v1.X.Y`), T12 code version (`v0.X.Y`), Analyzer substrate version (`v0.1.N`). Three independent counters. Substrate version is stamped on `Cover!B8` and on every sheet's `AZ4` anchor cell.
+- **Newest-at-top** in journal.md, CHANGELOG-RR.md, CHANGELOG-T12.md.
+- **Migration scripts are idempotent** — re-running on an already-migrated workbook is a no-op. Pattern: `migrate_to_v01N.py` lives in `tools/migration/`. Always include a verification block at the end.
+- **Per-sheet anchor cells** at `AZ1:AZ5` on every sheet — purpose / category / visibility / version / notes. Drives the Workbook Health Map section. Predictable location, verified empty across all sheets pre-v0.1.6.
+- **Named ranges** are listed in OPTIMIZATION-DECISIONS.md (Named-range definitions section). Currently: `DescMap_Description`, `DescMap_Label`, `RR_Period_Date`, `T12_Period_Date`, `RR_Input_Data`, `T12_Input_Data`, `Property_Name`.
+- **Workbook Health is hidden by default.** Right-click any tab → Unhide → Workbook Health to reach diagnostics, validation, and the workbook map.
+
+---
+
+## Three openpyxl quirks that bite migrations
+
+Documented from real bugs hit during migration script work:
+
+1. `wb.defined_names[name] = DefinedName(...)` is the v3.x assignment form. `defined_names.append()` was removed.
+2. Empty-string cell values render as `0` in Excel/Calc when read back. Leave the cell truly unset, or wrap with `=IF(ref="","",ref)` in formula context.
+3. `Cell.alignment` is read-only. To mutate one attribute (e.g. indent), re-assign the whole `Alignment(...)` object preserving the others. Same for `Font`, `PatternFill`, `Border`.
+4. (From 2026-05-06) `insert_rows()` shifts cells but not formula text — full-workbook regex sweep needed to update shifted refs. Lookbehind regex must include colons to catch range endpoints (`F15:Q15`). `insert_rows()` doesn't shift merged-cell range definitions; use `mr.shift(row_shift=delta)` to mutate bounds in-place — `unmerge_cells()` wipes displaced cell content.
+
+---
+
+## Starting a new chat — checklist for Claude
+
+1. Read this file first.
+2. Read the top entry of `journal.md` for the most recent session's carry-forwards.
+3. Identify which Track the user's request belongs to. If ambiguous, ask before proceeding.
+4. If the work is on Track 2 (substrate), assume migration script + spec update + changelog entry are all required deliverables — not just the code.
+5. If context starts thinning, recommend spinning up a working MD (e.g. `OPTIMIZATION-DECISIONS.md` style) before the chat hits the wall.
