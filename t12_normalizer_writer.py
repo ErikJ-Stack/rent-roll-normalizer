@@ -7,10 +7,12 @@ standalone `ALF_T12-_Normalizer.xlsx` at template v0.1.4), writes the parsed
 T12 GL detail into the `T12 Input` sheet, and returns the modified workbook
 as bytes.
 
-Naming history (see SPEC-T12.md §"Module naming history"):
-  - `t12_writer.py` — Track 1 module that writes RR data into `Rent Roll Input`.
-  - `t12_normalizer_writer.py` — THIS module, writes T12 data into `T12 Input`.
-  Both write into a T12-shaped destination workbook but handle different
+Naming (see CLAUDE.md "Module naming gotcha"):
+  - `analyzer_rr_writer.py` — Track 1 module that writes RR data into
+    `Rent Roll Input`. (Was `t12_writer.py` until 2026-05-10.)
+  - `t12_normalizer_writer.py` — THIS module, writes T12 data into
+    `T12 Input`.
+  Both write into the Analyzer destination workbook but handle different
   inputs and different sheets.
 
 Preservation guarantees (per SPEC-T12.md §"T12 file expected structure"):

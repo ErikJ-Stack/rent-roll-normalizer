@@ -48,7 +48,7 @@ from t12_normalizer_writer import (
     populate_t12_input,
 )
 from t12_translator import translate_for_t12
-from t12_writer import T12CapacityError, populate_t12
+from analyzer_rr_writer import T12CapacityError, populate_t12
 from writer import write_output
 
 

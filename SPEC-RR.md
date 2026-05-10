@@ -65,7 +65,7 @@ Local Windows machine: C:\Users\erikj\Downloads\rent_roll_app
 | `reports.py` | 6.7 KB | Builders for RR_Summary, RR_By_Type, RR_Exceptions |
 | `writer.py` | 14.0 KB | Excel writer with full formatting (RR-side) |
 | `t12_translator.py` | 3.6 KB | Translates Condensed_RR vocabulary → Analyzer's `Rent Roll Input` vocabulary |
-| `t12_writer.py` | 5.8 KB | Loads Analyzer, writes A:S row 7+ on `Rent Roll Input`, preserves all else. Module name is historical — predates the Track 1 / Track 2 split. See "Module naming history" in `SPEC-T12.md`. |
+| `analyzer_rr_writer.py` | 5.8 KB | Loads Analyzer, writes A:S row 7+ on `Rent Roll Input`, preserves all else. Renamed from `t12_writer.py` on 2026-05-10 (was named `t12_*` because the destination workbook predated the bundled Analyzer; see `CLAUDE.md` "Module naming gotcha"). |
 | `t12_normalizer.py` | 19.5 KB | Track 2 — T12 parser. Format-registry pattern (Yardi + MRI). |
 | `t12_normalizer_writer.py` | 12.7 KB | Track 2 — T12 writer. Writes `T12 Input!A12+`, appends `Description_Map` resolutions, adds `Run_Info` tab. |
 | `period_date.py` | 4.5 KB | Extracts period date from filename across 6 patterns |

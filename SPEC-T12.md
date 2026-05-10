@@ -33,12 +33,12 @@ This repo houses two normalizer modules and one combined output:
 
 ### Module naming history (read this before grepping)
 
-There are two writer modules in this repo with confusingly similar names. The naming is historical, not redesigned:
+There are two writer modules in this repo. They handle different inputs and write to different sheets of the same destination Analyzer workbook:
 
-- **`t12_writer.py`** — Track 1 module. Writes **rent roll** data (Condensed_RR) into the `Rent Roll Input` sheet of a T12-shaped destination workbook. Named "t12" because the destination is a T12 template, not because the input is T12 data.
-- **`t12_normalizer_writer.py`** — Track 2 module (shipped in v0.1.0). Writes **T12 GL detail** data into the `T12 Input` sheet of the same destination workbook.
+- **`analyzer_rr_writer.py`** — Track 1 module. Writes **rent roll** data (Condensed_RR) into the `Rent Roll Input` sheet of the Analyzer. Was named `t12_writer.py` until 2026-05-10 (when the destination workbook was a standalone T12 intake template — predates the bundled-Analyzer-by-default flow that shipped in RR v1.12.0).
+- **`t12_normalizer_writer.py`** — Track 2 module (shipped in v0.1.0). Writes **T12 GL detail** data into the `T12 Input` sheet of the Analyzer.
 
-Both write into a T12 template / Analyzer workbook, but they handle different inputs and different sheets. A future cross-cutting commit may rename `t12_writer.py` to `rr_to_analyzer_writer.py` for clarity. Deferred until that cleanup is its own task. Note: this naming-history note also belongs in `SPEC-RR.md` — flagged but not yet added.
+The exception class `T12CapacityError` exported by `analyzer_rr_writer.py` retains its old name to keep the rename surgical; could be renamed to `AnalyzerRRCapacityError` in a follow-up. The companion `t12_translator.py` (Track 1; translates Condensed_RR vocabulary into the Analyzer's data-validation vocabulary) is the natural next rename target — `analyzer_rr_translator.py` — if the symmetry becomes important. See `CLAUDE.md` "Module naming gotcha" for the full file-by-file disambiguation.
 
 ---
 
@@ -154,7 +154,7 @@ The writer loads the user's analysis workbook with openpyxl. Writes:
 
 Preserves col P formula on rows 12-511. All other sheets, formulas, named ranges, and the `T12_Calc` helper col N are untouched.
 
-Idempotent re-run: clears any prior data in `T12 Input!A12:O511` and `T12 Input!C11:N11` before writing. Same pattern as `t12_writer.py` for `Rent Roll Input!A7:S606`.
+Idempotent re-run: clears any prior data in `T12 Input!A12:O511` and `T12 Input!C11:N11` before writing. Same pattern as `analyzer_rr_writer.py` for `Rent Roll Input!A7:S606`.
 
 ### Stage 5 — UNMATCHED interactive matching (in-app)
 

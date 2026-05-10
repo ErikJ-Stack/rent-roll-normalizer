@@ -1,10 +1,17 @@
 """
-T12 Writer
-==========
+Analyzer RR Writer
+==================
 
-Loads a user-supplied T12 intake workbook, writes the translated rent roll
+Loads the destination Analyzer workbook, writes the translated rent roll
 into the "Rent Roll Input" sheet starting at row 7 (cols A through S), and
 returns the modified workbook as bytes.
+
+Module name was previously `t12_writer.py` — a historical artifact from
+when the destination workbook was a standalone "T12 intake template"
+(predates the bundled-Analyzer-by-default flow that shipped in RR v1.12.0).
+Renamed for clarity in 2026-05-10. The companion T12-side writer that
+populates the Analyzer's `T12 Input` sheet lives in
+`t12_normalizer_writer.py`.
 
 Critical preservation guarantees:
   - All other tabs are untouched
@@ -16,6 +23,10 @@ Critical preservation guarantees:
     won't leave ghost rows from the prior run)
 
 Limit: max 600 bed rows per run (matches the formula extent in cols T-U).
+
+The module's `T12CapacityError` exception name is also a historical
+artifact — preserved for now to keep the rename surgical. A follow-up
+could rename it to `AnalyzerRRCapacityError` for consistency.
 """
 
 from __future__ import annotations
