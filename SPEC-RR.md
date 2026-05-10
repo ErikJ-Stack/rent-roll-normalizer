@@ -6,7 +6,7 @@
 **Repo:** <https://github.com/ErikJ-Stack/rent-roll-normalizer> (public)
 **Owner:** Erik J (`Erikjayj@gmail.com`, GitHub: `ErikJ-Stack`)
 **Stack:** Python · Streamlit · pandas · openpyxl · Streamlit Community Cloud (free tier)
-**Current version:** v1.13.0 (2026-05-07) — Memory Care detection for Oaks-style rent rolls (Horizons wing, Comfort Care 1-4 acuity, split AL/MC level columns).
+**Current version:** v1.14.0 (2026-05-08) — Homestead-style rent roll support (broker-condensed format with `Unit ID` / `Cottage` / `Area` / `Category` / `BR/BA` / `Market / Mo YYYY` / `Status` headers); self-contained vacant rows now emit when bed_status is recognized; pre-cleaner cuts the Homestead end-of-sheet pricing summary table.
 
 ---
 
@@ -24,7 +24,7 @@ The Analyzer then drives the underwriting analysis (P&L, scenarios, returns) —
 * **Track 1 — Rent Roll Normalizer** (this document) — RR parsing, RR writer, Streamlit UI shell, Analyzer source resolution, period-date detection.
 * **Track 2 — T12 Normalizer** (`SPEC-T12.md`) — T12 parser (Yardi + MRI format registry), T12 writer (`T12 Input` sheet), `Description_Map` lookup, UNMATCHED matcher form.
 
-Both tracks ship in the same `app.py` and write into the same Analyzer workbook, but they have independent version streams. **Track 1 is at v1.13.0; Track 2 is at v0.1.1; bundled Analyzer substrate is at v0.1.5.**
+Both tracks ship in the same `app.py` and write into the same Analyzer workbook, but they have independent version streams. **Track 1 is at v1.14.0; Track 2 is at v0.2.0; bundled Analyzer substrate is at v0.1.7.**
 
 ---
 
@@ -248,9 +248,11 @@ Briar Glen Privacy Level codes translate to bed letters: PRI/Single → no lette
 
 ### Self-contained row detection (introduced v1.8.0)
 
-A row is "self-contained" if it has BOTH apartment-level info AND a **resident name** on the same row. Resident is the strict signal — rates alone don't qualify (Salem puts rates on parent rows).
+A row is "self-contained" if it has BOTH apartment-level info AND **either a resident name OR a recognized bed_status value** on the same row. Resident is the original Briar Glen signal — rates alone don't qualify (Salem puts rates on parent rows). Bed_status was added in v1.14.0 as a second signal so Homestead-style vacants (no resident name, but Status=`VACANT`) emit instead of being silently dropped.
 
-Resolves Briar Glen single-bed format where everything is on one row per unit.
+The bed_status fallback is gated on the value being a recognized status keyword (`occupied`, `vacant`, `notice`, `hold`, `ntv`, etc.) so summary-block rows where the Status column happens to hold a number or a label like "Monthly Total" don't false-positive.
+
+Resolves Briar Glen single-bed format and Homestead broker-condensed format where everything is on one row per unit.
 
 ### Bed status fallback (introduced v1.8.0)
 
@@ -342,6 +344,7 @@ The bundled `ALF_Financial_Analyzer_Only.xlsx` (substrate v0.1.5) contains these
 | Salem (Oaks) | 50 | $28,125.81 | $-2,841.45 (7 rows) | Original test case. Multi-column unit+apartment, Level 1-7 acuity, three care buckets. |
 | Briar Glen | 79 (71 units, 8 shared) | $234,360.00 | $-14,132.00 (16 rows) | Single-column unit, two-letter care codes, *Vacant marker, monthly columns without suffixes, blank padding rows, totals block. Recurring Discounts + One-Time Incentives mapped (v1.9.0). |
 | Oaks at Beaufort | 104 (54 AL + 50 MC) | AL $18,720 + MC $14,716.13 | (covered by Salem) | Mixed AL+MC building. AL wing labeled `Assisted Living`, MC wing labeled `Horizons`. Two parallel care-level column groups on every row (one for AL, one for MC). Comfort Care 1-4 acuity vocabulary on the MC side. Verified end-to-end in v1.13.0. |
+| Homestead Pensacola | 176 (62 IL + 62 AL + 52 MC) | n/a (no per-bed Care Level $ column in source) | n/a (no concession column in source) | Broker-condensed self-contained format: one row per unit with `Unit ID` (e.g. `A1`), `Cottage`, `Unit`, `Area`, `Category` (IL/AL/MC-I/MC-JK), `BR/BA` (STU/1BR/2BR), `Market / Mo YYYY`, `Actual / Mo YYYY`, `Status` (Occupied / VACANT / Vacant w/ Prelease / Occ w/ NTV). Verified end-to-end in v1.14.0: 128 Occupied + 43 Vacant + 5 Notice = 176, exact match to source pricing-summary subtotals (IL=62, AL=62, MC=52). |
 
 Both verified end-to-end on every release. Concession totals added to baseline in v1.9.0 to catch sign regressions.
 

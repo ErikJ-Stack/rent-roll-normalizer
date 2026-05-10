@@ -47,9 +47,12 @@ _BANNER_PREFIXES = (
     "report period:",
     "property:",
     "portfolio:",
+    "errors!!!",   # Homestead: row-2 chrome ("ERRORS!!!" / "Current Date:" cells)
+    "current date:",
 )
 
-# Row text → drop if any cell contains a totals signal
+# Row text → drop if any cell contains a totals signal. Anything from the FIRST
+# matching row to the end of the sheet is dropped (totals/summary block).
 _TOTALS_SIGNALS = (
     "totals for ",
     "grand total",
@@ -58,6 +61,15 @@ _TOTALS_SIGNALS = (
     "total units",
     "report total",
     "property total",
+    # Homestead: a category-pricing summary table follows the unit list, with
+    # care-type-prefixed subtotals and a "Double-Check" row at the very end.
+    # The subtotal labels are anchored enough to avoid false-positives on
+    # midstream sheets from other operators.
+    "il subtotal",
+    "al subtotal",
+    "mc subtotal",
+    "double-check",
+    "avg area",   # Homestead second-table column header (appears at the start of the pricing summary block, before any subtotal row)
 )
 
 # Care code legend rows specifically (Briar Glen has these on its 2nd sheet,
