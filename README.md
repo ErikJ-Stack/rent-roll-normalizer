@@ -65,9 +65,9 @@ rent_roll_app/
 ├── writer.py                           # RR Excel output writer (standalone normalized workbook)
 │
 ├── t12_normalizer.py                   # T12 format registry + extractors (Yardi / MRI / BrokerFinancialSummary)
-├── t12_writer.py                       # T12 → Analyzer paste (T12 Input sheet)
-├── t12_normalizer_writer.py            # T12 standalone normalized workbook writer
-├── t12_translator.py                   # RR → T12 vocabulary translator (translates Condensed_RR values into the T12 intake workbook's data-validation vocabulary; standalone RR output is unchanged)
+├── t12_normalizer_writer.py            # Writes parsed T12 GL detail into the Analyzer's T12 Input sheet (Track 2)
+├── t12_translator.py                   # Translates Condensed_RR values into the Analyzer's data-validation vocabulary (Track 1)
+├── analyzer_rr_writer.py               # Writes the translated RR into the Analyzer's Rent Roll Input sheet (Track 1; renamed from t12_writer.py on 2026-05-10)
 │
 ├── ALF_Financial_Analyzer_Only.xlsx    # Bundled Analyzer template (substrate v0.1.7)
 ├── mapping_template.xlsx               # Editable RR mapping override template (optional sidebar upload)

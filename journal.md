@@ -9,26 +9,45 @@ Newest at top.
 
 ---
 
-## 2026-05-10 — Doc cleanup: CLAUDE.md t12_* naming gotcha + v1.14.0 carry-forward closeouts
+## 2026-05-10 — Doc cleanup + `t12_writer.py` → `analyzer_rr_writer.py` rename
 
-Brief follow-up session after the v1.14.0 + README ship. Three carry-forwards closed, one resolved as a no-op.
+Follow-up session after the v1.14.0 + README ship. Closed three v1.14.0 carry-forwards plus the "newly identified" rename one (which was raised AND staffed in the same session — the user said "go ahead" mid-flight).
 
 **Smoke test closed.** User confirmed Salem / Briar Glen / Oaks at Beaufort all parse cleanly under v1.14.0 (`bed_status` self-contained signal didn't regress them — the keyword gate works as intended; `*Vacant` resident markers continue through the existing resident-name path on Briar Glen, and Salem's parent-child structure is unaffected because the new signal only fires on rows with `unit/apt` info AND a recognized status keyword).
 
-**`t12_*` "duplicate" investigation — false alarm.** PR #4 review surfaced what looked like a duplicate `t12_writer.py` vs `t12_normalizer_writer.py`. Read both files + grepped `app.py` for usage. Confirmed: four `t12_*` files exist and all four are imported and called by `app.py` at distinct sites (lines 46-51 imports, 795-806 orchestration). The `t12_` prefix originally meant "operates on the T12-shaped destination workbook" (which is now the Analyzer), not "operates on T12 data." Files: `t12_translator.translate_for_t12()` (RR vocabulary → Analyzer data-validation vocabulary), `t12_writer.populate_t12()` (RR → Analyzer `Rent Roll Input`), `t12_normalizer.parse_t12()` (raw T12 → parsed GL rows), `t12_normalizer_writer.populate_t12_input()` (parsed T12 → Analyzer `T12 Input`). No deletes.
+**`t12_*` "duplicate" investigation — false alarm.** PR #4 review surfaced what looked like a duplicate `t12_writer.py` vs `t12_normalizer_writer.py`. Read both files + grepped `app.py` for usage. Confirmed: four `t12_*` files exist and all four are imported and called by `app.py` at distinct sites (lines 46-51 imports, 795-806 orchestration). The `t12_` prefix originally meant "operates on the T12-shaped destination workbook" (which is now the Analyzer), not "operates on T12 data." No deletes.
 
-**CLAUDE.md "Naming history" note rewritten.** The old note claimed `t12_translator.py` was renamed to `t12_normalizer.py` — that's flatly wrong (both files exist, with distinct functions, both wired into `app.py`). Replaced with a "Module naming gotcha" table that lists all four files and their roles, plus the line-number pointers into `app.py` so the next chat tempted to delete one as "duplicate" can verify in one grep. Suggested but didn't staff: a rename pass to disambiguate (`t12_writer.py` → `analyzer_rr_writer.py`, etc.) — meaningful refactor, lots of import sites to update, not worth doing without a triggering reason.
+**CLAUDE.md "Naming history" note rewritten.** The old note claimed `t12_translator.py` was renamed to `t12_normalizer.py` — that's flatly wrong (both files exist, with distinct functions, both wired into `app.py`). Replaced with a "Module naming gotcha" table that lists all four files and their roles, plus the line-number pointers into `app.py` so the next chat tempted to delete one as "duplicate" can verify in one grep.
+
+**`t12_writer.py` → `analyzer_rr_writer.py` rename.** Initially flagged as a deferred carry-forward; user said "go ahead" so it shipped in this same PR. Surface area:
+- `git mv t12_writer.py analyzer_rr_writer.py` — preserves git history.
+- Updated docstring header inside the file (was "T12 Writer" → "Analyzer RR Writer", added explicit naming-history paragraph).
+- Updated import in `app.py:51`: `from t12_writer import ...` → `from analyzer_rr_writer import ...`.
+- Updated cross-reference in `t12_normalizer_writer.py` docstring (the disambiguation note that referenced `t12_writer.py`).
+- Updated live doc references: `CLAUDE.md` (Track 2 Code list — also corrected a separate pre-existing bug where `t12_writer.py` was wrongly listed under Track 2 even though it's RR-side; gotcha table; example line), `README.md` (project layout — also corrected a separate pre-existing bug where `t12_writer.py` was described as "T12 → Analyzer paste (T12 Input sheet)" which was the wrong file's role), `SPEC-RR.md` (file inventory entry), `SPEC-T12.md` (3 references: file inventory description, "future rename" deferred note now resolved, "same pattern as" cross-reference).
+- **Did NOT change:** historical CHANGELOG-RR.md / CHANGELOG-T12.md / older journal entries — those are records of what shipped at past versions; renaming would falsify history.
+- **Did NOT change:** the `T12CapacityError` exception name. Preserved to keep the rename surgical. Could be renamed to `AnalyzerRRCapacityError` in a follow-up — surface area is just `app.py:51` (the import) and the class definition. Documented as a follow-up in CLAUDE.md and in the new file's docstring.
+- **Did NOT change:** `t12_translator.py`. Companion Track 1 file — translates Condensed_RR vocabulary into Analyzer data-validation vocabulary. Same renaming logic would apply (`analyzer_rr_translator.py`), but the user only asked for the writer; flagged as a candidate follow-up in CLAUDE.md / SPEC-T12.md.
+
+Verification: re-ran the Homestead smoke test (the same `_smoke.py` harness pattern from the v1.14.0 ship) after the rename — 176 rows out, IL=62/AL=62/MC=52, 0 unmapped. App imports clean, no behavioral change.
 
 ### Files changed
 
-- `CLAUDE.md` — replaced the inaccurate "Naming history" one-liner with a four-row "Module naming gotcha" table
+- `t12_writer.py` → `analyzer_rr_writer.py` (rename via `git mv`, plus docstring update)
+- `app.py` — import path updated
+- `t12_normalizer_writer.py` — docstring cross-reference updated
+- `CLAUDE.md` — "Module naming gotcha" table updated; pre-existing Track 2 Code list bug fixed
+- `README.md` — project layout updated; pre-existing module-role-comment bug fixed
+- `SPEC-RR.md` — file inventory entry updated
+- `SPEC-T12.md` — 3 references updated; "future rename" deferred note now resolved
 - `journal.md` — this entry
 
 ### Carry-forwards still open
 
 - **Hold/Prelease distinction** for `Vacant w/ Prelease` rows. Currently both VACANT and Vacant w/ Prelease → Vacant. Defensible as-is.
 - **Substrate version-detection cosmetic bug.** `_detect_substrate_version()` returns `v0.1.5` for any v0.1.5+ substrate because newer substrates don't add new Labels in Description_Map column B. Worth widening the marker list when the bundle next changes Label vocabulary.
-- **`t12_*` rename pass** (newly identified). Disambiguating the four files would help future onboarding. Lots of import sites to update — wait for a triggering reason.
+- **`t12_translator.py` → `analyzer_rr_translator.py` rename** — companion to the writer rename done here. Wait for a triggering reason.
+- **`T12CapacityError` → `AnalyzerRRCapacityError`** — exception class rename for consistency with the file rename done here. Surface is one import + one class definition. Wait for a triggering reason.
 - **Track 3 — Analytical coverage** (Branch 3 per `OPTIMIZATION-DECISIONS.md`).
 - **Track 3 — Handoff readiness** (Branch 2, after Branch 3).
 
