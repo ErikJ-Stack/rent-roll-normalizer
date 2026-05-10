@@ -9,6 +9,31 @@ Newest at top.
 
 ---
 
+## 2026-05-10 — Doc cleanup: CLAUDE.md t12_* naming gotcha + v1.14.0 carry-forward closeouts
+
+Brief follow-up session after the v1.14.0 + README ship. Three carry-forwards closed, one resolved as a no-op.
+
+**Smoke test closed.** User confirmed Salem / Briar Glen / Oaks at Beaufort all parse cleanly under v1.14.0 (`bed_status` self-contained signal didn't regress them — the keyword gate works as intended; `*Vacant` resident markers continue through the existing resident-name path on Briar Glen, and Salem's parent-child structure is unaffected because the new signal only fires on rows with `unit/apt` info AND a recognized status keyword).
+
+**`t12_*` "duplicate" investigation — false alarm.** PR #4 review surfaced what looked like a duplicate `t12_writer.py` vs `t12_normalizer_writer.py`. Read both files + grepped `app.py` for usage. Confirmed: four `t12_*` files exist and all four are imported and called by `app.py` at distinct sites (lines 46-51 imports, 795-806 orchestration). The `t12_` prefix originally meant "operates on the T12-shaped destination workbook" (which is now the Analyzer), not "operates on T12 data." Files: `t12_translator.translate_for_t12()` (RR vocabulary → Analyzer data-validation vocabulary), `t12_writer.populate_t12()` (RR → Analyzer `Rent Roll Input`), `t12_normalizer.parse_t12()` (raw T12 → parsed GL rows), `t12_normalizer_writer.populate_t12_input()` (parsed T12 → Analyzer `T12 Input`). No deletes.
+
+**CLAUDE.md "Naming history" note rewritten.** The old note claimed `t12_translator.py` was renamed to `t12_normalizer.py` — that's flatly wrong (both files exist, with distinct functions, both wired into `app.py`). Replaced with a "Module naming gotcha" table that lists all four files and their roles, plus the line-number pointers into `app.py` so the next chat tempted to delete one as "duplicate" can verify in one grep. Suggested but didn't staff: a rename pass to disambiguate (`t12_writer.py` → `analyzer_rr_writer.py`, etc.) — meaningful refactor, lots of import sites to update, not worth doing without a triggering reason.
+
+### Files changed
+
+- `CLAUDE.md` — replaced the inaccurate "Naming history" one-liner with a four-row "Module naming gotcha" table
+- `journal.md` — this entry
+
+### Carry-forwards still open
+
+- **Hold/Prelease distinction** for `Vacant w/ Prelease` rows. Currently both VACANT and Vacant w/ Prelease → Vacant. Defensible as-is.
+- **Substrate version-detection cosmetic bug.** `_detect_substrate_version()` returns `v0.1.5` for any v0.1.5+ substrate because newer substrates don't add new Labels in Description_Map column B. Worth widening the marker list when the bundle next changes Label vocabulary.
+- **`t12_*` rename pass** (newly identified). Disambiguating the four files would help future onboarding. Lots of import sites to update — wait for a triggering reason.
+- **Track 3 — Analytical coverage** (Branch 3 per `OPTIMIZATION-DECISIONS.md`).
+- **Track 3 — Handoff readiness** (Branch 2, after Branch 3).
+
+---
+
 ## 2026-05-08 — RR v1.14.0 (Homestead-style broker-condensed format)
 
 **Started as:** Track 1 chat. User flagged that the Homestead Village Pensacola rent roll parsed incompletely — they shared the source RR (`2026-04-24 Homestead Village Rent Roll v2.xlsx`) and the populated Analyzer (`Analyzer with 2026-04-24 Homestead Village Rent Roll v2 + March 2026 T12 2026-04-24.xlsx`) and asked for a diagnosis.

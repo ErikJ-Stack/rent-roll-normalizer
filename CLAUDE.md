@@ -53,7 +53,16 @@ The repo runs three parallel tracks. They share an Analyzer but are otherwise in
 | Current code version | T12 v0.2.0 |
 | Current substrate version | v0.1.7 |
 
-**Naming history:** `t12_translator.py` was renamed to `t12_normalizer.py` at some point. If a chat references `t12_translator`, it's old terminology — confirm in the live file tree.
+**Module naming gotcha (verified 2026-05-10).** Four `t12_*` files exist and they are NOT duplicates — the `t12_` prefix originally meant "operates on the T12-shaped destination workbook" (which is now the Analyzer), not "operates on T12 data." Every one is imported by `app.py` and serves a distinct role:
+
+| File | Function | Role |
+| --- | --- | --- |
+| `t12_translator.py` | `translate_for_t12()` | Translates Condensed_RR vocabulary → Analyzer data-validation vocabulary (e.g. `1BR` → `1 Bedroom`). RR-side. |
+| `t12_writer.py` | `populate_t12()` | Writes the translated RR into the Analyzer's `Rent Roll Input` sheet. RR-side. |
+| `t12_normalizer.py` | `parse_t12()` | Parses raw T12 financial statements (Yardi / MRI / BrokerFinancialSummary format registry). T12-side (Track 2). |
+| `t12_normalizer_writer.py` | `populate_t12_input()` | Writes parsed T12 GL detail into the Analyzer's `T12 Input` sheet. T12-side (Track 2). |
+
+If a future chat is tempted to delete one as "duplicate," check `app.py` lines 46-51 and 795-806 — all four are wired into the orchestration. A rename pass to disambiguate (`t12_writer.py` → `analyzer_rr_writer.py`, etc.) would be a meaningful refactor; not staffed.
 
 ### Track 3 — Analyzer optimization (workbook-only, no code)
 
