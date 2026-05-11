@@ -38,7 +38,7 @@ The repo runs three parallel tracks. They share an Analyzer but are otherwise in
 | Code | `app.py`, `normalizer.py`, `mappings.py`, `pre_cleaner.py`, `period_date.py`, `reports.py`, `writer.py` |
 | Spec | `SPEC-RR.md` |
 | Changelog | `CHANGELOG-RR.md` |
-| Current version | RR v1.14.0 |
+| Current version | RR v1.15.0 |
 
 ### Track 2 — T12 Normalizer (T12-side code + Analyzer substrate)
 
@@ -101,7 +101,8 @@ These are real backlogged items that previous chats deferred. They have a home; 
 
 ### Closed 2026-05-11 (Substrate v0.1.8 — Branch 3 analytical coverage)
 
-- ✓ **Branch 3 — Analytical coverage shipped.** New: T12 Analytics property-name & period-end auto-fill (B2 3-priority RR→T12→Cover, E2 LOOKUP rightmost-populated month), 5 chart objects on T12 Analytics K1:V44 (occupancy stacked col / rate-band histogram / payer-mix doughnut / 12-mo revenue trend / AL acuity doughnut), 5 conditional formula-driven note cells, Rent Roll Recon B2 latest-date default formula + dropdown DV, section K (IL unit-type mix + sqft + rate dispersion at rows 86-100), section L (MC auto-detect flat/tiered/FFS at rows 102-117). Migration via `migrate_to_v018.py` — 10 ops, 17-check verify, idempotent. **Opens two follow-up carry-forwards** — see "Medium priority" below for the writer-side stamps.
+- ✓ **Branch 3 — Analytical coverage shipped (substrate v0.1.8).** New: T12 Analytics property-name & period-end auto-fill (B2 3-priority RR→T12→Cover, E2 LOOKUP rightmost-populated month), 5 chart objects on T12 Analytics K1:V44 (occupancy stacked col / rate-band histogram / payer-mix doughnut / 12-mo revenue trend / AL acuity doughnut), 5 conditional formula-driven note cells, Rent Roll Recon B2 latest-date default formula + dropdown DV, section K (IL unit-type mix + sqft + rate dispersion at rows 86-100), section L (MC auto-detect flat/tiered/FFS at rows 102-117). Migration via `migrate_to_v018.py` — 10 ops, 17-check verify, idempotent. Substrate cells A3 (RR Input) and A10 (T12 Input) reserved as property-name value targets (refinement 2026-05-11).
+- ✓ **Track 1 — RR writer auto-stamp `Rent Roll Input!A3`** (RR v1.15.0). `analyzer_rr_writer.populate_t12()` now accepts `source_filename` kwarg and writes the derived property name. Closes the Track 1 carry-forward opened by substrate v0.1.8. New shared module `property_name.py` with `derive_property_name(filename)` strips date stamps + report boilerplate. Verified end-to-end on Salem / Briar Glen / Homestead filename patterns.
 
 ### Closed 2026-05-08 (RR v1.14.0 — Homestead-style format)
 
@@ -116,8 +117,7 @@ These are real backlogged items that previous chats deferred. They have a home; 
 
 ### Medium priority (still open)
 
-- **Track 1 follow-up — RR writer stamp `Rent Roll Input!A3`** with parsed property name (from source RR filename stem or detected metadata). Opens the auto-fill path for `T12 Analytics!B2` 3-priority formula installed at substrate v0.1.8. A3 is a single-cell value target — no separate label. Until shipped, A3 is analyst-paste only. **Track 1 chat (small surface — `writer.py` only).**
-- **Track 2 follow-up — T12 writer stamp `T12 Input!A10`** with parsed property name (from T12 source metadata). Same shape as RR follow-up — A10 is a single-cell value target, no separate label. **Track 2 chat (small surface — `t12_normalizer_writer.py` only).**
+- **Track 2 follow-up — T12 writer stamp `T12 Input!A10`** with parsed property name (from T12 source filename). Counterpart to the Track 1 RR follow-up shipped 2026-05-11 in v1.15.0. A10 is a single-cell value target, no separate label. **Track 2 chat (small surface — `t12_normalizer_writer.py` only).**
 - **Branch 2 — Handoff readiness.** Pre-export gate, UW Export sheet (values-only mirror), metadata header, source trail. **Track 3 chat — Branch 2 was sequenced after Branch 3 per OPTIMIZATION-DECISIONS.md.**
 
 ### Low priority

@@ -38,6 +38,8 @@ from typing import Optional
 import openpyxl
 import pandas as pd
 
+from property_name import derive_property_name
+
 
 # Layout constants — match the T12 we inspected
 SHEET_NAME = "Rent Roll Input"
@@ -112,6 +114,8 @@ def populate_t12(
     t12_bytes: bytes,
     translated_df: pd.DataFrame,
     period_date: Optional[dt.date],
+    *,
+    source_filename: str = "",
 ) -> bytes:
     """Populate a T12 workbook with translated rent roll data and return as bytes.
 
@@ -120,6 +124,10 @@ def populate_t12(
         translated_df: DataFrame from t12_translator.translate_for_t12()
             — must have the 18 source columns in SOURCE_COLUMNS_A_TO_R
         period_date: Date written to col S on every populated row. Required.
+        source_filename: original RR filename. When non-empty, the derived
+            property name (via property_name.derive_property_name) is
+            written to `Rent Roll Input!A3` per substrate v0.1.8. Empty
+            string leaves A3 untouched.
 
     Raises:
         T12CapacityError: if the rent roll exceeds DATA_END_ROW - DATA_START_ROW + 1 rows
@@ -176,7 +184,16 @@ def populate_t12(
         s_cell.value = period_date
         s_cell.number_format = "mm/dd/yyyy"
 
-    # --- Step 3: Save and return ------------------------------------------
+    # --- Step 3: Stamp property name into A3 (substrate v0.1.8 source cell)
+    # Only writes when derivation produces something non-empty, so a bad
+    # filename doesn't clobber an analyst-typed value carried in from a
+    # prior session.
+    if source_filename:
+        derived = derive_property_name(source_filename)
+        if derived:
+            ws["A3"].value = derived
+
+    # --- Step 4: Save and return ------------------------------------------
     out = io.BytesIO()
     wb.save(out)
     return out.getvalue()

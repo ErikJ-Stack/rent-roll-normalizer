@@ -8,6 +8,52 @@ When making a code change in a chat, add an entry here in the same commit.
 
 ---
 
+## [1.15.0] — 2026-05-11
+
+### Summary
+
+Track 1 follow-up to substrate v0.1.8 Branch 3 analytical coverage: the RR Analyzer writer (`analyzer_rr_writer.populate_t12`) now stamps the property name into `Rent Roll Input!A3` automatically, derived from the uploaded RR filename. This closes the Track 1 carry-forward opened by substrate v0.1.8, which left A3 as analyst-paste-only. Now the property name flows automatically from "Salem Road T-12 1.31.26.xlsx" → A3 of the Analyzer → T12 Analytics!B2 (via the 3-priority formula installed at v0.1.8) → Workbook Health Property_Name validation. Manual override still works — analyst can paste a different name into A3 after download; the next re-run from app will rewrite it from the new RR upload.
+
+### What changed
+
+**New shared module — `property_name.py`:**
+- `derive_property_name(filename: str) -> str` — best-effort filename → property name. Strips date stamps (`1.31.26`, `2025.12`, `2026-04-24`, `Mar 2026`, etc.), boilerplate (`T-12`, `T12`, `RR`, `Rent Roll`, `P&L`, `Profit and Loss`, `Statement`, `Financial Summary`, `v2`, `(1)`), and normalizes separators (`_`, `-`) to spaces. Falls back to the raw stem if cleaning leaves nothing.
+- Verified against 15 representative filenames including the four T12 reference fixtures, Homestead RR, and edge cases (empty input, Windows path, UNIX path, bare property name).
+- Cross-track utility — used by both `analyzer_rr_writer.py` (Track 1) and `t12_normalizer_writer.py` (Track 2). Bumping its behavior should consider both writers.
+
+**Writer — `analyzer_rr_writer.py`:**
+- `populate_t12()` accepts a new `source_filename: str = ""` keyword. When non-empty, the derived property name is written to `Rent Roll Input!A3` per the substrate v0.1.8 contract. Empty filename or empty derivation leaves A3 untouched (so a bad filename doesn't clobber an analyst-typed value carried in from a prior session).
+- Idempotent: each call rewrites A3 from the new RR file's derived name. Matches the existing "writer manages the Rent Roll Input sheet" contract that already clears A7:S606 before each write.
+
+**App — `app.py`:**
+- `RR_VERSION = "1.15.0"`, `RR_LAST_UPDATED = "2026-05-11"`.
+- `populate_t12(...)` call passes `source_filename=getattr(rr_file, "name", "")`. Falls back to "" if `rr_file` has no `name` attribute (e.g. a future programmatic caller passing raw bytes).
+
+**Docs:**
+- `SPEC-RR.md` — Current version line bumped to v1.15.0; file inventory entry for `property_name.py` added.
+- `CHANGELOG-RR.md` — this entry.
+- `CLAUDE.md` — Track 1 follow-up carry-forward marked closed; current RR version bumped to v1.15.0.
+
+### Carry-forwards opened by this change
+
+- **None.** This closes the Track 1 carry-forward from substrate v0.1.8 cleanly. The companion Track 2 follow-up (T12 writer stamp at T12 Input!A10) is shipped as T12 v0.2.1 in a separate commit on the same branch.
+
+### Verification
+
+In-process smoke test (`_smoke_t1.py`, not committed) confirms:
+1. `"Salem Road T-12 1.31.26.xlsx"` → A3 = `"Salem Road"`.
+2. `"2026-04-24 Homestead Village Rent Roll v2.xlsx"` → A3 = `"Homestead Village"`.
+3. Empty / unspecified `source_filename` → A3 untouched.
+4. T12 Analytics B2 formula still resolves through the 3-priority chain.
+
+Unit-level: `_test_property_name.py` (not committed) covers 15 filename patterns end-to-end, all green.
+
+### Why this is Track 1 (not Track 3)
+
+The substrate workbook change shipped at v0.1.8 (Track 3) reserved the value cell. Stamping content into that cell from a parser-side filename is application logic — Track 1 territory per CLAUDE.md scope discipline. The user explicitly authorized cross-track work in the same chat (the 2026-05-11 Branch 3 + writer-follow-ups bundle) so this was done in the same session; future writer-side changes should be scoped to their own Track 1 chat.
+
+---
+
 ## [1.14.0] — 2026-05-08
 
 ### Summary
