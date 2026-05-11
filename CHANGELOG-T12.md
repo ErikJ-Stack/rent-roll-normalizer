@@ -8,6 +8,44 @@ When making a code change in a T12-related chat, add an entry here in the same c
 
 ---
 
+## [0.2.1] — 2026-05-11
+
+### Summary
+
+Track 2 follow-up to substrate v0.1.8 Branch 3 analytical coverage: the T12 Analyzer writer (`t12_normalizer_writer.populate_t12_input`) now stamps the property name into `T12 Input!A10`, derived from the uploaded T12 filename. Closes the Track 2 carry-forward opened by substrate v0.1.8. T12 Analytics!B2 (3-priority RR → T12 → Cover) now sees A10 populated when a T12 is uploaded — so if no RR is uploaded for the same property, B2 falls through to the T12-derived name instead of the Cover!B5 default.
+
+### What changed
+
+**Writer — `t12_normalizer_writer.py`:**
+- New `from property_name import derive_property_name` import (shared cross-track utility introduced in RR v1.15.0).
+- `populate_t12_input()` already received `source_filename` — that path is now extended: when non-empty, the derived property name is written to `T12 Input!A10` after the GL detail rows. Empty filename or empty derivation leaves A10 untouched.
+- Step numbering in the function body shifted: prior Step 4 (Description_Map append) and Step 5 (Run_Info upsert) become Steps 5 and 6; new Step 4 is the property-name stamp.
+- Idempotent: each call rewrites A10 from the new T12 file's derived name. Matches the existing "writer manages the T12 Input sheet" contract.
+
+**App — `app.py`:**
+- `T12_VERSION = "0.2.1"` (was 0.2.0); `T12_LAST_UPDATED = "2026-05-11"`.
+- No call-site change needed — `populate_t12_input()` already received `source_filename`; the new behavior consumes it.
+
+**Docs:**
+- `SPEC-T12.md` — Current version line bumped to v0.2.1; brief note in the parser/writer section about the A10 stamp.
+- `CHANGELOG-T12.md` — this entry.
+- `CLAUDE.md` — Track 2 follow-up carry-forward marked closed; current T12 version bumped to v0.2.1.
+
+### Verification
+
+In-process smoke test (`_smoke_t2.py`, not committed) covers the end-to-end pipeline through both writers:
+1. RR + T12 uploaded with same filename property prefix → A3 and A10 both populated with the derived name.
+2. RR + T12 from different uploads → A3 from RR-derived, A10 from T12-derived (RR wins in B2 by 3-priority order).
+3. T12 only (no RR) → A3 empty, A10 populated.
+4. Empty `source_filename` → A10 untouched.
+5. T12 Analytics B2 formula still resolves cleanly through the 3-priority chain.
+
+### Why this is Track 2 (not Track 3)
+
+Same logic as the RR v1.15.0 commit: substrate cell reservation was Track 3 work (substrate v0.1.8); stamping content into that cell from a parser-side filename is application logic — Track 2 territory. Bundled into the same chat as Track 1 per user authorization on 2026-05-11.
+
+---
+
 ## [Substrate template v0.1.8] — 2026-05-11
 
 Branch 3 of the Analyzer optimization roadmap (analytical coverage). All edits additive — new formulas in currently-empty cells (`T12 Analytics!B2`/`E2`), new chart objects on currently-empty `T12 Analytics!K1:V44`, and two new sections appended at the bottom of `Rent Roll Recon` (rows 86-117). No existing aggregators rewired. Workbook-only — no code changes to `t12_normalizer.py` / `t12_normalizer_writer.py` / `analyzer_rr_writer.py` / `app.py`. Design captured in `OPTIMIZATION-DECISIONS.md` decisions D-15 through D-22.

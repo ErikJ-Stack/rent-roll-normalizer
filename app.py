@@ -62,8 +62,8 @@ APP_LAST_UPDATED = "2026-05-08"   # alias for RR_LAST_UPDATED
 RR_VERSION = "1.15.0"
 RR_LAST_UPDATED = "2026-05-11"
 
-T12_VERSION = "0.2.0"
-T12_LAST_UPDATED = "2026-05-08"
+T12_VERSION = "0.2.1"
+T12_LAST_UPDATED = "2026-05-11"
 
 
 # ---------------------------------------------------------------------------
