@@ -10,9 +10,9 @@ A Streamlit app that turns a senior-housing rent roll AND a T12 financial statem
 
 | Stream | Version | Last updated |
 | --- | --- | --- |
-| RR Normalizer (`RR_VERSION`) | v1.14.0 | 2026-05-08 |
-| T12 Normalizer (`T12_VERSION`) | v0.2.0 | 2026-05-08 |
-| Bundled Analyzer substrate | v0.1.7 | 2026-05-08 |
+| RR Normalizer (`RR_VERSION`) | v1.15.0 | 2026-05-11 |
+| T12 Normalizer (`T12_VERSION`) | v0.2.1 | 2026-05-11 |
+| Bundled Analyzer substrate | v0.1.8 | 2026-05-11 |
 
 ---
 
@@ -26,6 +26,26 @@ Single-click flow: drop in a raw rent roll (and optionally a raw T12), download 
 2. **T12 Normalizer (Track 2)** — parses a raw T12 financial statement (Yardi, MRI, or broker-financial-summary format), classifies each GL row against the Analyzer's `Description_Map` Label vocabulary, surfaces UNMATCHED rows for one-click resolution, and writes the monthly trending matrix to `T12 Input`. Optional `annualize partial-year T12` toggle.
 
 The Analyzer (`ALF_Financial_Analyzer_Only.xlsx`) is bundled in the repo and loaded by default — no need to upload one. An "Advanced — override Analyzer template" expander accepts a custom Analyzer for the session if you need to populate an existing deal's workbook.
+
+### Auto-filled property-level metadata
+
+Both writers derive a property name from the uploaded filename (date stamps, `T-12` / `T12` / `RR` / `P&L` / `Statement` boilerplate stripped) via the shared `property_name.py` helper:
+
+- **RR upload** → property name stamped at `Rent Roll Input!A3`
+- **T12 upload** → property name stamped at `T12 Input!A10`
+- `T12 Analytics!B2` reads through a 3-priority chain: `Rent Roll Input!A3` → `T12 Input!A10` → `Cover!B5` (manual override)
+- `T12 Analytics!E2` derives the T12 period-ending date from the rightmost populated month label at `T12 Input!C11:N11`
+
+### Analyzer at a glance (post-Branch 3)
+
+The bundled Analyzer (substrate v0.1.8) renders five underwriting visuals on `T12 Analytics!K1:V44` — occupancy by care type (stacked column), rate dispersion (3-series histogram), payer mix (doughnut), 12-month revenue trend (line), and AL acuity mix (doughnut). Each chart has a conditional formula-driven note cell below it that fires only when its threshold is hit (e.g. "⚠ Medicaid revenue share 35% — reimbursement rate risk" only appears when Medicaid > 30%).
+
+`Rent Roll Recon` adds two IL/MC deep-dive sections beyond the existing AL Care Level Distribution:
+
+- **Section K — IL Unit-Type Mix, Size & Rate Dispersion** (rows 86-100): Studio / 1BR / 2BR / Cottage / Other × count / % / avg-min-max rate / avg sqft / $-per-sqft, plus a rate-CV proxy that flags wide dispersion as legacy in-place rates.
+- **Section L — MC Care Structure** (rows 102-117): auto-detects flat-rate / tiered / fee-for-service from the distinct-count of K-column values, then renders tier-specific metrics + a pattern-specific conditional note.
+
+`Rent Roll Recon!B2` (period selector) defaults to the latest period in the uploaded RR via `LOOKUP(9.99E+307, ...)`, with a dropdown for analyst override.
 
 ### What's normalized
 
@@ -68,8 +88,9 @@ rent_roll_app/
 ├── t12_normalizer_writer.py            # Writes parsed T12 GL detail into the Analyzer's T12 Input sheet (Track 2)
 ├── t12_translator.py                   # Translates Condensed_RR values into the Analyzer's data-validation vocabulary (Track 1)
 ├── analyzer_rr_writer.py               # Writes the translated RR into the Analyzer's Rent Roll Input sheet (Track 1; renamed from t12_writer.py on 2026-05-10)
+├── property_name.py                    # Cross-track helper: derives property name from filename for both writers
 │
-├── ALF_Financial_Analyzer_Only.xlsx    # Bundled Analyzer template (substrate v0.1.7)
+├── ALF_Financial_Analyzer_Only.xlsx    # Bundled Analyzer template (substrate v0.1.8)
 ├── mapping_template.xlsx               # Editable RR mapping override template (optional sidebar upload)
 │
 ├── tools/
@@ -79,6 +100,7 @@ rent_roll_app/
 │       ├── migrate_to_v015.py          # Substrate v0.1.4 → v0.1.5 migration
 │       ├── migrate_to_v016.py          # Substrate v0.1.5 → v0.1.6 migration
 │       ├── migrate_to_v017.py          # Substrate v0.1.6 → v0.1.7 migration
+│       ├── migrate_to_v018.py          # Substrate v0.1.7 → v0.1.8 migration (Branch 3 analytics)
 │       └── verify_e2e.py               # End-to-end Analyzer verification
 │
 ├── CLAUDE.md                           # Onboarding doc for any Claude session — read first
@@ -140,12 +162,15 @@ Add a new `*Format` class to `t12_normalizer.py` next to `YardiGeneralFormat`, `
 
 ### New Analyzer substrate version
 
-Substrate edits (new Labels, formula changes, row inserts, named-range changes) are a Track 3 / Track 2 deliverable, NOT a Track 1 (RR-side) one. Required deliverables:
+Substrate edits (new Labels, formula changes, row inserts, named-range changes, new chart objects, new conditional notes) are a **Track 3 deliverable** — workbook-only, no parser/writer code changes. Required deliverables:
 
 1. New entry in `CHANGELOG-T12.md` `[Substrate template vX.Y.Z]` section
 2. Migration script at `tools/migration/migrate_to_vXYZ.py` — must be idempotent, with a verification block at the end
 3. Update `Cover!B8` and every sheet's `AZ4` anchor cell to the new version
 4. Bump bundled `ALF_Financial_Analyzer_Only.xlsx` and update SPEC-RR.md / SPEC-T12.md / CLAUDE.md current-version lines
+5. Append design + decisions to `OPTIMIZATION-DECISIONS.md` (this is the canonical Track 3 design log)
+
+Cross-track follow-ups (where the substrate opens a writer-side carry-forward — e.g. v0.1.8 reserved property-name cells at `Rent Roll Input!A3` / `T12 Input!A10` for the writers to populate) should ship on their own track per the "one track at a time" principle in `CLAUDE.md`.
 
 ---
 
