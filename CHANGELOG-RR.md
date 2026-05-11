@@ -8,6 +8,95 @@ When making a code change in a chat, add an entry here in the same commit.
 
 ---
 
+## [1.16.0] — 2026-05-11
+
+### Summary
+
+Captures **7 new data fields per resident** that were previously being dropped silently — discovered against the Homestead fixture by tying out source-rent-roll charges to the Condensed_RR output. Combined with the v1.15.1 keyword widening (which recovered Pet / H/K / Laundry / Misc. / Diabetes into `Other LOC $`), this round adds dedicated columns for:
+
+1. **2nd Person Rent $** — housing revenue for couples, tied to apartment not care needs. Aligns with the T12 substrate's pre-existing `2nd Person Revenue` Label so RR ↔ T12 reconciliation now nets to zero on 2P revenue. Verified: 4 couples in the Homestead fixture now populate ($650 / $725 / $800).
+2. **Move-out Date** — for vacate forecasting in UW revenue projections. Was already captured in `Normalized_Beds` (col R) but dropped from `Condensed_RR` — now in both.
+3. **Balance** — outstanding AR per resident → bad-debt indicator.
+4. **Notes** — free-form context (rate-negotiation history, lease anomalies, transfer notes). 33 rows in the Homestead fixture have populated notes including the diagnostic "HK $100 eff 3/1- sec occ $650" that confirms the SP value.
+5. **Market PSF / Actual PSF** — rate per sqft. Derivable from Market/Actual Rate ÷ Sq Ft but having them explicit reduces downstream calc burden and makes the RR fully self-describing.
+6. **ACH** — auto-pay enrollment flag → collection-velocity signal.
+
+### What changed
+
+**Parser — `normalizer.py`:**
+- 6 new entries in `FIELD_PATTERNS`: `second_person_rent`, `balance`, `notes`, `ach`, `market_psf`, `actual_psf`. Existing `move_in` / `move_out` patterns also widened in v1.15.1 to catch Homestead's `Rent Start` / `Rent End` / `MoveOut Date` headers.
+- New `_normalize_flag(v)` helper for boolean-ish source values (handles `"X"`, `"Yes"`, `1`, `True`, etc. → `"X"`; everything else → `""`).
+- Bed-level dict extended to capture the 7 new fields.
+- `Total Monthly Revenue` calc now includes `+ second_person_rent` — 2P is incremental housing revenue and was previously excluded.
+- `CONDENSED_COLUMNS` grows 18 → 25; new columns appended at positions 19-25 (S-Y in the Condensed_RR sheet) so existing cols A-R retain their fixed positions for analyzer_rr_writer's mapping.
+
+**Writer — `analyzer_rr_writer.py`:**
+- New `SOURCE_COLUMNS_V_TO_AB` tuple maps the 7 new fields to Rent Roll Input cols V-AB.
+- `populate_t12()` writes the new cols after the existing S=Period Date and T-U formula columns, preserving the analyzer substrate's formula layout. Move-out Date (col W of Rent Roll Input) carries `mm/dd/yyyy` number format.
+- Idempotent clear extended to cols V-AB so re-runs don't leave ghost data.
+
+**App — `app.py`:**
+- `RR_VERSION = "1.16.0"`; `RR_LAST_UPDATED = "2026-05-11"`.
+
+**Substrate — `tools/migration/migrate_to_v0110.py`:** (Track 3 companion — substrate v0.1.9 → v0.1.10)
+- Adds 7 new column headers at Rent Roll Input row 4 cols V-AB, styled to match the existing navy header row.
+- Extends `Total Monthly Rev` formula at U7:U606: `=IFERROR(H{r}+IFERROR(I{r},0)+T{r},0)` → `=IFERROR(H{r}+IFERROR(I{r},0)+T{r}+IFERROR(V{r},0),0)` so 2nd Person Rent flows into the per-resident TMR.
+- Stamps Cover!B8 + 13 AZ4 anchors to v0.1.10.
+- 8-check verification block; idempotent — gate checks both stamp AND that row-4 V header is present.
+
+**T12 translator — `t12_translator.py`:** no changes needed. The translator passes through unrecognized columns via `df.copy()`, so the 7 new fields flow through to the Analyzer write step unchanged.
+
+### Verification
+
+End-to-end smoke against the Homestead fixture:
+1. `normalize_rent_roll()` → 176 rows, 25 cols, 4 couples with non-zero 2nd Person Rent $.
+2. `translate_for_t12()` → 25 cols preserved.
+3. `populate_t12()` against the v0.1.10 Analyzer → Rent Roll Input cols A-AB populated, including A3 (Homestead Village property name) + V (2P rent) + Y (notes) + Z/AA (PSF) + AB (ACH).
+4. Sandra & Darryl Owens row 19: V=$650 (SP), O=$100 (H/K), Y="HK $100 eff 3/1- sec occ $650" — splits source's $750 ancillary total correctly between dedicated 2P col + Other LOC.
+5. Total Monthly Rev formula at U19 now references V19: `=IFERROR(H19+IFERROR(I19,0)+T19+IFERROR(V19,0),0)`.
+
+### Carry-forwards opened by this round
+
+- **Rent Roll Recon updates (Track 3, future)**: the new IL deep-dive section K could surface PSF stats (avg / range across IL) by adding 2-3 formulas. Skipped this round to keep the substrate change minimal — sized as a small future v0.1.11.
+- **2P revenue reconciliation (Track 3, future)**: T12 Analytics could add a new row that compares `SUM('Rent Roll Input'!V) × 12` (RR-projected 2P revenue annualized) against `T12 Raw Data!2nd Person Revenue` (T12 actual). Same pattern as Section B revenue reconciliation in Rent Roll Recon. Sized as future v0.1.11.
+- **Balance aggregation (Track 3, future)**: total outstanding AR across all residents as a Workbook Health validation. Useful but not blocking.
+
+### Why this is Track 1 (with Track 3 companion)
+
+Parser changes that capture new source fields are Track 1 by CLAUDE.md scope discipline. The Analyzer substrate change to receive those new fields (column headers + extended TMR formula) is Track 3. Bundled into the same chat per user authorization 2026-05-11.
+
+---
+
+## [1.15.1] — 2026-05-11
+
+### Summary
+
+Fix for the user-reported bug against v1.15.0: Homestead per-resident ancillary charges (Pet / H/K / Laundry / Misc. / Diabetes) were silently dropped by the parser despite the Homestead fixture having them populated. Verified against 12 occupied IL residents — every one had non-zero charges that didn't make it into the Condensed_RR output.
+
+### Root cause
+
+The auto-catch-into-`Other LOC $` heuristic at `normalizer.py:251-256` gated on a narrow keyword list. None of Homestead's column names (`Pet`, `H/K`, `Laundry`, `Misc.`, `Diabetes`) contained any of the recognized keywords, so the parser silently skipped them.
+
+### What changed
+
+**Parser — `normalizer.py`:**
+- Widened the `looks_care` keyword list to include `pet`, `housekeeping`, `h/k`, `laundry`, `misc`, `diabet`. All flow into `Other LOC $` via the existing bucket logic. 13 IL residents in the Homestead fixture now show non-zero `Other LOC $` (was 0 before).
+- 2nd Person Rent (SP column) is **intentionally excluded** from this keyword expansion — it gets its own dedicated column at v1.16.0 (Tier 1.2) because it's housing revenue, not care-LOC, and the T12 substrate v0.1.5 already has a dedicated `2nd Person Revenue` Label that needs a 1:1 RR-side counterpart.
+- Added `r"^rent\s*start$"` to `move_in` patterns and `r"^move\s*out\s*date$"` / `r"^moveout\s*date$"` / `r"^rent\s*end$"` to `move_out` patterns. Homestead's `Rent Start` / `MoveOut Date` / `Rent End` headers now match.
+
+**App — `app.py`:**
+- `RR_VERSION = "1.15.1"`.
+
+### Verification
+
+Smoke test against Homestead fixture: 13 IL residents now have `Other LOC $` populated (Pet / H/K / Laundry / Misc.). Move-in Date populated for all 176 rows (was sparse).
+
+### Carry-forward to v1.16.0
+
+SP (Second Person Rent) is still not captured — by design, it gets a dedicated column in v1.16.0.
+
+---
+
 ## [1.15.0] — 2026-05-11
 
 ### Summary

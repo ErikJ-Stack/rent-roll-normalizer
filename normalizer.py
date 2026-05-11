@@ -82,9 +82,13 @@ FIELD_PATTERNS: Dict[str, List[str]] = {
     "discount":        [r"^discount$"],
     "move_in":         [r"^move\s*in$", r"^move[\- ]in\s*date$",
                         r"^lease\s*start$",
-                        r"^resident\s*move\s*in\s*date$"],   # Briar Glen
+                        r"^resident\s*move\s*in\s*date$",   # Briar Glen
+                        r"^rent\s*start$"],   # Homestead: "Rent Start"
     "move_out":        [r"^estimated\s*move\s*out$", r"^move\s*out$",
-                        r"^lease\s*end$"],
+                        r"^lease\s*end$",
+                        r"^move\s*out\s*date$",   # Homestead: "MoveOut Date" -> "moveout date"
+                        r"^moveout\s*date$",
+                        r"^rent\s*end$"],   # Homestead: "Rent End"
     "bed_status":      [r"^bed\s*status$",
                         r"^status$"],   # Homestead self-contained: one row per unit, "Status" = bed status
     "apt_status":      [r"^apartment\s*status$", r"^unit\s*status$"],
@@ -98,6 +102,18 @@ FIELD_PATTERNS: Dict[str, List[str]] = {
                         r"^wing$", r"^community\s*type$", r"^building$",
                         r"^license\s*type$", r"^care\s*setting$",
                         r"^category$"],   # Homestead: "Category" (IL / AL / MC-I / MC-JK)
+    # --- New at v1.16.0 (Tier 1.2 + Tier 2 + Tier 3) ----------------------
+    "second_person_rent":  [r"^sp$",                                # Homestead: "SP" (Second Person)
+                            r"^2nd\s*person.*$", r"^second\s*person.*$",
+                            r"^2p\s*rent$"],
+    "balance":             [r"^balance$", r"^outstanding\s*balance$",
+                            r"^ar$", r"^accounts?\s*receivable$"],
+    "notes":               [r"^notes?$", r"^comments?$", r"^remarks?$"],
+    "ach":                 [r"^ach$", r"^auto\s*pay$", r"^autopay$"],
+    "market_psf":          [r"^market\s*psf$", r"^market.*per\s*sq\s*ft$",
+                            r"^market\s*\$\s*/\s*sf$"],
+    "actual_psf":          [r"^actual\s*psf$", r"^actual.*per\s*sq\s*ft$",
+                            r"^actual\s*\$\s*/\s*sf$"],
 }
 
 
@@ -248,10 +264,21 @@ def detect_care_groups(headers: List[str], mappings: MappingSet) -> Tuple[List[C
             # "care", "medication", "pharmacy", "incentive", "discount" but
             # we exclude pure "discount"/"incentive" which are typically negative
             # adjustments rather than care revenue).
+            # Care-related keyword catch — broadened 2026-05-11 (RR v1.15.1) to
+            # capture Homestead-style per-resident ancillary charges that were
+            # silently dropped: Pet ($50), H/K (Housekeeping, $50-$200),
+            # Laundry ($100-$120), Misc. ($50-$180), Diabetes (care surcharge).
+            # All flow into Other LOC $ via the existing bucket logic — same
+            # treatment as the pre-existing "other charge" keyword.
+            # 2nd Person Rent (SP) is INTENTIONALLY excluded here because it
+            # gets its own dedicated column at v1.16.0 (Tier 1.2).
             looks_care = any(kw in hc for kw in [
                 "care charge", "care service", "med mgmt", "medication",
                 "pharmacy", "level of care", "ancillary", "service charge",
                 "other charge",
+                # Homestead-style per-resident ancillary charges (v1.15.1):
+                "pet", "housekeeping", "h/k", "laundry", "misc",
+                "diabet",
             ])
             if not looks_care:
                 continue
@@ -321,6 +348,28 @@ def _to_num(x) -> float:
         return float(s)
     except ValueError:
         return 0.0
+
+
+def _normalize_flag(v) -> str:
+    """Normalize a boolean-ish source value to 'X' (truthy) or '' (else).
+
+    Used for fields like ACH where the source convention varies — "X" / "x" /
+    "Yes" / "Y" / "TRUE" / 1 / True all mean enrolled; "" / "N" / "No" / 0 /
+    False / None all mean not enrolled.
+    """
+    if v is None:
+        return ""
+    if isinstance(v, bool):
+        return "X" if v else ""
+    if isinstance(v, (int, float)):
+        try:
+            return "X" if float(v) != 0 else ""
+        except (TypeError, ValueError):
+            return ""
+    s = str(v).strip().lower()
+    if s in {"", "0", "no", "n", "false", "f"}:
+        return ""
+    return "X"
 
 
 def _blank_if_zero(v):
@@ -436,10 +485,18 @@ class NormalizeResult:
 
 
 CONDENSED_COLUMNS = [
+    # Cols 1-18 (A-R): original schema — preserved by analyzer_rr_writer
+    # mapping into Rent Roll Input!A-R. Do not reorder.
     "Unit #", "Room #", "Sq Ft", "Care Type", "Status", "Apt Type",
     "Market Rate", "Actual Rate", "Concession $", "Concession End Date",
     "Care Level", "Care Level $", "Med Mgmt $", "Pharmacy $",
     "Other LOC $", "Payer Type", "Move-in Date", "Resident Name",
+    # Cols 19-25 (S-Y): new at v1.16.0. Written to Rent Roll Input cols V-AB
+    # by analyzer_rr_writer (after the existing S=Period Date and T-U formula
+    # columns). Order picked so V=2nd Person Rent sits adjacent to the
+    # existing housing-rate column group when imported into the Analyzer.
+    "2nd Person Rent $", "Move-out Date", "Balance", "Notes",
+    "Market PSF", "Actual PSF", "ACH",
 ]
 
 
@@ -862,12 +919,30 @@ def normalize_rent_roll(
                 "Other LOC $":        _blank_if_zero(bucket_sums.get("Other LOC $", 0.0)),
                 "Total LOC $":        _blank_if_zero(sum(bucket_sums.values())),
 
+                # --- New at v1.16.0: housing revenue + lifecycle + collection
+                # Captured from source headers via FIELD_PATTERNS — see
+                # CHANGELOG-RR.md [1.16.0] for the field-by-field rationale.
+                "2nd Person Rent $":  _blank_if_zero(_to_num(row.get(field_map.get("second_person_rent"))) if field_map.get("second_person_rent") else 0.0),
+                "Balance":            _blank_if_zero(_to_num(row.get(field_map.get("balance"))) if field_map.get("balance") else 0.0),
+                "Notes":              (row.get(field_map.get("notes")) if field_map.get("notes") else "") or "",
+                "Market PSF":         _blank_if_zero(_to_num(row.get(field_map.get("market_psf"))) if field_map.get("market_psf") else 0.0),
+                "Actual PSF":         _blank_if_zero(_to_num(row.get(field_map.get("actual_psf"))) if field_map.get("actual_psf") else 0.0),
+                # ACH is a flag — source values like "X" / "Yes" / 1 / TRUE all
+                # mean "enrolled". Anything else (blank, "N", "No", 0) → blank.
+                "ACH":                _normalize_flag(row.get(field_map.get("ach")) if field_map.get("ach") else None),
+
                 # --- Derived
                 # Concessions are stored as negative source values (discounts).
                 # Adding them correctly reduces revenue. Previous version used
                 # subtraction which inverted the discount on every concession row.
+                # 2nd Person Rent included at v1.16.0 — it's incremental housing
+                # revenue tied to the apartment, distinct from per-resident care
+                # charges.
                 "Total Monthly Revenue": _blank_if_zero(
-                    actual + sum(bucket_sums.values()) + conc_amt
+                    actual
+                    + sum(bucket_sums.values())
+                    + conc_amt
+                    + (_to_num(row.get(field_map.get("second_person_rent"))) if field_map.get("second_person_rent") else 0.0)
                 ),
             }
             bed_rows.append(rec)
@@ -922,6 +997,14 @@ def normalize_rent_roll(
             "Payer Type":        normalized["Payer Type"],
             "Move-in Date":      normalized["Move-in Date"],
             "Resident Name":     normalized["Resident Name"],
+            # --- New at v1.16.0 (cols 19-25, S-Y of Condensed_RR sheet) ---
+            "2nd Person Rent $": normalized["2nd Person Rent $"],
+            "Move-out Date":     normalized["Move-out Date"],
+            "Balance":           normalized["Balance"],
+            "Notes":             normalized["Notes"],
+            "Market PSF":        normalized["Market PSF"],
+            "Actual PSF":        normalized["Actual PSF"],
+            "ACH":               normalized["ACH"],
         })
     else:
         condensed = pd.DataFrame(columns=CONDENSED_COLUMNS)

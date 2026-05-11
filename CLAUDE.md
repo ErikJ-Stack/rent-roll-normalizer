@@ -2,7 +2,7 @@
 
 > Onboarding doc for any Claude session (chat or Claude Code) working on this repo. Read this first — it points to canonical truth and surfaces facts that previously had to be grubbed for.
 
-**Last updated:** 2026-05-11 (after substrate v0.1.9 — Rent Roll Recon period-default bug fix)
+**Last updated:** 2026-05-11 (after RR v1.16.0 + substrate v0.1.10 — data-capture expansion)
 
 ---
 
@@ -38,7 +38,7 @@ The repo runs three parallel tracks. They share an Analyzer but are otherwise in
 | Code | `app.py`, `normalizer.py`, `mappings.py`, `pre_cleaner.py`, `period_date.py`, `reports.py`, `writer.py` |
 | Spec | `SPEC-RR.md` |
 | Changelog | `CHANGELOG-RR.md` |
-| Current version | RR v1.15.0 |
+| Current version | RR v1.16.0 |
 
 ### Track 2 — T12 Normalizer (T12-side code + Analyzer substrate)
 
@@ -51,7 +51,7 @@ The repo runs three parallel tracks. They share an Analyzer but are otherwise in
 | Migration scripts | `tools/migration/migrate_to_v01N.py` (one per substrate version) |
 | Verification harness | `tools/verify_t12_v020.py` (parser-side; runs all four reference fixtures) |
 | Current code version | T12 v0.2.1 |
-| Current substrate version | v0.1.9 |
+| Current substrate version | v0.1.10 |
 
 **Module naming gotcha (verified 2026-05-10).** Four `t12_*` files exist and they are NOT duplicates — the `t12_` prefix originally meant "operates on the T12-shaped destination workbook" (which is now the Analyzer), not "operates on T12 data." Every one is imported by `app.py` and serves a distinct role:
 
@@ -99,6 +99,10 @@ Conversational examples should label placeholder text as `<REPLACE THIS>` so the
 
 These are real backlogged items that previous chats deferred. They have a home; they're just not staffed yet.
 
+### Closed 2026-05-11 (RR v1.16.0 + Substrate v0.1.10 — Data-capture expansion)
+
+- ✓ **RR per-resident charges + housing-revenue fields previously dropped now captured.** User reported (against RR v1.15.0) that the Homestead populated Analyzer was missing 2nd Person rent, Pet, H/K, Laundry, Misc., and other per-resident charges. v1.15.1 (keyword widening — `looks_care` heuristic now catches `pet`, `housekeeping`, `h/k`, `laundry`, `misc`, `diabet`) recovered 13 IL residents' Other LOC $. v1.16.0 added 7 new dedicated columns: `2nd Person Rent $` (4 couples populated $650-$800 in Homestead fixture), `Move-out Date`, `Balance`, `Notes` (33 rows captured incl. "HK $100 eff 3/1- sec occ $650"), `Market PSF`, `Actual PSF`, `ACH`. Companion substrate v0.1.10 adds matching headers at Rent Roll Input!V4:AB4 and extends Total Monthly Rev formula to include +V (2nd Person Rent). 2P rent now reconciles 1:1 against the T12 substrate's pre-existing `2nd Person Revenue` Label. End-to-end verified: Sandra & Darryl Owens (Homestead A14) splits source's $750 ancillary total correctly into V=$650 (SP) + O=$100 (H/K). Cross-track work (Track 1 normalizer / writer / app + Track 3 substrate migration) — user-authorized on 2026-05-11.
+
 ### Closed 2026-05-11 (Substrate v0.1.9 — Period-default bug fix)
 
 - ✓ **Rent Roll Recon!B2 period dropdown empty / no latest-date default in Excel** — root cause: pre-existing `_xludf.minifs(...)` formulas in RR_Calc!A2:A13 (Google Sheets / LibreOffice UDF prefix that Excel doesn't recognize → `#NAME?` → IFERROR-empty). v0.1.9 migration drops the `_xludf.` prefix from all 12 RR_Calc cells (native MINIFS works) AND rewrites Rent Roll Recon!B2 to read directly from `Rent Roll Input!$S$7:$S$606` via MAX, so the latest-date default works even if RR_Calc ever drifts again. Migration via `migrate_to_v019.py` (3 ops, 6-check verify, idempotent).
@@ -126,7 +130,7 @@ These are real backlogged items that previous chats deferred. They have a home; 
 
 ### Low priority
 
-- **Substrate version-detection bug suspected.** App's `_detect_substrate_version()` looks for `2nd Person Revenue` (v0.1.5 marker) in the Description_Map column B; v0.1.6/v0.1.7/v0.1.8/v0.1.9 add no new Labels there, so the detector returns `v0.1.5` for any of v0.1.5+. Cosmetic — worth widening the marker list when the bundle next changes Label vocabulary.
+- **Substrate version-detection bug suspected.** App's `_detect_substrate_version()` looks for `2nd Person Revenue` (v0.1.5 marker) in the Description_Map column B; v0.1.6/v0.1.7/v0.1.8/v0.1.9/v0.1.10 add no new Labels there, so the detector returns `v0.1.5` for any of v0.1.5+. Cosmetic — worth widening the marker list when the bundle next changes Label vocabulary. Could now use the new `2nd Person Rent $` header at Rent Roll Input V4 as a v0.1.10+ marker.
 
 ---
 

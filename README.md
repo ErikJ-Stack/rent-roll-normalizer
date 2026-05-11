@@ -10,9 +10,9 @@ A Streamlit app that turns a senior-housing rent roll AND a T12 financial statem
 
 | Stream | Version | Last updated |
 | --- | --- | --- |
-| RR Normalizer (`RR_VERSION`) | v1.15.0 | 2026-05-11 |
+| RR Normalizer (`RR_VERSION`) | v1.16.0 | 2026-05-11 |
 | T12 Normalizer (`T12_VERSION`) | v0.2.1 | 2026-05-11 |
-| Bundled Analyzer substrate | v0.1.9 | 2026-05-11 |
+| Bundled Analyzer substrate | v0.1.10 | 2026-05-11 |
 
 ---
 
@@ -35,6 +35,19 @@ Both writers derive a property name from the uploaded filename (date stamps, `T-
 - **T12 upload** → property name stamped at `T12 Input!A10`
 - `T12 Analytics!B2` reads through a 3-priority chain: `Rent Roll Input!A3` → `T12 Input!A10` → `Cover!B5` (manual override)
 - `T12 Analytics!E2` derives the T12 period-ending date from the rightmost populated month label at `T12 Input!C11:N11`
+
+### Data-capture coverage (per-resident fields)
+
+At RR v1.16.0 + substrate v0.1.10, the Analyzer's `Rent Roll Input` sheet captures (cols A-AB):
+
+- **Core identity** (A-F): Unit # / Room # / Sq Ft / Care Type / Status / Apt Type
+- **Pricing** (G-J): Market Rate / Actual Rate / Concession $ / Concession End Date
+- **Care** (K-O): Care Level / Care Level $ / Med Mgmt $ / Pharmacy $ / Other LOC $ (auto-catches Pet, H/K, Laundry, Misc., Diabetes per v1.15.1)
+- **Resident** (P-R): Payer Type / Move-in Date / Resident Name
+- **Period + formulas** (S-U): Period Date / Total LOC $ formula / Total Monthly Rev formula (now includes 2nd Person Rent)
+- **v1.16.0 extension** (V-AB): 2nd Person Rent $ / Move-out Date / Balance / Notes / Market PSF / Actual PSF / ACH
+
+2nd Person Rent reconciles 1:1 against the T12 substrate's `2nd Person Revenue` Label (added at v0.1.5). Notes column preserves free-form rate-negotiation / lease-anomaly context from the source RR.
 
 ### Analyzer at a glance (post-Branch 3)
 
@@ -90,7 +103,7 @@ rent_roll_app/
 ├── analyzer_rr_writer.py               # Writes the translated RR into the Analyzer's Rent Roll Input sheet (Track 1; renamed from t12_writer.py on 2026-05-10)
 ├── property_name.py                    # Cross-track helper: derives property name from filename for both writers
 │
-├── ALF_Financial_Analyzer_Only.xlsx    # Bundled Analyzer template (substrate v0.1.9)
+├── ALF_Financial_Analyzer_Only.xlsx    # Bundled Analyzer template (substrate v0.1.10)
 ├── mapping_template.xlsx               # Editable RR mapping override template (optional sidebar upload)
 │
 ├── tools/
@@ -102,6 +115,7 @@ rent_roll_app/
 │       ├── migrate_to_v017.py          # Substrate v0.1.6 → v0.1.7 migration
 │       ├── migrate_to_v018.py          # Substrate v0.1.7 → v0.1.8 migration (Branch 3 analytics)
 │       ├── migrate_to_v019.py          # Substrate v0.1.8 → v0.1.9 migration (RR_Calc _xludf fix + B2 rewrite)
+│       ├── migrate_to_v0110.py         # Substrate v0.1.9 → v0.1.10 migration (RR v1.16.0 column extension)
 │       └── verify_e2e.py               # End-to-end Analyzer verification
 │
 ├── CLAUDE.md                           # Onboarding doc for any Claude session — read first

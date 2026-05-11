@@ -8,6 +8,52 @@ When making a code change in a T12-related chat, add an entry here in the same c
 
 ---
 
+## [Substrate template v0.1.10] — 2026-05-11
+
+### Summary
+
+Track 3 companion to RR v1.16.0 (Track 1 data-capture expansion). Adds 7 new column headers to `Rent Roll Input` row 4 at columns V-AB, after the existing T-U formula columns. Extends the `Total Monthly Rev` formula at `U7:U606` to include the new 2nd Person Rent column. No new sheets, no new named ranges, no rewiring of existing aggregators — purely a column-extension of the existing Rent Roll Input schema.
+
+### What changed (migrate_to_v0110.py)
+
+- **A. New headers at Rent Roll Input row 4 cols V-AB**, styled to match the existing navy `FF1F3864` header row:
+  - V: `2nd Person Rent $` (Tier 1.2 — RR ↔ T12 2P reconciliation enabler)
+  - W: `Move-out Date` (Tier 2.1 — vacate forecasting)
+  - X: `Balance` (Tier 2.2 — bad-debt indicator)
+  - Y: `Notes` (Tier 2.3 — free-form context)
+  - Z: `Market PSF` (Tier 3.1)
+  - AA: `Actual PSF` (Tier 3.1)
+  - AB: `ACH` (Tier 3.2 — collection-velocity flag)
+- **B. Total Monthly Rev formula extension at U7:U606:**
+  ```
+  =IFERROR(H{r}+IFERROR(I{r},0)+T{r},0)
+    -> =IFERROR(H{r}+IFERROR(I{r},0)+T{r}+IFERROR(V{r},0),0)
+  ```
+  Adds `+V{r}` (2nd Person Rent) to the per-resident total. 2P is incremental housing revenue and was previously excluded — without this fix, V would be populated but never flow into TMR or downstream aggregators that read U.
+- **C. Stamp** `Cover!B8` and all 13 anchor `AZ4` cells to `v0.1.10`.
+
+### Idempotency
+
+Gate (`is_already_v0110()`) checks BOTH the version stamp AND that the row-4 V header is present. The formula-update step gates on the exact old-pattern match per row, so cells with customized formulas are left untouched on re-run.
+
+### Verification
+
+5-check verification block: Cover!B8 stamped, all 13 AZ4 stamped, 7 new headers present at V-AB, TMR formula extended in sample rows (DATA_START / mid / DATA_END), existing A4 header (`Unit #`) intact.
+
+End-to-end smoke against the Homestead fixture: RR v1.16.0 → translate → populate v0.1.10 Analyzer → Sandra & Darryl Owens row 19 has V=$650 (2P) + O=$100 (H/K) = $750 total, Notes captured ("HK $100 eff 3/1- sec occ $650"), Move-in Date 2026-02-23, Market PSF 8.12, ACH "X", and U19 formula correctly references V19.
+
+### Out of scope (logged for v0.1.11+)
+
+- `Rent Roll Recon` section K (IL deep-dive at rows 86-100) could surface PSF stats now that the substrate has those columns. Small addition (2-3 cells).
+- `T12 Analytics` could add a new row that reconciles `SUM('Rent Roll Input'!V) × 12` (RR-projected 2P annualized) against `T12 Raw Data!2nd Person Revenue` (T12 actual). Same shape as Section B revenue reconciliation. Useful enhancement.
+- `Workbook Health` could aggregate `Balance` column as a total-AR validation. Useful but not blocking.
+
+### Carry-forwards opened
+
+None blocking. The three items above are nice-to-haves that don't gate any downstream UW work.
+
+---
+
 ## [Substrate template v0.1.9] — 2026-05-11
 
 ### Summary
