@@ -8,6 +8,47 @@ When making a code change in a T12-related chat, add an entry here in the same c
 
 ---
 
+## [Substrate template v0.1.9] — 2026-05-11
+
+### Summary
+
+Bug fix on top of v0.1.8. Two issues surfaced when a user opened the substrate-v0.1.8 populated Analyzer in Excel: (a) the period-selector dropdown on `Rent Roll Recon!B2` rendered empty, and (b) the cell didn't auto-populate the latest period. Same root cause behind both: `RR_Calc!A2:A13` (the dropdown source + the v0.1.8 LOOKUP target) was pre-populated with `_xludf.minifs(...)` formulas. The `_xludf.` prefix is a Google Sheets / LibreOffice user-defined-function marker that Excel does not recognize as a function name — every cell resolved to `#NAME?`, the `IFERROR(..., "")` wrapper returned `""`, and my v0.1.8 LOOKUP-against-RR_Calc found no numeric value to return.
+
+### What changed
+
+**Migration script — `tools/migration/migrate_to_v019.py`:**
+
+- **A. Drop `_xludf.` prefix from 12 cells in `RR_Calc!A2:A13`** — `_xludf.minifs(...)` → `MINIFS(...)`. Excel-native MINIFS evaluates these correctly; the dropdown now populates with the sorted unique period dates and the chain feeds downstream cells as designed.
+- **B. Rewrite `Rent Roll Recon!B2` formula** to read directly from `Rent Roll Input!$S$7:$S$606` via `MAX`, dropping the transitive dependency on RR_Calc. Belt-and-suspenders — if RR_Calc ever drifts again, B2 still works:
+  ```excel
+  =IF(MAX('Rent Roll Input'!$S$7:$S$606)>0,MAX('Rent Roll Input'!$S$7:$S$606),"")
+  ```
+  Data validation on B2 (the dropdown sourced from RR_Calc) is left in place — now that RR_Calc evaluates correctly, the dropdown lets analysts override to an earlier period.
+- **C. Stamp `Cover!B8` and all 13 anchor `AZ4` cells to v0.1.9.**
+
+Idempotent — `is_already_v019()` gate checks both the version stamp AND that no `_xludf` prefix remains in RR_Calc, so the migration safely re-applies on partial-state files. 6-check verification block confirms: Cover B8 stamped, all 13 AZ4 stamped, zero `_xludf` remaining workbook-wide, RR_Calc!A2 uses native MINIFS, B2 references direct MAX on Rent Roll Input!S, B2 data validation intact.
+
+### Why this is in scope
+
+Analogous to the v0.1.6 H20 `_xlfn._LONGTEXT` chunked-literal repair (Cluster A correctness fix). The architectural constraint of "additive only" is preserved — these are formula-text repairs on broken formulas, not a rewrite of an aggregator's logic. RR_Calc's intent (produce sorted unique period dates) is unchanged; only the Excel-incompatible function-name prefix is removed.
+
+### Files
+
+- `tools/migration/migrate_to_v019.py` — new migration script.
+- `ALF_Financial_Analyzer_Only.xlsx` — bundled regenerated at v0.1.9.
+- `SPEC-T12.md`, `CLAUDE.md`, `OPTIMIZATION-DECISIONS.md`, `journal.md` — current-version refs + new design entry / decision / session note.
+
+### Verification
+
+- 6-check migration verifier: all green on first clean run, idempotent re-run is a no-op.
+- Functional smoke: load v0.1.9 bundled Analyzer, populate via `analyzer_rr_writer.populate_t12()` with 4 rows at period 04/24/2026, confirm the saved file has `Rent Roll Recon!B2` formula referencing `MAX('Rent Roll Input'!$S$7:$S$606)` and zero `_xludf` anywhere. (Excel-side calculation of the formula confirmed manually against the user's reported repro.)
+
+### Carry-forwards opened by this round
+
+- **None.** This is a pure bug fix that closes the user-reported issue. Branch 2 (Handoff readiness) remains the next open Analyzer-optimization workstream.
+
+---
+
 ## [0.2.1] — 2026-05-11
 
 ### Summary

@@ -2,7 +2,7 @@
 
 > Onboarding doc for any Claude session (chat or Claude Code) working on this repo. Read this first — it points to canonical truth and surfaces facts that previously had to be grubbed for.
 
-**Last updated:** 2026-05-11 (after substrate v0.1.8 — Branch 3 analytical coverage)
+**Last updated:** 2026-05-11 (after substrate v0.1.9 — Rent Roll Recon period-default bug fix)
 
 ---
 
@@ -51,7 +51,7 @@ The repo runs three parallel tracks. They share an Analyzer but are otherwise in
 | Migration scripts | `tools/migration/migrate_to_v01N.py` (one per substrate version) |
 | Verification harness | `tools/verify_t12_v020.py` (parser-side; runs all four reference fixtures) |
 | Current code version | T12 v0.2.1 |
-| Current substrate version | v0.1.8 |
+| Current substrate version | v0.1.9 |
 
 **Module naming gotcha (verified 2026-05-10).** Four `t12_*` files exist and they are NOT duplicates — the `t12_` prefix originally meant "operates on the T12-shaped destination workbook" (which is now the Analyzer), not "operates on T12 data." Every one is imported by `app.py` and serves a distinct role:
 
@@ -99,6 +99,10 @@ Conversational examples should label placeholder text as `<REPLACE THIS>` so the
 
 These are real backlogged items that previous chats deferred. They have a home; they're just not staffed yet.
 
+### Closed 2026-05-11 (Substrate v0.1.9 — Period-default bug fix)
+
+- ✓ **Rent Roll Recon!B2 period dropdown empty / no latest-date default in Excel** — root cause: pre-existing `_xludf.minifs(...)` formulas in RR_Calc!A2:A13 (Google Sheets / LibreOffice UDF prefix that Excel doesn't recognize → `#NAME?` → IFERROR-empty). v0.1.9 migration drops the `_xludf.` prefix from all 12 RR_Calc cells (native MINIFS works) AND rewrites Rent Roll Recon!B2 to read directly from `Rent Roll Input!$S$7:$S$606` via MAX, so the latest-date default works even if RR_Calc ever drifts again. Migration via `migrate_to_v019.py` (3 ops, 6-check verify, idempotent).
+
 ### Closed 2026-05-11 (Substrate v0.1.8 — Branch 3 analytical coverage)
 
 - ✓ **Branch 3 — Analytical coverage shipped (substrate v0.1.8).** New: T12 Analytics property-name & period-end auto-fill (B2 3-priority RR→T12→Cover, E2 LOOKUP rightmost-populated month), 5 chart objects on T12 Analytics K1:V44 (occupancy stacked col / rate-band histogram / payer-mix doughnut / 12-mo revenue trend / AL acuity doughnut), 5 conditional formula-driven note cells, Rent Roll Recon B2 latest-date default formula + dropdown DV, section K (IL unit-type mix + sqft + rate dispersion at rows 86-100), section L (MC auto-detect flat/tiered/FFS at rows 102-117). Migration via `migrate_to_v018.py` — 10 ops, 17-check verify, idempotent. Substrate cells A3 (RR Input) and A10 (T12 Input) reserved as property-name value targets (refinement 2026-05-11).
@@ -122,7 +126,7 @@ These are real backlogged items that previous chats deferred. They have a home; 
 
 ### Low priority
 
-- **Substrate version-detection bug suspected.** App's `_detect_substrate_version()` looks for `2nd Person Revenue` (v0.1.5 marker) in the Description_Map column B; v0.1.6/v0.1.7/v0.1.8 add no new Labels there, so the detector returns `v0.1.5` for any of v0.1.5+. Cosmetic — worth widening the marker list when the bundle next changes Label vocabulary.
+- **Substrate version-detection bug suspected.** App's `_detect_substrate_version()` looks for `2nd Person Revenue` (v0.1.5 marker) in the Description_Map column B; v0.1.6/v0.1.7/v0.1.8/v0.1.9 add no new Labels there, so the detector returns `v0.1.5` for any of v0.1.5+. Cosmetic — worth widening the marker list when the bundle next changes Label vocabulary.
 
 ---
 
