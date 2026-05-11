@@ -82,9 +82,13 @@ FIELD_PATTERNS: Dict[str, List[str]] = {
     "discount":        [r"^discount$"],
     "move_in":         [r"^move\s*in$", r"^move[\- ]in\s*date$",
                         r"^lease\s*start$",
-                        r"^resident\s*move\s*in\s*date$"],   # Briar Glen
+                        r"^resident\s*move\s*in\s*date$",   # Briar Glen
+                        r"^rent\s*start$"],   # Homestead: "Rent Start"
     "move_out":        [r"^estimated\s*move\s*out$", r"^move\s*out$",
-                        r"^lease\s*end$"],
+                        r"^lease\s*end$",
+                        r"^move\s*out\s*date$",   # Homestead: "MoveOut Date" -> "moveout date"
+                        r"^moveout\s*date$",
+                        r"^rent\s*end$"],   # Homestead: "Rent End"
     "bed_status":      [r"^bed\s*status$",
                         r"^status$"],   # Homestead self-contained: one row per unit, "Status" = bed status
     "apt_status":      [r"^apartment\s*status$", r"^unit\s*status$"],
@@ -248,10 +252,21 @@ def detect_care_groups(headers: List[str], mappings: MappingSet) -> Tuple[List[C
             # "care", "medication", "pharmacy", "incentive", "discount" but
             # we exclude pure "discount"/"incentive" which are typically negative
             # adjustments rather than care revenue).
+            # Care-related keyword catch — broadened 2026-05-11 (RR v1.15.1) to
+            # capture Homestead-style per-resident ancillary charges that were
+            # silently dropped: Pet ($50), H/K (Housekeeping, $50-$200),
+            # Laundry ($100-$120), Misc. ($50-$180), Diabetes (care surcharge).
+            # All flow into Other LOC $ via the existing bucket logic — same
+            # treatment as the pre-existing "other charge" keyword.
+            # 2nd Person Rent (SP) is INTENTIONALLY excluded here because it
+            # gets its own dedicated column at v1.16.0 (Tier 1.2).
             looks_care = any(kw in hc for kw in [
                 "care charge", "care service", "med mgmt", "medication",
                 "pharmacy", "level of care", "ancillary", "service charge",
                 "other charge",
+                # Homestead-style per-resident ancillary charges (v1.15.1):
+                "pet", "housekeeping", "h/k", "laundry", "misc",
+                "diabet",
             ])
             if not looks_care:
                 continue
