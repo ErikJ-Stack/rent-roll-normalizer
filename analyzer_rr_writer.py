@@ -41,15 +41,31 @@ import pandas as pd
 from property_name import derive_property_name
 
 
-# Layout constants — match the T12 we inspected
+# Layout constants — match the Analyzer substrate.
+# Substrate v0.1.9 layout (pre-v1.16.0 / pre-substrate-v0.1.10):
+#   A-R = 18 source cols from Condensed_RR
+#   S   = Period Date (set by this writer)
+#   T   = Total LOC $ formula (=IFERROR(L7+M7+N7+O7,0))
+#   U   = Total Monthly Rev formula (=IFERROR(H7+IFERROR(I7,0)+T7,0))
+# Substrate v0.1.10 layout (this writer + RR v1.16.0):
+#   V   = 2nd Person Rent $          (new at v1.16.0)
+#   W   = Move-out Date              (new at v1.16.0)
+#   X   = Balance                    (new at v1.16.0)
+#   Y   = Notes                      (new at v1.16.0)
+#   Z   = Market PSF                 (new at v1.16.0)
+#   AA  = Actual PSF                 (new at v1.16.0)
+#   AB  = ACH                        (new at v1.16.0)
+#   U formula extended to include +V (2nd Person Rent) in Total Monthly Rev.
 SHEET_NAME = "Rent Roll Input"
 DATA_START_ROW = 7
 DATA_END_ROW = 606  # also the formula extent in cols T, U
-COL_A_TO_R_COUNT = 18  # 18 columns from Condensed_RR
+COL_A_TO_R_COUNT = 18  # 18 cols from Condensed_RR mapped to A-R
 COL_S_INDEX = 19       # Period Date column
+COL_V_INDEX = 22       # 2nd Person Rent $ column (start of v1.16.0 extension)
+COL_AB_INDEX = 28      # ACH column (end of v1.16.0 extension)
 
-# The 18 source columns in the order the T12 expects them.
-# These names must match the Condensed_RR column names exactly.
+# The 18 source columns in the order the Analyzer's Rent Roll Input expects them
+# at cols A-R. These names must match the Condensed_RR column names exactly.
 SOURCE_COLUMNS_A_TO_R = [
     "Unit #",          # A
     "Room #",          # B
@@ -62,13 +78,25 @@ SOURCE_COLUMNS_A_TO_R = [
     "Concession $",    # I
     "Concession End Date",  # J
     "Care Level",      # K
-    "Care Level $", # L
+    "Care Level $",    # L
     "Med Mgmt $",      # M
     "Pharmacy $",      # N
     "Other LOC $",     # O
     "Payer Type",      # P
     "Move-in Date",    # Q
     "Resident Name",   # R
+]
+
+# 7 new source columns at v1.16.0, mapped to Rent Roll Input cols V-AB
+# (S=Period Date, T-U=formulas remain in place; new data sits after).
+SOURCE_COLUMNS_V_TO_AB = [
+    "2nd Person Rent $",  # V
+    "Move-out Date",      # W
+    "Balance",            # X
+    "Notes",              # Y
+    "Market PSF",         # Z
+    "Actual PSF",         # AA
+    "ACH",                # AB
 ]
 
 
@@ -157,11 +185,16 @@ def populate_t12(
 
     ws = wb[SHEET_NAME]
 
-    # --- Step 1: Clear any pre-existing data in A7:S606 -------------------
-    # This makes the operation idempotent. We only clear cols A-S; cols T-U
-    # contain formulas which we leave alone.
+    # --- Step 1: Clear any pre-existing data ------------------------------
+    # Idempotency: clearing happens before writing so re-running with a
+    # different RR doesn't leave ghost rows.
+    #   - Cols A-S: source data + period date (always clear)
+    #   - Cols T-U: formulas — DO NOT clear (preserved by the Analyzer substrate)
+    #   - Cols V-AB: v1.16.0 extension fields (always clear)
     for r in range(DATA_START_ROW, DATA_END_ROW + 1):
         for c in range(1, COL_S_INDEX + 1):  # cols 1-19 = A-S
+            ws.cell(row=r, column=c).value = None
+        for c in range(COL_V_INDEX, COL_AB_INDEX + 1):  # cols 22-28 = V-AB
             ws.cell(row=r, column=c).value = None
 
     # --- Step 2: Write the translated rent roll ---------------------------
@@ -172,6 +205,9 @@ def populate_t12(
         raise ValueError(
             f"Translated DataFrame is missing required columns: {missing}"
         )
+    # v1.16.0 extension cols are optional — if a translated_df was produced
+    # by a pre-v1.16.0 normalizer they won't be present. Detect + skip.
+    has_v116_cols = all(c in translated_df.columns for c in SOURCE_COLUMNS_V_TO_AB)
 
     for i, (_, row) in enumerate(translated_df.iterrows()):
         excel_row = DATA_START_ROW + i
@@ -183,6 +219,14 @@ def populate_t12(
         s_cell = ws.cell(row=excel_row, column=COL_S_INDEX)
         s_cell.value = period_date
         s_cell.number_format = "mm/dd/yyyy"
+        # Cols V-AB (22-28) ← v1.16.0 extension fields, when available
+        if has_v116_cols:
+            for offset, src_col in enumerate(SOURCE_COLUMNS_V_TO_AB):
+                col_idx = COL_V_INDEX + offset
+                value = _coerce_value(row[src_col])
+                ws.cell(row=excel_row, column=col_idx).value = value
+            # Date formats for the date cells in this group
+            ws.cell(row=excel_row, column=COL_V_INDEX + 1).number_format = "mm/dd/yyyy"  # W: Move-out Date
 
     # --- Step 3: Stamp property name into A3 (substrate v0.1.8 source cell)
     # Only writes when derivation produces something non-empty, so a bad

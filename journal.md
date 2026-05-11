@@ -9,6 +9,77 @@ Newest at top.
 
 ---
 
+## 2026-05-11 — RR v1.16.0 + Substrate v0.1.10 (Data-capture expansion)
+
+**Started as:** Continuation of the same 2026-05-11 session that shipped substrate v0.1.8 (Branch 3) → v0.1.9 (xludf fix) → RR v1.15.0 (property name stamp). User opened the v0.1.9 populated Analyzer in Excel after running their Homestead RR through the pipeline, noticed `Rent Roll Input` was missing 2nd Person Rent and other charges they could see in the source, and asked: "what other relevant information isn't being outputted... what are the other recommended changes to capture all data and transferred properly for future full UW".
+
+**Stayed as:** A multi-track chat by explicit user authorization ("Perform all tracks") after I proposed a 3-tier plan and offered to ship Tier 1.1 only. User overrode and asked for full coverage.
+
+**Scope:**
+- Track 1 (Tier 1.1) → RR v1.15.1: widen `looks_care` heuristic to catch Pet / H/K / Laundry / Misc. / Diabetes; widen `move_in` / `move_out` patterns for Rent Start / Rent End / MoveOut Date headers
+- Track 1 (Tier 1.2 + Tier 2 + Tier 3) → RR v1.16.0: 7 new resident-level fields (2nd Person Rent, Move-out Date, Balance, Notes, Market PSF, Actual PSF, ACH) captured by parser + flowed through Condensed_RR / Normalized_Beds / translator / analyzer_rr_writer
+- Track 3 → substrate v0.1.10: new column headers at Rent Roll Input!V4:AB4 + extended Total Monthly Rev formula (U7:U606) to include +V (2nd Person Rent)
+
+### Diagnostic phase
+
+Loaded the source Homestead RR (`2026-04-24 Homestead Village Rent Roll v2.xlsx`) and the user's downloaded populated Analyzer side by side. Source has 33 columns of per-resident data; output Condensed_RR has 18. The auto-catch-into-Other-LOC heuristic at `normalizer.py:251-256` gated on a narrow keyword list (`"care charge"`, `"med mgmt"`, `"pharmacy"`, `"level of care"`, `"ancillary"`, `"service charge"`, `"other charge"`). Homestead's column names (`Pet`, `H/K`, `Laundry`, `Misc.`, `Diabetes`, `SP`) didn't contain any of those keywords, so every charge was silently dropped. Verified across 12 occupied IL residents — every single one had populated charges that didn't make it to the output. **Sandra & Darryl Owens (A14) most dramatic case: $750/mo of revenue ($650 SP + $100 H/K) entirely missing.**
+
+### Design phase
+
+Researched what UW needs vs what the RR captures. Produced a 3-tier recommendation:
+- Tier 1.1 (must) — keyword widening to recover existing-bucket revenue
+- Tier 1.2 (must) — dedicated 2nd Person Rent column (housing revenue, separate from care-LOC, aligns with T12 substrate v0.1.5 `2nd Person Revenue` Label)
+- Tier 2 (should) — Move-out Date / Balance / Notes
+- Tier 3 (nice) — PSF rates / ACH / Rent Start pattern
+
+User authorized all tiers. Bundled as two commits in one PR:
+
+### Implementation calls made
+
+- **SP (Second Person) gets its own column, not Other LOC $.** Industry distinction: 2P is incremental housing revenue tied to the apartment, not a per-resident care charge. The T12 substrate has had a dedicated `2nd Person Revenue` Label since v0.1.5 but RR had no counterpart — Rent Roll Recon couldn't reconcile 2P. Dedicated column closes that gap. SP intentionally excluded from the v1.15.1 keyword expansion to avoid bundling it into Other LOC where it would be indistinguishable from Pet/Laundry/Misc.
+- **New columns append at V-AB, not insert.** Existing 18 cols (A-R) + Period Date (S) + Total LOC $ (T) + Total Monthly Rev (U) all keep their positions. This is the same lesson the v0.1.8 Branch 3 work captured (append not insert) — every Rent Roll Recon formula references specific column letters, shifting them would force a workbook-wide regex sweep.
+- **Move-out Date already in `Normalized_Beds`** (col R) but dropped from Condensed_RR. The `bed_rows` dict already captured it via line 841 of normalizer.py; just needed adding to the Condensed_RR builder. Easy win — no parser change.
+- **TMR formula extension** (U7:U606) added `+IFERROR(V{r},0)` to include 2nd Person Rent. Without this, V would have been populated by the writer but never flowed into downstream aggregators reading U.
+- **`_normalize_flag()` helper** for ACH — source convention varies (`"X"` / `"Yes"` / `1` / `True` all mean enrolled). One helper, predictable output (`"X"` or `""`).
+- **PSF rates captured separately** rather than computed downstream. Derivable from rate ÷ sqft but having them explicit in the source makes the RR fully self-describing and reduces formula complexity in any downstream UW model that wants $-per-sqft analysis.
+
+### Verification
+
+End-to-end smoke against Homestead fixture:
+1. `normalize_rent_roll()` → 176 rows, 25 cols (was 18), 4 couples with non-zero 2P rent ($650/$725/$800).
+2. `translate_for_t12()` → 25 cols preserved (translator passes through unrecognized cols unchanged).
+3. `populate_t12()` against v0.1.10 Analyzer → Rent Roll Input cols A-AB populated:
+   - A3: "Homestead Village" (property name from v1.15.0 stamp)
+   - V19 (Sandra & Darryl Owens 2P): $650
+   - O19 (Owens Other LOC, H/K only): $100
+   - Y19 (Owens Notes): "HK $100 eff 3/1- sec occ $650" ← confirms the $650 SP value
+   - U19 (Owens TMR formula): `=IFERROR(H19+IFERROR(I19,0)+T19+IFERROR(V19,0),0)` ← extended correctly
+   - Cover!B8: v0.1.10
+4. 5-check substrate migration verifier all green, idempotent.
+
+### Files at session end
+
+- Updated: `normalizer.py` (FIELD_PATTERNS + `_normalize_flag` + bed-row extension + CONDENSED_COLUMNS extension), `analyzer_rr_writer.py` (SOURCE_COLUMNS_V_TO_AB + extended writer body), `app.py` (RR_VERSION 1.15.0 → 1.16.0)
+- New: `tools/migration/migrate_to_v0110.py` (3 ops, 5-check verify, idempotent)
+- Updated: `ALF_Financial_Analyzer_Only.xlsx` (regenerated v0.1.10)
+- Updated: `CHANGELOG-RR.md` (v1.15.1 + v1.16.0 entries), `CHANGELOG-T12.md` (substrate v0.1.10 entry), `SPEC-RR.md`, `SPEC-T12.md`, `CLAUDE.md`, `README.md`, this journal entry
+
+### Carry-forwards opened
+
+- **Rent Roll Recon section K (IL deep-dive at rows 86-100) could surface PSF stats** now that the substrate carries them. Small future v0.1.11. Track 3.
+- **T12 Analytics 2P revenue reconciliation row.** Compare `SUM('Rent Roll Input'!V) × 12` (RR-projected 2P annualized) against `T12 Raw Data!2nd Person Revenue` (T12 actual). Closes the 2P side of Rent Roll Recon. Track 3.
+- **Workbook Health balance aggregation** — total outstanding AR as a validation. Track 3.
+
+None are blocking. With this commit, the RR side captures every meaningful per-resident field from the Homestead fixture.
+
+### Process lessons
+
+1. **Tying out source to output side-by-side caught a systemic bug.** The keyword-list approach in `looks_care` was originally written for the Salem / Briar Glen formats; Homestead's broker-style headers don't match the same vocabulary. Without a comparison harness it's invisible from the parser side alone.
+2. **2P-rent-as-housing-revenue (not care-LOC)** is a small distinction with big downstream implications. Substrate v0.1.5 made the right call adding a dedicated `2nd Person Revenue` Label for the T12 side; this round just brings the RR side into alignment.
+3. **Append-don't-insert at column-extension boundaries** is consistent with the row-extension lesson from v0.1.8. Both are about preserving cell-coordinate stability for downstream formulas.
+
+---
+
 ## 2026-05-11 — Substrate v0.1.8 (Branch 3 — Analytical coverage)
 
 > **Refinement after first-pass commit `096fbb3`:** User clarified that the property name should land at `Rent Roll Input!A3` and `T12 Input!A10` as single-cell values (no separate `Property name:` labels). First pass had placed labels at A3 (RR) and A2 (T12) with empty B-cells (B3 / B2) as the value targets. Refined in follow-up commit on the same branch — migration now clears the leftover labels, reserves A3 / A10 as the writer/analyst value cells, and rewires `T12 Analytics!B2` to read `RR Input!A3 → T12 Input!A10 → Property_Name`. `is_already_v018()` gate extended to also verify the corrected B2 formula text, so the migration re-runs cleanly on first-pass files. Track 1/2 writer follow-ups now target A3 / A10 instead of B3 / B2.
