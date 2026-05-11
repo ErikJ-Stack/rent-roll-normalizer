@@ -2,7 +2,7 @@
 
 > Onboarding doc for any Claude session (chat or Claude Code) working on this repo. Read this first — it points to canonical truth and surfaces facts that previously had to be grubbed for.
 
-**Last updated:** 2026-05-08 (after RR v1.14.0 — Homestead-style format support)
+**Last updated:** 2026-05-11 (after substrate v0.1.8 — Branch 3 analytical coverage)
 
 ---
 
@@ -51,7 +51,7 @@ The repo runs three parallel tracks. They share an Analyzer but are otherwise in
 | Migration scripts | `tools/migration/migrate_to_v01N.py` (one per substrate version) |
 | Verification harness | `tools/verify_t12_v020.py` (parser-side; runs all four reference fixtures) |
 | Current code version | T12 v0.2.0 |
-| Current substrate version | v0.1.7 |
+| Current substrate version | v0.1.8 |
 
 **Module naming gotcha (verified 2026-05-10).** Four `t12_*` files exist and they are NOT duplicates — the `t12_` prefix originally meant "operates on the T12-shaped destination workbook" (which is now the Analyzer), not "operates on T12 data." Every one is imported by `app.py` and serves a distinct role:
 
@@ -95,9 +95,13 @@ Conversational examples should label placeholder text as `<REPLACE THIS>` so the
 
 ---
 
-## Open carry-forwards (as of 2026-05-08, post-RR v1.14.0)
+## Open carry-forwards (as of 2026-05-11, post-substrate v0.1.8)
 
 These are real backlogged items that previous chats deferred. They have a home; they're just not staffed yet.
+
+### Closed 2026-05-11 (Substrate v0.1.8 — Branch 3 analytical coverage)
+
+- ✓ **Branch 3 — Analytical coverage shipped.** New: T12 Analytics property-name & period-end auto-fill (B2 3-priority RR→T12→Cover, E2 LOOKUP rightmost-populated month), 5 chart objects on T12 Analytics K1:V44 (occupancy stacked col / rate-band histogram / payer-mix doughnut / 12-mo revenue trend / AL acuity doughnut), 5 conditional formula-driven note cells, Rent Roll Recon B2 latest-date default formula + dropdown DV, section K (IL unit-type mix + sqft + rate dispersion at rows 86-100), section L (MC auto-detect flat/tiered/FFS at rows 102-117). Migration via `migrate_to_v018.py` — 10 ops, 17-check verify, idempotent. **Opens two follow-up carry-forwards** — see "Medium priority" below for the writer-side stamps.
 
 ### Closed 2026-05-08 (RR v1.14.0 — Homestead-style format)
 
@@ -112,13 +116,14 @@ These are real backlogged items that previous chats deferred. They have a home; 
 
 ### Medium priority (still open)
 
-- **Branch 3 — Analytical coverage.** Sensitivities, scenarios, debt + returns tab, IL/AL/MC expense splits. Per OPTIMIZATION-DECISIONS.md sequencing. **Track 3 chat.**
-- **Branch 2 — Handoff readiness.** Pre-export gate, UW Export sheet (values-only mirror), metadata header, source trail. **Track 3 chat, after Branch 3.**
+- **Track 1 follow-up — RR writer stamp `Rent Roll Input!B3`** with parsed property name. Opens the auto-fill path for `T12 Analytics!B2` 3-priority formula installed at substrate v0.1.8. Until shipped, B3 is analyst-paste only. **Track 1 chat (small surface — `writer.py` only).**
+- **Track 2 follow-up — T12 writer stamp `T12 Input!B2`** with parsed property name. Same shape as RR follow-up. **Track 2 chat (small surface — `t12_normalizer_writer.py` only).**
+- **Branch 2 — Handoff readiness.** Pre-export gate, UW Export sheet (values-only mirror), metadata header, source trail. **Track 3 chat — Branch 2 was sequenced after Branch 3 per OPTIMIZATION-DECISIONS.md.**
 
 ### Low priority
 
 - **README.md update** — bring it from RR-only framing to current dual-pipeline state.
-- **Substrate version-detection bug suspected.** App's `_detect_substrate_version()` looks for `2nd Person Revenue` (v0.1.5 marker) in the Description_Map column B; v0.1.6/v0.1.7 add no new Labels there, so the detector returns `v0.1.5` for any of v0.1.5+. Cosmetic — worth widening the marker list when the bundle next changes Label vocabulary.
+- **Substrate version-detection bug suspected.** App's `_detect_substrate_version()` looks for `2nd Person Revenue` (v0.1.5 marker) in the Description_Map column B; v0.1.6/v0.1.7/v0.1.8 add no new Labels there, so the detector returns `v0.1.5` for any of v0.1.5+. Cosmetic — worth widening the marker list when the bundle next changes Label vocabulary.
 
 ---
 
