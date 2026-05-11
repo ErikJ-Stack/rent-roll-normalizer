@@ -43,6 +43,7 @@ from typing import Any, Dict, List, Optional, Sequence
 
 import openpyxl
 
+from property_name import derive_property_name
 from t12_normalizer import T12ParseResult
 
 
@@ -187,11 +188,20 @@ def populate_t12_input(
         ws.cell(row=excel_row, column=COL_TOTAL).value = gl.total
         # Col P — UNTOUCHED. The Coverage Check formula already lives there.
 
-    # --- Step 4: Append any UNMATCHED-resolution mappings to Description_Map
+    # --- Step 4: Stamp property name into T12 Input!A10 (substrate v0.1.8)
+    # Only writes when derivation produces something non-empty, so a bad
+    # filename doesn't clobber an analyst-typed value carried in from a
+    # prior session.
+    if source_filename:
+        derived = derive_property_name(source_filename)
+        if derived:
+            ws["A10"].value = derived
+
+    # --- Step 5: Append any UNMATCHED-resolution mappings to Description_Map
     if new_descmap_entries:
         _append_descmap_entries(wb, new_descmap_entries)
 
-    # --- Step 5: Update Run_Info tab --------------------------------------
+    # --- Step 6: Update Run_Info tab --------------------------------------
     _upsert_run_info(
         wb,
         parse_result=parse_result,

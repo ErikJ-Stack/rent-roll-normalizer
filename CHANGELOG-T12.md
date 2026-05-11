@@ -8,6 +8,109 @@ When making a code change in a T12-related chat, add an entry here in the same c
 
 ---
 
+## [0.2.1] — 2026-05-11
+
+### Summary
+
+Track 2 follow-up to substrate v0.1.8 Branch 3 analytical coverage: the T12 Analyzer writer (`t12_normalizer_writer.populate_t12_input`) now stamps the property name into `T12 Input!A10`, derived from the uploaded T12 filename. Closes the Track 2 carry-forward opened by substrate v0.1.8. T12 Analytics!B2 (3-priority RR → T12 → Cover) now sees A10 populated when a T12 is uploaded — so if no RR is uploaded for the same property, B2 falls through to the T12-derived name instead of the Cover!B5 default.
+
+### What changed
+
+**Writer — `t12_normalizer_writer.py`:**
+- New `from property_name import derive_property_name` import (shared cross-track utility introduced in RR v1.15.0).
+- `populate_t12_input()` already received `source_filename` — that path is now extended: when non-empty, the derived property name is written to `T12 Input!A10` after the GL detail rows. Empty filename or empty derivation leaves A10 untouched.
+- Step numbering in the function body shifted: prior Step 4 (Description_Map append) and Step 5 (Run_Info upsert) become Steps 5 and 6; new Step 4 is the property-name stamp.
+- Idempotent: each call rewrites A10 from the new T12 file's derived name. Matches the existing "writer manages the T12 Input sheet" contract.
+
+**App — `app.py`:**
+- `T12_VERSION = "0.2.1"` (was 0.2.0); `T12_LAST_UPDATED = "2026-05-11"`.
+- No call-site change needed — `populate_t12_input()` already received `source_filename`; the new behavior consumes it.
+
+**Docs:**
+- `SPEC-T12.md` — Current version line bumped to v0.2.1; brief note in the parser/writer section about the A10 stamp.
+- `CHANGELOG-T12.md` — this entry.
+- `CLAUDE.md` — Track 2 follow-up carry-forward marked closed; current T12 version bumped to v0.2.1.
+
+### Verification
+
+In-process smoke test (`_smoke_t2.py`, not committed) covers the end-to-end pipeline through both writers:
+1. RR + T12 uploaded with same filename property prefix → A3 and A10 both populated with the derived name.
+2. RR + T12 from different uploads → A3 from RR-derived, A10 from T12-derived (RR wins in B2 by 3-priority order).
+3. T12 only (no RR) → A3 empty, A10 populated.
+4. Empty `source_filename` → A10 untouched.
+5. T12 Analytics B2 formula still resolves cleanly through the 3-priority chain.
+
+### Why this is Track 2 (not Track 3)
+
+Same logic as the RR v1.15.0 commit: substrate cell reservation was Track 3 work (substrate v0.1.8); stamping content into that cell from a parser-side filename is application logic — Track 2 territory. Bundled into the same chat as Track 1 per user authorization on 2026-05-11.
+
+---
+
+## [Substrate template v0.1.8] — 2026-05-11
+
+Branch 3 of the Analyzer optimization roadmap (analytical coverage). All edits additive — new formulas in currently-empty cells (`T12 Analytics!B2`/`E2`), new chart objects on currently-empty `T12 Analytics!K1:V44`, and two new sections appended at the bottom of `Rent Roll Recon` (rows 86-117). No existing aggregators rewired. Workbook-only — no code changes to `t12_normalizer.py` / `t12_normalizer_writer.py` / `analyzer_rr_writer.py` / `app.py`. Design captured in `OPTIMIZATION-DECISIONS.md` decisions D-15 through D-22.
+
+### What changed (Track 3 — workbook substrate)
+
+**Property name + period plumbing** (closes F-9, F-10, F-11 from the 2026-05-11 grounding inspection):
+- Reserved single-cell property-name value targets: `Rent Roll Input!A3` and `T12 Input!A10`. No separate labels — the cell location itself is the documented contract. Until Track 1/2 writer follow-ups land, these cells are analyst-paste; the analyst types once and T12 Analytics!B2 picks it up.
+- Rewired `T12 Analytics!B2` from `=Property_Name` to a 3-priority formula: `Rent Roll Input!A3` → `T12 Input!A10` → `Property_Name` (Cover!B5). Until writer follow-ups land, behavior identical to before — `Property_Name` is the only populated source.
+- Installed `T12 Analytics!E2` rightmost-populated-month formula: `=IFERROR(LOOKUP(2,1/('T12 Input'!$C$11:$N$11<>""),'T12 Input'!$C$11:$N$11),"")`. Partial-year safe. Named range `T12_Period_Date` now resolves; Workbook Health row 26 auto-validates.
+
+**Property snapshot visuals on T12 Analytics** (closes F-13):
+- 5 chart objects at `K1:V44` (industry-standard senior-housing UW visual set per CBRE / NIC MAP research):
+  - V1 — Occupancy by Care Type (stacked column, IL/AL/MC × Occupied/Vacant/Notice/Eviction)
+  - V2 — Rate Dispersion (clustered column, 5 rate bands × IL/AL/MC three-series)
+  - V3 — Payer Mix (doughnut, 7 payer types as % of total monthly revenue)
+  - V4 — T12 Revenue Trend (line, 12 months of total operating revenue)
+  - V5 — AL Acuity Mix (doughnut, Basic/Level 2-7 distribution)
+- 5 conditional formula-driven note cells at `K15`/`K30`/`P15`/`P30`/`K45` — context messages that update with the underlying data (e.g. "⚠ Medicaid revenue share 35% — reimbursement rate risk" only fires when Medicaid > 30%).
+- Hidden helper block at `K46:V52` for rate-bucket counts (V2 source) and at `K53:V54` for monthly revenue totals (V4 source). Bucket boundaries: $0-1,999 / $2,000-3,999 / $4,000-5,999 / $6,000-7,999 / $8,000+. Revenue source: `SUMIFS('T12 Raw Data'!F:F..Q:Q, A:A, "Revenue")` — sums all Revenue-section rows per month.
+
+**Rent Roll Recon period default + dropdown** (closes F-11):
+- `Rent Roll Recon!B2` set to `=IFERROR(LOOKUP(9.99E+307,'RR_Calc'!$A$2:$A$13),"")` — returns the latest date from the ascending-sorted period list.
+- Data validation list on B2 sourced from `RR_Calc!$A$2:$A$13`. Analyst can override via dropdown; once overridden, the formula is replaced by the static date (standard Excel behavior). Re-running the migration restores the formula default — flagged as expected idempotency side effect.
+
+**Rent Roll Recon section K — IL Unit-Type Mix, Size & Rate Dispersion** (closes F-14):
+- New section at rows 86-100 (append, not insert — avoids openpyxl `insert_rows()` formula-text quirk).
+- Columns: Unit Type / Count / % of IL / Avg Rate / Min Rate / Max Rate / Avg Sq Ft / $/Sq Ft.
+- Apt-type breakouts: Studio / 1 Bedroom / 2 Bedroom / Cottage / Villa / Other (filter on `Rent Roll Input!F`).
+- Summary rows: rate spread (max − min), CV proxy ((max − min) ÷ avg ÷ √12), avg sq ft, sq ft range, $/sq ft.
+- Conditional note at A100: flags wide IL rate dispersion (CV > 25%) as possible legacy in-place rates.
+
+**Rent Roll Recon section L — MC Care Structure auto-detect** (closes F-15):
+- New section at rows 102-117.
+- B103 pattern detector: counts distinct populated K-column values among occupied MC residents and classifies as Flat-rate / Tiered / Fee-for-service.
+- Tier mapping (rows 106-108): substring match on K values — Basic/Tier 1/Level 1 → Tier 1, Moderate/Tier 2/Level 2-3 → Tier 2, Advanced/Tier 3/Level 4-7 → Tier 3. Row 109 (Other / unmapped) catches FFS.
+- Summary rows: avg base rent / resident, avg care charge / resident, care charge ÷ base rent ratio (flag if > 30%), total MC monthly revenue.
+- Conditional note at A117: pattern-specific guidance — "Flat-rate MC detected.", "Tiered MC detected. Verify per-tier staffing model.", or "Fee-for-service MC detected. Review individual care plans for sustainability."
+
+**Substrate version stamp** `v0.1.7 → v0.1.8` (`Cover!B8`, all 13 anchor `AZ4` cells).
+
+### Files
+
+- `tools/migration/migrate_to_v018.py` — new migration script. 10 operations, 17-check verification block. Re-run on a v0.1.8 file is a no-op via the `is_already_v018` guard.
+- `ALF_Financial_Analyzer_Only.xlsx` — bundled regenerated at v0.1.8.
+- `OPTIMIZATION-DECISIONS.md` — added Branch 3 design (Clusters B3.1-B3.5), discovered facts F-9 through F-15, decisions D-15 through D-22.
+- `SPEC-T12.md` — Current Template substrate version line bumped; v0.1.8 entry appended to substrate history.
+- `CHANGELOG-T12.md` — this entry.
+- `CLAUDE.md` — version line, last-updated, carry-forward updates.
+- `journal.md` — session entry.
+
+### Carry-forwards opened by this round
+
+- **Track 1 follow-up — RR writer stamp.** Modify `writer.py` to write the parsed property name into `Rent Roll Input!A3`. Until this lands, A3 is analyst-paste only and T12 Analytics B2 continues to fall back to Cover!B5.
+- **Track 2 follow-up — T12 writer stamp.** Same idea for `t12_normalizer_writer.py` → `T12 Input!A10`.
+- **Branch 2 — Handoff readiness** remains open per the Track 3 roadmap (UW Export mirror, pre-export gate, metadata header).
+
+### Verification
+
+`tools/migration/migrate_to_v018.py` 17-check block: Cover!B8 = v0.1.8, all 13 AZ4 stamped, B2 3-priority formula references RR Input A3 + T12 Input A10, E2 LOOKUP formula present, 5 chart objects on T12 Analytics, helper rate-bucket block populated, helper V4 monthly revenue row populated, 5 conditional note cells present, Rent Roll Recon B2 formula + DV present, IL section K header at A86, IL total row at B93, MC section L header at A102, MC pattern detector at B103, RR Input A3 reserved (no leftover label), T12 Input A2 cleared (A10 is the writer target), all named ranges intact. Idempotent — re-run on v0.1.8 file is a no-op via gate that checks both `Cover!B8` and the corrected B2 formula text.
+
+Cell scan over all 13 sheets confirms zero formula error strings (`#NAME?` / `#REF!` / `#VALUE!` / `#DIV/0!` / `#N/A` / `#NUM!` / `#NULL!`) introduced.
+
+---
+
 ## [0.2.0] — 2026-05-08
 
 Adds `BrokerFinancialSummaryFormat` (third T12 format) and Cluster B robustness hooks (sign-convention guards + partial-year T12 detection). Closes the v0.1.6 carry-forward documented in OPTIMIZATION-DECISIONS.md D-12 and the BrokerFinancialSummaryFormat carry-forward from journal 2026-05-06.

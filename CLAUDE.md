@@ -2,7 +2,7 @@
 
 > Onboarding doc for any Claude session (chat or Claude Code) working on this repo. Read this first — it points to canonical truth and surfaces facts that previously had to be grubbed for.
 
-**Last updated:** 2026-05-08 (after RR v1.14.0 — Homestead-style format support)
+**Last updated:** 2026-05-11 (after substrate v0.1.8 — Branch 3 analytical coverage)
 
 ---
 
@@ -38,7 +38,7 @@ The repo runs three parallel tracks. They share an Analyzer but are otherwise in
 | Code | `app.py`, `normalizer.py`, `mappings.py`, `pre_cleaner.py`, `period_date.py`, `reports.py`, `writer.py` |
 | Spec | `SPEC-RR.md` |
 | Changelog | `CHANGELOG-RR.md` |
-| Current version | RR v1.14.0 |
+| Current version | RR v1.15.0 |
 
 ### Track 2 — T12 Normalizer (T12-side code + Analyzer substrate)
 
@@ -50,8 +50,8 @@ The repo runs three parallel tracks. They share an Analyzer but are otherwise in
 | Bundled workbook | `ALF_Financial_Analyzer_Only.xlsx` |
 | Migration scripts | `tools/migration/migrate_to_v01N.py` (one per substrate version) |
 | Verification harness | `tools/verify_t12_v020.py` (parser-side; runs all four reference fixtures) |
-| Current code version | T12 v0.2.0 |
-| Current substrate version | v0.1.7 |
+| Current code version | T12 v0.2.1 |
+| Current substrate version | v0.1.8 |
 
 **Module naming gotcha (verified 2026-05-10).** Four `t12_*` files exist and they are NOT duplicates — the `t12_` prefix originally meant "operates on the T12-shaped destination workbook" (which is now the Analyzer), not "operates on T12 data." Every one is imported by `app.py` and serves a distinct role:
 
@@ -95,9 +95,15 @@ Conversational examples should label placeholder text as `<REPLACE THIS>` so the
 
 ---
 
-## Open carry-forwards (as of 2026-05-08, post-RR v1.14.0)
+## Open carry-forwards (as of 2026-05-11, post-substrate v0.1.8)
 
 These are real backlogged items that previous chats deferred. They have a home; they're just not staffed yet.
+
+### Closed 2026-05-11 (Substrate v0.1.8 — Branch 3 analytical coverage)
+
+- ✓ **Branch 3 — Analytical coverage shipped (substrate v0.1.8).** New: T12 Analytics property-name & period-end auto-fill (B2 3-priority RR→T12→Cover, E2 LOOKUP rightmost-populated month), 5 chart objects on T12 Analytics K1:V44 (occupancy stacked col / rate-band histogram / payer-mix doughnut / 12-mo revenue trend / AL acuity doughnut), 5 conditional formula-driven note cells, Rent Roll Recon B2 latest-date default formula + dropdown DV, section K (IL unit-type mix + sqft + rate dispersion at rows 86-100), section L (MC auto-detect flat/tiered/FFS at rows 102-117). Migration via `migrate_to_v018.py` — 10 ops, 17-check verify, idempotent. Substrate cells A3 (RR Input) and A10 (T12 Input) reserved as property-name value targets (refinement 2026-05-11).
+- ✓ **Track 1 — RR writer auto-stamp `Rent Roll Input!A3`** (RR v1.15.0). `analyzer_rr_writer.populate_t12()` now accepts `source_filename` kwarg and writes the derived property name. Closes the Track 1 carry-forward opened by substrate v0.1.8. New shared module `property_name.py` with `derive_property_name(filename)` strips date stamps + report boilerplate. Verified end-to-end on Salem / Briar Glen / Homestead filename patterns.
+- ✓ **Track 2 — T12 writer auto-stamp `T12 Input!A10`** (T12 v0.2.1). `t12_normalizer_writer.populate_t12_input()` extends its existing `source_filename` parameter to also drive a property-name stamp at A10, via the shared `property_name.derive_property_name()` helper introduced in v1.15.0. Closes the Track 2 carry-forward opened by substrate v0.1.8. Combined smoke test confirms end-to-end pipeline: RR + T12 with same property → A3 + A10 populated; different uploads → each writer stamps its own derived name; T12 Analytics B2 (3-priority RR → T12 → Cover) resolves correctly.
 
 ### Closed 2026-05-08 (RR v1.14.0 — Homestead-style format)
 
@@ -112,13 +118,12 @@ These are real backlogged items that previous chats deferred. They have a home; 
 
 ### Medium priority (still open)
 
-- **Branch 3 — Analytical coverage.** Sensitivities, scenarios, debt + returns tab, IL/AL/MC expense splits. Per OPTIMIZATION-DECISIONS.md sequencing. **Track 3 chat.**
-- **Branch 2 — Handoff readiness.** Pre-export gate, UW Export sheet (values-only mirror), metadata header, source trail. **Track 3 chat, after Branch 3.**
+- **Branch 2 — Handoff readiness.** Pre-export gate, UW Export sheet (values-only mirror), metadata header, source trail. **Track 3 chat — Branch 2 was sequenced after Branch 3 per OPTIMIZATION-DECISIONS.md.** With Branch 3 + the Track 1/2 writer-side follow-ups all closed in the 2026-05-11 session, Branch 2 is the only remaining open Analyzer-optimization workstream.
 
 ### Low priority
 
 - **README.md update** — bring it from RR-only framing to current dual-pipeline state.
-- **Substrate version-detection bug suspected.** App's `_detect_substrate_version()` looks for `2nd Person Revenue` (v0.1.5 marker) in the Description_Map column B; v0.1.6/v0.1.7 add no new Labels there, so the detector returns `v0.1.5` for any of v0.1.5+. Cosmetic — worth widening the marker list when the bundle next changes Label vocabulary.
+- **Substrate version-detection bug suspected.** App's `_detect_substrate_version()` looks for `2nd Person Revenue` (v0.1.5 marker) in the Description_Map column B; v0.1.6/v0.1.7/v0.1.8 add no new Labels there, so the detector returns `v0.1.5` for any of v0.1.5+. Cosmetic — worth widening the marker list when the bundle next changes Label vocabulary.
 
 ---
 

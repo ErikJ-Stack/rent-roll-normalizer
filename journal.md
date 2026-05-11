@@ -9,6 +9,89 @@ Newest at top.
 
 ---
 
+## 2026-05-11 — Substrate v0.1.8 (Branch 3 — Analytical coverage)
+
+> **Refinement after first-pass commit `096fbb3`:** User clarified that the property name should land at `Rent Roll Input!A3` and `T12 Input!A10` as single-cell values (no separate `Property name:` labels). First pass had placed labels at A3 (RR) and A2 (T12) with empty B-cells (B3 / B2) as the value targets. Refined in follow-up commit on the same branch — migration now clears the leftover labels, reserves A3 / A10 as the writer/analyst value cells, and rewires `T12 Analytics!B2` to read `RR Input!A3 → T12 Input!A10 → Property_Name`. `is_already_v018()` gate extended to also verify the corrected B2 formula text, so the migration re-runs cleanly on first-pass files. Track 1/2 writer follow-ups now target A3 / A10 instead of B3 / B2.
+
+**Started as:** Track 3 chat. User opened a fresh session, asked me to pull main locally first, then framed the work per CLAUDE.md as workbook-only edits to the Analyzer. Specific asks: (a) T12 Analytics B2/E2 auto-population, (b) visuals on T12 Analytics starting column K with research-grounded recommendations, (c) Rent Roll Recon B2 auto-default to latest period as a dropdown, (d) IL + MC level study sections paralleling the existing AL Care Level section (row 57:67). User explicitly asked for samples + research before implementation.
+
+**Stayed as:** A Track 3 chat throughout. Worked in git worktree `claude/eloquent-euler-d15713`. No edits to Track 1 (`writer.py`, `normalizer.py`, `mappings.py`, `pre_cleaner.py`) or Track 2 (`t12_normalizer.py`, `t12_normalizer_writer.py`, `analyzer_rr_writer.py`, `app.py`) code. Cross-track follow-ups for property-name writer stamps explicitly flagged + deferred per the one-track-at-a-time principle.
+
+### Frame
+
+Loaded `ALF_Financial_Analyzer_Only.xlsx` from the worktree and dumped every cell that would be touched: T12 Analytics B2/E2 + their downstream readers, T12 Analytics K-area (verified empty), Rent Roll Recon section H (rows 57-67, existing AL Care Level), data validations (none on Rent Roll Recon), Rent Roll Input header layout, T12 Input header layout, RR_Calc period dropdown source, T12 Raw Data column structure. Three grounding findings surfaced that materially affected the design:
+
+1. **No property-name source exists in either input sheet.** Neither RR Input nor T12 Input has a property cell — only Cover!B5 carries it (manual). "Auto-extract from RR or T12" was a cross-track ask. Resolution: add input-sheet attachment cells (Track 3) now; defer the writer-side stamps to separate Track 1/2 chats.
+2. **CLAUDE.md F-8 stale.** F-8 claimed Rent Roll Recon B2 was a dropdown driven by `RR_Calc!B2:B13`. Reality: no data validation existed; period dates live in `RR_Calc!A2:A13` (column A, not B), with B2:B13 holding label strings ("Period 1", "Period 2", ...). Designed B2 from scratch as a formula + new DV.
+3. **AL Care Level doesn't translate 1:1 to IL/MC.** IL has no care levels by industry definition (researched CBRE / NIC MAP / Senior Housing News — IL is base-rent-only, K column empty for IL residents). MC has three dominant patterns: flat-rate, tiered 2-3 level, fee-for-service. A literal copy of section H to IL and MC would be wrong. Designed IL section as unit-type mix + sqft + rate dispersion (research-grounded), and MC section as auto-detect of flat/tiered/FFS.
+
+Did web research on senior-housing UW visuals (CBRE Investor Survey H2 2025, NIC MAP, Cushman & Wakefield, Senior Housing News). Five standard visuals emerge: occupancy by care type, rate dispersion, payer mix, T12 revenue trend, acuity mix. Locked all 5 per user instruction ("use the optional 5th").
+
+### Implementation calls made
+
+- **Append-only for new Rent Roll Recon sections.** Originally proposed inserting between current rows 67 and 69 (between section H and section I). Per CLAUDE.md openpyxl quirk #4, `insert_rows()` shifts cells but not formula text — would require a full-sheet regex sweep on Rent Roll Recon plus named-range fixups. Switched to append at rows 86-117 (current max_row=84). Dependency scan confirmed no external sheet references rows 69-84, so the visual-order tradeoff (Ancillary 69-75 sits above the new IL/MC deep-dive) is the only downside. Logged as D-20.
+- **Property-name source cells differ per sheet.** RR Input row 2 already holds v0.1.5 paste-instructions ("One row per resident per period..."); can't clobber. Used RR Input row 3 (verified empty) instead. T12 Input row 2 was empty, used that. Single-formula consumer at T12 Analytics B2 references `Rent Roll Input!B3` and `T12 Input!B2`. First migration run caught the mismatch via the verification block (RR Input A2 label check failed); fixed in one edit.
+- **V4 monthly revenue source.** First draft used `INDEX/MATCH("Total revenue",'T12 Raw Data'!A:A,0)` — wrong: column A is `Section` (Revenue / Expense / etc.), not a Label list. There's no "Total revenue" row. Corrected to `SUMIFS('T12 Raw Data'!F:Q, A:A, "Revenue")` — sums all Revenue-section rows per month. Confirmed clean via re-run.
+- **Conditional notes vs cell comments.** User asked for "popup notes, or maybe conditional notes depending on data." Picked conditional formula-driven notes (D-18). Popup comments don't react to data; conditional formulas surface only when relevant (e.g. Medicaid > 30% triggers reimbursement-risk note, otherwise shows ✓). Five notes installed at K15/K30/P15/P30/K45.
+- **MC pattern detector simplification.** Originally proposed a SUMPRODUCT-based distinct-count formula directly in B103; turned out too brittle (full-column ranges + COUNTIFS array trick interactions). Switched to a simpler `COUNTIF(B106:B109,">0")` approach — count how many of the four tier rows have non-zero count, classify by that. Rows 106-109 do the heavy lifting via substring matching on K-column values.
+
+### Workdir foot-gun (caught early)
+
+Per the v0.2.0 retrospective lesson — my first `Write` of `migrate_to_v018.py` and `Edit`s of `OPTIMIZATION-DECISIONS.md` used absolute paths to the main repo (`C:\Users\erikj\Downloads\rent_roll_app\...`) instead of the worktree. Caught immediately when the first migration run failed with "file not found." Recovered via `cp` to the worktree + `git restore` on main. **Same lesson as 2026-05-08: when operating in a worktree, the system-message-provided worktree directory is the only correct root.** Re-confirming for future chats.
+
+### What shipped
+
+**Substrate template** v0.1.7 → v0.1.8 (workbook only).
+
+Migration script `tools/migration/migrate_to_v018.py`:
+- 10 operations: input property cells, T12 Analytics B2 + E2 formulas, helper rate-bucket block, 5 charts, 5 conditional notes, Rent Roll Recon B2 default + DV, IL section K, MC section L, version stamps.
+- 17 verification checks at the end. All pass on first clean run.
+- Idempotency gate via `is_already_v018()`. Re-run on v0.1.8 file is a no-op.
+
+Cell scan over all 13 sheets confirms zero formula error strings (`#NAME?` / `#REF!` / `#VALUE!` / `#DIV/0!`) introduced. Output workbook 178,451 bytes vs source 170,441 — +8KB delta for the 5 chart objects and new sections.
+
+`OPTIMIZATION-DECISIONS.md`: Added entire "Branch 3 — Analytical coverage" section with Clusters B3.1-B3.5, discovered facts F-9 through F-15, design tables for each cluster, decisions D-15 through D-22 (also appended to the canonical Decision Log table), implementation packaging, open carry-forwards.
+
+`SPEC-T12.md`: Current Template substrate version bumped 0.1.7 → 0.1.8. New "Template v0.1.8" entry in substrate history with full prose describing each component.
+
+`CHANGELOG-T12.md`: New `[Substrate template v0.1.8] — 2026-05-11` entry at top.
+
+`CLAUDE.md`: Last-updated date, current substrate version, new "Closed 2026-05-11" section, new Track 1/2 follow-up carry-forwards under Medium priority, v0.1.8 added to the version-detection-bug note.
+
+### Discovered facts worth carrying forward
+
+- **F-8 was stale.** Rent Roll Recon B2 had no DV at the start of this session — the historical "dropdown driven by RR_Calc!B2:B13" claim was wrong on two counts (no DV, and B2:B13 is the label column, not the date column). Corrected by writing fresh behavior. Future chats checking F-8 should now read it as "Rent Roll Recon B2 holds a LOOKUP formula for latest date, with a DV dropdown sourced from RR_Calc!A2:A13 — analyst override replaces the formula with a static value (Excel default)."
+- **T12 Raw Data column map.** A=Section, B=Label, C=Care, D=Flag, E=Matched Descriptions, F-Q=M01..M12, R=T12_Total. Several aggregation formulas elsewhere reference column R (T12_Total) and column B (Label) — the new V4 helper at T12 Analytics K54:V54 introduces the first SUMIFS over column A (Section). Pattern is general — any "all revenue per month" or "all expense per month" query can use the same shape against `T12 Raw Data!$A:$A`.
+- **MC pricing patterns are real.** Per research, the three patterns (flat-rate / tiered / FFS) genuinely vary across operators. The L-section pattern detector handles all three. Worth noting if Track 2 ever wants to surface this signal in `app.py` status panels or in `t12_normalizer.py` warnings.
+
+### Carry-forwards opened
+
+- **Track 1 RR writer follow-up** — modify `writer.py` to stamp `Rent Roll Input!B3` with the parsed property name (from source RR file metadata or filename stem). Until shipped, B3 is analyst-paste only. Surface area: `writer.py` only.
+- **Track 2 T12 writer follow-up** — same shape for `t12_normalizer_writer.py` → `T12 Input!B2`. Until shipped, B2 is analyst-paste only.
+- **Branch 2 — Handoff readiness** remains the next open Track 3 workstream per OPTIMIZATION-DECISIONS.md sequencing.
+
+### Process lessons from this session
+
+1. **Web research before designing was worth it.** Without the CBRE / NIC MAP / Senior Housing News reads, I would have likely (a) defaulted to copying section H's care-level shape into IL where care levels don't exist, (b) missed the MC pricing-pattern variance, (c) picked a less industry-standard visual set. The Branch 3 design lines up with what underwriters actually expect, not what would have been a clean Excel exercise.
+2. **Pre-grounding via cell inspection caught two design errors before code.** F-8 staleness and the property-name source-cell absence both would have produced runtime issues or user confusion. Inspecting first, designing second, coding third paid off.
+3. **17-check verification block + idempotency gate** caught one bug (V4 helper using wrong column lookup) and one design-mismatch (RR Input A2 vs A3) on the first migration runs. Cheap to write, expensive to skip. Same lesson as the v0.1.6 / v0.1.7 retrospectives.
+
+### Commits this session
+
+(To be filled in at commit time.)
+
+### Files at session end
+
+- New: `tools/migration/migrate_to_v018.py`
+- Updated: `ALF_Financial_Analyzer_Only.xlsx` (regenerated v0.1.8)
+- Updated: `OPTIMIZATION-DECISIONS.md` (Branch 3 design appended)
+- Updated: `SPEC-T12.md` (current version line + v0.1.8 history entry)
+- Updated: `CHANGELOG-T12.md` (new top entry)
+- Updated: `CLAUDE.md` (last-updated, substrate version, carry-forwards)
+- Updated: `journal.md` (this entry)
+
+---
+
 ## 2026-05-10 — Doc cleanup + `t12_writer.py` → `analyzer_rr_writer.py` rename
 
 Follow-up session after the v1.14.0 + README ship. Closed three v1.14.0 carry-forwards plus the "newly identified" rename one (which was raised AND staffed in the same session — the user said "go ahead" mid-flight).

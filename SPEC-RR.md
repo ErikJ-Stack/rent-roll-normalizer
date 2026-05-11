@@ -6,7 +6,7 @@
 **Repo:** <https://github.com/ErikJ-Stack/rent-roll-normalizer> (public)
 **Owner:** Erik J (`Erikjayj@gmail.com`, GitHub: `ErikJ-Stack`)
 **Stack:** Python · Streamlit · pandas · openpyxl · Streamlit Community Cloud (free tier)
-**Current version:** v1.14.0 (2026-05-08) — Homestead-style rent roll support (broker-condensed format with `Unit ID` / `Cottage` / `Area` / `Category` / `BR/BA` / `Market / Mo YYYY` / `Status` headers); self-contained vacant rows now emit when bed_status is recognized; pre-cleaner cuts the Homestead end-of-sheet pricing summary table.
+**Current version:** v1.15.0 (2026-05-11) — Property-name auto-stamp into `Rent Roll Input!A3` via `analyzer_rr_writer.populate_t12()` (closes Track 1 follow-up from substrate v0.1.8 Branch 3). New shared utility `property_name.derive_property_name()` strips date stamps + report-type boilerplate from the uploaded RR filename. Prior: v1.14.0 (2026-05-08) — Homestead-style rent roll support (broker-condensed format with `Unit ID` / `Cottage` / `Area` / `Category` / `BR/BA` / `Market / Mo YYYY` / `Status` headers); self-contained vacant rows emit when bed_status is recognized; pre-cleaner cuts the Homestead end-of-sheet pricing summary table.
 
 ---
 
@@ -69,6 +69,7 @@ Local Windows machine: C:\Users\erikj\Downloads\rent_roll_app
 | `t12_normalizer.py` | 19.5 KB | Track 2 — T12 parser. Format-registry pattern (Yardi + MRI). |
 | `t12_normalizer_writer.py` | 12.7 KB | Track 2 — T12 writer. Writes `T12 Input!A12+`, appends `Description_Map` resolutions, adds `Run_Info` tab. |
 | `period_date.py` | 4.5 KB | Extracts period date from filename across 6 patterns |
+| `property_name.py` | — | Cross-track helper. `derive_property_name(filename)` strips date stamps and report-type boilerplate to recover the property name. Used by `analyzer_rr_writer.py` (writes to `Rent Roll Input!A3`) and `t12_normalizer_writer.py` (writes to `T12 Input!A10`). |
 | `mapping_template.xlsx` | 11.7 KB | Editable mapping override workbook for analysts |
 | `ALF_Financial_Analyzer_Only.xlsx` | ~150 KB | **Bundled Analyzer.** Loaded silently as the default destination workbook. Substrate at v0.1.5. |
 | `tools/migration/migrate_analyzer.py` | one-shot | Applied the v0.1.0 → v0.1.4 substrate migration to the master Analyzer (2026-05-02). Archived for traceability. |

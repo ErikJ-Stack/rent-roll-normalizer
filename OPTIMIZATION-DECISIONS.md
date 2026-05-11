@@ -192,6 +192,14 @@ Decisions land here once made. Format: append-only, newest at the bottom.
 | D-12 | 2026-05-07 | (meta) | Q-B-defer — Cluster B handling | **Defer to its own Track 2 chat.** Branch 1 partially closes this session; sub-cards 1.2 (sign guards) + 1.3 (partial-year T12) ship later. | Honors "one track at a time" principle from journal 2026-05-06. Cluster B is code-side; bundling it would re-create the cross-track scope problem. |
 | D-13 | 2026-05-07 | D | Q-D3 — Cell-comment scope | **(a) Light.** Comments on 4-5 hardest-to-decode formulas only: T12 Raw Data SUMIFS pattern, T12 Analytics core formulas, EGI calc, EBITDAR calc, H20 diagnostic chain. | Light coverage on the cells where a future analyst (or future Erik) is most likely to ask "what does this do?". Heavier coverage shifts to `SPEC-Analyzer.md` when that doc spins up. |
 | D-14 | 2026-05-07 | D | Q-D2 — Named ranges to add | **5 names:** `RR_Period_Date`, `T12_Period_Date`, `RR_Input_Data`, `T12_Input_Data`, `Property_Name`. | `Property_Name` lives at `Cover!B5` (new); `T12 Analytics!B2` (currently empty) gets `=Property_Name` so the property name is entered once and propagates. Other four point at existing cells. |
+| D-15 | 2026-05-11 | B3.1 | Property name source-of-truth | **A2 — input-sheet source cells + 3-priority formula.** RR Input B2 → T12 Input B2 → Cover B5 fallback. | Trivial workbook delta; clean attachment point for future Track 1/2 writer changes. |
+| D-16 | 2026-05-11 | B3.1 | T12 period-end derivation | **`LOOKUP(2,1/(...<>""))` rightmost-populated** on T12 Input C11:N11. | Partial-year safe. No upstream writer change needed. |
+| D-17 | 2026-05-11 | B3.2 | Visual placement + count | **5 charts on T12 Analytics K1:V44** (2×2 grid + conditional acuity donut). Hidden helper at K46:V53. | Senior-housing UW standard visual set per CBRE / NIC MAP. One-tab simplicity. |
+| D-18 | 2026-05-11 | B3.2 | Note style for visuals | **Conditional formula-driven notes**, not openpyxl cell comments. | Live notes update with data; popup comments don't. |
+| D-19 | 2026-05-11 | B3.3 | Rent Roll Recon B2 default | **`LOOKUP(9.99E+307,...)` default + DV from RR_Calc!A2:A13.** | Auto-latest with override. F-8 docstring updated accordingly. |
+| D-20 | 2026-05-11 | B3.4 | IL deep-dive position | **Append rows 86-100 on Rent Roll Recon.** Includes sqft analysis. | Avoids openpyxl `insert_rows()` quirk. Verified no external refs to rows 69-84. |
+| D-21 | 2026-05-11 | B3.5 | MC deep-dive pattern handling | **Auto-detect flat/tiered/FFS** via distinct-count of K column. Substring tier mapping. | Handles all three industry pricing structures. |
+| D-22 | 2026-05-11 | (meta) | Track scoping for cross-cutting plumbing | **Workbook = Track 3 (this session).** RR writer stamp = Track 1 follow-up. T12 writer stamp = Track 2 follow-up. Both deferred. | Honors one-track-at-a-time. |
 
 ---
 
@@ -470,6 +478,221 @@ Originally deferred per D-12 to a separate Track 2 chat to honor the one-track-a
 **B-2. Partial-year T12 handling** — shipped as `_count_populated_months(gl_rows)` + optional `parse_t12(..., annualize_partial_year=False)` kwarg in `t12_normalizer.py`. App.py wires a sidebar checkbox (disabled until a T12 is uploaded) and surfaces a partial-year warning in the T12 status panel when `populated_months < 12`. Workbook Health gets a V8 partial-year row at substrate v0.1.7 (`=COUNTA('T12 Input'!C11:N11)` paired with ✓/⚠ — see commit `36e1659`).
 
 Verification covers all four reference fixtures via `tools/verify_t12_v020.py`. None trip sign warnings on standard signs (the guard is genuinely defensive, not actively used by any current fixture).
+
+---
+
+## Branch 3 — Analytical coverage (substrate v0.1.7 → v0.1.8)
+
+Kicked off 2026-05-11. Workstream goal: bring underwriter-grade analytical depth into the Analyzer before Branch 2 (handoff readiness) wraps. Architecturally additive — new chart objects, new conditional-note cells, new appended sections on `Rent Roll Recon`, new formulas in currently-empty `T12 Analytics!B2` / `E2` / `K1:V44`. Existing aggregator formulas (`T12 Raw Data` SUMIFs, `Monthly Trending` INDEX/MATCH, `T12 Analytics` revenue/expense spine, `UW Output` spine) remain untouched.
+
+### Discovered facts (from 2026-05-11 grounding inspection)
+
+**F-9 — Property name has no source-of-truth in input sheets.**
+Neither `Rent Roll Input` nor `T12 Input` currently stores the property name. Both sheets start at row 1 with paste-instructions; data fills the bodies. The only canonical home is `Cover!B5` (manual entry, named `Property_Name`). For "auto-populate from RR or T12" to be meaningful, the input sheets need reserved value cells the user (or eventually the writer code) can fill. Workbook-only fix per user refinement: reserve **`Rent Roll Input!A3`** and **`T12 Input!A10`** as single-cell value targets (no separate labels — the cell location itself is documented in SPEC + writer follow-ups). Track 1 + Track 2 writer follow-ups stamp these cells programmatically (deferred).
+
+**F-10 — T12 Input C11:N11 holds 12 monthly date headers (post substrate v0.1.7).**
+Cluster B partial-year work shipped C11:N11 as the monthly-header anchor (`=COUNTA('T12 Input'!C11:N11)` drives Workbook Health V8). The rightmost populated cell in that range = T12 period ending. No upstream change needed — workbook can derive E2 directly.
+
+**F-11 — Rent Roll Recon B2 currently has no data validation.**
+CLAUDE.md F-8 claim of "dropdown driven by `RR_Calc!B2:B13`" is stale on two counts: (a) no DV exists on `Rent Roll Recon` today; (b) the period list lives in `RR_Calc!A2:A13` (date column), with `B2:B13` holding label strings ("Period 1", "Period 2", ...). The MINIFS sort is ascending, so the largest numeric in the range = latest period.
+
+**F-12 — Rent Roll Recon current max_row = 84.**
+Existing layout: Sections A-F (rows 6-47) + ARPR rows 50-55 + AL Care Level rows 57-67 + Ancillary rows 69-75 + Concession check rows 78-82. No external sheet references rows 69-84 (verified via dependency scan). Safe to append new sections at rows 86+ without `insert_rows()` risk.
+
+**F-13 — No charts exist anywhere in the workbook.**
+Wide-open canvas at `T12 Analytics!K1:V44` (max_col currently 52 from AZ anchors; data ends at H). Chart objects render on top of cells, not into them, so they don't conflict with the AZ4 anchor.
+
+**F-14 — IL has no care-level concept by industry definition.**
+Per CBRE / NIC MAP / industry research, IL is base-rent-only — `Rent Roll Input!K` (Care Level) is empty for IL residents. Right IL deep-dive metrics: unit-type mix, sqft, rate dispersion (and its CV).
+
+**F-15 — MC pricing has three dominant patterns** (per industry research):
+- **Flat-rate** all-inclusive (no per-level upcharge)
+- **Tiered** 2-3 level (typically Basic / Moderate / Advanced or numeric tiers)
+- **Fee-for-service** hour-package based (many distinct values)
+
+`Rent Roll Input!K` populated for MC residents iff the property uses tiered/FFS. Distinct-count of MC K values is the pattern signal: 0 → flat-rate, 1-3 → tiered, 4+ → FFS.
+
+### Cluster B3.1 — Property name + period date plumbing
+
+**B3.1-a. Reserve property-name source cells on input sheets.** (Refined 2026-05-11 per user spec — single-cell value, no separate label.)
+- `Rent Roll Input!A3` — single cell holding the property name VALUE (writer-populated; analyst-paste OK). The v0.1.5 paste-instructions string at A2 stays untouched.
+- `T12 Input!A10` — single cell holding the property name VALUE (writer-populated; analyst-paste OK). Row 10 sits between the layout-description text at A9 and the column headers at A11 — a natural free slot.
+
+These cells are blank by default. Future writer follow-ups stamp them on extraction:
+- **Track 1:** `writer.py` populates `Rent Roll Input!A3` with the property name parsed from the source RR (filename stem or detected metadata).
+- **Track 2:** `t12_normalizer_writer.py` populates `T12 Input!A10` with the property name parsed from the source T12.
+
+Until those land, the cells are analyst-paste; the analyst types once and T12 Analytics!B2 picks it up via the 3-priority formula below.
+
+**B3.1-b. T12 Analytics B2 formula — priority RR → T12 → Cover.**
+
+```excel
+B2 = =IFERROR(IF(LEN(TRIM('Rent Roll Input'!A3))>0,'Rent Roll Input'!A3,IF(LEN(TRIM('T12 Input'!A10))>0,'T12 Input'!A10,Property_Name)),Property_Name)
+```
+
+Falls back through three sources. `Property_Name` named range continues to point at `Cover!B5`. Workbook Health row 27 (Property_Name validation) keeps working because the named range definition is unchanged.
+
+**B3.1-c. T12 Analytics E2 formula — rightmost populated T12 month.**
+
+```excel
+E2 = =IFERROR(LOOKUP(2,1/('T12 Input'!$C$11:$N$11<>""),'T12 Input'!$C$11:$N$11),"")
+```
+
+`LOOKUP(2,1/(...))` is the canonical Excel idiom for "last non-empty value." Tolerates partial-year T12s. Number-formatted as `mmm yyyy`. Named range `T12_Period_Date` already points here; Workbook Health row 26 auto-validates.
+
+### Cluster B3.2 — Property snapshot visuals on T12 Analytics
+
+Layout `K1:V44` on `T12 Analytics`. Charts are openpyxl `BarChart` / `LineChart` / `DoughnutChart` objects anchored to cells. Conditional notes are formula cells below each chart that render context-dependent guidance.
+
+| Visual | Anchor | Source data | Conditional note (cell directly below) |
+| --- | --- | --- | --- |
+| **V1 — Occupancy by Care Type** (stacked column) | `K1:O14` | Rent Roll Recon B8:D11 (Occupied/Vacant/Notice/Eviction × IL/AL/MC) | `K15`: flags if any care type < 85% occ |
+| **V2 — Rate Dispersion** (histogram, IL/AL/MC three-series) | `K16:O29` | computed in helper rows K46:V53 (hidden) — 5 buckets $0-2k / 2-4k / 4-6k / 6-8k / 8k+ | `K30`: flags if IL rate CV > 25% (legacy in-place rates) |
+| **V3 — Payer Mix** (doughnut, % of total monthly rev) | `P1:T14` | Rent Roll Recon H40:H46 | `P15`: flags if Medicaid share > 30% (reimbursement risk) or Managed Care > 25% (rate-cap risk) |
+| **V4 — T12 Revenue Trend** (line, 12 months) | `P16:T29` | `T12 Raw Data` total operating rev row, monthly cols | `P30`: flags trajectory (latest 3-mo avg vs prior 3-mo avg) |
+| **V5 — Acuity Mix** (doughnut, AL Care Levels) | `K31:O44` | Rent Roll Recon D59:D66 | `K45`: flags if D67=0 ("Property is flat-rate AL — no acuity data") OR skew-flag if top tier > 50% of charges |
+
+**Chart styling convention:** match existing navy `FF2F5597` for chart titles. Series colors: IL = `FF4472C4` (light blue), AL = `FF2F5597` (navy), MC = `FFC65911` (orange). Consistent with how `UW Output` section headers and the existing Workbook Health badges already color.
+
+**Hidden helper block at K46:V53** holds the rate-bucket counts for V2 (openpyxl can't compute histogram bins natively — pre-compute via COUNTIFS into helper cells, then chart references the helpers). Cell content visible via Workbook Health → Unhide if needed for debug.
+
+### Cluster B3.3 — Rent Roll Recon B2 latest-date default + DV
+
+**B3.3-a. B2 formula default:**
+
+```excel
+B2 = =IFERROR(LOOKUP(9.99E+307,'RR_Calc'!$A$2:$A$13),"")
+```
+
+`9.99E+307` is the largest finite double — `LOOKUP` returns the last numeric value ≤ that, which is the largest date in the ascending-sorted list. Robust to empty rows (returns the last populated).
+
+**B3.3-b. Data validation on B2:**
+
+```
+type=list, formula1='RR_Calc!$A$2:$A$13'
+```
+
+Analyst can override via dropdown. When they pick a date, the formula is replaced by the static value — standard Excel behavior. Re-running the migration restores the default formula. Logged as expected idempotency side effect.
+
+### Cluster B3.4 — IL Unit-Type Mix & Rate Dispersion (Rent Roll Recon section K)
+
+Append at rows 86-100. Sources from `Rent Roll Input` filtered to `Care Type = IL` and `Status <> Vacant / Eviction`. Columns: F (Apt Type), C (Sq Ft), H (Actual Rate).
+
+```
+Row 86: K · IL UNIT-TYPE MIX, SIZE & RATE DISPERSION                       (purple section header — FF4A3869, matching H/I/J)
+Row 87: Unit Type | Count | % of IL | Avg Rate | Min Rate | Max Rate | Avg Sq Ft | $/Sq Ft
+Row 88: Studio
+Row 89: 1 Bedroom
+Row 90: 2 Bedroom
+Row 91: Cottage / Villa
+Row 92: Other
+Row 93: Total IL occupied | sum | 100% | weighted-avg | (range) | (range) | weighted-avg | weighted-avg
+Row 94: (blank)
+Row 95: Rate spread (max − min)
+Row 96: Rate CV (stdev ÷ avg)  [⚠ if >25%]
+Row 97: Avg sq ft (IL)
+Row 98: Sq ft range (min — max)
+Row 99: $/sq ft (IL avg rate ÷ avg sq ft)
+Row 100: Note cell — conditional context message
+```
+
+Formulas use `COUNTIFS` / `AVERAGEIFS` / `MINIFS` / `MAXIFS` / `STDEV.S` against `Rent Roll Input!$F$7:$F$606` (Apt Type), `$C$7:$C$606` (Sq Ft), `$H$7:$H$606` (Actual Rate), with the same `$S$7:$S$606=$B$2` period filter and `$D$7:$D$606="IL"` care-type filter that the existing IL columns use.
+
+CV flag in B96: `=IFERROR(IF(STDEV.S(...)/AVERAGEIFS(...)>0.25,"⚠ Wide rate spread — possible legacy in-place rates","✓ Tight"),"-")`
+
+Conditional note at A100: `=IF(B93=0,"No IL units in selected period",IF(<CV-high>,"⚠ IL rate dispersion CV "&TEXT(B96,"0.0%")&" — investigate legacy rates","IL rate dispersion within normal band"))`
+
+### Cluster B3.5 — MC Care Structure auto-detect (Rent Roll Recon section L)
+
+Append at rows 102-117. Sources from `Rent Roll Input` filtered to `Care Type = MC` and `Status <> Vacant / Eviction`. Auto-detect pattern from distinct-count of K values.
+
+```
+Row 102: L · MC CARE STRUCTURE  (auto-detected pattern)                    (purple section header — FF4A3869)
+Row 103: MC Care Pattern detected:   [auto-formula]
+Row 104: (blank)
+Row 105: Tier | Count | % of MC | Avg $/mo | Total $/mo
+Row 106: Tier 1 / Basic
+Row 107: Tier 2 / Moderate
+Row 108: Tier 3 / Advanced
+Row 109: Other / FFS
+Row 110: Total MC occupied | sum | 100% | weighted-avg | sum
+Row 111: (blank)
+Row 112: MC base rent / resident                  (avg)
+Row 113: MC care charge / resident                (avg)
+Row 114: Care charge ÷ base rent ratio            [⚠ if >30%]
+Row 115: Total MC monthly revenue
+Row 116: (blank)
+Row 117: Note cell — pattern-specific conditional message
+```
+
+Pattern detector at B103:
+```excel
+=IFERROR(
+  IF(SUMPRODUCT((COUNTIF('Rent Roll Input'!$K$7:$K$606,'Rent Roll Input'!$K$7:$K$606)>0)*('Rent Roll Input'!$D$7:$D$606="MC")*('Rent Roll Input'!$S$7:$S$606=$B$2)*('Rent Roll Input'!$E$7:$E$606<>"Vacant")*('Rent Roll Input'!$E$7:$E$606<>"Eviction"))=0,"Flat-rate (no care levels recorded)",
+  IF(<distinct-count>=1,"Flat-rate (single tier)",
+  IF(<distinct-count><=3,"Tiered acuity (" & <distinct-count> & " levels)",
+  "Fee-for-service (" & <distinct-count> & " distinct charges)"))),
+"-")
+```
+
+(Distinct-count computed via `SUMPRODUCT((COUNTIFS(...)>0)/COUNTIFS(...))` idiom; full formula assembled in the migration script.)
+
+Tier mapping for rows 106-108: explicit substring matches on K column (`"Basic"`, `"Tier 1"`, `"Level 1"` → Basic; `"Moderate"`, `"Tier 2"`, `"Level 2-3"` → Moderate; etc.). Row 109 "Other" catches anything unmatched.
+
+Conditional note at A117: text varies by detected pattern. Flat-rate → "Flat-rate MC. Tier analysis not applicable; see base rent only." Tiered → "Tiered MC. Verify per-tier staffing model supports the implied acuity mix." FFS → "Fee-for-service MC. Charges vary per resident — review individual care plans for sustainability."
+
+### Decision Log additions (Branch 3)
+
+| ID | Date | Cluster | Question | Decision | Rationale |
+| --- | --- | --- | --- | --- | --- |
+| D-15 | 2026-05-11 | B3.1 | Q-B3.1 — Property name source-of-truth | **Option A2 (refined): single-cell value targets at `Rent Roll Input!A3` and `T12 Input!A10` + 3-priority formula on T12 Analytics B2** (RR → T12 → Cover). No separate label cells (cell location documented in SPEC). Track 1/2 writer follow-ups deferred. | Trivial workbook delta now; clean attachment point for future writer changes. Manual-paste behavior interim. Initial v0.1.8 first pass placed labels at A2/A3 with B-cells as values; refined 2026-05-11 to single-cell-value form per user spec. |
+| D-16 | 2026-05-11 | B3.1 | Q-B3.1 — T12 period end derivation | **`LOOKUP(2,1/(...<>""))` on T12 Input C11:N11.** Number-format `mmm yyyy`. | Partial-year safe. No upstream writer change needed — substrate v0.1.7 already populates C11:N11. |
+| D-17 | 2026-05-11 | B3.2 | Q-B3.2 — Visual count and placement | **5 charts on `T12 Analytics` K1:V44** in 2×2 grid + acuity donut at K31:O44. Hidden helper block at K46:V53 for rate-bucket counts. | Industry-standard senior-housing UW visual set (per CBRE / NIC MAP research). Keeps everything on one tab. |
+| D-18 | 2026-05-11 | B3.2 | Q-B3.2 — Note style | **Conditional formula-driven notes**, not openpyxl cell comments. One note cell directly below each chart, formula-driven from underlying data. | Conditional notes update with the data; popup comments are static. Future analyst always sees current-state guidance. |
+| D-19 | 2026-05-11 | B3.3 | Q-B3.3 — Rent Roll Recon B2 default | **Formula `=LOOKUP(9.99E+307,RR_Calc!A2:A13)`** + data validation list on same cell. | "Auto-populate latest, but allow override" pattern. F-8 docstring will be corrected to reflect the new behavior. |
+| D-20 | 2026-05-11 | B3.4 | Q-B3.4 — IL deep-dive position | **Append at rows 86-100** (after current max_row=84). Includes sqft analysis per user instruction. | Avoids openpyxl `insert_rows()` formula-text quirk. Dependency scan confirmed no external sheet references current rows 69-84 — append is safe. |
+| D-21 | 2026-05-11 | B3.5 | Q-B3.5 — MC deep-dive pattern handling | **Auto-detect flat/tiered/FFS** via distinct-count of MC K-column values. Tier-mapping by substring match. | Handles all three industry pricing structures. Pattern-specific conditional note guides the analyst. |
+| D-22 | 2026-05-11 | (meta) | Q-track — Cross-track plumbing follow-ups | **Workbook change is Track 3.** RR writer (`writer.py`) stamp of `Rent Roll Input!A3` is a **Track 1 follow-up**; T12 writer (`t12_normalizer_writer.py`) stamp of `T12 Input!A10` is a **Track 2 follow-up**. Both deferred. | Honors one-track-at-a-time. Until follow-ups land, A3 / A10 of input sheets are analyst-paste; T12 Analytics B2 falls back to Cover!B5 as before. |
+
+### ✓ Branch 3 — Design close-out (substrate v0.1.7 → v0.1.8)
+
+| Change | Cell(s) | Status |
+| --- | --- | --- |
+| Reserve `Rent Roll Input!A3` as property-name value cell | input sheet | Spec'd |
+| Reserve `T12 Input!A10` as property-name value cell | input sheet | Spec'd |
+| T12 Analytics B2 — 3-priority formula | 1 cell | Spec'd |
+| T12 Analytics E2 — rightmost month formula | 1 cell | Spec'd |
+| T12 Analytics K1:V44 — 5 charts + 5 conditional note cells | new objects | Spec'd |
+| T12 Analytics K46:V53 — hidden helper rate buckets | helper block | Spec'd |
+| Rent Roll Recon B2 — default formula + DV | 1 cell + 1 DV | Spec'd |
+| Rent Roll Recon rows 86-100 — IL section | append | Spec'd |
+| Rent Roll Recon rows 102-117 — MC section | append | Spec'd |
+| Stamp `Cover!B8` and 13× AZ4 to `v0.1.8` | version pills | Spec'd |
+| Update Workbook Health version refs | Diagnostics section | Spec'd |
+
+### Branch 3 — Implementation packaging
+
+**Migration script:** `tools/migration/migrate_to_v018.py` — operations in order:
+
+1. Reserve `Rent Roll Input!A3` as property-name value cell (clears v0.1.8-first-pass label if present)
+2. Reserve `T12 Input!A10` as property-name value cell (clears v0.1.8-first-pass label at A2 if present)
+3. Rewrite `T12 Analytics!B2` with 3-priority formula
+4. Set `T12 Analytics!E2` formula + `mmm yyyy` number format
+5. Add 5 chart objects + 5 conditional-note cells on `T12 Analytics`
+6. Add hidden helper rate-bucket block at `T12 Analytics!K46:V53`
+7. Set `Rent Roll Recon!B2` formula + data validation
+8. Write Rent Roll Recon rows 86-100 (IL section)
+9. Write Rent Roll Recon rows 102-117 (MC section)
+10. Stamp `Cover!B8` = `v0.1.8`; stamp all 13× AZ4 anchors to `v0.1.8`
+11. Verification block: 0 formula errors, all named ranges resolve, all 13 AZ4 stamped, 5 chart objects present, RR Input + T12 Input source cells created, B2/E2 formulas present, IL section row 93 sums match section A row 7 IL count (cross-check), MC section row 110 sums match section A row 7 MC count
+
+**Idempotency rule:** every operation gates on a state-check first (cell content / chart presence / version stamp). Re-running produces identical workbook.
+
+### Branch 3 — Open carry-forwards after this ships
+
+- **Track 1 RR writer follow-up** — modify `writer.py` to stamp `Rent Roll Input!A3` with the property name parsed from the source RR (source path stem or detected metadata). Until this lands, the cell is analyst-paste.
+- **Track 2 T12 writer follow-up** — modify `t12_normalizer_writer.py` to stamp `T12 Input!A10` with the property name parsed from the T12 source. Until this lands, the cell is analyst-paste.
+- **Branch 2 — Handoff readiness** still open per the original Track 3 roadmap (UW Export mirror, pre-export gate, metadata header).
 
 ---
 

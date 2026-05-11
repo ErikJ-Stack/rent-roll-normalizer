@@ -59,11 +59,11 @@ from writer import write_output
 APP_VERSION = "1.14.0"            # alias for RR_VERSION; kept for back-compat
 APP_LAST_UPDATED = "2026-05-08"   # alias for RR_LAST_UPDATED
 
-RR_VERSION = "1.14.0"
-RR_LAST_UPDATED = "2026-05-08"
+RR_VERSION = "1.15.0"
+RR_LAST_UPDATED = "2026-05-11"
 
-T12_VERSION = "0.2.0"
-T12_LAST_UPDATED = "2026-05-08"
+T12_VERSION = "0.2.1"
+T12_LAST_UPDATED = "2026-05-11"
 
 
 # ---------------------------------------------------------------------------
@@ -797,6 +797,7 @@ with dl_col2:
                 analyzer_bytes_cached,
                 translated,
                 period_date_input,
+                source_filename=getattr(rr_file, "name", ""),
             )
 
             # Step 2: If T12 was uploaded, append session-state UNMATCHED
