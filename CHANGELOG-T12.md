@@ -15,8 +15,8 @@ Branch 3 of the Analyzer optimization roadmap (analytical coverage). All edits a
 ### What changed (Track 3 — workbook substrate)
 
 **Property name + period plumbing** (closes F-9, F-10, F-11 from the 2026-05-11 grounding inspection):
-- Added `Property name:` label cell on `Rent Roll Input!A3` (B3 empty, attachment point) and `T12 Input!A2` (B2 empty). Each is a paste target for the property name when working a deal; future RR / T12 writer code can stamp these cells.
-- Rewired `T12 Analytics!B2` from `=Property_Name` to a 3-priority formula: `Rent Roll Input!B3` → `T12 Input!B2` → `Property_Name` (Cover!B5). Until writer follow-ups land, behavior identical to before — `Property_Name` is the only populated source.
+- Reserved single-cell property-name value targets: `Rent Roll Input!A3` and `T12 Input!A10`. No separate labels — the cell location itself is the documented contract. Until Track 1/2 writer follow-ups land, these cells are analyst-paste; the analyst types once and T12 Analytics!B2 picks it up.
+- Rewired `T12 Analytics!B2` from `=Property_Name` to a 3-priority formula: `Rent Roll Input!A3` → `T12 Input!A10` → `Property_Name` (Cover!B5). Until writer follow-ups land, behavior identical to before — `Property_Name` is the only populated source.
 - Installed `T12 Analytics!E2` rightmost-populated-month formula: `=IFERROR(LOOKUP(2,1/('T12 Input'!$C$11:$N$11<>""),'T12 Input'!$C$11:$N$11),"")`. Partial-year safe. Named range `T12_Period_Date` now resolves; Workbook Health row 26 auto-validates.
 
 **Property snapshot visuals on T12 Analytics** (closes F-13):
@@ -61,13 +61,13 @@ Branch 3 of the Analyzer optimization roadmap (analytical coverage). All edits a
 
 ### Carry-forwards opened by this round
 
-- **Track 1 follow-up — RR writer stamp.** Modify `writer.py` to write the parsed property name into `Rent Roll Input!B3`. Until this lands, B3 is analyst-paste only and T12 Analytics B2 continues to fall back to Cover!B5.
-- **Track 2 follow-up — T12 writer stamp.** Same idea for `t12_normalizer_writer.py` → `T12 Input!B2`.
+- **Track 1 follow-up — RR writer stamp.** Modify `writer.py` to write the parsed property name into `Rent Roll Input!A3`. Until this lands, A3 is analyst-paste only and T12 Analytics B2 continues to fall back to Cover!B5.
+- **Track 2 follow-up — T12 writer stamp.** Same idea for `t12_normalizer_writer.py` → `T12 Input!A10`.
 - **Branch 2 — Handoff readiness** remains open per the Track 3 roadmap (UW Export mirror, pre-export gate, metadata header).
 
 ### Verification
 
-`tools/migration/migrate_to_v018.py` 17-check block: Cover!B8 = v0.1.8, all 13 AZ4 stamped, B2 3-priority formula present, E2 LOOKUP formula present, 5 chart objects on T12 Analytics, helper rate-bucket block populated, helper V4 monthly revenue row populated, 5 conditional note cells present, Rent Roll Recon B2 formula + DV present, IL section K header at A86, IL total row at B93, MC section L header at A102, MC pattern detector at B103, RR Input A3 label, T12 Input A2 label, all named ranges intact. Idempotent — re-run on v0.1.8 file is a no-op.
+`tools/migration/migrate_to_v018.py` 17-check block: Cover!B8 = v0.1.8, all 13 AZ4 stamped, B2 3-priority formula references RR Input A3 + T12 Input A10, E2 LOOKUP formula present, 5 chart objects on T12 Analytics, helper rate-bucket block populated, helper V4 monthly revenue row populated, 5 conditional note cells present, Rent Roll Recon B2 formula + DV present, IL section K header at A86, IL total row at B93, MC section L header at A102, MC pattern detector at B103, RR Input A3 reserved (no leftover label), T12 Input A2 cleared (A10 is the writer target), all named ranges intact. Idempotent — re-run on v0.1.8 file is a no-op via gate that checks both `Cover!B8` and the corrected B2 formula text.
 
 Cell scan over all 13 sheets confirms zero formula error strings (`#NAME?` / `#REF!` / `#VALUE!` / `#DIV/0!` / `#N/A` / `#NUM!` / `#NULL!`) introduced.
 

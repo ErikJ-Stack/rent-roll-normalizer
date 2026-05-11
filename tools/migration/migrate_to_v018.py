@@ -11,11 +11,13 @@ Rent Roll Recon which is reverted to the auto-latest formula by design).
 What this script does (per Branch 3 design close-out):
 
   B3.1 — Property name + period date plumbing
-    B3.1-a  Add `Property name:` label + empty value cell to Rent Roll Input
-            (A2/B2) and T12 Input (A2/B2). Attachment points for future
-            Track 1/2 writer changes.
+    B3.1-a  Reserve single-cell value targets for property name extracted
+            from raw data: Rent Roll Input!A3 (Track 1 writer-populated)
+            and T12 Input!A10 (Track 2 writer-populated). No separate
+            labels — the cell IS the value. Clears v0.1.8-first-pass
+            'Property name:' labels at RR Input A3 and T12 Input A2.
     B3.1-b  Replace T12 Analytics!B2 with 3-priority formula:
-            Rent Roll Input!B2 -> T12 Input!B2 -> Cover!B5 (Property_Name).
+            Rent Roll Input!A3 -> T12 Input!A10 -> Cover!B5 (Property_Name).
     B3.1-c  Set T12 Analytics!E2 to LOOKUP(2,1/(...<>"")) over
             T12 Input!C11:N11 — rightmost-populated month.
 
@@ -88,7 +90,17 @@ BODY_BOLD = Font(name="Arial", size=10, bold=True)
 # ============================================================================
 
 def is_already_v018(wb) -> bool:
-    return wb["Cover"]["B8"].value == SUBSTRATE_TO
+    """Gate also checks B2 formula references the refined A3/A10 cells.
+
+    Catches the v0.1.8 first-pass state where B8 was already stamped v0.1.8
+    but B2 still pointed at Rent Roll Input!B3 / T12 Input!B2 (per the
+    initial label-at-A2/A3-plus-empty-B2/B3 design). Re-running on that
+    state will apply this refinement.
+    """
+    if wb["Cover"]["B8"].value != SUBSTRATE_TO:
+        return False
+    b2 = str(wb["T12 Analytics"]["B2"].value or "")
+    return "'Rent Roll Input'!A3" in b2 and "'T12 Input'!A10" in b2
 
 
 # ============================================================================
@@ -96,24 +108,33 @@ def is_already_v018(wb) -> bool:
 # ============================================================================
 
 def add_input_property_cells(wb) -> None:
-    """Place the Property name label + empty value cell.
+    """Reserve property-name source cells. Single-cell value, no label.
 
-    Cell choice differs per sheet because each sheet's row-2 content differs:
-      - Rent Roll Input row 2 holds v0.1.5 paste instructions (don't clobber)
-        -> use A3/B3 (row 3 verified empty in v0.1.7 baseline).
-      - T12 Input row 2 is empty -> use A2/B2.
+    Target cells per user spec (2026-05-11 refinement of v0.1.8 first pass):
+      - Rent Roll Input!A3 — property name value (writer-populated; analyst-paste OK)
+      - T12 Input!A10 — property name value (writer-populated; analyst-paste OK)
+
+    Both cells are kept blank by the migration. Future writer code stamps
+    them on extraction:
+      - Track 1 follow-up: writer.py -> Rent Roll Input!A3
+      - Track 2 follow-up: t12_normalizer_writer.py -> T12 Input!A10
+
+    The v0.1.8 first pass placed 'Property name:' labels at A3 (RR Input)
+    and A2 (T12 Input) with empty B-cells as value targets. This refinement
+    clears those labels so the target cells themselves can hold the value.
+    Idempotent: only clears literals matching the v0.1.8-first-pass label;
+    user-entered property names are preserved on re-run.
     """
-    # Rent Roll Input: A3 / B3
+    # Rent Roll Input: clear v0.1.8 first-pass label at A3 (now value cell)
     rri = wb["Rent Roll Input"]
-    if rri["A3"].value != "Property name:" and rri["A3"].value is None:
-        rri["A3"] = "Property name:"
-        rri["A3"].font = BODY_BOLD
+    if rri["A3"].value == "Property name:":
+        rri["A3"] = None
 
-    # T12 Input: A2 / B2
+    # T12 Input: clear v0.1.8 first-pass label at A2 (replaced by A10 value cell)
     t12i = wb["T12 Input"]
-    if t12i["A2"].value != "Property name:" and t12i["A2"].value is None:
-        t12i["A2"] = "Property name:"
-        t12i["A2"].font = BODY_BOLD
+    if t12i["A2"].value == "Property name:":
+        t12i["A2"] = None
+    # A10 reserved as the value cell — no write here (writer populates).
 
 
 # ============================================================================
@@ -121,14 +142,15 @@ def add_input_property_cells(wb) -> None:
 # ============================================================================
 
 def install_b2_property_formula(wb) -> None:
-    """3-priority: Rent Roll Input!B3 -> T12 Input!B2 -> Cover!B5 (Property_Name).
+    """3-priority: Rent Roll Input!A3 -> T12 Input!A10 -> Cover!B5 (Property_Name).
 
-    See add_input_property_cells() docstring for why RR Input uses B3 not B2.
+    Cell coordinates per 2026-05-11 user refinement. See
+    add_input_property_cells() docstring for writer expectations.
     """
     ws = wb["T12 Analytics"]
     ws["B2"] = (
-        "=IFERROR(IF(LEN(TRIM('Rent Roll Input'!B3))>0,'Rent Roll Input'!B3,"
-        "IF(LEN(TRIM('T12 Input'!B2))>0,'T12 Input'!B2,Property_Name)),Property_Name)"
+        "=IFERROR(IF(LEN(TRIM('Rent Roll Input'!A3))>0,'Rent Roll Input'!A3,"
+        "IF(LEN(TRIM('T12 Input'!A10))>0,'T12 Input'!A10,Property_Name)),Property_Name)"
     )
 
 
@@ -777,10 +799,10 @@ def verify_migration(wb) -> dict:
     r["az4_all_v018"] = all(v == SUBSTRATE_TO for v in az4.values())
     r["az4_count"] = len(az4)
 
-    # 3. T12 Analytics B2 — 3-priority formula present
+    # 3. T12 Analytics B2 — 3-priority formula present (refined to A3/A10)
     b2 = wb["T12 Analytics"]["B2"].value or ""
     r["t12a_b2_priority"] = (
-        "'Rent Roll Input'!B3" in b2 and "'T12 Input'!B2" in b2 and "Property_Name" in b2
+        "'Rent Roll Input'!A3" in b2 and "'T12 Input'!A10" in b2 and "Property_Name" in b2
     )
 
     # 4. T12 Analytics E2 — rightmost-month formula present
@@ -839,9 +861,10 @@ def verify_migration(wb) -> dict:
         "Flat-rate" in str(rr_recon["B103"].value or "")
     )
 
-    # 13. Input sheets — property name label
-    r["rri_a3_label"] = wb["Rent Roll Input"]["A3"].value == "Property name:"
-    r["t12i_a2_label"] = wb["T12 Input"]["A2"].value == "Property name:"
+    # 13. Input sheets — leftover v0.1.8-first-pass labels cleared from
+    #     RR Input A3 and T12 Input A2 (now reserved as value cells / passed-through)
+    r["rri_a3_clear"] = wb["Rent Roll Input"]["A3"].value != "Property name:"
+    r["t12i_a2_clear"] = wb["T12 Input"]["A2"].value != "Property name:"
 
     # 14. Named ranges intact
     names = {n for n in wb.defined_names}
@@ -876,7 +899,7 @@ def main(input_path: str, output_path: str) -> int:
 
     # B3.1
     add_input_property_cells(wb)
-    print("  B3.1-a: added property-name source cells on Rent Roll Input + T12 Input")
+    print("  B3.1-a: reserved property-name value cells (RR Input A3, T12 Input A10)")
     install_b2_property_formula(wb)
     print("  B3.1-b: installed T12 Analytics B2 3-priority property-name formula")
     install_e2_period_formula(wb)
@@ -930,8 +953,8 @@ def main(input_path: str, output_path: str) -> int:
     print(f"  IL total row (B93)                  : {r['il_total_row_ok']}")
     print(f"  MC section L header (A102)          : {r['mc_section_header_ok']}")
     print(f"  MC pattern detector (B103)          : {r['mc_pattern_detector_ok']}")
-    print(f"  Rent Roll Input A3 label            : {r['rri_a3_label']}")
-    print(f"  T12 Input A2 label                  : {r['t12i_a2_label']}")
+    print(f"  Rent Roll Input A3 reserved (cleared): {r['rri_a3_clear']}")
+    print(f"  T12 Input A2 cleared (A10 is target) : {r['t12i_a2_clear']}")
     print(f"  Named ranges intact                 : {r['named_ranges_ok']}")
 
     all_ok = (
@@ -942,7 +965,7 @@ def main(input_path: str, output_path: str) -> int:
         and r["rr_recon_b2_ok"] and r["rr_recon_b2_dv_ok"]
         and r["il_section_header_ok"] and r["il_total_row_ok"]
         and r["mc_section_header_ok"] and r["mc_pattern_detector_ok"]
-        and r["rri_a3_label"] and r["t12i_a2_label"]
+        and r["rri_a3_clear"] and r["t12i_a2_clear"]
         and r["named_ranges_ok"]
     )
     print()

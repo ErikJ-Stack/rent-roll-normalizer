@@ -116,8 +116,8 @@ These are real backlogged items that previous chats deferred. They have a home; 
 
 ### Medium priority (still open)
 
-- **Track 1 follow-up — RR writer stamp `Rent Roll Input!B3`** with parsed property name. Opens the auto-fill path for `T12 Analytics!B2` 3-priority formula installed at substrate v0.1.8. Until shipped, B3 is analyst-paste only. **Track 1 chat (small surface — `writer.py` only).**
-- **Track 2 follow-up — T12 writer stamp `T12 Input!B2`** with parsed property name. Same shape as RR follow-up. **Track 2 chat (small surface — `t12_normalizer_writer.py` only).**
+- **Track 1 follow-up — RR writer stamp `Rent Roll Input!A3`** with parsed property name (from source RR filename stem or detected metadata). Opens the auto-fill path for `T12 Analytics!B2` 3-priority formula installed at substrate v0.1.8. A3 is a single-cell value target — no separate label. Until shipped, A3 is analyst-paste only. **Track 1 chat (small surface — `writer.py` only).**
+- **Track 2 follow-up — T12 writer stamp `T12 Input!A10`** with parsed property name (from T12 source metadata). Same shape as RR follow-up — A10 is a single-cell value target, no separate label. **Track 2 chat (small surface — `t12_normalizer_writer.py` only).**
 - **Branch 2 — Handoff readiness.** Pre-export gate, UW Export sheet (values-only mirror), metadata header, source trail. **Track 3 chat — Branch 2 was sequenced after Branch 3 per OPTIMIZATION-DECISIONS.md.**
 
 ### Low priority

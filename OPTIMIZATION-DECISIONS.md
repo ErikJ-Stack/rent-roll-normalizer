@@ -488,7 +488,7 @@ Kicked off 2026-05-11. Workstream goal: bring underwriter-grade analytical depth
 ### Discovered facts (from 2026-05-11 grounding inspection)
 
 **F-9 — Property name has no source-of-truth in input sheets.**
-Neither `Rent Roll Input` nor `T12 Input` currently stores the property name. Both sheets start at row 1 with paste-instructions; data fills the bodies. The only canonical home is `Cover!B5` (manual entry, named `Property_Name`). For "auto-populate from RR or T12" to be meaningful, the input sheets need named cells the user (or eventually the writer code) can fill. Workbook-only fix: add `Rent Roll Input!B2` and `T12 Input!B2` as labeled cells with `Property name:` literal at A2. Track 1 + Track 2 writer follow-ups can then stamp these cells programmatically (deferred).
+Neither `Rent Roll Input` nor `T12 Input` currently stores the property name. Both sheets start at row 1 with paste-instructions; data fills the bodies. The only canonical home is `Cover!B5` (manual entry, named `Property_Name`). For "auto-populate from RR or T12" to be meaningful, the input sheets need reserved value cells the user (or eventually the writer code) can fill. Workbook-only fix per user refinement: reserve **`Rent Roll Input!A3`** and **`T12 Input!A10`** as single-cell value targets (no separate labels — the cell location itself is documented in SPEC + writer follow-ups). Track 1 + Track 2 writer follow-ups stamp these cells programmatically (deferred).
 
 **F-10 — T12 Input C11:N11 holds 12 monthly date headers (post substrate v0.1.7).**
 Cluster B partial-year work shipped C11:N11 as the monthly-header anchor (`=COUNTA('T12 Input'!C11:N11)` drives Workbook Health V8). The rightmost populated cell in that range = T12 period ending. No upstream change needed — workbook can derive E2 directly.
@@ -514,18 +514,20 @@ Per CBRE / NIC MAP / industry research, IL is base-rent-only — `Rent Roll Inpu
 
 ### Cluster B3.1 — Property name + period date plumbing
 
-**B3.1-a. Add property-name source cells on input sheets.**
-- `Rent Roll Input!A2` = `Property name:` (label, bold)
-- `Rent Roll Input!B2` = empty (analyst paste / future writer target)
-- `T12 Input!A2` = `Property name:` (label, bold)
-- `T12 Input!B2` = empty (analyst paste / future writer target)
+**B3.1-a. Reserve property-name source cells on input sheets.** (Refined 2026-05-11 per user spec — single-cell value, no separate label.)
+- `Rent Roll Input!A3` — single cell holding the property name VALUE (writer-populated; analyst-paste OK). The v0.1.5 paste-instructions string at A2 stays untouched.
+- `T12 Input!A10` — single cell holding the property name VALUE (writer-populated; analyst-paste OK). Row 10 sits between the layout-description text at A9 and the column headers at A11 — a natural free slot.
 
-These cells are inert until a writer (RR Track 1 or T12 Track 2) populates them, or the analyst types. Until then, behavior of T12 Analytics B2 below is identical to today.
+These cells are blank by default. Future writer follow-ups stamp them on extraction:
+- **Track 1:** `writer.py` populates `Rent Roll Input!A3` with the property name parsed from the source RR (filename stem or detected metadata).
+- **Track 2:** `t12_normalizer_writer.py` populates `T12 Input!A10` with the property name parsed from the source T12.
+
+Until those land, the cells are analyst-paste; the analyst types once and T12 Analytics!B2 picks it up via the 3-priority formula below.
 
 **B3.1-b. T12 Analytics B2 formula — priority RR → T12 → Cover.**
 
 ```excel
-B2 = =IFERROR(IF(LEN(TRIM('Rent Roll Input'!B2))>0,'Rent Roll Input'!B2,IF(LEN(TRIM('T12 Input'!B2))>0,'T12 Input'!B2,Property_Name)),Property_Name)
+B2 = =IFERROR(IF(LEN(TRIM('Rent Roll Input'!A3))>0,'Rent Roll Input'!A3,IF(LEN(TRIM('T12 Input'!A10))>0,'T12 Input'!A10,Property_Name)),Property_Name)
 ```
 
 Falls back through three sources. `Property_Name` named range continues to point at `Cover!B5`. Workbook Health row 27 (Property_Name validation) keeps working because the named range definition is unchanged.
@@ -643,21 +645,21 @@ Conditional note at A117: text varies by detected pattern. Flat-rate → "Flat-r
 
 | ID | Date | Cluster | Question | Decision | Rationale |
 | --- | --- | --- | --- | --- | --- |
-| D-15 | 2026-05-11 | B3.1 | Q-B3.1 — Property name source-of-truth | **Option A2: add input-sheet source cells + 3-priority formula on T12 Analytics B2** (RR → T12 → Cover). Track 1/2 writer follow-ups deferred. | Trivial workbook delta now; clean attachment point for future writer changes. Manual-paste behavior interim. |
+| D-15 | 2026-05-11 | B3.1 | Q-B3.1 — Property name source-of-truth | **Option A2 (refined): single-cell value targets at `Rent Roll Input!A3` and `T12 Input!A10` + 3-priority formula on T12 Analytics B2** (RR → T12 → Cover). No separate label cells (cell location documented in SPEC). Track 1/2 writer follow-ups deferred. | Trivial workbook delta now; clean attachment point for future writer changes. Manual-paste behavior interim. Initial v0.1.8 first pass placed labels at A2/A3 with B-cells as values; refined 2026-05-11 to single-cell-value form per user spec. |
 | D-16 | 2026-05-11 | B3.1 | Q-B3.1 — T12 period end derivation | **`LOOKUP(2,1/(...<>""))` on T12 Input C11:N11.** Number-format `mmm yyyy`. | Partial-year safe. No upstream writer change needed — substrate v0.1.7 already populates C11:N11. |
 | D-17 | 2026-05-11 | B3.2 | Q-B3.2 — Visual count and placement | **5 charts on `T12 Analytics` K1:V44** in 2×2 grid + acuity donut at K31:O44. Hidden helper block at K46:V53 for rate-bucket counts. | Industry-standard senior-housing UW visual set (per CBRE / NIC MAP research). Keeps everything on one tab. |
 | D-18 | 2026-05-11 | B3.2 | Q-B3.2 — Note style | **Conditional formula-driven notes**, not openpyxl cell comments. One note cell directly below each chart, formula-driven from underlying data. | Conditional notes update with the data; popup comments are static. Future analyst always sees current-state guidance. |
 | D-19 | 2026-05-11 | B3.3 | Q-B3.3 — Rent Roll Recon B2 default | **Formula `=LOOKUP(9.99E+307,RR_Calc!A2:A13)`** + data validation list on same cell. | "Auto-populate latest, but allow override" pattern. F-8 docstring will be corrected to reflect the new behavior. |
 | D-20 | 2026-05-11 | B3.4 | Q-B3.4 — IL deep-dive position | **Append at rows 86-100** (after current max_row=84). Includes sqft analysis per user instruction. | Avoids openpyxl `insert_rows()` formula-text quirk. Dependency scan confirmed no external sheet references current rows 69-84 — append is safe. |
 | D-21 | 2026-05-11 | B3.5 | Q-B3.5 — MC deep-dive pattern handling | **Auto-detect flat/tiered/FFS** via distinct-count of MC K-column values. Tier-mapping by substring match. | Handles all three industry pricing structures. Pattern-specific conditional note guides the analyst. |
-| D-22 | 2026-05-11 | (meta) | Q-track — Cross-track plumbing follow-ups | **Workbook change is Track 3.** RR writer (`writer.py`) stamp of `Rent Roll Input!B2` is a **Track 1 follow-up**; T12 writer (`t12_normalizer_writer.py`) stamp of `T12 Input!B2` is a **Track 2 follow-up**. Both deferred. | Honors one-track-at-a-time. Until follow-ups land, B2 of input sheets is analyst-paste; T12 Analytics B2 falls back to Cover!B5 as before. |
+| D-22 | 2026-05-11 | (meta) | Q-track — Cross-track plumbing follow-ups | **Workbook change is Track 3.** RR writer (`writer.py`) stamp of `Rent Roll Input!A3` is a **Track 1 follow-up**; T12 writer (`t12_normalizer_writer.py`) stamp of `T12 Input!A10` is a **Track 2 follow-up**. Both deferred. | Honors one-track-at-a-time. Until follow-ups land, A3 / A10 of input sheets are analyst-paste; T12 Analytics B2 falls back to Cover!B5 as before. |
 
 ### ✓ Branch 3 — Design close-out (substrate v0.1.7 → v0.1.8)
 
 | Change | Cell(s) | Status |
 | --- | --- | --- |
-| Add `Rent Roll Input!A2:B2` (label + empty) | input sheet | Spec'd |
-| Add `T12 Input!A2:B2` (label + empty) | input sheet | Spec'd |
+| Reserve `Rent Roll Input!A3` as property-name value cell | input sheet | Spec'd |
+| Reserve `T12 Input!A10` as property-name value cell | input sheet | Spec'd |
 | T12 Analytics B2 — 3-priority formula | 1 cell | Spec'd |
 | T12 Analytics E2 — rightmost month formula | 1 cell | Spec'd |
 | T12 Analytics K1:V44 — 5 charts + 5 conditional note cells | new objects | Spec'd |
@@ -672,8 +674,8 @@ Conditional note at A117: text varies by detected pattern. Flat-rate → "Flat-r
 
 **Migration script:** `tools/migration/migrate_to_v018.py` — operations in order:
 
-1. Add `Rent Roll Input!A2:B2` label + empty (skip if A2 already populated)
-2. Add `T12 Input!A2:B2` label + empty (skip if A2 already populated)
+1. Reserve `Rent Roll Input!A3` as property-name value cell (clears v0.1.8-first-pass label if present)
+2. Reserve `T12 Input!A10` as property-name value cell (clears v0.1.8-first-pass label at A2 if present)
 3. Rewrite `T12 Analytics!B2` with 3-priority formula
 4. Set `T12 Analytics!E2` formula + `mmm yyyy` number format
 5. Add 5 chart objects + 5 conditional-note cells on `T12 Analytics`
@@ -688,8 +690,8 @@ Conditional note at A117: text varies by detected pattern. Flat-rate → "Flat-r
 
 ### Branch 3 — Open carry-forwards after this ships
 
-- **Track 1 RR writer follow-up** — modify `writer.py` to stamp `Rent Roll Input!B2` with the property name parsed from the source RR (source path stem or detected metadata). Until this lands, the cell is analyst-paste.
-- **Track 2 T12 writer follow-up** — modify `t12_normalizer_writer.py` to stamp `T12 Input!B2` with the property name parsed from the T12 source. Until this lands, the cell is analyst-paste.
+- **Track 1 RR writer follow-up** — modify `writer.py` to stamp `Rent Roll Input!A3` with the property name parsed from the source RR (source path stem or detected metadata). Until this lands, the cell is analyst-paste.
+- **Track 2 T12 writer follow-up** — modify `t12_normalizer_writer.py` to stamp `T12 Input!A10` with the property name parsed from the T12 source. Until this lands, the cell is analyst-paste.
 - **Branch 2 — Handoff readiness** still open per the original Track 3 roadmap (UW Export mirror, pre-export gate, metadata header).
 
 ---
