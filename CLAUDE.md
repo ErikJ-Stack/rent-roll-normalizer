@@ -122,7 +122,6 @@ These are real backlogged items that previous chats deferred. They have a home; 
 
 ### Low priority
 
-- **README.md update** — bring it from RR-only framing to current dual-pipeline state.
 - **Substrate version-detection bug suspected.** App's `_detect_substrate_version()` looks for `2nd Person Revenue` (v0.1.5 marker) in the Description_Map column B; v0.1.6/v0.1.7/v0.1.8 add no new Labels there, so the detector returns `v0.1.5` for any of v0.1.5+. Cosmetic — worth widening the marker list when the bundle next changes Label vocabulary.
 
 ---
