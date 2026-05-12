@@ -315,6 +315,17 @@ def detect_concession_cols(headers: List[str]) -> Tuple[List[str], Optional[str]
     Multiple columns may be detected — Briar Glen has both 'Recurring Discounts'
     and 'One-Time Incentives' alongside the generic 'Concession' pattern other
     operators use. All matched columns are summed into Concession $ in the output.
+
+    De-duplication for paired bare-prefix + (month)-suffixed columns
+    -----------------------------------------------------------------
+    Yardi-style rent rolls (Salem, Beaufort) export the same concession value
+    in two columns: a bare-prefix snapshot (`Assisted Living ongoing concession`)
+    and a month-suffixed accrual (`Assisted Living ongoing concession (January
+    2026)`). Both match `\\bconcession\\b`, so naive collection sums each row's
+    discount twice. When both variants exist for the same prefix, we keep the
+    (month)-suffixed one (the actual monthly accrual, source of truth for
+    revenue) and drop the bare-prefix sibling. Standalone bare-prefix columns
+    with no (month) sibling (Briar Glen `Recurring Discounts`) are kept as-is.
     """
     monthly_cols: List[str] = []
     end_date: Optional[str] = None
@@ -329,6 +340,20 @@ def detect_concession_cols(headers: List[str]) -> Tuple[List[str], Optional[str]
             if re.search(pat, hc):
                 monthly_cols.append(h)
                 break
+
+    # De-dupe: for every (month)-suffixed column, compute its prefix and drop
+    # any bare-prefix sibling that matches that prefix exactly.
+    suffixed_prefixes: set[str] = set()
+    for h in monthly_cols:
+        prefix, suffix = _strip_bucket_suffix(_clean_header(h))
+        if suffix == "(month":
+            suffixed_prefixes.add(prefix)
+    if suffixed_prefixes:
+        monthly_cols = [
+            h for h in monthly_cols
+            if _clean_header(h) not in suffixed_prefixes
+        ]
+
     return monthly_cols, end_date
 
 

@@ -8,6 +8,61 @@ When making a code change in a chat, add an entry here in the same commit.
 
 ---
 
+## [1.16.1] — 2026-05-12
+
+### Summary
+
+Patch release. Fixes a long-standing concession-doubling bug on Yardi-style rent rolls (Salem, Beaufort). The bug was originally surfaced during v1.13.0 baseline verification but logged as a Known issue for a separate chat. This chat reapplies the fix against the current v1.16.0 codebase. **Parser-only change** — single function (`detect_concession_cols`); no UI, no writer, no substrate, no doc layout changes beyond a single decision-section addition.
+
+### Root cause
+
+`detect_concession_cols` in `normalizer.py` was matching both the bare-prefix concession column and its `(month)`-suffixed sibling as separate concession sources:
+
+* `Assisted Living ongoing concession`        ← bare-prefix snapshot
+* `Assisted Living ongoing concession (January 2026)` ← month-suffixed accrual
+
+Both columns hold identical per-row values in the operators verified (the bare column is a static reference; the `(month)` column is the actual monthly accrual). The bare-prefix variant matches the generic `\bconcession\b` pattern. The `(month)` variant matches the same pattern. Naive collection summed each row's discount twice. Salem read $-5,682.90 (2× the SPEC baseline of $-2,841.45); Beaufort read $-8,969.70 silently (2× the broker's reported $-4,484.85 total).
+
+### What changed
+
+**Parser — `normalizer.py`:**
+- Added a de-dupe pass to `detect_concession_cols`. After the initial collection, for every `(month)`-suffixed column we compute its prefix via the existing `_strip_bucket_suffix` helper. Bare-prefix columns whose cleaned header matches the prefix of any `(month)`-suffixed sibling are dropped. Standalone bare-prefix columns with no `(month)` sibling (Briar Glen `Recurring Discounts`, `One-Time Incentives`) are kept.
+
+**App — `app.py`:**
+- `RR_VERSION` `"1.16.0"` → `"1.16.1"`; `RR_LAST_UPDATED` `"2026-05-11"` → `"2026-05-12"`.
+
+**Docs — `SPEC-RR.md`:**
+- Current-version line replaced.
+- "Track 1 is at v1.14.0; Track 2 is at v0.2.0; bundled Analyzer substrate is at v0.1.7" updated to v1.16.1 / v0.2.1 / v0.1.10 (this line had been stale since v1.15.0; corrected during this patch).
+- Concession-detection decision section gains a "Bare-prefix + `(month)`-suffixed pair de-duplication" note explaining why the de-dupe pass exists and which fixtures it affects.
+- Verified-formats table: Salem `Concession $` row regains its `$-2,841.45 (7 rows)` baseline (was already there); Beaufort row gains its newly-verified `$-4,484.85 (8 rows)` baseline (was `"(covered by Salem)"`); Beaufort Care Level $ collapsed from `AL $18,720 + MC $14,716.13` to the sum `$33,436.13` with the breakdown in a parenthetical for cleaner table display.
+
+### Verification
+
+Pre-fix baseline against current v1.16.0 codebase confirmed the bug still exists on origin/main — `detect_concession_cols` was unchanged since v1.13.0 across the 30+ commits since.
+
+| Fixture | Concession $ (pre-fix) | Concession $ (post-fix) | Expected | Notes |
+| --- | ---: | ---: | ---: | --- |
+| Salem | $-5,682.90 | $-2,841.45 | $-2,841.45 | matches SPEC baseline (restored) |
+| Briar Glen | $-14,132.00 | $-14,132.00 | $-14,132.00 | unchanged — de-dupe is no-op |
+| Oaks at Beaufort | $-8,969.70 | $-4,484.85 | $-4,484.85 | matches broker `Total Marketing Incentive Charges`; was silently wrong |
+| Homestead Pensacola | $0.00 | $0.00 | $0.00 | no concession column in source; unchanged |
+
+All other RR metrics across all four fixtures are unchanged (bed counts, Care Type distributions, Care Level $, Status counts). The v1.16.0 data-capture columns (2nd Person Rent, Notes, Balance, ACH, PSF, etc.) are not touched.
+
+### Why this fix took 5 days to land
+
+Originally surfaced and patched in a working tree on 2026-05-07 against the then-current v1.13.0 codebase. That commit (`8dc1e08` on safety branch `claude/v1-13-1-attempt-stale-2026-05-07`) bundled documentation rewrites alongside the code fix. By the time of push, the codebase had advanced to v1.16.0 through 8 PRs and the bundled commit was unmergeable — version numbers would have stepped backwards, the README would have overwritten two newer README refreshes, and the docs touched files (`OPTIMIZATION-DECISIONS.md`, `CLAUDE.md`, renamed `analyzer_rr_writer.py`) that didn't exist in the stale view. The current PR pulls forward only the 14-line code change against the current parser, re-verifies against all four fixtures, and lands as a focused patch.
+
+### Files changed
+
+- `normalizer.py` — `detect_concession_cols` de-dupe pass
+- `app.py` — version bump
+- `SPEC-RR.md` — current-version line, Track-versions inline reference, Concession-detection decision section (de-dupe note added), Verified-formats table (Salem + Beaufort concession baselines)
+- `CHANGELOG-RR.md` — this entry
+
+---
+
 ## [1.16.0] — 2026-05-11
 
 ### Summary
