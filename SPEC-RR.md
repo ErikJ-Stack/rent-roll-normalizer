@@ -6,7 +6,7 @@
 **Repo:** <https://github.com/ErikJ-Stack/rent-roll-normalizer> (public)
 **Owner:** Erik J (`Erikjayj@gmail.com`, GitHub: `ErikJ-Stack`)
 **Stack:** Python · Streamlit · pandas · openpyxl · Streamlit Community Cloud (free tier)
-**Current version:** v1.16.0 (2026-05-11) — Data-capture expansion: 7 new resident-level fields previously dropped now flow into Condensed_RR + the Analyzer's Rent Roll Input. New columns: `2nd Person Rent $` (housing revenue for couples; aligns with T12 substrate's `2nd Person Revenue` Label), `Move-out Date`, `Balance`, `Notes`, `Market PSF`, `Actual PSF`, `ACH`. Verified against Homestead fixture: 4 couples now populate 2P rent ($650-$800), 33 rows have notes, all 176 rows have PSF + ACH. `Total Monthly Revenue` formula in Analyzer extended to include 2P rent. Companion substrate v0.1.10 migration (`migrate_to_v0110.py`) installs new column headers at Rent Roll Input!V4:AB4. Prior: v1.15.1 (2026-05-11) widened `looks_care` heuristic for Homestead ancillary charges + added `Rent Start` / `Rent End` / `MoveOut Date` patterns; v1.15.0 (2026-05-11) property-name auto-stamp via `analyzer_rr_writer.populate_t12()` + new shared `property_name.py` helper; v1.14.0 (2026-05-08) Homestead-style rent roll support.
+**Current version:** v1.16.1 (2026-05-12) — Patch: fixed concession-doubling on Yardi-style rent rolls (Salem + Beaufort). `detect_concession_cols` was matching both the bare-prefix concession column and its `(month)`-suffixed sibling — both columns hold the same per-row value, so each row's discount was being summed twice. De-dupe pass now drops bare-prefix columns whose cleaned header equals the prefix of any `(month)`-suffixed sibling. Salem $-5,682.90 → $-2,841.45 (matches SPEC baseline). Beaufort $-8,969.70 → $-4,484.85 (matches broker `Total Marketing Incentive Charges`). Briar Glen unchanged (de-dupe is no-op — its `Recurring Discounts` / `One-Time Incentives` have no `(month)` siblings). Prior: v1.16.0 (2026-05-11) data-capture expansion (7 new resident-level fields).
 
 ---
 
@@ -24,7 +24,7 @@ The Analyzer then drives the underwriting analysis (P&L, scenarios, returns) —
 * **Track 1 — Rent Roll Normalizer** (this document) — RR parsing, RR writer, Streamlit UI shell, Analyzer source resolution, period-date detection.
 * **Track 2 — T12 Normalizer** (`SPEC-T12.md`) — T12 parser (Yardi + MRI format registry), T12 writer (`T12 Input` sheet), `Description_Map` lookup, UNMATCHED matcher form.
 
-Both tracks ship in the same `app.py` and write into the same Analyzer workbook, but they have independent version streams. **Track 1 is at v1.14.0; Track 2 is at v0.2.0; bundled Analyzer substrate is at v0.1.7.**
+Both tracks ship in the same `app.py` and write into the same Analyzer workbook, but they have independent version streams. **Track 1 is at v1.16.1; Track 2 is at v0.2.1; bundled Analyzer substrate is at v0.1.10.**
 
 ---
 
@@ -284,6 +284,8 @@ Heuristic: the column must contain a care-related keyword (charge, service, care
 
 The care-group detector explicitly skips columns matching the concession patterns to prevent any future double-counting.
 
+**Bare-prefix + `(month)`-suffixed pair de-duplication (v1.16.1).** Yardi-style rent rolls (Salem, Beaufort) export the same concession value in two columns: a bare-prefix snapshot (`Assisted Living ongoing concession`) and a month-suffixed accrual (`Assisted Living ongoing concession (January 2026)`). Both match `\bconcession\b`. After collecting matches, `detect_concession_cols` drops bare-prefix columns whose cleaned header matches the prefix of any `(month)`-suffixed sibling. Standalone bare-prefix columns with no `(month)` sibling (Briar Glen `Recurring Discounts`, `One-Time Incentives`) are kept as-is. Without this pass, Salem reads $-5,682.90 (2× actual); with it, $-2,841.45 (matches SPEC baseline). Beaufort silently corrects from $-8,969.70 → $-4,484.85 (matches broker `Total Marketing Incentive Charges`).
+
 ### Smart sheet selection (introduced v1.8.0)
 
 Multi-sheet workbooks (like Briar Glen with `Document map` + data sheet + legend) get an automatic best-sheet pick based on row × col + header signal scoring. Avoids tiny metadata sheets.
@@ -342,9 +344,9 @@ The bundled `ALF_Financial_Analyzer_Only.xlsx` (substrate v0.1.5) contains these
 
 | Format | Beds | Care Level $ | Concession $ | Notes |
 | --- | --- | --- | --- | --- |
-| Salem (Oaks) | 50 | $28,125.81 | $-2,841.45 (7 rows) | Original test case. Multi-column unit+apartment, Level 1-7 acuity, three care buckets. |
+| Salem (Oaks) | 50 | $28,125.81 | $-2,841.45 (7 rows) | Original test case. Multi-column unit+apartment, Level 1-7 acuity, three care buckets. Concession baseline restored in v1.16.1 (de-dupe of paired bare-prefix + `(month)` columns). |
 | Briar Glen | 79 (71 units, 8 shared) | $234,360.00 | $-14,132.00 (16 rows) | Single-column unit, two-letter care codes, *Vacant marker, monthly columns without suffixes, blank padding rows, totals block. Recurring Discounts + One-Time Incentives mapped (v1.9.0). |
-| Oaks at Beaufort | 104 (54 AL + 50 MC) | AL $18,720 + MC $14,716.13 | (covered by Salem) | Mixed AL+MC building. AL wing labeled `Assisted Living`, MC wing labeled `Horizons`. Two parallel care-level column groups on every row (one for AL, one for MC). Comfort Care 1-4 acuity vocabulary on the MC side. Verified end-to-end in v1.13.0. |
+| Oaks at Beaufort | 104 (54 AL + 50 MC) | $33,436.13 (AL $18,720 + MC $14,716.13) | $-4,484.85 (8 rows) | Mixed AL+MC building. AL wing labeled `Assisted Living`, MC wing labeled `Horizons`. Two parallel care-level column groups on every row (one for AL, one for MC). Comfort Care 1-4 acuity vocabulary on the MC side. MC support added v1.13.0; Concession baseline established v1.16.1 (matches broker `Total Marketing Incentive Charges`; same de-dupe pattern as Salem). |
 | Homestead Pensacola | 176 (62 IL + 62 AL + 52 MC) | n/a (no per-bed Care Level $ column in source) | n/a (no concession column in source) | Broker-condensed self-contained format: one row per unit with `Unit ID` (e.g. `A1`), `Cottage`, `Unit`, `Area`, `Category` (IL/AL/MC-I/MC-JK), `BR/BA` (STU/1BR/2BR), `Market / Mo YYYY`, `Actual / Mo YYYY`, `Status` (Occupied / VACANT / Vacant w/ Prelease / Occ w/ NTV). Verified end-to-end in v1.14.0: 128 Occupied + 43 Vacant + 5 Notice = 176, exact match to source pricing-summary subtotals (IL=62, AL=62, MC=52). |
 
 Both verified end-to-end on every release. Concession totals added to baseline in v1.9.0 to catch sign regressions.
