@@ -2,7 +2,7 @@
 
 > Onboarding doc for any Claude session (chat or Claude Code) working on this repo. Read this first — it points to canonical truth and surfaces facts that previously had to be grubbed for.
 
-**Last updated:** 2026-05-11 (after RR v1.16.0 + substrate v0.1.10 — data-capture expansion)
+**Last updated:** 2026-05-12 (after substrate v0.1.11 — Rent Roll Recon row 16 GPR fix)
 
 ---
 
@@ -51,7 +51,7 @@ The repo runs three parallel tracks. They share an Analyzer but are otherwise in
 | Migration scripts | `tools/migration/migrate_to_v01N.py` (one per substrate version) |
 | Verification harness | `tools/verify_t12_v020.py` (parser-side; runs all four reference fixtures) |
 | Current code version | T12 v0.2.1 |
-| Current substrate version | v0.1.10 |
+| Current substrate version | v0.1.11 |
 
 **Module naming gotcha (verified 2026-05-10).** Four `t12_*` files exist and they are NOT duplicates — the `t12_` prefix originally meant "operates on the T12-shaped destination workbook" (which is now the Analyzer), not "operates on T12 data." Every one is imported by `app.py` and serves a distinct role:
 
@@ -95,9 +95,13 @@ Conversational examples should label placeholder text as `<REPLACE THIS>` so the
 
 ---
 
-## Open carry-forwards (as of 2026-05-11, post-substrate v0.1.8)
+## Open carry-forwards (as of 2026-05-12, post-substrate v0.1.11)
 
 These are real backlogged items that previous chats deferred. They have a home; they're just not staffed yet.
+
+### Closed 2026-05-12 (Substrate v0.1.11 — Rent Roll Recon row 16 GPR fix)
+
+- ✓ **Rent Roll Recon row 16 — "RR gross contracted base rent / mo" mis-calculating against its own H-note intent.** User-reported against v0.1.10 populated Homestead Analyzer: row 16 read $565,140 but the Rent Roll Input Market Rate total was $809,567 — and the row's H-column note ("Gross contracted rates before concessions") clearly described the latter. Root cause: B16/C16/D16 summed Actual Rate (`'Rent Roll Input'!$H`) over occupied units only, instead of Market Rate (`$G`) over all units (= GPR at 100% occupancy). Fix in v0.1.11 rewrites the three care-type formulas to sum `$G` with no status filter, updates A16 label to "RR Gross Potential Rent / mo  (Market × all units)", and rewrites H16 note to state GPR semantics + identify row 16 − row 17 = vacancy + market-vs-actual gap. Rows 17-20 unchanged. Migration via `migrate_to_v0111.py` (3 ops, 9-check verify, idempotent).
 
 ### Closed 2026-05-11 (RR v1.16.0 + Substrate v0.1.10 — Data-capture expansion)
 
@@ -130,7 +134,7 @@ These are real backlogged items that previous chats deferred. They have a home; 
 
 ### Low priority
 
-- **Substrate version-detection bug suspected.** App's `_detect_substrate_version()` looks for `2nd Person Revenue` (v0.1.5 marker) in the Description_Map column B; v0.1.6/v0.1.7/v0.1.8/v0.1.9/v0.1.10 add no new Labels there, so the detector returns `v0.1.5` for any of v0.1.5+. Cosmetic — worth widening the marker list when the bundle next changes Label vocabulary. Could now use the new `2nd Person Rent $` header at Rent Roll Input V4 as a v0.1.10+ marker.
+- **Substrate version-detection bug suspected.** App's `_detect_substrate_version()` looks for `2nd Person Revenue` (v0.1.5 marker) in the Description_Map column B; v0.1.6/v0.1.7/v0.1.8/v0.1.9/v0.1.10/v0.1.11 add no new Labels there, so the detector returns `v0.1.5` for any of v0.1.5+. Cosmetic — worth widening the marker list when the bundle next changes Label vocabulary. Could now use the `2nd Person Rent $` header at Rent Roll Input V4 (v0.1.10+) or the `$G$7:$G$606` token in Rent Roll Recon B16 (v0.1.11+) as a precise marker.
 
 ---
 

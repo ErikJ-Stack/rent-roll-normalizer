@@ -8,6 +8,57 @@ When making a code change in a T12-related chat, add an entry here in the same c
 
 ---
 
+## [Substrate template v0.1.11] — 2026-05-12
+
+### Summary
+
+Track 3 single-cell fix. Realigns `Rent Roll Recon` row 16 — "RR gross contracted base rent / mo" — with the intent already documented in column H ("Gross contracted rates before concessions"). The old formula summed Actual Rate (`$H`) over occupied units only, which produces "current contracted income" (Homestead: $565k) rather than the Gross Potential Rent at 100% occupancy that the row's role in the underwriting flow demands. Fix: sum Market Rate (`$G`) over all units regardless of status, by care type. On Homestead the row now correctly reads $809,567 (IL $167,156 + AL $327,776 + MC $314,635). Rows 17-20 unchanged — row 17's `H + I` was already correct because concessions are negative-signed.
+
+### What changed (migrate_to_v0111.py)
+
+- **A. Row 16 formulas rewritten** at `Rent Roll Recon!B16:D16`:
+  ```
+  Old:  SUMIFS('Rent Roll Input'!$H, ..., E<>Vacant, E<>Eviction, D=<care>)
+  New:  SUMIFS('Rent Roll Input'!$G, ..., D=<care>)
+  ```
+  Status filter removed (`E<>Vacant`, `E<>Eviction`) because GPR is by definition at 100% occupancy. `E16 = SUM(B16:D16)` is unchanged.
+- **B. Row 16 label** at `A16` rewritten from "RR gross contracted base rent / mo" to "RR Gross Potential Rent / mo  (Market × all units)". "Contracted" was misleading once vacants are included.
+- **C. Row 16 note** at `H16` rewritten from "Gross contracted rates before concessions" to "Gross Potential Rent — Market Rate × all units at 100% occupancy. Excludes concessions & vacancy loss. Row 16 − Row 17 = vacancy + market-vs-actual gap." Now states the GPR semantics explicitly and identifies what the row16-vs-row17 gap measures.
+- **D. Stamp** `Cover!B8` and all 13 anchor `AZ4` cells to `v0.1.11`.
+
+### Why this is a Track 3 fix, not a Track 1/2 code change
+
+The bug was in the Analyzer template's formula, not in any RR or T12 parser code. Both writers were correctly populating columns G (Market Rate) and H (Actual Rate) on Rent Roll Input — the formula was just reading the wrong column. Substrate-only fix.
+
+### Idempotency
+
+Gate (`is_already_v0111()`) checks BOTH the version stamp AND that B16 references `$G` (the new column). Re-running on a v0.1.11 file is a no-op (just re-saves).
+
+### Verification
+
+9 checks: Cover!B8 stamp, all 13 AZ4 stamps, B16/C16/D16 each sum `$G` with the right care code, row 16 has no Vacant/Eviction filter, E16 still `=SUM(B16:D16)`, A16 label updated, H16 note updated, row 17 untouched (still `$H + $I` with status filter — sanity check that we didn't accidentally rewrite the wrong row).
+
+### Cross-checks on populated Homestead sample (2026-04-24 v2)
+
+| Quantity | v0.1.10 | v0.1.11 |
+|---|---|---|
+| Row 16 IL / AL / MC | $133,730 / $226,457 / $204,953 | $167,156 / $327,776 / $314,635 |
+| **Row 16 total** | **$565,140** | **$809,567** |
+| Row 17 total | $565,140 | $565,140 (unchanged) |
+| Row 16 − Row 17 | $0 | $244,427 (= vacancy loss + market-vs-actual premium) |
+
+The post-fix gap of $244k matches independent occupancy + premium math: 43 vacant units × ~$2.5k market × occupancy mix + small actual-vs-market premium on occupied units.
+
+### Files
+
+- `tools/migration/migrate_to_v0111.py` (new)
+- `ALF_Financial_Analyzer_Only.xlsx` (regenerated)
+- `SPEC-T12.md` (current substrate version bumped, v0.1.11 entry added to history)
+- `CLAUDE.md` (last-updated, current substrate version, closed-item note)
+- `OPTIMIZATION-DECISIONS.md` (decision entry for the row-16 fix)
+
+---
+
 ## [Substrate template v0.1.10] — 2026-05-11
 
 ### Summary

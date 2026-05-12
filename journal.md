@@ -9,6 +9,80 @@ Newest at top.
 
 ---
 
+## 2026-05-12 — Substrate v0.1.11 (Rent Roll Recon row 16 GPR fix)
+
+**Started as:** Track 3 chat. User asked to "complete Track 3" referencing the open carry-forwards (Branch 2 + 3 Lows). I scoped the question (Branch 2 alone vs. bundled), got infrastructure ready (installed `gh` CLI via Homebrew on this Mac and authenticated for the first time — `gh` v2.92.0, scopes `repo, workflow, read:org, gist`, token in macOS Keychain), then user pivoted before Branch 2 design started: opened a question on the Analyzer itself — "Rent Roll Recon row 16 says Gross RR at 100% occupancy is $565k but the market rate total is $809k in Rent Roll Input."
+
+**Stayed as:** Single Track 3 chat. The fix is workbook-only — no RR / T12 code touched.
+
+### Diagnostic phase
+
+Read Rent Roll Recon rows 14-22 from the bundled template Analyzer with formulas, then read the user's populated Homestead Analyzer (Dropbox path) to verify cached values + cross-check what the formulas actually compute.
+
+Findings, row by row:
+
+| Row | A label | H note (intent) | Formula does | Verdict |
+|---|---|---|---|---|
+| **16** | RR gross contracted base rent / mo | "Gross contracted rates **before concessions**" | `SUMIFS(H, period, E<>Vacant, E<>Eviction, by care)` → Actual Rate × occupied | ❌ Wrong column AND wrong filter |
+| 17 | RR effective net base rent / mo (after concessions) | "Actual rate + concessions — compare to T12 collected" | `SUMIFS(H, occupied) + SUMIFS(I, occupied)` | ✅ Correct (concessions negative-signed per SPEC-RR.md L184, so `H + I` nets the discount) |
+| 18 | RR effective net rent (×12) | "For direct comparison to T12 annual base rent" | `=E17*12` | ✅ |
+| 19 | T12 actual base rent (annualized) | "T12 total base rent from Raw Data" | INDEX/MATCH on `T12 Raw Data!R` ("T12_Total") | ✅ |
+| 20 | Gap (RR annualized − T12 actual) | conditional commentary | `=E18-E19` | ✅ |
+
+So the only real bug was row 16. Two issues compounded:
+
+1. **Wrong column.** Formula sums `$H` (Actual Rate) but "gross before concessions" naturally reads as `$G` (Market Rate — the asking rate, what would be charged at 100% occupancy with zero discounting).
+2. **Wrong filter.** `E<>Vacant, E<>Eviction` excludes vacant units. For "100% occupancy" you'd want **all** units (vacants still have a populated Market Rate).
+
+Cross-checks against the populated Homestead sample confirmed:
+- SUM(G — Market Rate, all 176 rows) = $809,567 ← matches user's $809k expectation
+- SUM(H — Actual Rate, occupied) = $565,140 ← matches what current formula returns
+- Status counts: 128 Occupied + 5 Notice + 43 Vacant = 176
+
+**Special case noted but not load-bearing:** Homestead has no concession column in source (per SPEC-RR.md L350), so on this property `Row 16 = Row 17` numerically with the old formula — the bug only manifested as the $565k vs $809k label mismatch, not as a row16/row17 discrepancy. Other operators (Salem, Beaufort) would have shown the bug as both a wrong row 16 AND a misleading row16-vs-row17 delta.
+
+### Implementation calls made
+
+- **Sum `$G` (Market Rate), drop status filter.** Definitive read of the H-note + the user's "100% occupancy" framing. Result aligns with Gross Potential Rent (GPR) — the standard underwriting anchor that sits above Effective Gross Rent.
+- **Don't touch row 17.** With concessions negative-signed, the existing `H + I` correctly nets the discount. Filter on `E<>Vacant, E<>Eviction` keeps row 17 comparable to T12 collected. Adding extra changes here would expand blast radius for no benefit.
+- **Update label + note to match new behavior.** "Contracted" was misleading once vacants are included → "Gross Potential Rent (Market × all units)." Note explicitly states what row16-vs-row17 measures (vacancy + market-vs-actual gap), so a future reader doesn't have to derive that from formulas.
+- **Single migration, not bundled with Branch 2.** Atomic, easy to verify, easy to roll back. Branch 2 + the 3 Low-priority Track 3 carry-forwards remain open for future v0.1.12+.
+
+### Verification
+
+End-to-end against both fixtures:
+
+1. **Template Analyzer** — `Cover!B8 = v0.1.11`, all 13 AZ4 stamped, all 9 verifier checks green. Idempotency confirmed (re-run on the migrated file = no-op).
+2. **Populated Homestead Analyzer** — same 9 checks all green. Simulated SUMIFS by care type against actual data:
+   - B16 IL: $167,155.63 (62 units)
+   - C16 AL: $327,776.35 (62 units)
+   - D16 MC: $314,635.03 (52 units)
+   - **E16 = $809,567.01** ← matches user's $809k
+   - E17 = $565,140.05 (unchanged from prior)
+   - **Row 16 − Row 17 = $244,426.97** = clean vacancy + market-vs-actual gap
+
+### Files at session end
+
+- New: `tools/migration/migrate_to_v0111.py` (3 ops, 9-check verify, idempotent — gate checks both `Cover!B8` AND that B16 references `$G`)
+- Updated: `ALF_Financial_Analyzer_Only.xlsx` (regenerated v0.1.11)
+- Updated: `CHANGELOG-T12.md` (v0.1.11 entry at top)
+- Updated: `SPEC-T12.md` (current substrate version line + v0.1.11 history entry)
+- Updated: `CLAUDE.md` (last-updated, current substrate version, closed-item note, version-detection bug note widened to mention v0.1.11+ marker possibilities)
+- Updated: `OPTIMIZATION-DECISIONS.md` (D-23 decision row appended)
+- Updated: `journal.md` (this entry)
+
+### Carry-forwards opened
+
+None new. The original Branch 2 (Handoff readiness) + 3 Low-priority Track 3 items remain open per the v1.16.0 journal entry's carry-forward list.
+
+### Process lessons
+
+1. **The H-column note was the source of truth — and it had been right all along.** The bug existed for at least four substrate versions (v0.1.6 through v0.1.10) because nothing forced a periodic check that formulas matched their own annotations. A future audit pass over every "intent note" cell vs. its row's formula would catch this class of drift cheaply.
+2. **Side-by-side template + populated-sample inspection caught the issue in one read.** The template alone can't expose this — you need to see what number the formula produces against real data and compare it to what the label/note implies. Same lesson as the v1.16.0 RR data-capture session.
+3. **Single-cell substrate fixes are worth shipping atomically.** This change is smaller than every prior substrate version (3 formulas + 1 label + 1 note) but the migration script + verify-block + spec/changelog/journal updates still earned their weight: full reproducibility, idempotent re-run, immediate readable diff. The friction of doing it "properly" is low once the pattern is established.
+
+---
+
 ## 2026-05-11 — RR v1.16.0 + Substrate v0.1.10 (Data-capture expansion)
 
 **Started as:** Continuation of the same 2026-05-11 session that shipped substrate v0.1.8 (Branch 3) → v0.1.9 (xludf fix) → RR v1.15.0 (property name stamp). User opened the v0.1.9 populated Analyzer in Excel after running their Homestead RR through the pipeline, noticed `Rent Roll Input` was missing 2nd Person Rent and other charges they could see in the source, and asked: "what other relevant information isn't being outputted... what are the other recommended changes to capture all data and transferred properly for future full UW".

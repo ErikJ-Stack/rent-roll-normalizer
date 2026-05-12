@@ -200,6 +200,7 @@ Decisions land here once made. Format: append-only, newest at the bottom.
 | D-20 | 2026-05-11 | B3.4 | IL deep-dive position | **Append rows 86-100 on Rent Roll Recon.** Includes sqft analysis. | Avoids openpyxl `insert_rows()` quirk. Verified no external refs to rows 69-84. |
 | D-21 | 2026-05-11 | B3.5 | MC deep-dive pattern handling | **Auto-detect flat/tiered/FFS** via distinct-count of K column. Substring tier mapping. | Handles all three industry pricing structures. |
 | D-22 | 2026-05-11 | (meta) | Track scoping for cross-cutting plumbing | **Workbook = Track 3 (this session).** RR writer stamp = Track 1 follow-up. T12 writer stamp = Track 2 follow-up. Both deferred. | Honors one-track-at-a-time. |
+| D-23 | 2026-05-12 | (Cluster A — late) | Rent Roll Recon row 16 — formula vs intent mismatch | **Rewrite B16/C16/D16 to sum Market Rate (`'Rent Roll Input'!$G`) over all units (no status filter), by care type.** Was summing Actual Rate (`$H`) over occupied. Update A16 label to "RR Gross Potential Rent / mo  (Market × all units)" and rewrite H16 note to state GPR semantics. | The H-column note already specified "gross before concessions" intent; the formula didn't match. New behavior gives the underwriting-standard Gross Potential Rent anchor (Homestead: $809k vs the prior $565k). Row 17 was already correct (`H + I` works because concessions are negative-signed) and is left untouched — preserves the row16-vs-row17 reading as "vacancy + market-vs-actual gap." |
 
 ---
 
