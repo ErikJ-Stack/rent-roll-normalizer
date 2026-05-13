@@ -268,8 +268,13 @@ def detect_care_groups(headers: List[str], mappings: MappingSet) -> Tuple[List[C
             # capture Homestead-style per-resident ancillary charges that were
             # silently dropped: Pet ($50), H/K (Housekeeping, $50-$200),
             # Laundry ($100-$120), Misc. ($50-$180), Diabetes (care surcharge).
-            # All flow into Other LOC $ via the existing bucket logic — same
-            # treatment as the pre-existing "other charge" keyword.
+            # Further broadened 2026-05-13 (RR v1.16.2 / UW-BACKLOG BL-0007)
+            # for meal-delivery / mobility-aid ancillary categories surfaced
+            # by Section M (substrate v0.1.12). All flow into Other LOC $ via
+            # the existing bucket logic — same treatment as the pre-existing
+            # "other charge" keyword. The per-fee Rent Roll Input column
+            # expansion (UW-BACKLOG BL-0003) will later split these out into
+            # named buckets at Rent Roll Input!AC-AH.
             # 2nd Person Rent (SP) is INTENTIONALLY excluded here because it
             # gets its own dedicated column at v1.16.0 (Tier 1.2).
             looks_care = any(kw in hc for kw in [
@@ -279,6 +284,9 @@ def detect_care_groups(headers: List[str], mappings: MappingSet) -> Tuple[List[C
                 # Homestead-style per-resident ancillary charges (v1.15.1):
                 "pet", "housekeeping", "h/k", "laundry", "misc",
                 "diabet",
+                # Section M ancillaries (v1.16.2 / BL-0007) — meal-delivery,
+                # motorized-scooter / mobility-aid, resident-transport:
+                "meal", "scooter", "mobility", "transport",
             ])
             if not looks_care:
                 continue

@@ -134,18 +134,6 @@ truth.
 - **Scope:** 1-2 new metric rows in Section K (rows 86-100). Pulls from
   `Rent Roll Input!Z` and `!AA`.
 
-### [BL-0007] RR Other LOC keyword expansion — meal / scooter / mobility / transport
-- **Track:** RR (Track 1) · target **RR v1.16.2 patch**
-- **Surfaced in:** substrate v0.1.12 Section M (M2 fees that "fall into
-  Misc.")
-- **Description:** v1.15.1 widened `_looks_care` for `pet`, `housekeeping`,
-  `h/k`, `laundry`, `misc`, `diabet`. Meal / scooter / mobility / transport
-  still aren't caught — those source columns are silently dropped if their
-  header doesn't match other keywords. Needed before BL-0003 can split them
-  into named columns.
-- **Scope:** 3-5 keyword additions in `normalizer.py`. Single-file patch,
-  matches v1.15.1 pattern. Trivial.
-
 ### [BL-0008] Substrate version-detection in `app.py`
 - **Track:** RR (Track 1) · target whenever bundled with another RR change
 - **Surfaced in:** CLAUDE.md "Open carry-forwards"
@@ -198,6 +186,19 @@ truth.
 
 ## Shipped
 
-*(Empty — items will move here as they ship. The pre-v0.1.12 closed
-items are already documented in CHANGELOG-T12.md and CHANGELOG-RR.md;
-no retroactive backfill needed here.)*
+### [BL-0007] RR Other LOC keyword expansion — meal / scooter / mobility / transport
+- **Shipped in:** RR v1.16.2 (2026-05-13, PR #15)
+- **Track:** RR (Track 1)
+- **Originally surfaced in:** substrate v0.1.12 Section M (M2 fees that "fall
+  into Misc.")
+- **Summary:** Added `meal`, `scooter`, `mobility`, `transport` to the
+  `_looks_care` keyword list in `detect_care_groups` (`normalizer.py`).
+  Matches v1.15.1's prior keyword broadening pattern. Future-proofs the
+  parser for operators whose source rent rolls expose those services as
+  named columns. **No impact on Homestead specifically** — its broker
+  format bundles optional services into a single `Misc.` column rather
+  than breaking them out. Regression-verified against all three baseline
+  fixtures (Salem, Briar Glen, Beaufort) with no drift.
+
+*(Pre-v0.1.12 closed items are documented in CHANGELOG-T12.md and
+CHANGELOG-RR.md; no retroactive backfill needed here.)*
