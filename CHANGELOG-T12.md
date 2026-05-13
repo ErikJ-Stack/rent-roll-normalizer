@@ -8,6 +8,73 @@ When making a code change in a T12-related chat, add an entry here in the same c
 
 ---
 
+## [Substrate template v0.1.12] — 2026-05-13
+
+### Summary
+
+Adds **Section M** (Operator Fee Schedule & Ancillary Revenue Reconciliation) to `Rent Roll Recon` rows 119-172. Captures the operator's published fee schedule as a structural part of the underwriting analysis and reconciles published rates against T12 actuals through the chain: schedule → RR-side capture (count + %) → T12 12-month actuals → implied per-resident rate → schedule fidelity %.
+
+Five sub-sections:
+
+- **M1 — Published schedule (analyst paste-in)**: 7 default fee rows (Community Fee / Elective Transfer / Meal Delivery / Motorized Scooter / Second Person / Housekeeping / Laundry) plus 2 blank rows for property-specific additions. Column D = T12 Label, validated against `DescMap_Label` named range.
+- **M2 — RR-side capture (auto)**: for fees with a direct per-resident column on `Rent Roll Input`, count eligible vs. capturing residents and compute capture %. Today only Second Person Fee has a direct match (`Rent Roll Input!V`, added v0.1.10). Other 6 fees show `n/a (one-time)` or `falls into M5 (see UW-BACKLOG BL-0003)`.
+- **M3 — T12 actuals (auto)**: VLOOKUP from the M1 T12 Label into `T12 Raw Data!R` (annual total). Shared-bucket detection: when multiple M1 fees map to the same Label (typical for `Other community revenue`), the 2nd+ occurrences display `(shared — see row N)` instead of duplicating the value.
+- **M4 — Implied per-resident rate (T12 ÷ RR count vs. schedule)**: per user spec, divides T12 monthly $ by RR # capturing → implied per-resident rate → variance % vs. M1 schedule. Conditional note fires when |variance| > 5%. Only computable today for SP; others fall into M5.
+- **M5 — Misc. Income (residual)**: T12 `Other community revenue` annual + monthly + per-fee attribution + residual + % of EGI. Conditional note fires when residual > 15% of EGI, pointing the analyst to UW-BACKLOG BL-0003.
+
+### What changed (migrate_to_v0112.py)
+
+- **A. Section M installation** on `Rent Roll Recon` at rows 119-172:
+  - Section title (row 119), 5 subsection titles (M1 row 121, M2 row 133, M3 row 143, M4 row 153, M5 row 163)
+  - M1: 9 paste-in rows × 4 cols (Fee Name / Published $ / Basis / T12 Label) with data validation on the Label column
+  - M2: 9 auto-computed rows × 5 cols
+  - M3: 9 auto-computed rows × 5 cols (VLOOKUP + shared-bucket detection)
+  - M4: 9 auto-computed rows × 7 cols (implied rate + variance + conditional note)
+  - M5: 5 metric rows + 1 conditional note row, anchored to `'Monthly Trending'!$N$21` (EGI annual)
+- **B. Stamp** `Cover!B8` and all 13 anchor `AZ4` cells to `v0.1.12`.
+
+### Idempotency
+
+Gate (`is_already_v0112()`) checks BOTH the version stamp AND that `Rent Roll Recon!A119` already starts with `"M "` (the Section M title prefix). Re-runs on a partial-state file safely re-apply.
+
+### Verification
+
+10-check verification block: Cover!B8 stamped, all 13 AZ4 stamped, Section M title in place, M1 subsection title, 7 default fees installed, M2 SP COUNTIF formula references `Rent Roll Input!V`, M3 first row VLOOKUP formula references `T12 Raw Data`, M4 SP variance formula references D column (implied rate), M5 residual formula references B column (computed delta), Sections K and L (rows 86-117) intact.
+
+Migration verified end-to-end on:
+- **Bundled v0.1.11 Analyzer** → migrates cleanly to v0.1.12, file size 180,003 → 183,103 bytes (+3,100 bytes, consistent with ~50 new rows of content)
+- **User's populated Homestead workbook** (RR + T12 baked in) → same verification result; Section M installs cleanly alongside existing data
+
+### Idempotency proven
+
+Re-running the migration on an already-v0.1.12 file exits cleanly: `"Workbook is already at v0.1.12. No-op (will re-save)."` No double-installation, no formula corruption.
+
+### Companion: UW-BACKLOG.md
+
+This release introduces `UW-BACKLOG.md` at the repo root as the authoritative forward-looking list of underwriting workbook changes. Prior "Out of scope" / "Carry-forward" notes scattered across CHANGELOG-T12 and CHANGELOG-RR have been swept into 10 `BL-NNNN` entries. New items are added there; closed items move to the `Shipped` section but keep their IDs so cross-references remain stable.
+
+The Section M work itself opens 4 new backlog items (BL-0001, BL-0003, BL-0004, BL-0007) — finer T12 Labels, RR Input expansion, T12 Analytics 2P reconciliation row, and the meal/scooter RR keyword widening. All are wired into Section M's conditional notes so the analyst sees them in-workbook when relevant.
+
+### Out of scope (logged in UW-BACKLOG.md)
+
+- **BL-0001**: Finer ancillary Labels in `Description_Map` (Meal Income, HK Income, Laundry Income, Scooter Fee Revenue, Transfer Fee Revenue). Substrate v0.2.0 territory — vocabulary expansion, not a patch.
+- **BL-0003**: RR Input expansion for per-fee ancillary columns. Cross-cutting Track 1 + Track 3; ships as its own scoped PR.
+- **BL-0004**: T12 Analytics 2P reconciliation row. Substrate v0.1.13 candidate.
+- **BL-0007**: Meal / scooter / mobility / transport keyword additions in `_looks_care`. RR v1.16.2 patch candidate.
+
+### Files changed
+
+- `ALF_Financial_Analyzer_Only.xlsx` — bundled Analyzer migrated to v0.1.12
+- `tools/migration/migrate_to_v0112.py` — idempotent migration script
+- `UW-BACKLOG.md` — **new file** at repo root; 10 initial entries swept from prior changelogs + this release
+- `SPEC-T12.md` — current-version line bumped to v0.1.12; file inventory adds `migrate_to_v0112.py` row
+- `SPEC-RR.md` — Track-versions inline line bumped (v0.1.11 → v0.1.12); Section M referenced in the Analyzer-source section
+- `README.md` — versions table + migration script listing updated
+- `CLAUDE.md` — substrate version bumped to v0.1.12; carry-forwards section condensed to point at UW-BACKLOG.md
+- `CHANGELOG-T12.md` — this entry
+
+---
+
 ## [Substrate template v0.1.11] — 2026-05-13
 
 ### Summary

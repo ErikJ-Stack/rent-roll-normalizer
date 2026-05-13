@@ -24,7 +24,9 @@ The Analyzer then drives the underwriting analysis (P&L, scenarios, returns) —
 * **Track 1 — Rent Roll Normalizer** (this document) — RR parsing, RR writer, Streamlit UI shell, Analyzer source resolution, period-date detection.
 * **Track 2 — T12 Normalizer** (`SPEC-T12.md`) — T12 parser (Yardi + MRI format registry), T12 writer (`T12 Input` sheet), `Description_Map` lookup, UNMATCHED matcher form.
 
-Both tracks ship in the same `app.py` and write into the same Analyzer workbook, but they have independent version streams. **Track 1 is at v1.16.1; Track 2 is at v0.2.1; bundled Analyzer substrate is at v0.1.11.**
+Both tracks ship in the same `app.py` and write into the same Analyzer workbook, but they have independent version streams. **Track 1 is at v1.16.1; Track 2 is at v0.2.1; bundled Analyzer substrate is at v0.1.12.**
+
+A persistent forward-looking backlog of UW workbook changes lives at [`UW-BACKLOG.md`](UW-BACKLOG.md). Add items there when a release surfaces a downstream need; close items by moving to the `Shipped` section. Cross-references use `BL-NNNN` IDs that stay stable across releases.
 
 ---
 
