@@ -6,7 +6,7 @@
 **Repo:** <https://github.com/ErikJ-Stack/rent-roll-normalizer> (public)
 **Owner:** Erik J (`Erikjayj@gmail.com`, GitHub: `ErikJ-Stack`)
 **Stack:** Python · Streamlit · pandas · openpyxl · Streamlit Community Cloud (free tier)
-**Current version:** v1.16.1 (2026-05-12) — Patch: fixed concession-doubling on Yardi-style rent rolls (Salem + Beaufort). `detect_concession_cols` was matching both the bare-prefix concession column and its `(month)`-suffixed sibling — both columns hold the same per-row value, so each row's discount was being summed twice. De-dupe pass now drops bare-prefix columns whose cleaned header equals the prefix of any `(month)`-suffixed sibling. Salem $-5,682.90 → $-2,841.45 (matches SPEC baseline). Beaufort $-8,969.70 → $-4,484.85 (matches broker `Total Marketing Incentive Charges`). Briar Glen unchanged (de-dupe is no-op — its `Recurring Discounts` / `One-Time Incentives` have no `(month)` siblings). Prior: v1.16.0 (2026-05-11) data-capture expansion (7 new resident-level fields).
+**Current version:** v1.16.2 (2026-05-13) — Patch (UW-BACKLOG BL-0007): added `meal`, `scooter`, `mobility`, `transport` to the `_looks_care` keyword list in `detect_care_groups` so per-resident meal-delivery / motorized-scooter / mobility-aid / resident-transport charges flow into `Other LOC $` when source rent rolls expose them as named columns. Companion to substrate v0.1.12 Section M ancillaries; the eventual per-fee column split lands in BL-0003 (cross-cutting RR v1.17 + substrate v0.1.13). Prior: v1.16.1 (2026-05-12) concession-doubling de-dupe (Salem + Beaufort). Prior: v1.16.0 (2026-05-11) data-capture expansion.
 
 ---
 

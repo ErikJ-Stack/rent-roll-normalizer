@@ -8,6 +8,60 @@ When making a code change in a chat, add an entry here in the same commit.
 
 ---
 
+## [1.16.2] — 2026-05-13
+
+### Summary
+
+Single-file patch on `normalizer.py`. Adds `meal`, `scooter`, `mobility`, `transport` to the `looks_care` keyword list in the care-bucket auto-detector. **UW-BACKLOG BL-0007** — closes the keyword side of the Section M v0.1.12 follow-up by ensuring per-resident meal-delivery / motorized-scooter / mobility-aid / resident-transport charges flow into `Other LOC $` if any source rent roll exposes them as named columns.
+
+### Why
+
+Substrate v0.1.12 introduced **Section M** (Operator Fee Schedule & Ancillary Reconciliation) on `Rent Roll Recon`. The default 7-fee schedule includes Meal Delivery and Motorized Scooter Fee; the M2 RR-side capture for those fees needs the parser to actually capture those columns into `Other LOC $` (today, in advance of BL-0003 splitting them into named columns at `Rent Roll Input!AC-AH`). v1.15.1 already widened the keyword list for Homestead-style ancillaries (pet / housekeeping / h/k / laundry / misc / diabet); this patch extends to the four remaining common ancillary names.
+
+### Foundation that doesn't change
+
+The auto-catch-into-`Other LOC $` heuristic in `detect_care_groups` recognizes a "standalone care/ancillary column" (header is itself the bucket, no prefix-suffix split) only when the cleaned header contains a known care-related keyword. Without that gate, every numeric column in a rent roll would be picked up — including non-care numerics like account numbers, IDs, etc. Adding to the keyword list is the safe, narrow way to expand coverage.
+
+### What changed
+
+**Parser — `normalizer.py`:**
+- `_looks_care` keyword list (inside `detect_care_groups`) extended with 4 new entries: `meal`, `scooter`, `mobility`, `transport`. Each is a case-insensitive substring match against the cleaned header.
+- Inline comment updated to reference v1.16.2 + UW-BACKLOG BL-0007 and to forward-reference BL-0003 (the cross-cutting PR that will split these out into named columns at `Rent Roll Input!AC-AH`).
+
+**App — `app.py`:**
+- `RR_VERSION` `"1.16.1"` → `"1.16.2"`; `RR_LAST_UPDATED` `"2026-05-12"` → `"2026-05-13"`.
+
+**Docs — `SPEC-RR.md`:**
+- Current-version line replaced.
+
+**Docs — `UW-BACKLOG.md`:**
+- `BL-0007` moved from `Pending` to `Shipped`; entry retains its `BL-0007` ID and gains a `Shipped in <release>` note + a one-paragraph summary of the keyword additions.
+
+### Verification
+
+Regression check against all three baseline-tracked fixtures: **all green**.
+
+| Fixture | Beds | Care Level $ | Concession $ | Notes |
+| --- | ---: | ---: | ---: | --- |
+| Salem (Oaks) | 50 | $28,125.81 ✅ | $-2,841.45 across 7 rows ✅ | Yardi — no meal/scooter columns |
+| Briar Glen (Vitality) | 79 | $234,360.00 ✅ | $-14,132.00 across 16 rows ✅ | MRI-style — no meal/scooter columns |
+| Oaks at Beaufort | 104 | $33,436.13 ✅ | $-4,484.85 across 8 rows ✅ | Yardi — no meal/scooter columns |
+| Homestead Pensacola | 176 (62 IL + 62 AL + 52 MC) | n/a | n/a | Broker-condensed — bundles meal/scooter into the existing `Misc.` column |
+
+**Observation on Homestead specifically:** the four new keywords (`meal`/`scooter`/`mobility`/`transport`) don't add new dollars on Homestead because the broker format collapses optional services into a single `Misc.` column rather than breaking them out by name. This patch is **future-proofing for other operators** whose source rent rolls do break those services out as named columns (no such operator is in our verified set today, but the cost of the four keyword additions is zero where unused). The downstream value comes when BL-0003 ships and Section M's M2 starts reading per-fee columns at `Rent Roll Input!AC-AH`.
+
+**Observation worth a future follow-up:** Homestead's `Other LOC $` total nets to **-$9,966.75** (negative). This means some `Pet` / `H/K` / `Laundry` / `Misc.` entries are credits (negative dollars). Not introduced by this patch and not a regression — but flagged for review since it could indicate hidden concessions or write-offs that should reconcile against T12 `Concessions & specials`. **Add to UW-BACKLOG.md if it persists.**
+
+### Files changed
+
+- `normalizer.py` — 4 keywords appended to `_looks_care` list + inline comment update
+- `app.py` — version bump
+- `SPEC-RR.md` — current-version line replaced
+- `UW-BACKLOG.md` — `BL-0007` moved to Shipped
+- `CHANGELOG-RR.md` — this entry
+
+---
+
 ## [1.16.1] — 2026-05-12
 
 ### Summary
