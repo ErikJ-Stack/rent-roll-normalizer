@@ -12,7 +12,7 @@ A Streamlit app that turns a senior-housing rent roll AND a T12 financial statem
 | --- | --- | --- |
 | RR Normalizer (`RR_VERSION`) | v1.16.0 | 2026-05-11 |
 | T12 Normalizer (`T12_VERSION`) | v0.2.1 | 2026-05-11 |
-| Bundled Analyzer substrate | v0.1.11 | 2026-05-13 |
+| Bundled Analyzer substrate | v0.1.12 | 2026-05-13 |
 
 ---
 
@@ -103,7 +103,7 @@ rent_roll_app/
 ├── analyzer_rr_writer.py               # Writes the translated RR into the Analyzer's Rent Roll Input sheet (Track 1; renamed from t12_writer.py on 2026-05-10)
 ├── property_name.py                    # Cross-track helper: derives property name from filename for both writers
 │
-├── ALF_Financial_Analyzer_Only.xlsx    # Bundled Analyzer template (substrate v0.1.11)
+├── ALF_Financial_Analyzer_Only.xlsx    # Bundled Analyzer template (substrate v0.1.12)
 ├── mapping_template.xlsx               # Editable RR mapping override template (optional sidebar upload)
 │
 ├── tools/
@@ -117,6 +117,7 @@ rent_roll_app/
 │       ├── migrate_to_v019.py          # Substrate v0.1.8 → v0.1.9 migration (RR_Calc _xludf fix + B2 rewrite)
 │       ├── migrate_to_v0110.py         # Substrate v0.1.9 → v0.1.10 migration (RR v1.16.0 column extension)
 │       ├── migrate_to_v0111.py         # Substrate v0.1.10 → v0.1.11 migration (chart catAx axPos fix)
+│       ├── migrate_to_v0112.py         # Substrate v0.1.11 → v0.1.12 migration (Rent Roll Recon Section M)
 │       └── verify_e2e.py               # End-to-end Analyzer verification
 │
 ├── CLAUDE.md                           # Onboarding doc for any Claude session — read first

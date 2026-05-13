@@ -2,7 +2,7 @@
 
 > Onboarding doc for any Claude session (chat or Claude Code) working on this repo. Read this first — it points to canonical truth and surfaces facts that previously had to be grubbed for.
 
-**Last updated:** 2026-05-11 (after RR v1.16.0 + substrate v0.1.10 — data-capture expansion)
+**Last updated:** 2026-05-13 (after substrate v0.1.12 — Rent Roll Recon Section M: Operator Fee Schedule + Ancillary Revenue Reconciliation)
 
 ---
 
@@ -95,7 +95,9 @@ Conversational examples should label placeholder text as `<REPLACE THIS>` so the
 
 ---
 
-## Open carry-forwards (as of 2026-05-11, post-substrate v0.1.8)
+## Open carry-forwards (as of 2026-05-13, post-substrate v0.1.12)
+
+**The authoritative forward-looking list now lives in [`UW-BACKLOG.md`](UW-BACKLOG.md).** When a release surfaces a need it can't ship, log a `BL-NNNN` entry there. The historical "closed" notes below stay here for context and traceability of how prior chats deferred work.
 
 These are real backlogged items that previous chats deferred. They have a home; they're just not staffed yet.
 
