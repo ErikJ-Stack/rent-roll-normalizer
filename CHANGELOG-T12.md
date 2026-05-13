@@ -1,10 +1,56 @@
 # Changelog — T12 Normalizer
 
-All notable changes to the T12 Normalizer (Track 2). Independent version stream from the Rent Roll Normalizer (Track 1, currently v1.11.0). This changelog covers T12 work only — see `CHANGELOG-RR.md` for RR releases.
+All notable changes to the T12 Normalizer (Track 2). Independent version stream from the Rent Roll Normalizer (Track 1, currently v1.16.1). This changelog covers T12 work only — see `CHANGELOG-RR.md` for RR releases.
 
 Format: each version has a section with date, summary, and per-file change notes. Newest at top.
 
 When making a code change in a T12-related chat, add an entry here in the same commit.
+
+---
+
+## [Substrate template v0.1.11] — 2026-05-13
+
+### Summary
+
+Patch fix for a chart category-axis positioning bug introduced when the five `T12 Analytics` charts were added at substrate v0.1.8 (Branch 3 analytical coverage). All three axis-bearing charts (V1, V2, V4) had their category axis incorrectly positioned at `axPos="l"` (left) when it should be `axPos="b"` (bottom) for vertical column and line charts.
+
+The bug visibly manifests on the V4 LineChart (T12 Revenue Trend): Excel can't reconcile two axes both claiming the left position and falls back to rendering the categories (month labels) as legend entries with no plot area. V1 (Occupancy stacked column) and V2 (Rate Dispersion clustered column) had the same bug technically but Excel tolerates BarChart axis ambiguity — they rendered correctly to the eye. This fix brings them to spec-compliance and removes the risk of stricter future Excel versions silently breaking them.
+
+### What changed (migrate_to_v0111.py)
+
+- **A. Chart category-axis position fix.** For each chart on `T12 Analytics` whose title matches V1 / V2 / V4, flip `x_axis.axPos` from `"l"` to `"b"`. The value axis (`y_axis.axPos`) is left at `"l"` — correct for vertical charts. V3 (Payer Mix doughnut) and V5 (AL Acuity Mix doughnut) have no axes and are skipped.
+- **B. Stamp** `Cover!B8` and all 13 anchor `AZ4` cells to `v0.1.11`.
+
+No new sheets, no new named ranges, no new formulas, no header changes. Three byte-level edits inside three chart XML files (l → b in `<catAx><axPos val="l"/>`) plus 14 cell stamps.
+
+### Idempotency
+
+Gate (`is_already_v0111()`) checks BOTH the version stamp AND that V4's `x_axis.axPos` already reads `"b"`. Re-runs on a partial-state file safely re-apply.
+
+### Verification
+
+6-check verification block: `Cover!B8` stamped, all 13 `AZ4` stamped, three target charts have catAx `"b"` (was `"l"`), valAx unmoved at `"l"`, V3 and V5 doughnuts still present (sanity).
+
+Round-trip test against the v0.1.10 bundled Analyzer + the user-reported populated Homestead workbook: in both cases, all three target charts flip cleanly to `"b"`, the value axis stays at `"l"`, and the doughnut charts are untouched. File size delta on the bundled Analyzer: +10 bytes (3 axPos edits + 14 stamps) — confirms no other content was dropped or rewritten during the openpyxl save.
+
+End-to-end smoke after applying the migration: parser pipeline produces a populated Analyzer whose `Description_Map` and formula sheets are unchanged from pre-migration. Re-opening the populated file in Excel renders V4 as a 12-point line chart with months on the X axis (was: empty plot + months as a vertical legend list).
+
+### How this bug got introduced
+
+When `migrate_to_v018.py` created the five charts at substrate v0.1.8, the chart construction code likely copied axis configuration from another chart type without adjusting `axPos`. The bug only surfaced when V4 (the LineChart) was actually populated with monthly trend data — V1 and V2 happened to render fine despite being equally wrong, so the issue stayed latent until a Homestead-with-T12 run hit V4 with real data.
+
+### Out of scope (logged for v0.1.12+)
+
+- The carry-forwards from v0.1.10 still stand: `Rent Roll Recon` section K PSF stats, T12 Analytics 2P reconciliation row, `Workbook Health` AR aggregation.
+- V5's empty rendering on broker-format rent rolls (Homestead has no per-bed acuity tiers, so SUMIFS for Basic/Level 2-7 all return $0). Either accept that V5 is meaningful only when source has acuity, or rework V5 to fall back to "Care Level $ grouped by Care Type" for sources without acuity. Design decision, not a bug.
+
+### Files changed
+
+- `ALF_Financial_Analyzer_Only.xlsx` — bundled Analyzer migrated to v0.1.11
+- `tools/migration/migrate_to_v0111.py` — idempotent migration script
+- `SPEC-T12.md` — current-version line bumped, file inventory updated
+- `SPEC-RR.md` — Track-versions inline line bumped (substrate v0.1.10 → v0.1.11)
+- `CHANGELOG-T12.md` — this entry; also corrected header line's stale Track 1 reference (was v1.11.0; now v1.16.1)
 
 ---
 
