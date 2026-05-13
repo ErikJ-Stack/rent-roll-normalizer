@@ -148,7 +148,17 @@ DEFAULT_CARE_TYPE = [
 # -- Care bucket detection (for Other LOC $ auto-catch) ----------------------
 # Maps column-header substrings to normalized care buckets.
 # Any monthly-total column not matched here flows into "Other LOC $".
+#
+# v1.17.0 (UW-BACKLOG BL-0003) — Other LOC $ split into named per-fee buckets:
+# Meal Plan $ / Scooter Fee $ / Housekeeping $ / Laundry $ / Pet $. Each gets
+# its own column on Rent Roll Input (substrate v0.1.13: AC-AG). Section M's
+# RR-side capture (M2/M4) uses these to compute per-fee capture rates and
+# implied rates vs. the published schedule. Diabetes / Misc / anything else
+# care-related but not in the named buckets stays in Other LOC $ (the
+# fallback). The 4 named-bucket rules use word boundaries (\b) to avoid
+# spurious matches in column names like "Misc. (no laundry charge)".
 DEFAULT_CARE_BUCKETS = [
+    # Care-revenue buckets (acuity / nursing) ---------------------------
     (r"assisted\s*living",          "Care Level $"),
     (r"memory\s*care",              "Care Level $"),  # Oaks: MC level $ is care revenue, not ancillary
     (r"\bal\s*care\b",              "Care Level $"),
@@ -158,6 +168,17 @@ DEFAULT_CARE_BUCKETS = [
     (r"medication",                 "Med Mgmt $"),
     (r"pharmacy",                   "Pharmacy $"),
     (r"\brx\b",                     "Pharmacy $"),
+    # Per-fee ancillary buckets (v1.17.0 — UW-BACKLOG BL-0003) ----------
+    (r"\bmeal\b",                   "Meal Plan $"),
+    (r"\bscooter\b",                "Scooter Fee $"),
+    (r"\bmobility\b",               "Scooter Fee $"),   # mobility-aid bundles with scooter
+    (r"\btransport\b",              "Scooter Fee $"),   # resident-transport bundles with scooter
+    (r"\bhousekeeping\b",           "Housekeeping $"),
+    (r"\bh\s*/\s*k\b",              "Housekeeping $"),  # Homestead-style "H/K"
+    (r"\blaundry\b",                "Laundry $"),
+    (r"\bpet\b",                    "Pet $"),
+    # Diabetes / Misc / unmatched care headers fall through to "Other LOC $"
+    # (the classify_care_bucket fallback in this same module).
 ]
 
 

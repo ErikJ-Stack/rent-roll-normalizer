@@ -8,6 +8,107 @@ When making a code change in a chat, add an entry here in the same commit.
 
 ---
 
+## [1.17.0] — 2026-05-13
+
+### Summary
+
+**UW-BACKLOG BL-0003 — RR Input expansion: per-fee ancillary columns.** Splits what previously lumped into `Other LOC $` (col O) into 5 named per-fee columns at `Rent Roll Input!AC-AG`: `Meal Plan $`, `Scooter Fee $`, `Housekeeping $`, `Laundry $`, `Pet $`. Other LOC $ remains as the catchall for unmatched care headers (Diabetes, Misc, anything else). Cross-cutting Track 1 (parser + writer + 5 new bed-record fields + 5 new Condensed_RR cols) **plus** Track 3 (substrate v0.1.13 — see [CHANGELOG-T12.md](CHANGELOG-T12.md) `[Substrate template v0.1.13]` for the substrate-side mechanics). Bundled into a single PR per user spec.
+
+Companion to substrate v0.1.12 Section M (Operator Fee Schedule). With the per-fee columns now populated by the parser, **Section M2 capture rate / M4 implied per-resident rate now compute for Meal Delivery / Motorized Scooter Fee / Housekeeping / Laundry** — not just Second Person Fee. Section M2's previous "falls into M5 Misc. (see UW-BACKLOG BL-0003)" placeholder text is replaced with real `INDIRECT` formulas off the new RR Input Col mapping (added at v0.1.13).
+
+### Closes [UW-BACKLOG BL-0003](UW-BACKLOG.md)
+
+### Why
+
+v0.1.12 shipped Section M with 4 of the 7 default fees deferred to M5 Misc. (no per-resident RR data to compute capture rates). That deferred work was logged as `BL-0003`. This release closes it.
+
+### What changed
+
+**Mapping rules — `mappings.py`:**
+- `DEFAULT_CARE_BUCKETS` extended with 8 new bucket-routing rules:
+  - `\bmeal\b` → `Meal Plan $`
+  - `\bscooter\b`, `\bmobility\b`, `\btransport\b` → `Scooter Fee $`
+  - `\bhousekeeping\b`, `\bh\s*/\s*k\b` → `Housekeeping $`
+  - `\blaundry\b` → `Laundry $`
+  - `\bpet\b` → `Pet $`
+- Diabetes, Misc, anything else care-related still flows to the existing `Other LOC $` catchall via `classify_care_bucket`'s fallback. No changes to that fallback behavior.
+
+**Parser — `normalizer.py`:**
+- `bucket_sums` initialized with 9 buckets (was 4): adds `Meal Plan $` / `Scooter Fee $` / `Housekeeping $` / `Laundry $` / `Pet $`.
+- Bed record dict gains 5 new fields (one per new bucket).
+- `Total LOC $` per-bed sum extended to include the new buckets — but the dollar total is **unchanged** because the same source dollars are now distributed across more columns instead of all going to Other LOC $.
+- `CONDENSED_COLUMNS` grows 25 → 30. New columns at positions 26-30 (Z-AD on Condensed_RR sheet); existing cols 1-25 retain their fixed positions.
+
+**Writer — `analyzer_rr_writer.py`:**
+- New constants: `COL_AC_INDEX = 29`, `COL_AG_INDEX = 33`, `SOURCE_COLUMNS_AC_TO_AG` (5-element list).
+- Idempotent clear extended to AC-AG so re-runs don't leave ghost data.
+- v1.17.0 cols are detected optionally (`has_v117_cols`) so a pre-v1.17.0 `translated_df` still writes cleanly.
+
+**App — `app.py`:**
+- `RR_VERSION` `"1.16.2"` → `"1.17.0"`.
+
+**Substrate — `tools/migration/migrate_to_v0113.py`** (Track 3 companion — substrate v0.1.12 → v0.1.13):
+- See [CHANGELOG-T12.md](CHANGELOG-T12.md) `[Substrate template v0.1.13]` for the substrate-side details. In summary: 5 new column headers at Rent Roll Input row 4 cols AC-AG, Total LOC $ formula at T7:T606 extended to include AC-AG, Section M1 gets a 5th column "RR Input Col" pre-populated for the 5 default fees that have direct RR matches, Section M2/M4 rewritten with universal INDIRECT formulas off the new col so any analyst-added M1 row auto-computes if it has an RR Input Col set. M2 eligibility unified to all-occupied beds (not just IL — per user spec couples can occur in any care type).
+
+### Verification
+
+End-to-end fixture regression — all four fixtures green:
+
+| Fixture | Beds | Care Level $ | Concession $ | Total LOC $ | Notes |
+| --- | ---: | ---: | ---: | ---: | --- |
+| Salem (Oaks) | 50 ✅ | $28,125.81 ✅ | $-2,841.45 / 7 ✅ | $36,675.00 ✅ | Yardi — no per-fee ancillary cols in source |
+| Briar Glen (MRI) | 79 ✅ | $234,360.00 ✅ | $-14,132.00 / 16 ✅ | $235,710.00 ✅ | MRI — no per-fee ancillary cols in source |
+| Oaks at Beaufort | 104 ✅ | $33,436.13 ✅ | $-4,484.85 / 8 ✅ | $41,201.13 ✅ | **NEW**: surfaces $65 in Laundry $ (was buried in Other LOC) |
+| Homestead Pensacola | 176 (62/62/52) | $0.00 ✅ | n/a | $-8,466.75 ✅ (was the same total before — split, not changed) | **NEW**: Pet $100, Housekeeping $1,450, Laundry $630 split out from Other LOC |
+
+**Other LOC $ → split sum invariant** for Homestead:
+- Pre-split: Other LOC $ = $-9,966.75 (everything lumped)
+- Post-split: Other LOC $ = $-12,146.75 (Diabetes + Misc residual) + Pet $100 + Housekeeping $1,450 + Laundry $630 + Meal $0 + Scooter $0 = **$-9,966.75** ✓
+
+Sum of new named buckets + remaining Other LOC = original Other LOC. Total LOC $ preserved. No double-counting.
+
+### Migration path for existing populated workbooks
+
+Workbooks downloaded before this release sit at substrate v0.1.10, v0.1.11, or v0.1.12. Migration scripts handle one substrate version step each — chain them in order:
+
+```
+python tools/migration/migrate_to_v0111.py file.xlsx file_v0111.xlsx
+python tools/migration/migrate_to_v0112.py file_v0111.xlsx file_v0112.xlsx
+python tools/migration/migrate_to_v0113.py file_v0112.xlsx file_v0113.xlsx
+```
+
+Or simpler: re-run the live app on the same RR + T12, get a fresh download with v0.1.13 substrate baked in and the v1.17.0 parser populating the new cols.
+
+Verified end-to-end on the user's downloaded Homestead populated workbook (v0.1.10) chained through v0.1.12 → v0.1.13 with all 11 verification checks green at each step.
+
+### Files changed
+
+- `mappings.py` — 8 new DEFAULT_CARE_BUCKETS rules
+- `normalizer.py` — bucket_sums + bed record dict + CONDENSED_COLUMNS + condensed builder all extended for 5 new buckets
+- `analyzer_rr_writer.py` — `SOURCE_COLUMNS_AC_TO_AG` constant + write block + idempotent clear extension
+- `ALF_Financial_Analyzer_Only.xlsx` — bundled Analyzer migrated to v0.1.13
+- `tools/migration/migrate_to_v0113.py` — new idempotent migration script (5 install steps, 11-check verification)
+- `app.py` — version bump
+- `SPEC-RR.md` — current-version line
+- `CHANGELOG-T12.md` — `[Substrate template v0.1.13]` entry (Track 3 companion)
+- `SPEC-T12.md` — current-version line
+- `README.md` — versions table + migration script listing
+- `CLAUDE.md` — substrate version reference
+- `UW-BACKLOG.md` — `BL-0003` moved from Pending to Shipped
+- `CHANGELOG-RR.md` — this entry
+
+### Carry-forwards opened by this round
+
+- **None blocking.** With BL-0003 closed, the next obvious follow-ups in `UW-BACKLOG.md` are:
+  - `BL-0001` (substrate v0.2.0): finer ancillary T12 Labels (`Meal Income`, `Housekeeping Income`, etc.) so Section M3 stops returning `(shared bucket)` notes.
+  - `BL-0004` / `BL-0005` / `BL-0006` (substrate v0.1.14): small Track 3 patches surfaced by v0.1.10 (T12 Analytics 2P reconciliation, Workbook Health AR aggregation, Section K PSF dispersion stats).
+
+### Side observation worth tracking
+
+Homestead's `Other LOC $` post-split is **-$12,146.75** (residual = Diabetes + Misc, both partially negative). The residual was negative before too (entire OCR was -$9,966.75); the split just makes the negative-net portion visible as a residual after attributing the named buckets. **If this persists across future Homestead-format deals**, consider adding a `BL-NNNN` for Misc/Diabetes credit reconciliation against T12 `Concessions & specials`.
+
+---
+
 ## [1.16.2] — 2026-05-13
 
 ### Summary

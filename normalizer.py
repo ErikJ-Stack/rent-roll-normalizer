@@ -530,6 +530,14 @@ CONDENSED_COLUMNS = [
     # existing housing-rate column group when imported into the Analyzer.
     "2nd Person Rent $", "Move-out Date", "Balance", "Notes",
     "Market PSF", "Actual PSF", "ACH",
+    # Cols 26-30 (Z-AD on Condensed_RR): new at v1.17.0 (UW-BACKLOG BL-0003).
+    # Per-fee ancillary breakdown — splits what previously lumped into
+    # "Other LOC $" (col 15 / O) into named buckets. Other LOC $ remains as
+    # the catchall for unmatched care headers (Diabetes, Misc, etc.).
+    # Written to Rent Roll Input cols AC-AG by analyzer_rr_writer; Section
+    # M2/M4 use these for per-fee capture-rate validation against the
+    # operator's published schedule.
+    "Meal Plan $", "Scooter Fee $", "Housekeeping $", "Laundry $", "Pet $",
 ]
 
 
@@ -893,8 +901,26 @@ def normalize_rent_roll(
             )
             conc_end = row.get(conc_end_col) if conc_end_col else None
 
-            # Care bucket totals
-            bucket_sums = {"Care Level $": 0.0, "Med Mgmt $": 0.0, "Pharmacy $": 0.0, "Other LOC $": 0.0}
+            # Care bucket totals — initialized with all 9 standard buckets so
+            # bed records always have stable schema even when a particular
+            # source RR exposes none of those columns. Bucket assignment is
+            # driven by mappings.DEFAULT_CARE_BUCKETS (see classify_care_bucket).
+            # The 5 ancillary buckets (Meal Plan / Scooter Fee / Housekeeping /
+            # Laundry / Pet) added at v1.17.0 (UW-BACKLOG BL-0003) split what
+            # previously lumped into Other LOC $ so Section M2/M4 on the
+            # Analyzer can compute per-fee capture rates against the
+            # operator's published schedule.
+            bucket_sums = {
+                "Care Level $": 0.0,
+                "Med Mgmt $":   0.0,
+                "Pharmacy $":   0.0,
+                "Meal Plan $":     0.0,
+                "Scooter Fee $":   0.0,
+                "Housekeeping $":  0.0,
+                "Laundry $":       0.0,
+                "Pet $":           0.0,
+                "Other LOC $":  0.0,   # fallback catchall (Diabetes, Misc, unmatched care headers)
+            }
             for g in care_groups:
                 if g.monthly_col:
                     bucket_sums[g.bucket] = bucket_sums.get(g.bucket, 0.0) + _to_num(row.get(g.monthly_col))
@@ -950,6 +976,17 @@ def normalize_rent_roll(
                 "Med Mgmt $":         _blank_if_zero(bucket_sums.get("Med Mgmt $", 0.0)),
                 "Pharmacy $":         _blank_if_zero(bucket_sums.get("Pharmacy $", 0.0)),
                 "Other LOC $":        _blank_if_zero(bucket_sums.get("Other LOC $", 0.0)),
+                # Per-fee ancillary buckets new at v1.17.0 (UW-BACKLOG BL-0003)
+                "Meal Plan $":        _blank_if_zero(bucket_sums.get("Meal Plan $", 0.0)),
+                "Scooter Fee $":      _blank_if_zero(bucket_sums.get("Scooter Fee $", 0.0)),
+                "Housekeeping $":     _blank_if_zero(bucket_sums.get("Housekeeping $", 0.0)),
+                "Laundry $":          _blank_if_zero(bucket_sums.get("Laundry $", 0.0)),
+                "Pet $":              _blank_if_zero(bucket_sums.get("Pet $", 0.0)),
+                # Total LOC $ sums ALL buckets (Care Level + Med Mgmt + Pharmacy +
+                # Other LOC + the 5 new per-fee ancillary buckets). Total holds
+                # the same dollar amount as before v1.17.0 — the split just
+                # redistributes across more columns. Verify this against any
+                # baseline that tracks Total LOC $.
                 "Total LOC $":        _blank_if_zero(sum(bucket_sums.values())),
 
                 # --- New at v1.16.0: housing revenue + lifecycle + collection
@@ -1038,6 +1075,12 @@ def normalize_rent_roll(
             "Market PSF":        normalized["Market PSF"],
             "Actual PSF":        normalized["Actual PSF"],
             "ACH":               normalized["ACH"],
+            # --- New at v1.17.0 (cols 26-30, Z-AD of Condensed_RR sheet) ---
+            "Meal Plan $":       normalized["Meal Plan $"],
+            "Scooter Fee $":     normalized["Scooter Fee $"],
+            "Housekeeping $":    normalized["Housekeeping $"],
+            "Laundry $":         normalized["Laundry $"],
+            "Pet $":             normalized["Pet $"],
         })
     else:
         condensed = pd.DataFrame(columns=CONDENSED_COLUMNS)

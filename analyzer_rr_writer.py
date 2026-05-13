@@ -63,6 +63,8 @@ COL_A_TO_R_COUNT = 18  # 18 cols from Condensed_RR mapped to A-R
 COL_S_INDEX = 19       # Period Date column
 COL_V_INDEX = 22       # 2nd Person Rent $ column (start of v1.16.0 extension)
 COL_AB_INDEX = 28      # ACH column (end of v1.16.0 extension)
+COL_AC_INDEX = 29      # Meal Plan $ (start of v1.17.0 per-fee ancillary block)
+COL_AG_INDEX = 33      # Pet $ (end of v1.17.0 per-fee ancillary block)
 
 # The 18 source columns in the order the Analyzer's Rent Roll Input expects them
 # at cols A-R. These names must match the Condensed_RR column names exactly.
@@ -97,6 +99,22 @@ SOURCE_COLUMNS_V_TO_AB = [
     "Market PSF",         # Z
     "Actual PSF",         # AA
     "ACH",                # AB
+]
+
+# 5 new source columns at v1.17.0 (UW-BACKLOG BL-0003), mapped to Rent Roll
+# Input cols AC-AG. Per-fee ancillary breakdown — splits what previously
+# lumped into "Other LOC $" (col O) into named buckets so Section M2/M4 on
+# the Analyzer can compute per-fee capture rates against the operator's
+# published schedule. Other LOC $ (col O) remains as the catchall for
+# unmatched care headers (Diabetes, Misc, anything not in the named
+# buckets). Total LOC $ (col T formula) extended in substrate v0.1.13 to
+# include AC-AG so the per-resident total is unchanged.
+SOURCE_COLUMNS_AC_TO_AG = [
+    "Meal Plan $",        # AC
+    "Scooter Fee $",      # AD
+    "Housekeeping $",     # AE
+    "Laundry $",          # AF
+    "Pet $",              # AG
 ]
 
 
@@ -191,10 +209,13 @@ def populate_t12(
     #   - Cols A-S: source data + period date (always clear)
     #   - Cols T-U: formulas — DO NOT clear (preserved by the Analyzer substrate)
     #   - Cols V-AB: v1.16.0 extension fields (always clear)
+    #   - Cols AC-AG: v1.17.0 per-fee ancillary fields (always clear)
     for r in range(DATA_START_ROW, DATA_END_ROW + 1):
         for c in range(1, COL_S_INDEX + 1):  # cols 1-19 = A-S
             ws.cell(row=r, column=c).value = None
         for c in range(COL_V_INDEX, COL_AB_INDEX + 1):  # cols 22-28 = V-AB
+            ws.cell(row=r, column=c).value = None
+        for c in range(COL_AC_INDEX, COL_AG_INDEX + 1):  # cols 29-33 = AC-AG
             ws.cell(row=r, column=c).value = None
 
     # --- Step 2: Write the translated rent roll ---------------------------
@@ -208,6 +229,8 @@ def populate_t12(
     # v1.16.0 extension cols are optional — if a translated_df was produced
     # by a pre-v1.16.0 normalizer they won't be present. Detect + skip.
     has_v116_cols = all(c in translated_df.columns for c in SOURCE_COLUMNS_V_TO_AB)
+    # v1.17.0 per-fee ancillary cols are optional too.
+    has_v117_cols = all(c in translated_df.columns for c in SOURCE_COLUMNS_AC_TO_AG)
 
     for i, (_, row) in enumerate(translated_df.iterrows()):
         excel_row = DATA_START_ROW + i
@@ -227,6 +250,12 @@ def populate_t12(
                 ws.cell(row=excel_row, column=col_idx).value = value
             # Date formats for the date cells in this group
             ws.cell(row=excel_row, column=COL_V_INDEX + 1).number_format = "mm/dd/yyyy"  # W: Move-out Date
+        # Cols AC-AG (29-33) ← v1.17.0 per-fee ancillary fields, when available
+        if has_v117_cols:
+            for offset, src_col in enumerate(SOURCE_COLUMNS_AC_TO_AG):
+                col_idx = COL_AC_INDEX + offset
+                value = _coerce_value(row[src_col])
+                ws.cell(row=excel_row, column=col_idx).value = value
 
     # --- Step 3: Stamp property name into A3 (substrate v0.1.8 source cell)
     # Only writes when derivation produces something non-empty, so a bad
