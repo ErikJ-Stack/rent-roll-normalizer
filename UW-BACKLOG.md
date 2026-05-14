@@ -139,6 +139,12 @@ truth.
 
 ## Shipped
 
+### [BL-0015] Rent Roll Recon row 16 — GPR realignment (`$H` × occupied → `$G` × all units)
+- **Shipped in:** substrate v0.2.3 (2026-05-14)
+- **Track:** Substrate (Track 3)
+- **Originally surfaced in:** user-reported on 2026-05-12 against the populated Homestead v0.1.10 Analyzer ("Row 16 says Gross RR at 100% occupancy is $565k but the market rate total is $809k"). First implementation shipped as substrate v0.1.11 in [PR #12](https://github.com/ErikJ-Stack/rent-roll-normalizer/pull/12); PR went stale while main moved through v0.1.12 → v0.2.2, was closed unmerged + re-implemented here as v0.2.3 with the current 14-sheet anchor list and the v0.1.11 substrate number reused on main for an unrelated chart-axis fix.
+- **Summary:** Realigns `Rent Roll Recon!B16:D16` with the intent already documented in column H ("Gross contracted rates before concessions"). Old formula summed Actual Rate (`'Rent Roll Input'!$H`) over occupied units only — producing "current contracted at actual rate" rather than the Gross Potential Rent at 100% occupancy that the row's role as the underwriting anchor demands. New formula sums Market Rate (`$G`) over all units regardless of status, by care type. On Homestead populated: E16 reconciles from $565,140 → **$809,567** (IL $167k + AL $328k + MC $315k). Row 17 (effective net after concessions) is unchanged — its `H + I` is already correct because concessions are negative-signed (per [SPEC-RR.md L184](SPEC-RR.md)). A16 label rewritten to "RR Gross Potential Rent / mo  (Market × all units)" ("contracted" was misleading once vacants are included). H16 note rewritten to state GPR semantics + identify the row16-vs-row17 gap as vacancy + market-vs-actual premium ($244k on Homestead). Migration via `migrate_to_v023.py` — 3 ops, 9-check verify, idempotent. Closes the loop on the user-reported issue from 2026-05-12.
+
 ### [BL-0001] Finer ancillary Labels in `Description_Map`
 - **Shipped in:** substrate v0.2.1 (2026-05-14) + RR v1.17.3 (companion `_detect_substrate_version()` widening)
 - **Track:** Substrate (Track 3) + companion patch on RR (Track 1)
