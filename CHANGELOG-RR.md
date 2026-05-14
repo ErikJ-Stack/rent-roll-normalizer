@@ -8,6 +8,75 @@ When making a code change in a chat, add an entry here in the same commit.
 
 ---
 
+## [1.17.4] — 2026-05-14
+
+### Summary
+
+**Companion to substrate v0.2.2 + new parser-side concession-from-Notes rerouter.** Two changes bundled in the same PR per the established cross-cutting pattern:
+
+1. **`_detect_substrate_version()` sentinel addition (`app.py`)** — adds a v0.2.2+ check for the new Rent Roll Input!AH4 ("Total\nAncillary $") cell. Maintains the newest-first sentinel ordering.
+2. **`normalizer.py` — `_reroute_recurring_concessions()` post-process pass** — closes the user-feedback gap surfaced against the v0.2.1 Homestead populated workbook (2026-05-14). Concession dollars buried in Homestead's `Misc.` GL column with a human-readable explanation in `Notes` are now correctly routed to `Concession $` (col I) instead of `Other LOC $` (col O).
+
+### Why (parser change)
+
+Some operators (Homestead-format especially) post concession amounts to a `Misc.` GL column with the explanation in `Notes`, leaving the structured `Concession $` column empty. The `Misc.` GL flows into our `Other LOC $` catchall (per `_looks_care` broadening in v1.16.2). So the concession value is *captured* but lives in the wrong bucket — Section M / UW Output sees the operator as having more residual ancillary expense and less concession activity than reality.
+
+User feedback against the v0.2.1 Homestead populated workbook flagged 17 rows where `Notes` mentioned "concession" but `Concession $` was empty and `Other LOC $` was negative. Of those 17:
+- **16 are recurring** (`$XXX/mo concession`, `$XXX concession ending DATE`, `$XXX concession remaining`, `ongoing concession`, `waived CF`) — these should be in `Concession $`.
+- **1 is one-time** (`(half off $1047 concession)`) — descriptive parenthetical, leave in `Other LOC $`.
+
+### What changed (parser)
+
+**`normalizer.py`:**
+
+1. New regex constants `_RECURRING_CONCESSION_PATTERNS` and `_ONE_TIME_CONCESSION_PATTERNS` — conservative match patterns for the two classes:
+   - Recurring: 5 patterns (per-month markers, "remaining"/"ending" qualifiers, "ongoing", "waived CF").
+   - One-time: 1 pattern (`(half off ...`).
+2. New regex constant `_END_DATE_PATTERNS` — extracts `M/D/YYYY` or `M/YYYY` from "ending DATE" markers.
+3. New helpers:
+   - `_classify_concession_notes(notes) -> 'recurring' | 'one-time' | 'unknown'` — one-time markers OVERRIDE recurring.
+   - `_extract_concession_end_date(notes) -> 'M/D/YYYY' | 'M/YYYY' | ''`.
+4. New post-process function `_reroute_recurring_concessions(condensed)` — operates on the constructed Condensed_RR DataFrame. For each row where `_classify_concession_notes(Notes) == 'recurring'` AND `Other LOC $ < 0` AND `Concession $` is empty/zero:
+   - Move the negative value: `Concession $` ← `Other LOC $`, `Other LOC $` ← `0.0`.
+   - Extract end date if present, write to `Concession End Date`.
+5. The pass is called from `normalize_rent_roll()` immediately after Condensed_RR construction, before mapping audit / return.
+
+**Conservative gating** — only acts when ALL gates pass:
+- Notes literally contains the word `concession`
+- A recurring-marker pattern matches
+- No one-time marker matches
+- Other LOC $ is negative (positive Other LOC $ is something else, leave alone)
+- Concession $ is empty/zero (don't clobber operator-provided values)
+
+### Verification
+
+End-to-end smoke test against the user's source RR (`2026-04-24 Homestead Village Rent Roll v2.xlsx`):
+
+- 17 rows with "concession" in Notes
+- **16 of 16 recurring rows correctly moved** from Other LOC $ → Concession $
+- **1 of 1 one-time row correctly left alone** (A12 — Sams mom, "half off $1047")
+- **6 of 6 end dates correctly extracted** (G6: 8/31/2026, E6: 7/31/2026, E13: 7/31/2026, F6: 12/2026, C5: 8/31/2026, K14: 9/30/2026)
+
+Classifier unit tests: 25/26 pass (the one miss is an inverted-order speculative pattern not present in actual fixtures).
+
+### What didn't change
+
+- `_looks_care` keyword list (still routes `Misc.` → Other LOC $ at the bucket-routing stage).
+- Existing `detect_concession_cols()` (still detects structured concession columns from operators that use them, e.g. Salem / Briar Glen).
+- The output schema (still 30-col Condensed_RR; no new columns).
+
+### Why bundled with substrate v0.2.2
+
+Cross-cutting Track 1 (parser + version-detect) + Track 3 (substrate migration). Per the session pattern (BL-0001, BL-0003, BL-0009 all bundled), user authorized cross-cutting PRs.
+
+### Files changed
+
+- `app.py` — `_detect_substrate_version()` sentinel addition for v0.2.2; `RR_VERSION` 1.17.3 → 1.17.4
+- `normalizer.py` — concession rerouter (~95 lines: 4 helpers + 1 post-process call site)
+- (Substrate side: see `CHANGELOG-T12.md` `[Substrate template v0.2.2]` for the migration that motivated this patch.)
+
+---
+
 ## [1.17.3] — 2026-05-14
 
 ### Summary

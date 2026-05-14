@@ -1,10 +1,109 @@
 # Changelog — T12 Normalizer
 
-All notable changes to the T12 Normalizer (Track 2). Independent version stream from the Rent Roll Normalizer (Track 1, currently v1.17.3). This changelog covers T12 work only — see `CHANGELOG-RR.md` for RR releases.
+All notable changes to the T12 Normalizer (Track 2). Independent version stream from the Rent Roll Normalizer (Track 1, currently v1.17.4). This changelog covers T12 work only — see `CHANGELOG-RR.md` for RR releases.
 
 Format: each version has a section with date, summary, and per-file change notes. Newest at top.
 
 When making a code change in a T12-related chat, add an entry here in the same commit.
+
+---
+
+## [Substrate template v0.2.2] — 2026-05-14
+
+### Summary
+
+**User-feedback round against the Homestead populated v0.2.1 workbook.** Three coordinated Rent Roll Input fixes that close out the visual + structural gaps left by the v0.1.10 (cols V–AB) and v0.1.13 (cols AC–AG) column extensions. Cross-cuts with RR v1.17.4 (companion `_detect_substrate_version()` sentinel + parser-side concession-from-Notes rerouter).
+
+### What changed (migrate_to_v022.py)
+
+#### A. Format consistency on Rent Roll Input cols V–AH
+
+The v0.1.10 and v0.1.13 column extensions used a different default style than the pre-existing cols A–U:
+
+| Attribute | Pre-existing A–U | New V–AG (v0.1.10/v0.1.13) | After v0.2.2 |
+| --- | --- | --- | --- |
+| Header font size | 8 bold | 10 bold | 8 bold |
+| Data number format | `$#,##0.00` / `mm/dd/yyyy` | `General` (no formatting) | `$` for monetary, date for W |
+| Data row fill | `FFFFFFC7` (pale yellow) | `00000000` (transparent) | `FFFFFFC7` |
+| Column widths | per-col widths set | unset | per-col widths set |
+
+Step A applies the matching styling cell-by-cell: header sz=8, `$#,##0.00;"($"#,##0.00);-` on monetary cols (V, X, AC–AG, AH), `mm/dd/yyyy` on W (Move-out Date), `$#,##0.00` on Z/AA (PSF cols), pale-yellow `FFFFFFC7` data fill across all data rows 7-606, and column widths per col semantics (V=11, W=12, X=11, Y=30 for Notes text, Z/AA=10 for PSF, AB=8 for ACH flag, AC–AG=11, AH=13).
+
+Total cells modified in Step A: ~7,800 (12 cols × header + 600 data rows).
+
+#### B. Split T (Total LOC $) + add new col AH (Total Ancillary $)
+
+Pre-v0.2.2 T was a mixed-semantics rollup:
+
+```
+T = L + M + N + O + IFERROR(AC,0) + IFERROR(AD,0) + IFERROR(AE,0) + IFERROR(AF,0) + IFERROR(AG,0)
+   ── Care/LOC charges ──   ── 5 per-fee ancillary fees (added in v0.1.13) ──
+```
+
+The label "Total LOC $" no longer reflected what was in the cell. v0.2.2 splits this:
+
+- **T (Total LOC $)** reverts to pure LOC: `=IFERROR(L+M+N+O,0)`.
+- **NEW col AH (Total Ancillary $)** = `=IFERROR(IFERROR(V,0)+IFERROR(AC,0)+IFERROR(AD,0)+IFERROR(AE,0)+IFERROR(AF,0)+IFERROR(AG,0),0)` — the 2nd Person Rent + 5 per-fee ancillary cols, in one explicit sum.
+
+#### C. Rewrite U (Total Monthly Rev) for transparency
+
+Pre-v0.2.2:
+```
+U = H + IFERROR(I,0) + T + IFERROR(V,0)
+```
+The +V was needed because T didn't include V; the AC–AG were silently included via T. After step B, V is inside AH and AC–AG are no longer in T:
+
+```
+U = H + IFERROR(I,0) + T + IFERROR(AH,0)    (post-v0.2.2)
+```
+
+The math is structurally identical (V is now inside AH). The structure is now `Total Monthly Rev = Actual Rate + Concession + Total LOC + Total Ancillary` — every contributor is visible at one hop.
+
+### What changed (RR companion v1.17.4 — bundled in this PR)
+
+**`_detect_substrate_version()` sentinel addition (`app.py`):** prepended to the fallback chain (newest-first):
+- `Rent Roll Input!AH4` contains `"Total"` + `"Ancillary"` → `v0.2.2+`
+
+**`normalizer.py` — concession-from-Notes rerouter:** new `_reroute_recurring_concessions()` post-process pass that detects negative `Other LOC $` values whose Notes column contains a recurring-concession marker (`$XXX/mo concession`, `$XXX concession ending DATE`, `$XXX concession remaining`, `ongoing concession`, `waived CF`) and **moves the value from Other LOC $ to Concession $** (with end-date extraction into `Concession End Date` when present). One-time / parenthetical mentions like `(half off $1047 concession)` are explicitly left alone. See `CHANGELOG-RR.md` `[1.17.4]` for full detail.
+
+### Idempotency
+
+Gate checks both `Cover!B8 == "v0.2.2"` AND `Rent Roll Input!AH4 == "Total\nAncillary $"`. Re-run on already-migrated workbook is a no-op.
+
+### Verification
+
+12/12 verification checks pass on the bundled Analyzer:
+
+```
+   1. Cover!B8 = 'v0.2.2'                                              : True
+   2. All 14 AZ4 = v0.2.2                                              : True (14 sheets)
+   3. AH4 sentinel = 'Total\nAncillary $'                              : True
+   4. T7 = pure LOC (L+M+N+O, no AC..AG)                               : True
+   5. AH7 = V+AC+AD+AE+AF+AG (Total Ancillary)                         : True
+   6. U7 = H+I+T+AH (rewritten, no +V)                                 : True
+   7. V4 header font size = 8 (was 10)                                 : True
+   8. AC7 number_format includes $ sign                                : True
+   9. AC7 fill = FFFFFFC7 (pale yellow)                                : True
+  10. W7 number_format = mm/dd/yyyy (Move-out Date)                    : True
+  11. Column widths set on V-AH per spec                               : True
+  12. T606 (last row) also rewritten                                   : True
+```
+
+### Files changed
+
+- `tools/migration/migrate_to_v022.py` — new idempotent migration script (~470 lines)
+- `ALF_Financial_Analyzer_Only.xlsx` — bundled Analyzer migrated to v0.2.2
+- `app.py` — sentinel addition for v0.2.2 + RR_VERSION bump
+- `normalizer.py` — concession-from-Notes rerouter
+- `CHANGELOG-T12.md` — this entry
+- `CHANGELOG-RR.md` — companion `[1.17.4]` entry
+- `SPEC-T12.md` / `SPEC-RR.md` — current-version lines
+- `README.md` — versions table + migration script listing
+- `CLAUDE.md` — Last updated line + current substrate version
+
+### Out of scope (carry-forwards opened)
+
+None. The user-feedback issues (formatting, formula transparency, concession routing) are all addressed in this release.
 
 ---
 
