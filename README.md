@@ -10,7 +10,7 @@ A Streamlit app that turns a senior-housing rent roll AND a T12 financial statem
 
 | Stream | Version | Last updated |
 | --- | --- | --- |
-| RR Normalizer (`RR_VERSION`) | v1.17.1 | 2026-05-14 |
+| RR Normalizer (`RR_VERSION`) | v1.17.2 | 2026-05-14 |
 | T12 Normalizer (`T12_VERSION`) | v0.2.1 | 2026-05-11 |
 | Bundled Analyzer substrate | v0.2.0 | 2026-05-14 |
 
@@ -99,7 +99,7 @@ rent_roll_app/
 │
 ├── t12_normalizer.py                   # T12 format registry + extractors (Yardi / MRI / BrokerFinancialSummary)
 ├── t12_normalizer_writer.py            # Writes parsed T12 GL detail into the Analyzer's T12 Input sheet (Track 2)
-├── t12_translator.py                   # Translates Condensed_RR values into the Analyzer's data-validation vocabulary (Track 1)
+├── analyzer_rr_translator.py           # Translates Condensed_RR values into the Analyzer's data-validation vocabulary (Track 1; renamed from t12_translator.py on 2026-05-14)
 ├── analyzer_rr_writer.py               # Writes the translated RR into the Analyzer's Rent Roll Input sheet (Track 1; renamed from t12_writer.py on 2026-05-10)
 ├── property_name.py                    # Cross-track helper: derives property name from filename for both writers
 │

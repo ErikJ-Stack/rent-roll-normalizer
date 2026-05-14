@@ -47,7 +47,7 @@ from t12_normalizer_writer import (
     T12NormalizerCapacityError,
     populate_t12_input,
 )
-from t12_translator import translate_for_t12
+from analyzer_rr_translator import translate_for_t12
 from analyzer_rr_writer import T12CapacityError, populate_t12
 from writer import write_output
 
@@ -59,7 +59,7 @@ from writer import write_output
 APP_VERSION = "1.14.0"            # alias for RR_VERSION; kept for back-compat
 APP_LAST_UPDATED = "2026-05-08"   # alias for RR_LAST_UPDATED
 
-RR_VERSION = "1.17.1"
+RR_VERSION = "1.17.2"
 RR_LAST_UPDATED = "2026-05-14"
 
 T12_VERSION = "0.2.1"

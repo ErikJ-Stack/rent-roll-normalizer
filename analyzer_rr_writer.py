@@ -167,7 +167,7 @@ def populate_t12(
 
     Args:
         t12_bytes: Raw bytes of the user-uploaded T12 .xlsx file
-        translated_df: DataFrame from t12_translator.translate_for_t12()
+        translated_df: DataFrame from analyzer_rr_translator.translate_for_t12()
             — must have the 18 source columns in SOURCE_COLUMNS_A_TO_R
         period_date: Date written to col S on every populated row. Required.
         source_filename: original RR filename. When non-empty, the derived

@@ -8,6 +8,52 @@ When making a code change in a chat, add an entry here in the same commit.
 
 ---
 
+## [1.17.2] — 2026-05-14
+
+### Summary
+
+**UW-BACKLOG BL-0010 closed.** Pure refactor: module rename `t12_translator.py` → `analyzer_rr_translator.py`. Completes the Track 1 file disambiguation that began on 2026-05-10 (when `t12_writer.py` was renamed to `analyzer_rr_writer.py`). No behavioral change — `translate_for_t12()` signature, translation tables, and pass-through semantics are all unchanged.
+
+### Why
+
+The `t12_` prefix is a historical artifact from when the destination workbook was a standalone T12 intake template. Once the bundled-Analyzer flow shipped (RR v1.12.0), the prefix on Track 1 modules became misleading — a translator that converts RR vocabulary into Analyzer vocabulary has nothing to do with T12 GL detail. The 2026-05-10 rename of the writer half left the translator half stranded with the old name; this finishes the pair so future readers don't wonder which Track owns which file.
+
+### What changed
+
+**Module rename — `t12_translator.py` → `analyzer_rr_translator.py`:** done via `git mv` to preserve history. File contents unchanged.
+
+**Import path — `app.py`:** single-line update at line 50, `from t12_translator import translate_for_t12` → `from analyzer_rr_translator import translate_for_t12`.
+
+**Docstring reference — `analyzer_rr_writer.py`:** in `populate_t12()` docstring, `DataFrame from t12_translator.translate_for_t12()` → `DataFrame from analyzer_rr_translator.translate_for_t12()`.
+
+**Version bump — `app.py`:** `RR_VERSION` `"1.17.1"` → `"1.17.2"`.
+
+### What didn't change
+
+- `translate_for_t12()` function name (still the public entry point — renaming would touch every caller without a clarity gain).
+- `T12CapacityError` exception class exported by `analyzer_rr_writer.py` (kept for the same "rename surgical" reason recorded on 2026-05-10).
+- Function name `populate_t12()` on `analyzer_rr_writer.py` (also a historical artifact; renaming is a separate follow-up, not bundled here).
+- Translation tables (`STATUS_MAP`, `APT_TYPE_MAP`, `CARE_LEVEL_MAP`, `PAYER_MAP`) — verbatim.
+
+### Verification
+
+- Static check: `grep -r "t12_translator" .` returns only changelog / spec / docs references describing the historical name. No live imports.
+- Import smoke test: `python -c "from analyzer_rr_translator import translate_for_t12; print(translate_for_t12)"` succeeds; original `from t12_translator import ...` now raises `ModuleNotFoundError` as expected.
+- No substrate change, no migration script needed.
+
+### Files changed
+
+- `t12_translator.py` → `analyzer_rr_translator.py` — file rename (git mv)
+- `app.py` — import path; `RR_VERSION` bump
+- `analyzer_rr_writer.py` — docstring reference
+- `CLAUDE.md` — module naming gotcha table + paragraph (now reflects 2-rename history); Last updated line
+- `SPEC-RR.md` — file inventory; current-version line; Track 1 stamp
+- `SPEC-T12.md` — naming paragraph at line 41
+- `README.md` — project layout listing; versions table row
+- `UW-BACKLOG.md` — BL-0010 moved Pending → Shipped
+
+---
+
 ## [1.17.1] — 2026-05-14
 
 ### Summary
