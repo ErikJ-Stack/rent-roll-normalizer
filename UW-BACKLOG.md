@@ -46,25 +46,6 @@ truth.
 
 *(BL-0002 and BL-0008 moved to Shipped — see below.)*
 
-### [BL-0009] Branch 2 — Handoff readiness (UW Export, pre-export gate, metadata header)
-- **Track:** Substrate (Track 3) · target **substrate v0.2.0**
-- **Surfaced in:** CLAUDE.md "Open carry-forwards" (long-standing Track 3
-  roadmap item)
-- **Description:** Per the Track 3 roadmap, the four-branch plan is:
-  Branches 1+4 (correctness + substrate, closed in v0.1.6); Branch 3
-  (analytical coverage, closed in v0.1.8 + extended in v0.1.10/v0.1.12);
-  Branch 2 (Handoff readiness, **still open**). Includes:
-  - **Pre-export gate**: validates required cells are populated; no formulas
-    showing `#REF` / `#NAME` / `#N/A`; period date set; property name stamped.
-  - **UW Export sheet**: values-only mirror of `UW Output` for clean
-    copy-paste into the downstream full-underwriting sheet (which doesn't
-    consume formulas — only values).
-  - **Metadata header on UW Export**: deal name, period date, RR + T12
-    versions, source filenames, run timestamp. Provides downstream sheet a
-    full audit trail.
-- **Scope:** larger feature — substantial Track 3 work. Likely the v0.2.0
-  flagship release.
-
 ### [BL-0010] Module rename — `t12_translator.py` → `analyzer_rr_translator.py`
 - **Track:** Refactor (cross-cutting) · target **whenever bundled**
 - **Surfaced in:** 2026-05-10 partial rename (`t12_writer.py` →
@@ -83,6 +64,25 @@ truth.
 ---
 
 ## Shipped
+
+### [BL-0009] Branch 2 — Handoff readiness (UW Export + Pre-Export Gate + metadata header)
+- **Shipped in:** substrate v0.2.0 (2026-05-14, flagship release)
+- **Track:** Substrate (Track 3)
+- **Originally surfaced in:** CLAUDE.md "Open carry-forwards" — long-standing
+  Track 3 roadmap item from the four-branch plan.
+- **Summary:** Three coordinated additions ship the final piece of the
+  Track 3 roadmap. (1) New **`UW Export` sheet** at index 8 — title +
+  italic instructions + 5-row metadata header (Property / RR period /
+  T12 period / Substrate version / Generated timestamp) + 71-row × 8-col
+  values-only mirror of UW Output via `='UW Output'!{cell}` formulas.
+  When opened in Excel the cells evaluate to values; downstream consumer
+  copies-as-values into their template. (2) New **Pre-Export Gate**
+  section on Workbook Health (rows 46-52) aggregating existing V1-V8
+  validation checks into four P-checks plus a single ✓/⚠ "READY FOR
+  EXPORT" aggregate cell at row 52. (3) **Workbook Map extension**
+  adding `UW Export` row at Workbook Health row 19. **The four-branch
+  Track 3 roadmap is now fully closed** (Branches 1+4 in v0.1.6, Branch 3
+  in v0.1.8 through v0.1.14, Branch 2 in this v0.2.0 release).
 
 ### [BL-0008] Substrate version-detection in `app.py`
 - **Shipped in:** RR v1.17.1 (2026-05-14)
