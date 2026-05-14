@@ -22,7 +22,118 @@ truth.
 
 ## Pending
 
-*(empty — all BL-NNNN items closed as of 2026-05-14)*
+### [BL-0011] Function/class renames — `populate_t12()` → `populate_rr_input()` + `T12CapacityError` → `AnalyzerRRCapacityError`
+- **Track:** Refactor (Track 1) · target **whenever bundled**
+- **Surfaced in:** RR v1.17.2 (BL-0010) `analyzer_rr_writer.py` rename — the
+  CLAUDE.md note explicitly deferred the function/class renames as a
+  "separate, more invasive follow-up."
+- **Description:** The 2026-05-10 file rename (`t12_writer.py` →
+  `analyzer_rr_writer.py`) and the 2026-05-14 file rename
+  (`t12_translator.py` → `analyzer_rr_translator.py`) together completed
+  the Track 1 file disambiguation. Two `t12_*` symbols inside those
+  files are still misnamed and were left untouched to keep the file
+  renames surgical:
+    1. `populate_t12(...)` on `analyzer_rr_writer.py` — populates the
+       Analyzer's `Rent Roll Input` sheet, NOT the `T12 Input` sheet.
+       Rename to `populate_rr_input()` mirrors the partner
+       `populate_t12_input()` on `t12_normalizer_writer.py` (which
+       correctly populates `T12 Input`).
+    2. `T12CapacityError` on `analyzer_rr_writer.py` — exception class
+       raised when the rent roll exceeds the Rent Roll Input capacity
+       (DATA_END_ROW - DATA_START_ROW + 1). Rename to
+       `AnalyzerRRCapacityError`.
+- **Scope:** ~5 line updates across `analyzer_rr_writer.py` (def +
+  class), `app.py` (import + 1-2 call sites), `analyzer_rr_translator.py`
+  (probably nothing — translator doesn't call writer), CHANGELOG-RR /
+  CLAUDE.md / SPEC-RR (file inventory + "Module naming gotcha" table
+  on CLAUDE.md). No behavioral change. No substrate change.
+- **Why deferred from BL-0010:** function-rename ripples touch every
+  caller; class-rename ripples touch every except-clause. BL-0010 was
+  scoped to "file rename + import + docs" deliberately. Bundle this
+  with the next non-emergency Track 1 PR.
+
+### [BL-0012] Section M — Misc/Diabetes credit reconciliation against T12 `Concessions & specials`
+- **Track:** Substrate (Track 3) · target **substrate v0.2.2+**
+- **Surfaced in:** RR v1.17.0 (BL-0003) "Side observation worth tracking"
+  in CHANGELOG-RR.md.
+- **Description:** Homestead's residual `Other LOC $` post-split is
+  **-$12,146.75** (Diabetes + Misc, both partially negative — net
+  credit). The residual was negative before BL-0003 too (entire OCR was
+  -$9,966.75); the per-fee split just makes the negative-net portion
+  visible as a residual after attributing the named buckets. The
+  hypothesis is that the negative residual reflects discount/credit
+  postings that operators sometimes route through Other LOC instead of
+  the formal `Concessions` GL — but Section M5 currently treats
+  negative residuals the same as positive, so it surfaces a misleading
+  "✓ Misc. income share within band" note when the bucket is actually
+  negative.
+- **Scope:** add a Section M6 (or extend M5) on Rent Roll Recon that
+  compares the residual `Other LOC $` (when negative) against the
+  T12 `Concessions & specials` Label total. If the negative residual
+  is plausible as misposted concessions, flag a reconciliation note;
+  if not, surface a data-quality warning. Rough implementation: ~5-10
+  cells on Rent Roll Recon below the existing Section M, conditional
+  formula-driven with a ⚠ trigger when |negative residual| > 10% of
+  T12 Concessions absolute value.
+- **Conditional on:** observing the same negative-residual pattern in
+  one more Homestead-format deal (or any non-Homestead operator). If
+  it's idiosyncratic to this single Homestead fixture, defer
+  indefinitely. If it persists, ship as part of substrate v0.2.2.
+- **Depends on:** nothing structural. Reads existing Section M data
+  + existing T12 Raw Data `Concessions & specials` Label.
+
+### [BL-0013] README.md modernization — T12 + bundled-Analyzer framing
+- **Track:** Documentation (cross-cutting) · target **whenever bundled**
+- **Surfaced in:** RR v1.14.0 (CHANGELOG-RR.md line 537-538) and earlier
+  releases. Flagged as a known carry-forward across multiple chats.
+- **Description:** README.md was written when this repo was a
+  RR-Normalizer-only project. It doesn't mention:
+    1. The T12 Normalizer pipeline (Track 2) — `t12_normalizer.py` /
+       `t12_normalizer_writer.py` / the four format-registry classes.
+    2. The bundled-Analyzer flow that became default in RR v1.12.0 —
+       app no longer requires a user-uploaded Analyzer; the bundled
+       template at `ALF_Financial_Analyzer_Only.xlsx` is the default
+       destination.
+    3. The substrate version stream (currently v0.2.1) and the
+       migration script chain in `tools/migration/`.
+    4. UW-BACKLOG.md as the forward-looking change list.
+    5. The four-branch Track 3 roadmap (Correctness / Handoff /
+       Analytical coverage / Substrate) and its closure status.
+- **Scope:** rewrite README.md "What this is" + add a new "Pipelines"
+  section + add a "Bundled Analyzer" section + cross-reference
+  CLAUDE.md for the contributor onboarding details (no need to
+  duplicate). Versions table at top is already current.
+- **Why low-pri:** README is for prospective contributors / external
+  readers; both CLAUDE.md and the SPECs are accurate and that's what
+  any active session reads first. Worth doing before any external
+  visibility push.
+
+### [BL-0014] CLAUDE.md hygiene — refresh "Open carry-forwards" + expand openpyxl quirk #4
+- **Track:** Documentation (Track 3-adjacent) · target **whenever bundled**
+- **Surfaced in:** This sweep (2026-05-14, post-substrate v0.2.1).
+- **Description:** Two CLAUDE.md sections drifted:
+    1. **"Open carry-forwards (as of 2026-05-13, post-substrate
+       v0.1.12)"** — header date is stale; substrate is now v0.2.1.
+       Two bullets are stale-or-resolved: "Branch 2 — Handoff
+       readiness" closed in BL-0009 (substrate v0.2.0), and
+       "Substrate version-detection bug suspected" closed in BL-0008
+       (RR v1.17.1) with regex further widened in BL-0001 companion
+       (RR v1.17.3). Section can be condensed to point at UW-BACKLOG
+       as the single source of truth, with the historical "Closed"
+       bullets retained for traceability.
+    2. **openpyxl quirks #4** — currently reads "Lookbehind regex
+       must include colons to catch range endpoints (`F15:Q15`)."
+       BL-0001's migration surfaced the dual issue: the unqualified-
+       ref regex ALSO catches qualified-range endpoints
+       (`T12_Calc!$N$1:$N$500`'s `$N$500` falls outside the
+       qualified-pattern's first-cell match), causing accidental
+       row-shifts on cross-sheet range endpoints. The migration
+       worked around it by capturing template formulas AFTER the
+       shift sweep — that pattern should be documented as the
+       canonical fix, not buried in v0.2.1's CHANGELOG.
+- **Scope:** ~30-line edit to CLAUDE.md. No code change.
+- **Why deferred:** docs hygiene, no consumer-visible impact. Bundle
+  with the next CLAUDE.md edit (probably the next migration PR).
 
 ---
 
