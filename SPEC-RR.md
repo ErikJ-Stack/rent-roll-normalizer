@@ -6,7 +6,7 @@
 **Repo:** <https://github.com/ErikJ-Stack/rent-roll-normalizer> (public)
 **Owner:** Erik J (`Erikjayj@gmail.com`, GitHub: `ErikJ-Stack`)
 **Stack:** Python · Streamlit · pandas · openpyxl · Streamlit Community Cloud (free tier)
-**Current version:** v1.17.0 (2026-05-13) — **UW-BACKLOG BL-0003 closed**: RR Input expansion. Per-fee ancillary columns at `Rent Roll Input!AC-AG` (`Meal Plan $` / `Scooter Fee $` / `Housekeeping $` / `Laundry $` / `Pet $`). Splits what previously lumped into `Other LOC $` (col O) — Other LOC remains as the catchall (Diabetes, Misc, anything unmatched). Total LOC $ unchanged per-resident; just distributed across more columns. `mappings.py` adds 8 new bucket-routing rules; `normalizer.py` `bucket_sums` + bed record + CONDENSED_COLUMNS extended (25 → 30); `analyzer_rr_writer.py` writes the new fields. Cross-cutting **with substrate v0.1.13** (Track 3 — see `CHANGELOG-T12.md`) which adds the new RRI cols and rewrites Section M2/M4 to use universal `INDIRECT` formulas off a new "RR Input Col" mapping in M1. Prior: v1.16.2 (2026-05-13) `_looks_care` keyword expansion (BL-0007).
+**Current version:** v1.17.1 (2026-05-14) — Patch (UW-BACKLOG BL-0008 closed): `_detect_substrate_version()` rewritten to read `Cover!B8` (canonical version stamp since v0.1.4) as the primary source, with per-version sentinel-cell fallback for damaged stamps. Was capped at `v0.1.5` since v1.12.0. Cross-cuts with substrate v0.1.15 (BL-0002 closed — V5 chart empty-state UX) — bundled in the same PR. Prior: v1.17.0 (2026-05-13) RR Input expansion with per-fee ancillary columns at AC-AG (BL-0003).
 
 ---
 
@@ -24,7 +24,7 @@ The Analyzer then drives the underwriting analysis (P&L, scenarios, returns) —
 * **Track 1 — Rent Roll Normalizer** (this document) — RR parsing, RR writer, Streamlit UI shell, Analyzer source resolution, period-date detection.
 * **Track 2 — T12 Normalizer** (`SPEC-T12.md`) — T12 parser (Yardi + MRI format registry), T12 writer (`T12 Input` sheet), `Description_Map` lookup, UNMATCHED matcher form.
 
-Both tracks ship in the same `app.py` and write into the same Analyzer workbook, but they have independent version streams. **Track 1 is at v1.17.0; Track 2 is at v0.2.1; bundled Analyzer substrate is at v0.1.14.**
+Both tracks ship in the same `app.py` and write into the same Analyzer workbook, but they have independent version streams. **Track 1 is at v1.17.1; Track 2 is at v0.2.1; bundled Analyzer substrate is at v0.1.15.**
 
 A persistent forward-looking backlog of UW workbook changes lives at [`UW-BACKLOG.md`](UW-BACKLOG.md). Add items there when a release surfaces a downstream need; close items by moving to the `Shipped` section. Cross-references use `BL-NNNN` IDs that stay stable across releases.
 

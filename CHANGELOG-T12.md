@@ -1,10 +1,81 @@
 # Changelog — T12 Normalizer
 
-All notable changes to the T12 Normalizer (Track 2). Independent version stream from the Rent Roll Normalizer (Track 1, currently v1.17.0). This changelog covers T12 work only — see `CHANGELOG-RR.md` for RR releases.
+All notable changes to the T12 Normalizer (Track 2). Independent version stream from the Rent Roll Normalizer (Track 1, currently v1.17.1). This changelog covers T12 work only — see `CHANGELOG-RR.md` for RR releases.
 
 Format: each version has a section with date, summary, and per-file change notes. Newest at top.
 
 When making a code change in a T12-related chat, add an entry here in the same commit.
+
+---
+
+## [Substrate template v0.1.15] — 2026-05-14
+
+### Summary
+
+**UW-BACKLOG BL-0002 closed** — V5 chart empty-state UX. When a source rent roll has no per-bed acuity tier data (Homestead-style broker-condensed formats, or flat-rate AL operators), the AL Acuity Mix doughnut on `T12 Analytics` previously rendered an empty frame with 8 zero-value slices in the legend, leaving the analyst with no in-workbook context for why. Two coordinated tweaks fix this without restructuring the chart or adding new sheets.
+
+Companion to **RR v1.17.1** (UW-BACKLOG BL-0008 — version detection rewrite). Both ship in the same PR.
+
+### What changed (migrate_to_v0115.py)
+
+- **A. Blank D59:D66 when no acuity data** — wraps the 8 existing `IFERROR(SUMIFS(...), 0)` formulas at `Rent Roll Recon!D59:D66` so they return `""` (empty) when `$B$67 = 0` (zero occupied AL beds with any acuity tier filled in):
+  ```
+  Old:  =IFERROR(SUMIFS(...), 0)
+  New:  =IF($B$67=0, "", IFERROR(SUMIFS(...), 0))
+  ```
+  Doughnut charts treat empty cells as "no slice" — V5 now renders as a true empty frame instead of 8 zero-value slices with legend labels. Analyst-customized SUMIFS (if any) survive the migration verbatim because the wrapper splices in the inner formula unchanged.
+
+- **B. Style the existing V5 conditional note at `T12 Analytics!K45`** — the cell already contains (since v0.1.8) a 3-branch `IF` formula whose empty-state branch returns `"Property has no AL acuity data — flat-rate AL or unpopulated."`. The note was visible but visually identical to a label. v0.1.15 adds:
+  - **Bold font** (Calibri 10 bold, dark text)
+  - **Pale yellow fill** (`#FFF2CC`) — matches the warning palette used by other Workbook Health and Section M conditional notes
+  - **Left + wrap_text alignment**
+
+  The formula itself is **untouched** — only the styling changes. When the formula returns the `✓` branch (acuity data present), the cell is still bold + yellow, which is fine: the ✓ now reads as a confirmation banner. The cosmetic mismatch is the tradeoff for not needing conditional formatting (which openpyxl's formula-based CF support is unreliable for and would have ballooned the migration scope).
+
+- **C. Stamp** `Cover!B8` and 13 `AZ4` anchors to `v0.1.14` → `v0.1.15`.
+
+### Why option (a) instead of (b) or (c) from the backlog
+
+The original BL-0002 entry listed three options:
+- (a) Accept and document — V5 only useful when source has acuity
+- (b) Fall back to "Care Level $ grouped by Care Type" when no acuity
+- (c) Hide chart conditionally
+
+Implementation analysis during this release:
+- **(b)** would create useful content for *flat-rate AL operators* (some Care Level $ data, no acuity tiers) but is **not a fix for Homestead specifically** — Homestead has $0 Care Level $ total across all 176 beds (broker format doesn't expose per-bed LOC). A Care Type fallback chart would also be empty for Homestead.
+- **(c)** "hide the chart" — openpyxl's chart object doesn't expose a "hide if all-zero data" toggle. The closest available primitive is the `plotVisOnly` attribute, which only controls how hidden source cells are plotted; the chart frame stays rendered. A real hide would require chart XML manipulation we'd want to avoid.
+- **(a)** with **strengthened styling** is the lowest-risk improvement that ships the user-visible benefit (clear in-workbook context for empty V5) without changing chart structure or data flow.
+
+When a future deal surfaces a flat-rate-AL fixture (Care Level $ > 0 but no acuity), revisit BL-0002-style fallback content as a follow-up.
+
+### Idempotency
+
+Gate (`is_already_v0115()`) checks BOTH the version stamp AND that `Rent Roll Recon!D59` already starts with the v0.1.15 wrapper prefix `=IF($B$67=0,"",`. Re-runs on partial-state files safely re-apply.
+
+### Verification
+
+7-check verification block: Cover!B8 stamped, all 13 AZ4 stamped, all 8 acuity-data cells wrapped (D59:D66), K45 note bold, K45 note fill = `FFFFF2CC`, K45 note styling check (combined), K45 note formula intact.
+
+Migration verified end-to-end on:
+- **Bundled v0.1.14 → v0.1.15**: 7/7 checks pass. File size 194,732 → 194,779 bytes (+47 bytes — minimal, consistent with 8 formula wraps + 1 cell style change + 14 stamps).
+- **User's populated Homestead workbook** chained `v0.1.10 → v0.1.12 → v0.1.13 → v0.1.14 → v0.1.15` — Cover!B8 reads `v0.1.15`, D59 formula carries the new wrapper, K45 styled bold + yellow.
+- **Idempotency**: re-running on a v0.1.15 file exits cleanly with `"Workbook is already at v0.1.15. No-op (will re-save)."`
+
+### Companion (RR v1.17.1)
+
+Bundled in the same PR — see [CHANGELOG-RR.md](CHANGELOG-RR.md) `[1.17.1]` for the RR-side `_detect_substrate_version()` rewrite (BL-0008).
+
+### Files changed
+
+- `ALF_Financial_Analyzer_Only.xlsx` — bundled Analyzer migrated to v0.1.15
+- `tools/migration/migrate_to_v0115.py` — new idempotent migration script
+- `SPEC-T12.md` — current-version line
+- `SPEC-RR.md` — Track-versions inline reference
+- `README.md` — versions table + migration script listing
+- `CLAUDE.md` — version references
+- `UW-BACKLOG.md` — `BL-0002` + `BL-0008` moved to Shipped
+- `CHANGELOG-T12.md` — this entry
+- `CHANGELOG-RR.md` — `[1.17.1]` entry
 
 ---
 
