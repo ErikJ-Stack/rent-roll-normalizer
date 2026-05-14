@@ -2,7 +2,7 @@
 
 > Onboarding doc for any Claude session (chat or Claude Code) working on this repo. Read this first — it points to canonical truth and surfaces facts that previously had to be grubbed for.
 
-**Last updated:** 2026-05-14 (after substrate v0.2.0 flagship — BL-0009 Branch 2 Handoff readiness closed: new `UW Export` sheet + Pre-Export Gate on Workbook Health + Workbook Map extension. Four-branch Track 3 roadmap now fully closed.)
+**Last updated:** 2026-05-14 (after RR v1.17.2 — BL-0010 module rename `t12_translator.py` → `analyzer_rr_translator.py`, finishing the 2026-05-10 Track 1 file disambiguation. Substrate still v0.2.0.)
 
 ---
 
@@ -53,16 +53,16 @@ The repo runs three parallel tracks. They share an Analyzer but are otherwise in
 | Current code version | T12 v0.2.1 |
 | Current substrate version | v0.2.0 |
 
-**Module naming gotcha (verified 2026-05-10).** Four `t12_*` files exist and they are NOT duplicates — the `t12_` prefix originally meant "operates on the T12-shaped destination workbook" (which is now the Analyzer), not "operates on T12 data." Every one is imported by `app.py` and serves a distinct role:
+**Module naming gotcha (updated 2026-05-14 after BL-0010).** Four modules historically shared a `t12_` prefix because the destination workbook was originally a standalone T12 intake template — the prefix meant "operates on the T12-shaped destination workbook," not "operates on T12 data." Once the bundled Analyzer flow shipped (RR v1.12.0) the prefix became misleading. The two Track 1 modules have now been renamed; the remaining `t12_*` files are the legitimate T12-data modules. All four are imported by `app.py` and serve distinct roles:
 
 | File | Function | Role |
 | --- | --- | --- |
-| `t12_translator.py` | `translate_for_t12()` | Translates Condensed_RR vocabulary → Analyzer data-validation vocabulary (e.g. `1BR` → `1 Bedroom`). RR-side (Track 1). |
+| `analyzer_rr_translator.py` | `translate_for_t12()` | Translates Condensed_RR vocabulary → Analyzer data-validation vocabulary (e.g. `1BR` → `1 Bedroom`). RR-side (Track 1). Was named `t12_translator.py` until 2026-05-14 (BL-0010) — see CHANGELOG-RR.md for the rename. |
 | `analyzer_rr_writer.py` | `populate_t12()` | Writes the translated RR into the Analyzer's `Rent Roll Input` sheet. RR-side (Track 1). Was named `t12_writer.py` until 2026-05-10 — see CHANGELOG-RR.md and journal.md for the rename. The exception class it exports is still `T12CapacityError` (preserved to keep the rename surgical; could be renamed to `AnalyzerRRCapacityError` in a follow-up). |
 | `t12_normalizer.py` | `parse_t12()` | Parses raw T12 financial statements (Yardi / MRI / BrokerFinancialSummary format registry). T12-side (Track 2). |
 | `t12_normalizer_writer.py` | `populate_t12_input()` | Writes parsed T12 GL detail into the Analyzer's `T12 Input` sheet. T12-side (Track 2). |
 
-If a future chat is tempted to delete one as "duplicate," check `app.py` lines 46-51 and 795-806 — all four are wired into the orchestration. The 2026-05-10 rename of `t12_writer.py` → `analyzer_rr_writer.py` was the first pass at disambiguation; the partner file `t12_translator.py` could similarly be renamed to `analyzer_rr_translator.py` if the symmetry becomes important.
+If a future chat is tempted to delete one as "duplicate," check `app.py` lines 46-51 and 795-806 — all four are wired into the orchestration. The function name `populate_t12()` on `analyzer_rr_writer.py` is also a historical artifact (it populates Rent Roll Input, not T12 Input) — leave it for now; renaming the function is a separate, more invasive follow-up.
 
 ### Track 3 — Analyzer optimization (workbook-only, no code)
 

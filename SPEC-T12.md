@@ -38,7 +38,7 @@ There are two writer modules in this repo. They handle different inputs and writ
 - **`analyzer_rr_writer.py`** — Track 1 module. Writes **rent roll** data (Condensed_RR) into the `Rent Roll Input` sheet of the Analyzer. Was named `t12_writer.py` until 2026-05-10 (when the destination workbook was a standalone T12 intake template — predates the bundled-Analyzer-by-default flow that shipped in RR v1.12.0).
 - **`t12_normalizer_writer.py`** — Track 2 module (shipped in v0.1.0). Writes **T12 GL detail** data into the `T12 Input` sheet of the Analyzer.
 
-The exception class `T12CapacityError` exported by `analyzer_rr_writer.py` retains its old name to keep the rename surgical; could be renamed to `AnalyzerRRCapacityError` in a follow-up. The companion `t12_translator.py` (Track 1; translates Condensed_RR vocabulary into the Analyzer's data-validation vocabulary) is the natural next rename target — `analyzer_rr_translator.py` — if the symmetry becomes important. See `CLAUDE.md` "Module naming gotcha" for the full file-by-file disambiguation.
+The exception class `T12CapacityError` exported by `analyzer_rr_writer.py` retains its old name to keep the rename surgical; could be renamed to `AnalyzerRRCapacityError` in a follow-up. The companion Track 1 module `analyzer_rr_translator.py` (translates Condensed_RR vocabulary into the Analyzer's data-validation vocabulary) was renamed from `t12_translator.py` on 2026-05-14 (UW-BACKLOG BL-0010), completing the Track 1 file disambiguation. See `CLAUDE.md` "Module naming gotcha" for the full file-by-file disambiguation.
 
 ---
 

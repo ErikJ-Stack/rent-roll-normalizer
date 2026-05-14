@@ -44,26 +44,27 @@ truth.
   mutually amplifying — when both ship, Section M validates *both* sides of
   the ancillary revenue picture.
 
-*(BL-0002 and BL-0008 moved to Shipped — see below.)*
-
-### [BL-0010] Module rename — `t12_translator.py` → `analyzer_rr_translator.py`
-- **Track:** Refactor (cross-cutting) · target **whenever bundled**
-- **Surfaced in:** 2026-05-10 partial rename (`t12_writer.py` →
-  `analyzer_rr_writer.py`); the partner module was deferred.
-- **Description:** Pair to the 2026-05-10 rename. `t12_translator.py`
-  translates `Condensed_RR` vocabulary into the Analyzer's data-validation
-  vocabulary — RR-side concern, despite the historical `t12_` prefix.
-  Rename via `git mv`, update imports in `app.py`. The exception class
-  `T12CapacityError` exported by `analyzer_rr_writer.py` retains its old
-  name for the same "keep the rename surgical" reason — could be renamed
-  to `AnalyzerRRCapacityError` in the same commit.
-- **Scope:** 1 `git mv` + ~5 line updates across `app.py` (import) +
-  `SPEC-RR.md` (file inventory) + `CLAUDE.md` (module naming gotcha
-  paragraph).
+*(BL-0002, BL-0008, and BL-0010 moved to Shipped — see below.)*
 
 ---
 
 ## Shipped
+
+### [BL-0010] Module rename — `t12_translator.py` → `analyzer_rr_translator.py`
+- **Shipped in:** RR v1.17.2 (2026-05-14)
+- **Track:** Refactor (Track 1)
+- **Originally surfaced in:** 2026-05-10 partial rename (`t12_writer.py` →
+  `analyzer_rr_writer.py`); the partner module was deferred to "whenever
+  bundled."
+- **Summary:** `git mv` rename. Single live import in `app.py` line 50
+  updated; one docstring reference in `analyzer_rr_writer.py` updated.
+  Function name `translate_for_t12()`, translation tables, and the
+  exception class `T12CapacityError` (still exported by
+  `analyzer_rr_writer.py`) all retained for surgical scope. CLAUDE.md
+  "Module naming gotcha" rewritten to reflect that the Track 1 file
+  disambiguation is now complete; only the legitimate Track 2 `t12_*`
+  files (`t12_normalizer.py`, `t12_normalizer_writer.py`) remain with
+  the prefix.
 
 ### [BL-0009] Branch 2 — Handoff readiness (UW Export + Pre-Export Gate + metadata header)
 - **Shipped in:** substrate v0.2.0 (2026-05-14, flagship release)

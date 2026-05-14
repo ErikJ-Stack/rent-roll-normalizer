@@ -6,7 +6,7 @@
 **Repo:** <https://github.com/ErikJ-Stack/rent-roll-normalizer> (public)
 **Owner:** Erik J (`Erikjayj@gmail.com`, GitHub: `ErikJ-Stack`)
 **Stack:** Python · Streamlit · pandas · openpyxl · Streamlit Community Cloud (free tier)
-**Current version:** v1.17.1 (2026-05-14) — Patch (UW-BACKLOG BL-0008 closed): `_detect_substrate_version()` rewritten to read `Cover!B8` (canonical version stamp since v0.1.4) as the primary source, with per-version sentinel-cell fallback for damaged stamps. Was capped at `v0.1.5` since v1.12.0. Cross-cuts with substrate v0.1.15 (BL-0002 closed — V5 chart empty-state UX) — bundled in the same PR. Prior: v1.17.0 (2026-05-13) RR Input expansion with per-fee ancillary columns at AC-AG (BL-0003).
+**Current version:** v1.17.2 (2026-05-14) — Refactor (UW-BACKLOG BL-0010 closed): module rename `t12_translator.py` → `analyzer_rr_translator.py` for symmetry with the 2026-05-10 `t12_writer.py` → `analyzer_rr_writer.py` rename. No functional change. Prior: v1.17.1 (2026-05-14) `_detect_substrate_version()` rewrite (BL-0008) bundled with substrate v0.1.15 (BL-0002 V5 chart empty-state UX). v1.17.0 (2026-05-13) RR Input expansion with per-fee ancillary columns at AC-AG (BL-0003).
 
 ---
 
@@ -24,7 +24,7 @@ The Analyzer then drives the underwriting analysis (P&L, scenarios, returns) —
 * **Track 1 — Rent Roll Normalizer** (this document) — RR parsing, RR writer, Streamlit UI shell, Analyzer source resolution, period-date detection.
 * **Track 2 — T12 Normalizer** (`SPEC-T12.md`) — T12 parser (Yardi + MRI format registry), T12 writer (`T12 Input` sheet), `Description_Map` lookup, UNMATCHED matcher form.
 
-Both tracks ship in the same `app.py` and write into the same Analyzer workbook, but they have independent version streams. **Track 1 is at v1.17.1; Track 2 is at v0.2.1; bundled Analyzer substrate is at v0.2.0.**
+Both tracks ship in the same `app.py` and write into the same Analyzer workbook, but they have independent version streams. **Track 1 is at v1.17.2; Track 2 is at v0.2.1; bundled Analyzer substrate is at v0.2.0.**
 
 A persistent forward-looking backlog of UW workbook changes lives at [`UW-BACKLOG.md`](UW-BACKLOG.md). Add items there when a release surfaces a downstream need; close items by moving to the `Shipped` section. Cross-references use `BL-NNNN` IDs that stay stable across releases.
 
@@ -66,7 +66,7 @@ Local Windows machine: C:\Users\erikj\Downloads\rent_roll_app
 | `mappings.py` | 9.5 KB | Default mapping rules + override loader |
 | `reports.py` | 6.7 KB | Builders for RR_Summary, RR_By_Type, RR_Exceptions |
 | `writer.py` | 14.0 KB | Excel writer with full formatting (RR-side) |
-| `t12_translator.py` | 3.6 KB | Translates Condensed_RR vocabulary → Analyzer's `Rent Roll Input` vocabulary |
+| `analyzer_rr_translator.py` | 3.6 KB | Translates Condensed_RR vocabulary → Analyzer's `Rent Roll Input` vocabulary. Renamed from `t12_translator.py` on 2026-05-14 (BL-0010) for symmetry with the writer rename. |
 | `analyzer_rr_writer.py` | 5.8 KB | Loads Analyzer, writes A:S row 7+ on `Rent Roll Input`, preserves all else. Renamed from `t12_writer.py` on 2026-05-10 (was named `t12_*` because the destination workbook predated the bundled Analyzer; see `CLAUDE.md` "Module naming gotcha"). |
 | `t12_normalizer.py` | 19.5 KB | Track 2 — T12 parser. Format-registry pattern (Yardi + MRI). |
 | `t12_normalizer_writer.py` | 12.7 KB | Track 2 — T12 writer. Writes `T12 Input!A12+`, appends `Description_Map` resolutions, adds `Run_Info` tab. |
