@@ -1,10 +1,128 @@
 # Changelog — T12 Normalizer
 
-All notable changes to the T12 Normalizer (Track 2). Independent version stream from the Rent Roll Normalizer (Track 1, currently v1.17.1). This changelog covers T12 work only — see `CHANGELOG-RR.md` for RR releases.
+All notable changes to the T12 Normalizer (Track 2). Independent version stream from the Rent Roll Normalizer (Track 1, currently v1.17.3). This changelog covers T12 work only — see `CHANGELOG-RR.md` for RR releases.
 
 Format: each version has a section with date, summary, and per-file change notes. Newest at top.
 
 When making a code change in a T12-related chat, add an entry here in the same commit.
+
+---
+
+## [Substrate template v0.2.1] — 2026-05-14
+
+### Summary
+
+**UW-BACKLOG BL-0001 closed — finer ancillary Labels in `Description_Map`.** Surfaced by substrate v0.1.12 Section M (Operator Fee Schedule & Ancillary Reconciliation): M2 / M3 / M4 were reporting 5 of the 7 default Homestead IL fees against the shared catchall Label "Other community revenue", with the M3 `(shared — see row N)` heuristic preventing double-reporting but also preventing per-fee T12 attribution. This release adds 5 dedicated Labels so each of those fees can be attributed at the GL level.
+
+Closed vocabulary grows **55 → 60 Labels**.
+
+Cross-cuts with RR v1.17.3 — `_detect_substrate_version()` in `app.py` is widened to accept the `vN.N.N` pattern (was capped at `v0.1.N`, so v0.2.0 / v0.2.1 fell through to the sentinel-cell fallback). Bundled in the same PR.
+
+### Five new Labels
+
+| Label                 | Replaces routing of                                      |
+| --------------------- | -------------------------------------------------------- |
+| `Meal Income`         | Meal Plan Revenue, Meal Plan Income, Dining Revenue, …   |
+| `Housekeeping Income` | Housekeeping Income, H/K Income, Housekeeping Revenue    |
+| `Laundry Income`      | Laundry Income, Laundry Revenue                           |
+| `Scooter Fee Revenue` | Motorized Scooter Fee, Mobility Fee, Scooter Fee         |
+| `Transfer Fee Revenue`| Elective Transfer Fee, Transfer Fee                       |
+
+Each previously got mapped to `Other community revenue` (the catchall). After this release, those source descriptions match the new specific Labels via Description_Map, populate their own rows on T12 Raw Data + Monthly Trending, and Section M can isolate per-fee T12 totals.
+
+### What changed (migrate_to_v021.py)
+
+The migration follows the v0.1.5 row-insertion pattern documented in CHANGELOG-T12.md, scaled to insert 5 rows at once (`insert_rows(target, amount=5)`).
+
+#### A. T12 Raw Data — insert 5 rows at R16
+
+5 new SUMIF rows inserted between `2nd Person Revenue` at R15 and the old `Other community revenue` at R16 (which shifts to R21). Each new row mirrors the R15 template:
+- col A = `"Revenue"`
+- col B = new Label
+- cols F-Q (monthly Jan-Dec) = `=SUMIF(T12_Calc!$N$1:$N$505, "<NewLabel>", T12_Calc!$B$1:$B$505)`
+- col R (annual) = `=SUM(F{row}:Q{row})`
+
+After insert, all workbook formulas referencing T12 Raw Data row ≥ 16 get their row refs shifted by +5 (696 cells across T12 Analytics + T12 Raw Data internal SUMs). **Template formulas are captured AFTER the shift sweep** — the v0.1.5 implementation captured pre-shift, which caused the new rows' SUMIF range endpoints to lag the bumped-up neighbors. Post-shift capture keeps every row's `$N$505` consistent.
+
+#### B. Monthly Trending — insert 5 rows at R20
+
+5 new INDEX/MATCH rows inserted between `2nd Person Revenue` at R19 and the old `Other community revenue` at R20 (which shifts to R25). EGI shifts from R21 → R26. Each new row mirrors R19's INDEX/MATCH template:
+- col A = new Label
+- cols B-M = `=IFERROR(INDEX('T12 Raw Data'!<col>:<col>, MATCH("<NewLabel>", 'T12 Raw Data'!B:B, 0)), 0)`
+- col N (annual) = `=SUM(B{row}:M{row})`
+
+After insert, 147 formula cells shifted across Rent Roll Recon (1) + Monthly Trending (145) + Workbook Health (1). The EGI formula at the new R26 is explicitly rewritten to include the 5 new rows (`=B8+B10+B11+B15+B16+B17+B18+B19+B20+B21+B22+B23+B24+B25` instead of just `+B25`).
+
+#### C. Description_Map — 14 new Description→Label appends
+
+The Description_Map uses dynamic defined-name ranges (`DescMap_Description`, `DescMap_Label` via COUNTA) that auto-extend, so no row insertion is needed — appending at the bottom is enough. 14 typical operator-side descriptions added, mapped to the 5 new Labels:
+
+| New Label             | Source descriptions added (count)                                    |
+| --------------------- | -------------------------------------------------------------------- |
+| Meal Income           | Meal Income, Meal Plan Revenue, Meal Plan Income, Dining Revenue (4) |
+| Housekeeping Income   | Housekeeping Income, Housekeeping Revenue, H/K Income (3)            |
+| Laundry Income        | Laundry Income, Laundry Revenue (2)                                  |
+| Scooter Fee Revenue   | Scooter Fee, Motorized Scooter Fee, Mobility Fee (3)                 |
+| Transfer Fee Revenue  | Transfer Fee, Elective Transfer Fee (2)                              |
+
+#### D. Rent Roll Recon Section M D-column re-points
+
+5 of the 7 default fees on Section M1 (rows 123-129) have their `T12 Label` (col D) changed from `Other community revenue` to the matching new Label:
+
+| Row | Fee Name              | Old D-column                | New D-column          |
+| --- | --------------------- | --------------------------- | --------------------- |
+| 124 | Elective Transfer Fee | Other community revenue     | Transfer Fee Revenue  |
+| 125 | Meal Delivery         | Other community revenue     | Meal Income           |
+| 126 | Motorized Scooter Fee | Other community revenue     | Scooter Fee Revenue   |
+| 128 | Housekeeping          | Other community revenue     | Housekeeping Income   |
+| 129 | Laundry               | Other community revenue     | Laundry Income        |
+
+M2 / M3 / M4 read these via relative references, so the per-fee attribution propagates automatically. M3's `(shared — see row N)` detection resolves: COUNTIF finds no duplicates so each row gets its own VLOOKUP T12 total. M5 ("Other community revenue residual") still works correctly — only the unchanged D123 (Community Fee → Community / move-in fees, not a residual contributor) remains in the M5 attribution sum.
+
+#### E. RR v1.17.3 companion patch — `_detect_substrate_version()` widening
+
+The version-detection regex in `app.py` was `^v0\.1\.\d+$` — it didn't match `v0.2.0` or `v0.2.1`, so any Analyzer at v0.2.x fell through to the sentinel-cell fallback (which reported `v0.1.14+` based on the Rent Roll Recon!I87 sentinel that's still present). Widened to `^v\d+\.\d+\.\d+$`. Added two new sentinel checks for the fallback chain (T12 Raw Data!B16 == "Meal Income" → v0.2.1+; presence of "UW Export" sheet → v0.2.0+).
+
+### Idempotency
+
+Gate checks both `Cover!B8 == "v0.2.1"` AND `T12 Raw Data!B16 == "Meal Income"` — re-running on an already-migrated workbook prints `"Workbook is already at v0.2.1. No-op (will re-save)."` and exits.
+
+### Verification
+
+13/13 verification checks on the bundled Analyzer:
+
+```
+   1. Cover!B8 = 'v0.2.1'                                              : True
+   2. All 14 AZ4 = v0.2.1                                              : True (14 sheets)
+   3. T12 Raw Data R16-R20 = the 5 new labels                          : True
+   4. T12 Raw Data R21 = 'Other community revenue' (shifted +5)        : True
+   5. T12 Raw Data F16 SUMIF refers to 'Meal Income'                   : True
+   6. Monthly Trending R20-R24 = the 5 new labels                      : True
+   7. Monthly Trending R25 = 'Other community revenue' & R26 = EGI     : True
+   8. Monthly Trending B26 EGI includes new rows B20-B24 + B25         : True
+   9. Monthly Trending B20 INDEX/MATCH refers to 'Meal Income'         : True
+  10. Rent Roll Recon Section M D124-D129 re-pointed to new Labels     : True
+  11. Description_Map appended 14/14 new descriptions                  : True
+  12. Rent Roll Recon B174 EGI ref shifted to Monthly Trending N26     : True
+  13. Sentinel: T12 Raw Data!B16 = 'Meal Income'                       : True
+```
+
+### Files changed
+
+- `tools/migration/migrate_to_v021.py` — new idempotent migration script (~580 lines)
+- `ALF_Financial_Analyzer_Only.xlsx` — bundled Analyzer migrated to v0.2.1
+- `app.py` — `_detect_substrate_version()` regex + sentinel chain widened; `RR_VERSION` 1.17.2 → 1.17.3
+- `CHANGELOG-T12.md` — this entry
+- `CHANGELOG-RR.md` — companion `[1.17.3]` entry for the version-detection widening
+- `SPEC-T12.md` — current-version line
+- `SPEC-RR.md` — current-version line + Track 1 stamp
+- `README.md` — versions table + migration script listing
+- `CLAUDE.md` — Last updated line + current substrate version
+- `UW-BACKLOG.md` — BL-0001 moved Pending → Shipped
+
+### Out of scope (carry-forwards opened)
+
+None. With BL-0001 closed, **the UW-BACKLOG forward-looking list is empty** for the first time since UW-BACKLOG.md was introduced in substrate v0.1.12. (BL-0010 — the partner `t12_translator.py` rename — also closed in RR v1.17.2 immediately before this release.)
 
 ---
 

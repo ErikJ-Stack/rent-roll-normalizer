@@ -22,33 +22,36 @@ truth.
 
 ## Pending
 
-### [BL-0001] Finer ancillary Labels in `Description_Map`
-- **Track:** Substrate (Track 3) · target **substrate v0.2.0**
-- **Surfaced in:** substrate v0.1.12 Section M (this release)
-- **Description:** Section M3 collapses 5 of the 7 default Homestead IL fees
-  (Elective Transfer / Meal Delivery / Motorized Scooter / Housekeeping /
-  Laundry) into the single Label `Other community revenue`. The Section M3
-  formula detects shared-bucket Labels and shows "(shared — see row N)" on
-  subsequent occurrences to avoid double-reporting the same dollar amount.
-  Per-fee T12 attribution is impossible until each fee has its own Label.
-- **Scope:** add 5 new Labels — `Meal Income`, `Housekeeping Income`,
-  `Laundry Income`, `Scooter Fee Revenue`, `Transfer Fee Revenue`. Each
-  needs (a) row in `Description_Map`, (b) aggregation row in `T12 Raw Data`
-  with SUMIF formulas, (c) row in `Monthly Trending` (with downstream row
-  shift handled per the openpyxl quirks documented in CHANGELOG-T12 v0.1.5).
-  Closed vocabulary grows from 55 → 60 Labels.
-- **Why deferred from v0.1.12:** vocabulary expansion is a substrate-version
-  increment (v0.2.0 territory), not a patch. v0.1.12 ships the analytical
-  surface that exposes the need.
-- **Depends on:** nothing. Orthogonal to BL-0003 (RR Input expansion) but
-  mutually amplifying — when both ship, Section M validates *both* sides of
-  the ancillary revenue picture.
-
-*(BL-0002, BL-0008, and BL-0010 moved to Shipped — see below.)*
+*(empty — all BL-NNNN items closed as of 2026-05-14)*
 
 ---
 
 ## Shipped
+
+### [BL-0001] Finer ancillary Labels in `Description_Map`
+- **Shipped in:** substrate v0.2.1 (2026-05-14) + RR v1.17.3 (companion `_detect_substrate_version()` widening)
+- **Track:** Substrate (Track 3) + companion patch on RR (Track 1)
+- **Originally surfaced in:** substrate v0.1.12 Section M (the analytical
+  surface that exposed the per-fee attribution gap)
+- **Summary:** 5 new Labels added to the closed vocabulary (55 → 60):
+  `Meal Income`, `Housekeeping Income`, `Laundry Income`,
+  `Scooter Fee Revenue`, `Transfer Fee Revenue`. Each gets (a) a row in
+  T12 Raw Data with SUMIF formulas against `T12_Calc` (cols F-R), (b) a
+  row in Monthly Trending with INDEX/MATCH formulas against T12 Raw
+  Data (cols B-N), (c) typical Description→Label mappings appended to
+  Description_Map (14 new rows, 2-4 per Label). Section M D-column on
+  Rent Roll Recon re-pointed: 5 of the 7 default fees (rows 124-129
+  except 127) move from `Other community revenue` → their new specific
+  Labels. M3's `(shared — see row N)` heuristic resolves automatically
+  since each row's COUNTIF finds no duplicates. EGI on Monthly
+  Trending R26 (was R21) rewritten to include the 5 new rows.
+  Migration via `migrate_to_v021.py` — single 5-row insert at each
+  destination (`insert_rows(target, amount=5)`), full-workbook shift
+  sweep for row refs ≥ threshold, idempotent gate, 13-check
+  verification. Companion `app.py` patch widens the version-detection
+  regex `v0\.1\.\d+` → `v\d+\.\d+\.\d+` so v0.2.x reports accurately;
+  bundled in the same PR. **UW-BACKLOG is now empty** for the first
+  time since this file was introduced in substrate v0.1.12.
 
 ### [BL-0010] Module rename — `t12_translator.py` → `analyzer_rr_translator.py`
 - **Shipped in:** RR v1.17.2 (2026-05-14)

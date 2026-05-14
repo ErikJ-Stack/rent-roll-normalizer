@@ -2,7 +2,7 @@
 
 > Onboarding doc for any Claude session (chat or Claude Code) working on this repo. Read this first — it points to canonical truth and surfaces facts that previously had to be grubbed for.
 
-**Last updated:** 2026-05-14 (after RR v1.17.2 — BL-0010 module rename `t12_translator.py` → `analyzer_rr_translator.py`, finishing the 2026-05-10 Track 1 file disambiguation. Substrate still v0.2.0.)
+**Last updated:** 2026-05-14 (after RR v1.17.3 + substrate v0.2.1 — BL-0001 closed: 5 new ancillary Labels added to `Description_Map` / T12 Raw Data / Monthly Trending; Section M now isolates per-fee T12 attribution instead of collapsing 5 fees into "Other community revenue". Companion `_detect_substrate_version()` regex widened to accept `vN.N.N`. UW-BACKLOG is now empty.)
 
 ---
 
