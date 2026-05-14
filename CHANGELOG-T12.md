@@ -8,6 +8,118 @@ When making a code change in a T12-related chat, add an entry here in the same c
 
 ---
 
+## [Substrate template v0.2.0] — 2026-05-14
+
+### Summary
+
+**v0.2.0 flagship release — BL-0009 closed.** Branch 2 (Handoff readiness) — the final open Analyzer-optimization workstream from the four-branch Track 3 roadmap. Ships three coordinated additions to round out the downstream-handoff story:
+
+1. **New `UW Export` sheet** — values-only mirror of UW Output for clean copy-paste into the downstream full-underwriting sheet (which doesn't consume formula references back into this workbook — only static values).
+2. **Pre-Export Gate** — compact aggregated readiness check on Workbook Health that surfaces a single ✓ / ⚠ "READY FOR EXPORT" indicator before the analyst hands the file off.
+3. **Workbook Map extension** — UW Export added to the existing sheet directory.
+
+Pure Track 3 substrate work. No RR/T12 code changes. The minor-version bump (v0.1.x → **v0.2.0**) reflects the new top-level sheet rather than a breaking change to existing semantics.
+
+### What changed (migrate_to_v020.py)
+
+#### A. UW Export sheet (NEW)
+
+Inserted at index 8 — between UW Output and Mapping Review in the tab order. Sheet layout:
+
+```
+Row 1     :  Title (merged A:H, navy fill)
+             "UW Export  —  Values-only mirror of UW Output"
+Row 2     :  Instructions (merged A:H, italic)
+             "Copy A9:H79 … into the downstream UW template …"
+Rows 3-7  :  Metadata header (label in col A, formula in col B merged to H):
+             - Property name:        =IFERROR(Property_Name, "(not set)")
+             - Rent roll period:     =IF(ISNUMBER(RR_Period_Date), TEXT(...), "(not set)")
+             - T12 period:           =IF(ISNUMBER(T12_Period_Date), TEXT(...), "(not set)")
+             - Substrate version:    =Cover!$B$8
+             - Generated (open time): =TEXT(NOW(), "yyyy-mm-dd hh:mm")
+Row 8     :  Visual break
+Rows 9-79 :  Values-only mirror of UW Output rows 1-71 across cols A-H.
+             Each cell uses ='UW Output'!{cell}. Header row at row 12
+             (mirror of UW Output row 4) gets header styling.
+```
+
+Sheet-level: gridlines hidden, col A width 28, cols B-H width 14, AZ1 holds the sheet-purpose label `"Values-only mirror of UW Output for downstream paste"`, AZ4 holds the v0.2.0 version stamp.
+
+Why formulas not static values: openpyxl cannot evaluate formulas, so the writer pipeline can't produce truly static values at write-time. The formula approach is cleaner anyway — when the analyst opens the file in Excel and the chain (Rent Roll Input → T12 Analytics → UW Output → UW Export) re-evaluates, the mirror reflects the latest computed state. The downstream consumer uses Excel's **Paste-Special: Values** when pulling from UW Export into their template, producing a fully static destination.
+
+#### B. Pre-Export Gate (Workbook Health rows 46-52)
+
+Adds a fourth section to Workbook Health:
+
+```
+Row 46:  "4 · PRE-EXPORT GATE"  (subtitle bar)
+Row 47:  headers: Check | Status
+Row 48:  P1 · RR + T12 period dates set       → reads V3+V4 (rows 25-26)
+Row 49:  P2 · Property name populated          → reads Property_Name named range
+Row 50:  P3 · RR + T12 input rows present      → reads V6+V7 (rows 28-29)
+Row 51:  P4 · Source $→Operating $ leakage ≤±$1 → reads V1 (row 23)
+Row 52:  READY FOR EXPORT?  →  ✓ READY / ⚠ NOT READY   (aggregate AND across P1-P4)
+```
+
+Each P-check is a formula reference to an existing V-row validation cell that's been on Workbook Health since v0.1.4. No new validation criteria invented — just packages them as a downstream-handoff readiness aggregate.
+
+Row 52 aggregate is bold + yellow-fill — visually distinct from the per-check rows above. Reads `"✓ READY — UW Export tab is good to copy"` or `"⚠ NOT READY — resolve the ⚠ items above first"` based on whether all four sub-checks pass.
+
+#### C. Workbook Map extension
+
+Adds `"UW Export"` at Workbook Health row 19 (a previously-empty visual break before Section 2). Cell B19 reads `='UW Export'!AZ1` — pulls the sheet-purpose label set at install time.
+
+#### D. ANCHOR_SHEETS extended from 13 → 14
+
+The migration's ANCHOR_SHEETS tuple now includes UW Export so the AZ4 anchor count is 14 (was 13 through v0.1.15). All 14 anchors stamped to `v0.2.0`. Cover!B8 stamped to `v0.2.0`.
+
+### Idempotency
+
+Gate (`is_already_v020()`) checks BOTH the version stamp AND that the `UW Export` sheet exists with the title at A1. Re-runs on partial-state files safely re-apply — if `UW Export` is partial, the migration drops and recreates it cleanly rather than in-place patching (the sheet is content-only, no analyst-edited cells to preserve).
+
+### Verification
+
+13-check verification block: Cover!B8 stamped, all 14 AZ4 stamped, UW Export sheet exists + title row 1 + Property name metadata (label + formula) + Substrate version metadata formula + Mirror A9 = `'UW Output'!A1` + Mirror H79 = `'UW Output'!H71`, Pre-Export Gate title + P1 sub-check + aggregate formula present, Workbook Map includes UW Export.
+
+Migration verified end-to-end on:
+
+- **Bundled v0.1.15 → v0.2.0**: 13/13 checks pass. File size 194,779 → 199,228 bytes (+4,449 bytes — new sheet with 71 mirror rows × 8 cols + 5 metadata rows + Pre-Export Gate cells).
+- **User's populated Homestead workbook** chained `v0.1.10 → v0.1.12 → v0.1.13 → v0.1.14 → v0.1.15 → v0.2.0` — all checks green at each step.
+- **Idempotency**: re-running on a v0.2.0 file exits cleanly with `"Workbook is already at v0.2.0. No-op (will re-save)."`
+
+### Closes BL-0009 — full Branch 2 scope
+
+The original BL-0009 entry listed three components for Branch 2:
+
+| Sub-item | Status |
+| --- | --- |
+| Pre-export gate | ✅ Shipped (Workbook Health rows 46-52, aggregate cell 52) |
+| UW Export sheet (values-only mirror) | ✅ Shipped (71-row mirror with formula references to UW Output) |
+| Metadata header on UW Export | ✅ Shipped (rows 3-7: Property name / RR period / T12 period / substrate version / generated timestamp) |
+
+### What remains in [UW-BACKLOG.md](UW-BACKLOG.md) after this release
+
+- `BL-0001` — finer ancillary T12 Labels (Description_Map vocabulary expansion). Reasonable next v0.2.1+ candidate.
+- `BL-0010` — module rename `t12_translator.py` → `analyzer_rr_translator.py` refactor. Whenever bundled.
+
+The four-branch Track 3 roadmap is now **fully closed**:
+- Branches 1+4 (correctness + substrate) — closed in v0.1.6
+- Branch 3 (analytical coverage) — closed in v0.1.8, extended through v0.1.14
+- Branch 2 (Handoff readiness) — **closed in v0.2.0 (this release)**
+
+### Files changed
+
+- `ALF_Financial_Analyzer_Only.xlsx` — bundled Analyzer migrated to v0.2.0
+- `tools/migration/migrate_to_v020.py` — new idempotent migration script
+- `SPEC-T12.md` — current-version line
+- `SPEC-RR.md` — Track-versions inline reference (substrate v0.2.0)
+- `README.md` — versions table + migration script listing
+- `CLAUDE.md` — version references
+- `UW-BACKLOG.md` — `BL-0009` moved to Shipped
+- `CHANGELOG-T12.md` — this entry
+
+---
+
 ## [Substrate template v0.1.15] — 2026-05-14
 
 ### Summary
