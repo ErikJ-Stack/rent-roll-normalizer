@@ -59,7 +59,7 @@ from writer import write_output
 APP_VERSION = "1.14.0"            # alias for RR_VERSION; kept for back-compat
 APP_LAST_UPDATED = "2026-05-08"   # alias for RR_LAST_UPDATED
 
-RR_VERSION = "1.16.2"
+RR_VERSION = "1.17.0"
 RR_LAST_UPDATED = "2026-05-13"
 
 T12_VERSION = "0.2.1"

@@ -1,10 +1,98 @@
 # Changelog — T12 Normalizer
 
-All notable changes to the T12 Normalizer (Track 2). Independent version stream from the Rent Roll Normalizer (Track 1, currently v1.16.1). This changelog covers T12 work only — see `CHANGELOG-RR.md` for RR releases.
+All notable changes to the T12 Normalizer (Track 2). Independent version stream from the Rent Roll Normalizer (Track 1, currently v1.17.0). This changelog covers T12 work only — see `CHANGELOG-RR.md` for RR releases.
 
 Format: each version has a section with date, summary, and per-file change notes. Newest at top.
 
 When making a code change in a T12-related chat, add an entry here in the same commit.
+
+---
+
+## [Substrate template v0.1.13] — 2026-05-13
+
+### Summary
+
+Track 3 companion to RR v1.17.0 (UW-BACKLOG BL-0003 — RR Input expansion). Two coordinated changes:
+
+1. **Rent Roll Input gets 5 new columns at AC-AG** to receive the per-fee ancillary breakdown produced by the v1.17.0 parser: `Meal Plan $` / `Scooter Fee $` / `Housekeeping $` / `Laundry $` / `Pet $`. Other LOC $ (col O) remains as the catchall. Total LOC $ formula at T7:T606 extended to include AC-AG so the per-resident total is unchanged — only the distribution across columns changes.
+
+2. **Section M (Rent Roll Recon rows 121-167) gets a 5th M1 column "RR Input Col"** plus a complete M2 / M4 rewrite using universal `INDIRECT` formulas off that column. Previously only Second Person Fee had real per-fee capture-rate / implied-rate formulas; now Meal Delivery / Motorized Scooter / Housekeeping / Laundry compute too because they have direct RR Input column matches. M2 eligibility unified to all-occupied beds in the selected period (was: occupied IL only for SP — per user spec, couples can occur in any care type).
+
+### What changed (migrate_to_v0113.py)
+
+- **A. RRI new column headers** at row 4 cols AC-AG (5 cells styled to match the existing navy header).
+- **B. Total LOC $ formula extension** at T7:T606:
+  ```
+  Old: =IFERROR(L{r}+M{r}+N{r}+O{r},0)
+  New: =IFERROR(L{r}+M{r}+N{r}+O{r}+IFERROR(AC{r},0)+IFERROR(AD{r},0)+
+                 IFERROR(AE{r},0)+IFERROR(AF{r},0)+IFERROR(AG{r},0),0)
+  ```
+  Pattern-matched on the exact prior shape so customized formulas (if any) are left intact.
+- **C1. Section M1 "RR Input Col" header** at E122 + pre-populated default mappings for the 7 default fees:
+  - Community Fee → `""` (event-based; no per-fee RR col)
+  - Elective Transfer Fee → `""` (rare event; no per-fee RR col)
+  - Meal Delivery → `AC`
+  - Motorized Scooter Fee → `AD`
+  - Second Person Fee → `V` (existing v0.1.10 column)
+  - Housekeeping → `AE`
+  - Laundry → `AF`
+- **C2. Section M2 universal formulas** (rows 135-143):
+  - Eligible #: `COUNTIFS(occupied across all care types, period selector)` — same for all 9 rows
+  - Capturing #: `IF(E{m1_row}="", "—", COUNTIF(INDIRECT("'Rent Roll Input'!"&E{m1_row}&"7:606"), ">0"))`
+  - Capture %: `IFERROR(C/B, "")`
+  - Note: dynamic — `"✓ Direct RR match (col X)"` when E set, `"No per-fee RR column"` otherwise
+- **C3. Section M4 universal formulas** (rows 159-167):
+  - T12 $/mo from M3 (unchanged behavior)
+  - RR # capturing pulled from M2
+  - Implied $/resident: only when E set AND counts numeric
+  - Variance % vs. M1 schedule
+  - Conditional note: `"✓ Implied rate within 5% of schedule"` / `"⚠ Implied rate differs by X%"` / `"Falls into M5 Misc."` based on E-col + variance threshold
+- **D. Stamp** `Cover!B8` and 13 `AZ4` anchors to `v0.1.13`.
+
+Section M3 / M5 unchanged — the v0.1.12 formulas were already forward-compatible. M5's SUMPRODUCT for "fees attributed to OCR via M2 capture" begins producing real deductions automatically once Meal/Scooter/HK/Laundry rows have populated M2 capture #'s.
+
+### Idempotency
+
+Gate (`is_already_v0113()`) checks BOTH the version stamp AND that `Rent Roll Input!AC4` reads `Meal Plan` (verifying the new headers landed). Re-runs on a partial-state file safely re-apply.
+
+### Verification
+
+11-check verification block: Cover!B8 stamped, all 13 AZ4 stamped, 5 new RRI headers present, Total LOC formula extended in 600 rows, M1 col E header / 5 default mappings, M2 INDIRECT formula present, M2 eligibility unified (no IL filter), M4 implied-rate formula generic, Sections K and L intact.
+
+End-to-end migration verified on:
+- **Bundled v0.1.12 Analyzer** → v0.1.13 cleanly. File size 183,103 → 193,915 bytes (+10,812 bytes consistent with 5 new header cells + 600 row × 1 col formula extension + 9 × 4 cells of M1/M2/M4 rewrites).
+- **User's populated Homestead workbook** chained through v0.1.10 → v0.1.12 → v0.1.13 — all 11 checks green at each step.
+- **Idempotency**: re-running on a v0.1.13 file exits cleanly with `"Workbook is already at v0.1.13. No-op (will re-save)."`
+
+### Migration path for users
+
+Workbooks at substrates older than v0.1.12 must chain through prior migrations in order. Each script handles one substrate version step:
+
+```
+python tools/migration/migrate_to_v0111.py file.xlsx file_v0111.xlsx
+python tools/migration/migrate_to_v0112.py file_v0111.xlsx file_v0112.xlsx
+python tools/migration/migrate_to_v0113.py file_v0112.xlsx file_v0113.xlsx
+```
+
+Or skip the chaining: re-run the live app to get a fresh download with v0.1.13 substrate.
+
+### Out of scope (logged in UW-BACKLOG.md)
+
+- **`BL-0001`** still pending: finer ancillary T12 Labels (`Meal Income`, `Housekeeping Income`, etc.) so Section M3 stops returning `(shared bucket)` notes. Substrate v0.2.0 vocabulary expansion.
+- **`BL-0004` / `BL-0005` / `BL-0006`** still pending: small Track 3 patches surfaced by v0.1.10 (T12 Analytics 2P reconciliation row, Workbook Health AR aggregation, Section K PSF dispersion stats). Substrate v0.1.14 candidates.
+
+### Files changed
+
+- `ALF_Financial_Analyzer_Only.xlsx` — bundled Analyzer migrated to v0.1.13
+- `tools/migration/migrate_to_v0113.py` — new idempotent migration script
+- `SPEC-T12.md` — current-version line
+- `SPEC-RR.md` — Track-versions inline reference
+- `README.md` — versions table + migration script listing
+- `CLAUDE.md` — substrate version reference
+- `UW-BACKLOG.md` — `BL-0003` moved to Shipped
+- `CHANGELOG-T12.md` — this entry
+
+(See [CHANGELOG-RR.md](CHANGELOG-RR.md) `[1.17.0]` for the Track 1 parser / writer / mapping changes that this substrate companions.)
 
 ---
 

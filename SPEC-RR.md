@@ -6,7 +6,7 @@
 **Repo:** <https://github.com/ErikJ-Stack/rent-roll-normalizer> (public)
 **Owner:** Erik J (`Erikjayj@gmail.com`, GitHub: `ErikJ-Stack`)
 **Stack:** Python · Streamlit · pandas · openpyxl · Streamlit Community Cloud (free tier)
-**Current version:** v1.16.2 (2026-05-13) — Patch (UW-BACKLOG BL-0007): added `meal`, `scooter`, `mobility`, `transport` to the `_looks_care` keyword list in `detect_care_groups` so per-resident meal-delivery / motorized-scooter / mobility-aid / resident-transport charges flow into `Other LOC $` when source rent rolls expose them as named columns. Companion to substrate v0.1.12 Section M ancillaries; the eventual per-fee column split lands in BL-0003 (cross-cutting RR v1.17 + substrate v0.1.13). Prior: v1.16.1 (2026-05-12) concession-doubling de-dupe (Salem + Beaufort). Prior: v1.16.0 (2026-05-11) data-capture expansion.
+**Current version:** v1.17.0 (2026-05-13) — **UW-BACKLOG BL-0003 closed**: RR Input expansion. Per-fee ancillary columns at `Rent Roll Input!AC-AG` (`Meal Plan $` / `Scooter Fee $` / `Housekeeping $` / `Laundry $` / `Pet $`). Splits what previously lumped into `Other LOC $` (col O) — Other LOC remains as the catchall (Diabetes, Misc, anything unmatched). Total LOC $ unchanged per-resident; just distributed across more columns. `mappings.py` adds 8 new bucket-routing rules; `normalizer.py` `bucket_sums` + bed record + CONDENSED_COLUMNS extended (25 → 30); `analyzer_rr_writer.py` writes the new fields. Cross-cutting **with substrate v0.1.13** (Track 3 — see `CHANGELOG-T12.md`) which adds the new RRI cols and rewrites Section M2/M4 to use universal `INDIRECT` formulas off a new "RR Input Col" mapping in M1. Prior: v1.16.2 (2026-05-13) `_looks_care` keyword expansion (BL-0007).
 
 ---
 
@@ -24,7 +24,7 @@ The Analyzer then drives the underwriting analysis (P&L, scenarios, returns) —
 * **Track 1 — Rent Roll Normalizer** (this document) — RR parsing, RR writer, Streamlit UI shell, Analyzer source resolution, period-date detection.
 * **Track 2 — T12 Normalizer** (`SPEC-T12.md`) — T12 parser (Yardi + MRI format registry), T12 writer (`T12 Input` sheet), `Description_Map` lookup, UNMATCHED matcher form.
 
-Both tracks ship in the same `app.py` and write into the same Analyzer workbook, but they have independent version streams. **Track 1 is at v1.16.1; Track 2 is at v0.2.1; bundled Analyzer substrate is at v0.1.12.**
+Both tracks ship in the same `app.py` and write into the same Analyzer workbook, but they have independent version streams. **Track 1 is at v1.17.0; Track 2 is at v0.2.1; bundled Analyzer substrate is at v0.1.13.**
 
 A persistent forward-looking backlog of UW workbook changes lives at [`UW-BACKLOG.md`](UW-BACKLOG.md). Add items there when a release surfaces a downstream need; close items by moving to the `Shipped` section. Cross-references use `BL-NNNN` IDs that stay stable across releases.
 

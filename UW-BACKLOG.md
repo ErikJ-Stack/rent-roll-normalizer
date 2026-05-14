@@ -63,44 +63,6 @@ truth.
   acuity (e.g. Salem, Oaks at Beaufort) while not showing an empty doughnut
   for sources that don't.
 
-### [BL-0003] RR Input expansion — per-fee ancillary columns
-- **Track:** RR (Track 1) **+ substrate** (Track 3) · target
-  **RR v1.17.0 + substrate v0.1.13**
-- **Surfaced in:** substrate v0.1.12 Section M2 (4 of 7 default fees fall
-  through to "no per-fee RR column yet" notes pointing here)
-- **Description:** Today the RR parser lumps Meal / Scooter / Housekeeping /
-  Laundry / other ancillaries into `Other LOC $` (col O on Rent Roll Input).
-  Section M2's RR-capture rate works ONLY for fees with a direct RR column —
-  currently `Second Person Rent` (col V, added v1.16.0). Adding named
-  columns for the four most common ancillaries unlocks per-fee capture-rate
-  validation in Section M.
-- **Scope:**
-  - **Parser** (`normalizer.py`): extend the keyword-bucketing logic in
-    `_looks_care` (currently a flat "is this column a care line" check) to
-    also categorize hits into named buckets — `meal`, `scooter` / `mobility`,
-    `housekeeping` / `h/k`, `laundry`. Add fallback aggregate bucket for
-    anything that matches `looks_care` but doesn't match a named bucket.
-  - **Substrate**: add 4-6 new columns at `Rent Roll Input!AC-AH`:
-    - `AC` `Meal Plan $` (monthly $)
-    - `AD` `Scooter Fee $` (monthly $)
-    - `AE` `Housekeeping $` (monthly $)
-    - `AF` `Laundry $` (monthly $)
-    - `AG` `Other Ancillary $` (monthly $ — catch-all that doesn't match the
-      named buckets; preserves the existing Other-LOC-style total-protection)
-    - `AH` `Total Ancillary $` (formula `=SUM(AC:AG)`)
-  - **Writer** (`analyzer_rr_writer.py`): write the new fields into the new
-    cols.
-  - **Section M2**: rewrite the 4 currently-deferred fee rows (Meal Delivery,
-    Motorized Scooter, Housekeeping, Laundry) to use real
-    `COUNTIF / SUMIFS` against the new columns instead of the
-    `"falls into M5 Misc."` placeholder text.
-- **Why deferred:** cross-cutting (Track 1 parser + Track 3 substrate), should
-  ship in its own scoped PR.
-- **Depends on:** BL-0007 (RR Other LOC keyword expansion) — at least the
-  meal / scooter / mobility / transport keywords. Can ship BL-0007 first to
-  capture the dollars into the existing `Other LOC $`, then BL-0003 to split
-  them out into named columns.
-
 ### [BL-0004] T12 Analytics — 2P revenue reconciliation row
 - **Track:** Substrate (Track 3) · target **substrate v0.1.13**
 - **Surfaced in:** substrate v0.1.10 carry-forward (RR v1.16.0 added per-bed
@@ -185,6 +147,26 @@ truth.
 ---
 
 ## Shipped
+
+### [BL-0003] RR Input expansion — per-fee ancillary columns
+- **Shipped in:** RR v1.17.0 + substrate v0.1.13 (2026-05-13)
+- **Track:** RR (Track 1) + Substrate (Track 3) — cross-cutting single PR
+- **Originally surfaced in:** substrate v0.1.12 Section M2 (4 of 7 default
+  fees fell through to "no per-fee RR column yet" notes pointing here)
+- **Summary:** Per-fee ancillary columns added at `Rent Roll Input!AC-AG`
+  (`Meal Plan $`, `Scooter Fee $`, `Housekeeping $`, `Laundry $`, `Pet $`).
+  `mappings.py` extended with 8 new bucket-routing rules; `normalizer.py`
+  bucket_sums + bed record + CONDENSED_COLUMNS extended (25 → 30);
+  `analyzer_rr_writer.py` writes the new fields. Substrate v0.1.13 adds the
+  RRI columns, extends Total LOC $ formula to include AC-AG, adds a 5th
+  "RR Input Col" mapping column to Section M1, and rewrites M2/M4 with
+  universal `INDIRECT` formulas off that mapping. M2 eligibility unified
+  to all-occupied beds (was IL-only for SP).
+  **End-to-end on Homestead**: Pet $100, Housekeeping $1,450, Laundry $630
+  split out from Other LOC $; Total LOC $ unchanged ($-9,966.75 of
+  ancillary preserved across the 5 split + Other LOC catchall). Salem /
+  Briar Glen / Beaufort baselines all green; Beaufort surfaces $65 in
+  `Laundry $` previously buried in Other LOC $.
 
 ### [BL-0007] RR Other LOC keyword expansion — meal / scooter / mobility / transport
 - **Shipped in:** RR v1.16.2 (2026-05-13, PR #15)
