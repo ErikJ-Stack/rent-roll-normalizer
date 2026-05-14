@@ -63,39 +63,6 @@ truth.
   acuity (e.g. Salem, Oaks at Beaufort) while not showing an empty doughnut
   for sources that don't.
 
-### [BL-0004] T12 Analytics — 2P revenue reconciliation row
-- **Track:** Substrate (Track 3) · target **substrate v0.1.13**
-- **Surfaced in:** substrate v0.1.10 carry-forward (RR v1.16.0 added per-bed
-  SP capture)
-- **Description:** Compare `SUM('Rent Roll Input'!V) × 12` (RR-projected
-  annual 2P revenue from per-bed entries) against `T12 Raw Data!R15`
-  (T12 actual annual 2P revenue). Same pattern as the Section B revenue
-  reconciliation on Rent Roll Recon. Flags rate misalignment or
-  under-collection.
-- **Scope:** ~5 cells on T12 Analytics: implied / actual / variance %
-  / conditional note (fire when variance > 10% one way or the other).
-
-### [BL-0005] Workbook Health — total AR / Balance aggregation
-- **Track:** Substrate (Track 3) · target **substrate v0.1.13**
-- **Surfaced in:** substrate v0.1.10 carry-forward (RR v1.16.0 added Balance
-  column at `Rent Roll Input!X`)
-- **Description:** Aggregate `Rent Roll Input!X` (Balance) into a Workbook
-  Health validation row. Surface total outstanding AR + AR / monthly EGI %.
-  Conditional note fires if AR > 5% of monthly EGI as a collection-velocity
-  risk indicator.
-- **Scope:** 2-3 cells on Workbook Health.
-
-### [BL-0006] Rent Roll Recon Section K — PSF dispersion stats
-- **Track:** Substrate (Track 3) · target **substrate v0.1.13**
-- **Surfaced in:** substrate v0.1.10 carry-forward (RR v1.16.0 added Market
-  PSF / Actual PSF at `Rent Roll Input!Z-AA`)
-- **Description:** Section K's IL deep-dive already shows rate dispersion and
-  avg sqft per unit-type. Adding avg / range of $/sqft (PSF) per unit-type
-  catches under-priced legacy in-place residents along a dimension
-  orthogonal to the existing rate-CV check.
-- **Scope:** 1-2 new metric rows in Section K (rows 86-100). Pulls from
-  `Rent Roll Input!Z` and `!AA`.
-
 ### [BL-0008] Substrate version-detection in `app.py`
 - **Track:** RR (Track 1) · target whenever bundled with another RR change
 - **Surfaced in:** CLAUDE.md "Open carry-forwards"
@@ -147,6 +114,42 @@ truth.
 ---
 
 ## Shipped
+
+### [BL-0004] T12 Analytics — 2P revenue reconciliation row
+- **Shipped in:** substrate v0.1.14 (2026-05-14)
+- **Track:** Substrate (Track 3)
+- **Originally surfaced in:** substrate v0.1.10 carry-forward (RR v1.16.0 added per-bed SP capture at col V)
+- **Summary:** 3-row block on T12 Analytics rows 168-170 (after the existing
+  KPI Dashboard color key at row 166). Compares `=SUM('Rent Roll Input'!$V$7:$V$606)*12`
+  (RR-projected annual 2P revenue) against `=IFERROR('T12 Raw Data'!$R$15,0)`
+  (T12 actual annual 2P revenue). Variance % + conditional note fires when
+  \|variance\| > 10%. Placement chose rows 168+ because the natural slot at
+  rows 42-44 had pre-existing horizontal merges (A43:H43, A45:H45) for visual
+  breaks between GPR Waterfall and Other Revenue Normalization Bridge.
+
+### [BL-0005] Workbook Health — total AR / Balance aggregation
+- **Shipped in:** substrate v0.1.14 (2026-05-14)
+- **Track:** Substrate (Track 3)
+- **Originally surfaced in:** substrate v0.1.10 carry-forward (RR v1.16.0 added Balance column at `Rent Roll Input!X`)
+- **Summary:** 3 new rows extending the Workbook Health DIAGNOSTICS section.
+  Row 43: `G9 · Total outstanding AR` = `SUM('Rent Roll Input'!$X$7:$X$606)`.
+  Row 44: `G10 · AR ÷ monthly EGI` = `B43 / ('Monthly Trending'!$N$21/12)`.
+  Row 45: conditional note (merged A:D) — ⚠ fires when AR > 5% of monthly
+  EGI; ✓ "within 5%" otherwise. Slots after the existing G8 'Last opened'
+  volatile timestamp at row 42.
+
+### [BL-0006] Rent Roll Recon Section K — Avg Actual PSF column
+- **Shipped in:** substrate v0.1.14 (2026-05-14)
+- **Track:** Substrate (Track 3)
+- **Originally surfaced in:** substrate v0.1.10 carry-forward (RR v1.16.0 added Actual PSF at `Rent Roll Input!AA`)
+- **Summary:** New col I "Avg Actual PSF" on Section K IL unit-type table.
+  I87 header + I88-I92 per-unit-type AVERAGEIFS on `Rent Roll Input!$AA$7:$AA$606`
+  (Actual PSF) + I93 Total IL row. Same filter pattern as existing col D
+  (Avg Rate). Sources from per-bed data captured at v1.16.0; cell-only
+  extension of the existing table (cols A-H untouched, dispersion rows
+  95-100 untouched). Complements the existing derived `$/Sq Ft` column at H
+  (which divides Avg Rate ÷ Avg Sq Ft) — col I pulls the direct per-bed PSF
+  average for cross-validation.
 
 ### [BL-0003] RR Input expansion — per-fee ancillary columns
 - **Shipped in:** RR v1.17.0 + substrate v0.1.13 (2026-05-13)
