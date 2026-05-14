@@ -44,38 +44,7 @@ truth.
   mutually amplifying — when both ship, Section M validates *both* sides of
   the ancillary revenue picture.
 
-### [BL-0002] V5 chart — empty rendering for broker-format rent rolls
-- **Track:** Substrate (Track 3) · target **substrate v0.1.13** or **v0.2.0**
-- **Surfaced in:** substrate v0.1.11 (chart axis fix) verification on
-  Homestead.
-- **Description:** The V5 doughnut (AL Acuity Mix) on T12 Analytics queries
-  `Rent Roll Input!K` (Care Level) grouped by `Basic / Level 2-7`. Homestead
-  and other broker-condensed formats have no per-bed acuity tiers — column K
-  is empty for all 176 rows, so SUMIFS for every category returns $0 and the
-  doughnut renders empty. Not a chart bug; data limitation.
-- **Options:**
-  - (a) Accept and document — V5 only useful when source has acuity.
-  - (b) Fall back to "Care Level $ grouped by Care Type" when source has no
-    acuity. Repurposes V5 for broker-format sources.
-  - (c) Hide chart conditionally when the underlying SUMIFS all return $0
-    (set chart `plotVisOnly` + a conditional data-source switch).
-- **Recommended:** **(c)** — preserves the chart for sources that DO have
-  acuity (e.g. Salem, Oaks at Beaufort) while not showing an empty doughnut
-  for sources that don't.
-
-### [BL-0008] Substrate version-detection in `app.py`
-- **Track:** RR (Track 1) · target whenever bundled with another RR change
-- **Surfaced in:** CLAUDE.md "Open carry-forwards"
-- **Description:** `_detect_substrate_version()` looks for `2nd Person
-  Revenue` Label (v0.1.5 marker). v0.1.6-v0.1.12 all add no new Labels in
-  `Description_Map`, so the detector returns `v0.1.5` for any v0.1.5+
-  Analyzer. Cosmetic — display-only; never gates functionality.
-- **Scope:** widen the marker list:
-  - v0.1.10+: detect by `2nd Person Rent $` header presence at
-    `Rent Roll Input!V4`
-  - v0.1.11+: detect by chart catAx `axPos` value (would require parsing
-    chart XML — overkill; v0.1.11 has no other distinguishing cell change)
-  - v0.1.12+: detect by `Rent Roll Recon!A119` Section M title presence
+*(BL-0002 and BL-0008 moved to Shipped — see below.)*
 
 ### [BL-0009] Branch 2 — Handoff readiness (UW Export, pre-export gate, metadata header)
 - **Track:** Substrate (Track 3) · target **substrate v0.2.0**
@@ -114,6 +83,41 @@ truth.
 ---
 
 ## Shipped
+
+### [BL-0008] Substrate version-detection in `app.py`
+- **Shipped in:** RR v1.17.1 (2026-05-14)
+- **Track:** RR (Track 1)
+- **Originally surfaced in:** CLAUDE.md "Open carry-forwards"
+- **Summary:** Rewrote `_detect_substrate_version()` with a three-tier
+  resolution strategy. Primary path reads `Cover!B8` (the canonical
+  version stamp set by every migration since v0.1.4). Fallback uses
+  newest-to-oldest sentinel cells (Rent Roll Recon!I87, T12 Analytics!A168,
+  Rent Roll Input!AC4, Rent Roll Recon!A119, Rent Roll Input!V4). Legacy
+  Description_Map heuristic preserved for pre-v0.1.10 Analyzers. The
+  prior implementation was stale-capped at `v0.1.5` since v1.12.0.
+  Sanity-checked on the bundled v0.1.14 Analyzer (reports `v0.1.14`) and
+  user's populated Homestead workbook at v0.1.10 (reports `v0.1.10`).
+
+### [BL-0002] V5 chart — empty rendering for broker-format rent rolls
+- **Shipped in:** substrate v0.1.15 (2026-05-14)
+- **Track:** Substrate (Track 3)
+- **Originally surfaced in:** substrate v0.1.11 verification on Homestead
+- **Summary:** Improved V5 (AL Acuity Mix) empty-state UX without
+  restructuring the chart. (1) Wrapped `Rent Roll Recon!D59:D66` formulas
+  with `IF($B$67=0, "", ...)` so the doughnut renders as a true empty
+  frame (no zero-valued slices) when source has no acuity data.
+  (2) Applied bold + pale-yellow fill styling to `T12 Analytics!K45`
+  (the existing v0.1.8 conditional note "Property has no AL acuity data
+  — flat-rate AL or unpopulated.") so the empty-state message reads as
+  a warning attached to the chart instead of an ignorable label.
+  
+  Chose option (a) "accept and document" with strengthened styling rather
+  than option (b) "fallback Care Type breakdown" because Homestead has
+  $0 Care Level $ total across all 176 beds — a Care Type fallback
+  chart would also be empty for the user's headline fixture. Option (c)
+  "hide the chart" wasn't available in openpyxl without chart XML
+  manipulation. When a flat-rate-AL fixture surfaces (Care Level $ > 0
+  but no acuity tiers), revisit option (b) as a follow-up.
 
 ### [BL-0004] T12 Analytics — 2P revenue reconciliation row
 - **Shipped in:** substrate v0.1.14 (2026-05-14)

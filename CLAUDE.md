@@ -2,7 +2,7 @@
 
 > Onboarding doc for any Claude session (chat or Claude Code) working on this repo. Read this first — it points to canonical truth and surfaces facts that previously had to be grubbed for.
 
-**Last updated:** 2026-05-14 (after substrate v0.1.14 — three small Track 3 patches: BL-0004 T12 Analytics 2P revenue reconciliation row, BL-0005 Workbook Health total AR aggregation, BL-0006 Section K Avg Actual PSF column)
+**Last updated:** 2026-05-14 (after RR v1.17.1 + substrate v0.1.15 — BL-0008 `_detect_substrate_version()` rewrite + BL-0002 V5 chart empty-state UX)
 
 ---
 
@@ -38,7 +38,7 @@ The repo runs three parallel tracks. They share an Analyzer but are otherwise in
 | Code | `app.py`, `normalizer.py`, `mappings.py`, `pre_cleaner.py`, `period_date.py`, `reports.py`, `writer.py` |
 | Spec | `SPEC-RR.md` |
 | Changelog | `CHANGELOG-RR.md` |
-| Current version | RR v1.17.0 |
+| Current version | RR v1.17.1 |
 
 ### Track 2 — T12 Normalizer (T12-side code + Analyzer substrate)
 
@@ -51,7 +51,7 @@ The repo runs three parallel tracks. They share an Analyzer but are otherwise in
 | Migration scripts | `tools/migration/migrate_to_v01N.py` (one per substrate version) |
 | Verification harness | `tools/verify_t12_v020.py` (parser-side; runs all four reference fixtures) |
 | Current code version | T12 v0.2.1 |
-| Current substrate version | v0.1.14 |
+| Current substrate version | v0.1.15 |
 
 **Module naming gotcha (verified 2026-05-10).** Four `t12_*` files exist and they are NOT duplicates — the `t12_` prefix originally meant "operates on the T12-shaped destination workbook" (which is now the Analyzer), not "operates on T12 data." Every one is imported by `app.py` and serves a distinct role:
 

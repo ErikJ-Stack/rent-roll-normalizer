@@ -59,8 +59,8 @@ from writer import write_output
 APP_VERSION = "1.14.0"            # alias for RR_VERSION; kept for back-compat
 APP_LAST_UPDATED = "2026-05-08"   # alias for RR_LAST_UPDATED
 
-RR_VERSION = "1.17.0"
-RR_LAST_UPDATED = "2026-05-13"
+RR_VERSION = "1.17.1"
+RR_LAST_UPDATED = "2026-05-14"
 
 T12_VERSION = "0.2.1"
 T12_LAST_UPDATED = "2026-05-11"
@@ -120,18 +120,84 @@ def _read_descmap_labels(analyzer_bytes: bytes) -> list[str]:
 
 
 def _detect_substrate_version(analyzer_bytes: bytes) -> str:
-    """Heuristically detect the substrate version of an Analyzer by looking
-    for canonical Labels in Description_Map.
+    """Detect the substrate version of an Analyzer.
 
-    v0.1.5 marker: "2nd Person Revenue" Label exists.
-    v0.1.4 marker: "Auto Expense" + "Lease / ground lease" exist; no "2nd Person Revenue".
-    Pre-v0.1.4: neither marker present.
+    Closes UW-BACKLOG BL-0008. The prior implementation (v1.12.0-v1.17.0)
+    only knew the v0.1.4 and v0.1.5 Description_Map markers, so any
+    Analyzer at v0.1.6 through v0.1.14 reported as `v0.1.5`. This rewrite
+    reads `Cover!B8` (the canonical version stamp set by every migration
+    since v0.1.4) as the primary source, then falls back to the legacy
+    Label-based heuristic for older Analyzers that predate `Cover!B8` or
+    for files where that cell has been damaged.
 
-    Returns a string like "v0.1.5", "v0.1.4", or "(unknown)" on any read error.
+    Strategy:
+        1. Try `Cover!B8`. If it matches `v0.1.N` pattern, return as-is.
+        2. Fall back to substrate-distinctive sentinel cells (in order
+           from newest to oldest):
+             - Rent Roll Recon!I87 contains "Actual" + "PSF" → v0.1.14+
+             - T12 Analytics!A168 contains "Reconciliation" → v0.1.14+
+             - Rent Roll Input!AC4 contains "Meal Plan" → v0.1.13+
+             - Rent Roll Recon!A119 contains "M " → v0.1.12+
+             - Rent Roll Input!V4 contains "2nd Person" → v0.1.10+
+             - Description_Map contains "2nd Person Revenue" Label → v0.1.5+
+             - Description_Map contains "Auto Expense" + "Lease / ground lease" → v0.1.4
+        3. If nothing matches: `"pre-v0.1.4"`.
+
+    Returns a string like `"v0.1.14"` or `"(unknown)"` on any read error.
     Used for the sidebar caption only — never gates functionality.
     """
     try:
         wb = openpyxl.load_workbook(pd.io.common.BytesIO(analyzer_bytes), data_only=True)
+
+        # 1. Primary: Cover!B8 stamp (canonical since v0.1.4)
+        try:
+            cover_b8 = wb["Cover"]["B8"].value
+            if isinstance(cover_b8, str):
+                import re
+                m = re.match(r"^v0\.1\.\d+$", cover_b8.strip())
+                if m:
+                    return cover_b8.strip()
+        except Exception:
+            pass
+
+        # 2. Fallback: substrate-distinctive sentinel cells (newest → oldest)
+        try:
+            rr = wb["Rent Roll Recon"]
+            i87 = rr.cell(87, 9).value
+            if isinstance(i87, str) and "Actual" in i87 and "PSF" in i87:
+                return "v0.1.14+"
+        except Exception:
+            pass
+        try:
+            ta = wb["T12 Analytics"]
+            a168 = ta.cell(168, 1).value
+            if isinstance(a168, str) and "Reconciliation" in a168:
+                return "v0.1.14+"
+        except Exception:
+            pass
+        try:
+            rri = wb["Rent Roll Input"]
+            ac4 = rri.cell(4, 29).value
+            if isinstance(ac4, str) and "Meal Plan" in ac4:
+                return "v0.1.13+"
+        except Exception:
+            pass
+        try:
+            rr = wb["Rent Roll Recon"]
+            a119 = rr.cell(119, 1).value
+            if isinstance(a119, str) and a119.startswith("M "):
+                return "v0.1.12+"
+        except Exception:
+            pass
+        try:
+            rri = wb["Rent Roll Input"]
+            v4 = rri.cell(4, 22).value
+            if isinstance(v4, str) and "2nd Person" in v4:
+                return "v0.1.10+"
+        except Exception:
+            pass
+
+        # 3. Legacy Description_Map Label heuristic (pre-v0.1.10 fallback)
         ws = wb["Description_Map"]
         labels: set[str] = set()
         for r in range(5, ws.max_row + 1):
@@ -139,7 +205,7 @@ def _detect_substrate_version(analyzer_bytes: bytes) -> str:
             if v and str(v).strip():
                 labels.add(str(v).strip())
         if "2nd Person Revenue" in labels:
-            return "v0.1.5"
+            return "v0.1.5+"
         if "Auto Expense" in labels and "Lease / ground lease" in labels:
             return "v0.1.4"
         return "pre-v0.1.4"

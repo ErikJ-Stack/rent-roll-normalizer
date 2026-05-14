@@ -8,6 +8,63 @@ When making a code change in a chat, add an entry here in the same commit.
 
 ---
 
+## [1.17.1] — 2026-05-14
+
+### Summary
+
+**UW-BACKLOG BL-0008 closed.** Single-file patch in `app.py`: rewrites `_detect_substrate_version()` to accurately report newer substrate versions instead of stale-capping at `v0.1.5`. Cross-cuts with substrate v0.1.15 (`BL-0002` closed — V5 chart empty-state UX). Both ship in the same PR per user request to bundle them.
+
+### Why
+
+Prior implementation (since v1.12.0) only knew the v0.1.4 and v0.1.5 Description_Map markers. Any Analyzer at substrate v0.1.6 through v0.1.14 returned `"v0.1.5"` — the sidebar caption silently misreported the actual substrate of every populated Analyzer downloaded since the substrate moved past v0.1.5. Cosmetic (display-only; never gates functionality) but confusing during deal review.
+
+### What changed
+
+**App — `app.py`:** `_detect_substrate_version()` rewritten with a three-tier resolution strategy:
+
+1. **Primary**: read `Cover!B8` (canonical version stamp set by every migration since v0.1.4). If it matches `v0.1.N`, return as-is.
+2. **Fallback heuristic** (newest-to-oldest sentinel cells, used when `Cover!B8` is missing or damaged):
+   - `Rent Roll Recon!I87` contains `"Actual"`+`"PSF"` → `v0.1.14+`
+   - `T12 Analytics!A168` contains `"Reconciliation"` → `v0.1.14+`
+   - `Rent Roll Input!AC4` contains `"Meal Plan"` → `v0.1.13+`
+   - `Rent Roll Recon!A119` starts with `"M "` → `v0.1.12+`
+   - `Rent Roll Input!V4` contains `"2nd Person"` → `v0.1.10+`
+3. **Legacy Description_Map heuristic** (pre-v0.1.10 fallback): unchanged from prior `2nd Person Revenue` / `Auto Expense` / `Lease / ground lease` checks.
+
+All exception paths preserve the original `"(unknown)"` failure mode.
+
+**App — `app.py` (version bump):** `RR_VERSION` `"1.17.0"` → `"1.17.1"`; `RR_LAST_UPDATED` updated.
+
+### Verification
+
+Sanity-checked detection against two reference workbooks:
+
+| Workbook | `Cover!B8` | Detected | Outcome |
+| --- | --- | --- | --- |
+| Bundled v0.1.14 (post-PR #17 main) | `v0.1.14` | `v0.1.14` ✅ | Primary path |
+| User's populated Homestead workbook | `v0.1.10` | `v0.1.10` ✅ | Primary path |
+
+After this PR ships + the substrate v0.1.15 companion is applied, both will report `v0.1.15`.
+
+### Companion (substrate v0.1.15)
+
+Bundled in the same PR — see [CHANGELOG-T12.md](CHANGELOG-T12.md) `[Substrate template v0.1.15]` for the substrate-side details (BL-0002 closure: V5 chart empty-state UX).
+
+### Files changed
+
+- `app.py` — `_detect_substrate_version()` rewritten; version bump
+- `ALF_Financial_Analyzer_Only.xlsx` — bundled Analyzer migrated to v0.1.15 (Track 3 companion)
+- `tools/migration/migrate_to_v0115.py` — new idempotent migration script (Track 3 companion)
+- `SPEC-RR.md` — current-version line
+- `SPEC-T12.md` — current-version line (substrate v0.1.15 reference)
+- `README.md` — versions table + migration script listing
+- `CLAUDE.md` — version references
+- `UW-BACKLOG.md` — `BL-0002` + `BL-0008` moved to Shipped
+- `CHANGELOG-RR.md` — this entry
+- `CHANGELOG-T12.md` — `[Substrate template v0.1.15]` entry
+
+---
+
 ## [1.17.0] — 2026-05-13
 
 ### Summary
