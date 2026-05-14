@@ -8,6 +8,73 @@ When making a code change in a T12-related chat, add an entry here in the same c
 
 ---
 
+## [Substrate template v0.1.14] — 2026-05-14
+
+### Summary
+
+Three small Track 3 patches surfaced in v0.1.10 carry-forwards, bundled into a single substrate increment per UW-BACKLOG prioritization. Pure substrate change — no RR/T12 code changes.
+
+**Closes [UW-BACKLOG BL-0004, BL-0005, BL-0006](UW-BACKLOG.md).**
+
+### What changed (migrate_to_v0114.py)
+
+- **A. BL-0004 — T12 Analytics: 2P revenue reconciliation row** at rows 168-170:
+  - Row 168: subsection title (merged A:G) — `RR ↔ T12 — 2nd Person Revenue Reconciliation`
+  - Row 169: column headers (Metric / RR projection / T12 actual / Variance % / Note)
+  - Row 170: data row — `=SUM('Rent Roll Input'!$V$7:$V$606)*12` (RR annual projection) vs. `=IFERROR('T12 Raw Data'!$R$15,0)` (T12 actual annual). Variance % + conditional note: ⚠ fires at \|variance\| > 10%; ✓ "reconciles within 10% of T12" otherwise.
+
+  Placement: chose rows 168-170 (after the existing KPI Dashboard color key at row 166) instead of slotting into rows 42-44 because of pre-existing `A43:H43` and `A45:H45` horizontal merges in the GPR Waterfall area. Appending past row 166 is cleaner than disrupting merge ranges; the new block stands alone as an addendum and doesn't risk breaking adjacent formulas.
+
+- **B. BL-0005 — Workbook Health: total AR / Balance aggregation** at rows 43-45:
+  - Row 43: `G9 · Total outstanding AR (Σ Rent Roll Input!X)` — `=SUM('Rent Roll Input'!$X$7:$X$606)`
+  - Row 44: `G10 · AR ÷ monthly EGI (collection-velocity indicator)` — `=IFERROR(B43/('Monthly Trending'!$N$21/12),0)`
+  - Row 45: conditional note (merged A:D) — ⚠ fires when `AR > 5% of monthly EGI`; ✓ "within 5% of monthly EGI" otherwise.
+
+  Placement: directly after the existing `G8 · Last opened (volatile)` row at 42. The new rows extend the Diagnostics section without disturbing it.
+
+- **C. BL-0006 — Rent Roll Recon Section K: Avg Actual PSF column** at col I rows 87-93:
+  - I87: header — `Avg Actual\nPSF`
+  - I88-I92: per-unit-type AVERAGEIFS on `Rent Roll Input!$AA$7:$AA$606` (Actual PSF, captured at v1.16.0). Same filter pattern as col D (Avg Rate) — period selector + occupied + IL care type + unit type.
+  - I93: Total IL row — same formula without the unit-type filter.
+
+  Placement: extends the existing IL unit-type table (cols A-H) with a new col I. Doesn't touch the dispersion rows below (rows 95-100). Source data already exists at `Rent Roll Input!AA` per substrate v0.1.10.
+
+- **D. Stamp** `Cover!B8` and 13 `AZ4` anchors to `v0.1.14`.
+
+### Idempotency
+
+Gate (`is_already_v0114()`) checks BOTH the version stamp AND three sentinel cells (one per BL): T12 Analytics!A168 contains "Reconciliation", Workbook Health!A43 contains "G9", Rent Roll Recon!I87 contains "Actual" and "PSF". Re-runs on partial-state files safely re-apply.
+
+### Verification
+
+13-check verification block: Cover!B8 stamped, all 13 AZ4 stamped, BL-0004 title row + RR projection formula + T12 actual formula, BL-0005 G9 label + AR sum formula + G10 label, BL-0006 I87 header + I88 Studio formula + I93 Total IL formula, plus Section K unit-type table intact + Section L MC structure intact (regression guards).
+
+Migration verified end-to-end on:
+- **Bundled v0.1.13 Analyzer** → v0.1.14 cleanly. File size 193,915 → 194,732 bytes (+817 bytes — small, consistent with ~13 new functional cells + 14 stamps).
+- **User's populated Homestead workbook** chained v0.1.10 → v0.1.12 → v0.1.13 → v0.1.14 — all 13 checks green at each step.
+- **Idempotency**: re-running on a v0.1.14 file exits cleanly with `"Workbook is already at v0.1.14. No-op (will re-save)."`
+
+### What's left in UW-BACKLOG.md after this release
+
+- `BL-0001` (substrate v0.2.0): finer ancillary T12 Labels (`Meal Income`, `Housekeeping Income`, etc.)
+- `BL-0002` (substrate v0.2.0): V5 chart fallback for broker-format rent rolls with no acuity
+- `BL-0008` (RR, whenever bundled): substrate version detection in `app.py`
+- `BL-0009` (substrate v0.2.0 flagship): Branch 2 Handoff readiness (UW Export, pre-export gate, metadata header)
+- `BL-0010` (refactor, whenever): `t12_translator.py` → `analyzer_rr_translator.py` rename
+
+### Files changed
+
+- `ALF_Financial_Analyzer_Only.xlsx` — bundled Analyzer migrated to v0.1.14
+- `tools/migration/migrate_to_v0114.py` — new idempotent migration script
+- `SPEC-T12.md` — current-version line
+- `SPEC-RR.md` — Track-versions inline reference
+- `README.md` — versions table + migration script listing
+- `CLAUDE.md` — substrate version reference
+- `UW-BACKLOG.md` — `BL-0004` / `BL-0005` / `BL-0006` moved from Pending to Shipped
+- `CHANGELOG-T12.md` — this entry
+
+---
+
 ## [Substrate template v0.1.13] — 2026-05-13
 
 ### Summary
