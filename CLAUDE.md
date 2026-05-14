@@ -2,7 +2,7 @@
 
 > Onboarding doc for any Claude session (chat or Claude Code) working on this repo. Read this first — it points to canonical truth and surfaces facts that previously had to be grubbed for.
 
-**Last updated:** 2026-05-14 (after RR v1.17.3 + substrate v0.2.1 — BL-0001 closed: 5 new ancillary Labels added to `Description_Map` / T12 Raw Data / Monthly Trending; Section M now isolates per-fee T12 attribution instead of collapsing 5 fees into "Other community revenue". Companion `_detect_substrate_version()` regex widened to accept `vN.N.N`. UW-BACKLOG is now empty.)
+**Last updated:** 2026-05-14 (after RR v1.17.4 + substrate v0.2.2 — user-feedback round against the Homestead populated v0.2.1 workbook. Rent Roll Input cols V–AH formatting consistency, T (Total LOC $) split into pure LOC, new col AH (Total Ancillary $) added, U (Total Monthly Rev) rewritten for transparency. Companion parser change in `normalizer.py` adds `_reroute_recurring_concessions()` post-process pass — concession dollars buried in Notes now route to `Concession $` instead of `Other LOC $` for recurring concessions, with end-date extraction.)
 
 ---
 

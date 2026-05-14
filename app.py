@@ -59,7 +59,7 @@ from writer import write_output
 APP_VERSION = "1.14.0"            # alias for RR_VERSION; kept for back-compat
 APP_LAST_UPDATED = "2026-05-08"   # alias for RR_LAST_UPDATED
 
-RR_VERSION = "1.17.3"
+RR_VERSION = "1.17.4"
 RR_LAST_UPDATED = "2026-05-14"
 
 T12_VERSION = "0.2.1"
@@ -135,6 +135,7 @@ def _detect_substrate_version(analyzer_bytes: bytes) -> str:
            components allowed), return as-is.
         2. Fall back to substrate-distinctive sentinel cells (in order
            from newest to oldest):
+             - Rent Roll Input!AH4 contains "Total" + "Ancillary" → v0.2.2+
              - T12 Raw Data!B16 == "Meal Income" → v0.2.1+
              - Workbook contains "UW Export" sheet → v0.2.0+
              - Rent Roll Recon!I87 contains "Actual" + "PSF" → v0.1.14+
@@ -167,6 +168,13 @@ def _detect_substrate_version(analyzer_bytes: bytes) -> str:
             pass
 
         # 2. Fallback: substrate-distinctive sentinel cells (newest → oldest)
+        try:
+            rri = wb["Rent Roll Input"]
+            ah4 = rri.cell(4, 34).value
+            if isinstance(ah4, str) and "Total" in ah4 and "Ancillary" in ah4:
+                return "v0.2.2+"
+        except Exception:
+            pass
         try:
             trd = wb["T12 Raw Data"]
             b16 = trd.cell(16, 2).value

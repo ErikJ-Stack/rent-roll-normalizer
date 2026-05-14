@@ -541,6 +541,124 @@ CONDENSED_COLUMNS = [
 ]
 
 
+# --- Concession-from-Notes rerouter (post-process pass, v1.17.4) ----------
+#
+# Detects recurring-concession patterns in the `Notes` field and moves the
+# corresponding negative dollar amount from `Other LOC $` to `Concession $`.
+# Closes the gap surfaced by user feedback against the v0.2.1 Homestead
+# populated workbook (2026-05-14): the Misc. column on Homestead-format
+# rent rolls carries concession amounts as negative values with the
+# explanation in Notes; the parser was correctly capturing the dollars
+# but routing them to the catchall instead of the dedicated concession
+# column.
+
+# Recurring-concession markers (presence of ANY one => recurring).
+# Conservative — each pattern matches a distinctive shape.
+_RECURRING_CONCESSION_PATTERNS = (
+    re.compile(r"\$?\d[\d,.]*\s*/\s*(?:mo|month)\s+concession", re.IGNORECASE),       # "$200/mo concession", "380/mo concession"
+    re.compile(r"concession\s+remaining", re.IGNORECASE),                              # "$357 concession remaining- legacy"
+    re.compile(r"concession\s+ending", re.IGNORECASE),                                 # "$228 concession ending 8/31/2026"
+    re.compile(r"\bongoing\s+concession\b", re.IGNORECASE),                            # "ongoing concession/TR J14 3/1"
+    re.compile(r"waived\s+CF\b", re.IGNORECASE),                                       # "waived CF $726/mo concession"
+)
+
+# Explicit one-time / non-monthly markers (presence => DON'T move).
+# Parenthetical descriptions are typically legacy / context, not currently
+# active monthly concessions.
+_ONE_TIME_CONCESSION_PATTERNS = (
+    re.compile(r"\(\s*half\s+off\b", re.IGNORECASE),                                   # "(half off $1047 concession)"
+)
+
+# End-date extraction patterns. Try most specific first.
+_END_DATE_PATTERNS = (
+    re.compile(r"ending\s+(\d{1,2}/\d{1,2}/\d{2,4})", re.IGNORECASE),                  # "ending 8/31/2026"
+    re.compile(r"ending\s+(\d{1,2}/\d{2,4})", re.IGNORECASE),                          # "ending 12/2026"
+)
+
+
+def _classify_concession_notes(notes: str) -> str:
+    """Return 'recurring', 'one-time', or 'unknown' based on Notes content.
+
+    Notes must contain the literal word 'concession' AND a recurring marker
+    to qualify as 'recurring'. One-time markers OVERRIDE recurring (a row
+    with both is left alone — defer to a human).
+    """
+    if not isinstance(notes, str) or not notes.strip():
+        return "unknown"
+    nlow = notes.lower()
+    if "concession" not in nlow:
+        return "unknown"
+
+    has_one_time = any(p.search(notes) for p in _ONE_TIME_CONCESSION_PATTERNS)
+    if has_one_time:
+        return "one-time"
+
+    has_recurring = any(p.search(notes) for p in _RECURRING_CONCESSION_PATTERNS)
+    if has_recurring:
+        return "recurring"
+
+    return "unknown"
+
+
+def _extract_concession_end_date(notes: str) -> str:
+    """Return a 'M/D/YYYY' or 'M/YYYY' string if Notes contains an
+    'ending DATE' marker; otherwise empty string.
+    """
+    if not isinstance(notes, str):
+        return ""
+    for p in _END_DATE_PATTERNS:
+        m = p.search(notes)
+        if m:
+            return m.group(1)
+    return ""
+
+
+def _reroute_recurring_concessions(condensed: pd.DataFrame) -> pd.DataFrame:
+    """Mutate `condensed` in place: where Notes flags a recurring concession
+    AND `Other LOC $` is negative AND `Concession $` is empty, move the
+    negative amount from `Other LOC $` to `Concession $`. Also extract end
+    dates into `Concession End Date` when present.
+    """
+    if "Notes" not in condensed.columns or "Other LOC $" not in condensed.columns:
+        return condensed
+
+    moved_count = 0
+    for idx in condensed.index:
+        notes = condensed.at[idx, "Notes"]
+        kind = _classify_concession_notes(notes if isinstance(notes, str) else "")
+        if kind != "recurring":
+            continue
+
+        other_loc = condensed.at[idx, "Other LOC $"]
+        if not isinstance(other_loc, (int, float)) or other_loc >= 0:
+            continue
+
+        # Don't clobber an explicitly-set Concession $ (operator-provided)
+        existing_conc = condensed.at[idx, "Concession $"]
+        if isinstance(existing_conc, (int, float)) and existing_conc != 0:
+            continue
+
+        # Move the value. Use 0.0 (numeric zero) for Other LOC $ rather than
+        # empty string — the column dtype is float64 when any row has a
+        # numeric value, and writing "" would raise LossySetitemError on
+        # pandas >= 2.x. Downstream Excel display: 0 with the substrate's
+        # `$#,##0.00;...;-` number format renders as "-" (the dash branch
+        # handles zero), which is the same visual as an empty cell.
+        condensed.at[idx, "Concession $"] = other_loc
+        condensed.at[idx, "Other LOC $"] = 0.0
+
+        # Extract end date if present and not already set
+        existing_end = condensed.at[idx, "Concession End Date"]
+        if not (isinstance(existing_end, str) and existing_end.strip()):
+            ed = _extract_concession_end_date(notes if isinstance(notes, str) else "")
+            if ed:
+                condensed.at[idx, "Concession End Date"] = ed
+
+        moved_count += 1
+
+    return condensed
+
+
 def normalize_rent_roll(
     xlsx_bytes_or_path,
     sheet_name: Optional[str] = None,
@@ -1084,6 +1202,30 @@ def normalize_rent_roll(
         })
     else:
         condensed = pd.DataFrame(columns=CONDENSED_COLUMNS)
+
+    # --- Reroute recurring concessions buried in Notes ---------------------
+    # Some operators (Homestead-format especially) post concession amounts
+    # to a `Misc.` GL column with a human-readable explanation in `Notes`,
+    # leaving the structured `Concession $` column empty. The `Misc.` GL
+    # then flows into our `Other LOC $` catchall (per `_looks_care`
+    # broadening in v1.16.2). The concession value is captured but lives
+    # in the wrong bucket — Section M / UW Output sees the operator as
+    # having more residual ancillary expense / less concession activity
+    # than reality.
+    #
+    # This pass scans every row's Notes for an explicit "concession" word
+    # plus a recurring-marker pattern (e.g. "$XXX/mo concession",
+    # "$XXX concession ending DATE", "$XXX concession remaining"). When
+    # both are present AND `Other LOC $` is negative AND `Concession $` is
+    # currently empty, it MOVES the negative value from `Other LOC $` to
+    # `Concession $` and (when present) extracts the end date into
+    # `Concession End Date`. One-time / parenthetical mentions like
+    # "(half off $XXXX concession)" are explicitly left alone.
+    #
+    # Conservative: only acts when ALL gates pass. Closes user feedback
+    # round 2026-05-14 against substrate v0.2.1 + RR v1.17.3.
+    if not condensed.empty:
+        condensed = _reroute_recurring_concessions(condensed)
 
     # --- Mapping audit -----------------------------------------------------
     audit_rows = []

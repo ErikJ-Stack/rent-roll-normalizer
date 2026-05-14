@@ -6,7 +6,7 @@
 **Repo:** <https://github.com/ErikJ-Stack/rent-roll-normalizer> (public)
 **Owner:** Erik J (`Erikjayj@gmail.com`, GitHub: `ErikJ-Stack`)
 **Stack:** Python · Streamlit · pandas · openpyxl · Streamlit Community Cloud (free tier)
-**Current version:** v1.17.3 (2026-05-14) — Companion patch to substrate v0.2.1 (BL-0001 closed): `_detect_substrate_version()` regex widened `v0\.1\.\d+` → `v\d+\.\d+\.\d+` + 2 new sentinel checks (T12 Raw Data!B16 == "Meal Income" → v0.2.1+; "UW Export" sheet → v0.2.0+) so v0.2.x Analyzers report accurately. Prior: v1.17.2 (2026-05-14) module rename `t12_translator.py` → `analyzer_rr_translator.py` (BL-0010). v1.17.1 (2026-05-14) `_detect_substrate_version()` rewrite (BL-0008) bundled with substrate v0.1.15 (BL-0002).
+**Current version:** v1.17.4 (2026-05-14) — Companion to substrate v0.2.2 (user-feedback round). Two parts: (1) `_detect_substrate_version()` sentinel addition for v0.2.2+ (Rent Roll Input!AH4 contains "Total" + "Ancillary"). (2) New parser-side `_reroute_recurring_concessions()` post-process pass in `normalizer.py` — concession dollars buried in `Misc.` GL with explanation in `Notes` (Homestead pattern) now route to `Concession $` instead of `Other LOC $` for recurring concessions, with end-date extraction. End-to-end smoke: 16/16 recurring + 1/1 one-time correctly classified across 17 Homestead rows. Prior: v1.17.3 (2026-05-14) version-detection regex widening (BL-0001 companion).
 
 ---
 
@@ -24,7 +24,7 @@ The Analyzer then drives the underwriting analysis (P&L, scenarios, returns) —
 * **Track 1 — Rent Roll Normalizer** (this document) — RR parsing, RR writer, Streamlit UI shell, Analyzer source resolution, period-date detection.
 * **Track 2 — T12 Normalizer** (`SPEC-T12.md`) — T12 parser (Yardi + MRI format registry), T12 writer (`T12 Input` sheet), `Description_Map` lookup, UNMATCHED matcher form.
 
-Both tracks ship in the same `app.py` and write into the same Analyzer workbook, but they have independent version streams. **Track 1 is at v1.17.3; Track 2 is at v0.2.1; bundled Analyzer substrate is at v0.2.1.**
+Both tracks ship in the same `app.py` and write into the same Analyzer workbook, but they have independent version streams. **Track 1 is at v1.17.4; Track 2 is at v0.2.1; bundled Analyzer substrate is at v0.2.2.**
 
 A persistent forward-looking backlog of UW workbook changes lives at [`UW-BACKLOG.md`](UW-BACKLOG.md). Add items there when a release surfaces a downstream need; close items by moving to the `Shipped` section. Cross-references use `BL-NNNN` IDs that stay stable across releases.
 
