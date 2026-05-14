@@ -10,9 +10,9 @@ A Streamlit app that turns a senior-housing rent roll AND a T12 financial statem
 
 | Stream | Version | Last updated |
 | --- | --- | --- |
-| RR Normalizer (`RR_VERSION`) | v1.17.2 | 2026-05-14 |
+| RR Normalizer (`RR_VERSION`) | v1.17.3 | 2026-05-14 |
 | T12 Normalizer (`T12_VERSION`) | v0.2.1 | 2026-05-11 |
-| Bundled Analyzer substrate | v0.2.0 | 2026-05-14 |
+| Bundled Analyzer substrate | v0.2.1 | 2026-05-14 |
 
 ---
 
@@ -103,7 +103,7 @@ rent_roll_app/
 ├── analyzer_rr_writer.py               # Writes the translated RR into the Analyzer's Rent Roll Input sheet (Track 1; renamed from t12_writer.py on 2026-05-10)
 ├── property_name.py                    # Cross-track helper: derives property name from filename for both writers
 │
-├── ALF_Financial_Analyzer_Only.xlsx    # Bundled Analyzer template (substrate v0.2.0)
+├── ALF_Financial_Analyzer_Only.xlsx    # Bundled Analyzer template (substrate v0.2.1)
 ├── mapping_template.xlsx               # Editable RR mapping override template (optional sidebar upload)
 │
 ├── tools/
@@ -122,6 +122,7 @@ rent_roll_app/
 │       ├── migrate_to_v0114.py         # Substrate v0.1.13 → v0.1.14 migration (T12 Analytics 2P recon + Workbook Health AR + Section K PSF)
 │       ├── migrate_to_v0115.py         # Substrate v0.1.14 → v0.1.15 migration (V5 chart empty-state UX + acuity formula blanking)
 │       ├── migrate_to_v020.py          # Substrate v0.1.15 → v0.2.0 flagship migration (UW Export sheet + Pre-Export Gate + Workbook Map extension)
+│       ├── migrate_to_v021.py          # Substrate v0.2.0 → v0.2.1 migration (5 new ancillary Labels: Meal/HK/Laundry/Scooter/Transfer Income — BL-0001)
 │       └── verify_e2e.py               # End-to-end Analyzer verification
 │
 ├── CLAUDE.md                           # Onboarding doc for any Claude session — read first

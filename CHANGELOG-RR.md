@@ -8,6 +8,45 @@ When making a code change in a chat, add an entry here in the same commit.
 
 ---
 
+## [1.17.3] — 2026-05-14
+
+### Summary
+
+**Companion patch to substrate v0.2.1 (BL-0001).** Widens `_detect_substrate_version()` to match `vN.N.N` instead of `v0.1.N`, and adds two new sentinel checks (T12 Raw Data!B16 == "Meal Income" → v0.2.1+; "UW Export" sheet present → v0.2.0+) to the fallback chain. Bundled in the same PR as the substrate migration per the established cross-cutting pattern.
+
+### Why
+
+The prior regex `^v0\.1\.\d+$` was added in v1.17.1 (BL-0008) to handle the per-version sentinel-cell fallbacks. It was too narrow — any Analyzer at substrate v0.2.0 or v0.2.1 has `Cover!B8 = "v0.2.0"` / `"v0.2.1"`, which fails the regex, so detection falls through to the sentinel chain and returns `"v0.1.14+"` (because the I87 / A168 / etc. checks all still match). Cosmetic — the sidebar caption misreports — but confusing during deal review.
+
+### What changed
+
+**`app.py` — `_detect_substrate_version()`:**
+
+1. Primary regex widened: `^v0\.1\.\d+$` → `^v\d+\.\d+\.\d+$`. Accepts any future major/minor without further code changes.
+2. Two new sentinel checks prepended to the fallback chain (before the v0.1.14+ checks so detection is precise):
+   - `T12 Raw Data!B16 == "Meal Income"` → return `"v0.2.1+"` (the v0.2.1 vocabulary expansion sentinel).
+   - `"UW Export" in wb.sheetnames` → return `"v0.2.0+"` (the v0.2.0 flagship sheet).
+
+**`app.py` — `RR_VERSION`:** `"1.17.2"` → `"1.17.3"`.
+
+### Verification
+
+Direct call against the post-migration bundled v0.2.1 Analyzer:
+
+```
+Bundled v0.2.1 Analyzer detected as: v0.2.1
+Expected:                            v0.2.1
+```
+
+Primary path hits — the widened regex matches `v0.2.1` and returns it as-is. (Pre-patch, this returned `v0.1.14+` via the sentinel-cell fallback.)
+
+### Files changed
+
+- `app.py` — `_detect_substrate_version()` regex + 2 new sentinels; `RR_VERSION` bump
+- (Substrate side: see `CHANGELOG-T12.md` `[Substrate template v0.2.1]` for the migration that motivated this patch.)
+
+---
+
 ## [1.17.2] — 2026-05-14
 
 ### Summary

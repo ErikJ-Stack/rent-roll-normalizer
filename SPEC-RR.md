@@ -6,7 +6,7 @@
 **Repo:** <https://github.com/ErikJ-Stack/rent-roll-normalizer> (public)
 **Owner:** Erik J (`Erikjayj@gmail.com`, GitHub: `ErikJ-Stack`)
 **Stack:** Python · Streamlit · pandas · openpyxl · Streamlit Community Cloud (free tier)
-**Current version:** v1.17.2 (2026-05-14) — Refactor (UW-BACKLOG BL-0010 closed): module rename `t12_translator.py` → `analyzer_rr_translator.py` for symmetry with the 2026-05-10 `t12_writer.py` → `analyzer_rr_writer.py` rename. No functional change. Prior: v1.17.1 (2026-05-14) `_detect_substrate_version()` rewrite (BL-0008) bundled with substrate v0.1.15 (BL-0002 V5 chart empty-state UX). v1.17.0 (2026-05-13) RR Input expansion with per-fee ancillary columns at AC-AG (BL-0003).
+**Current version:** v1.17.3 (2026-05-14) — Companion patch to substrate v0.2.1 (BL-0001 closed): `_detect_substrate_version()` regex widened `v0\.1\.\d+` → `v\d+\.\d+\.\d+` + 2 new sentinel checks (T12 Raw Data!B16 == "Meal Income" → v0.2.1+; "UW Export" sheet → v0.2.0+) so v0.2.x Analyzers report accurately. Prior: v1.17.2 (2026-05-14) module rename `t12_translator.py` → `analyzer_rr_translator.py` (BL-0010). v1.17.1 (2026-05-14) `_detect_substrate_version()` rewrite (BL-0008) bundled with substrate v0.1.15 (BL-0002).
 
 ---
 
@@ -24,7 +24,7 @@ The Analyzer then drives the underwriting analysis (P&L, scenarios, returns) —
 * **Track 1 — Rent Roll Normalizer** (this document) — RR parsing, RR writer, Streamlit UI shell, Analyzer source resolution, period-date detection.
 * **Track 2 — T12 Normalizer** (`SPEC-T12.md`) — T12 parser (Yardi + MRI format registry), T12 writer (`T12 Input` sheet), `Description_Map` lookup, UNMATCHED matcher form.
 
-Both tracks ship in the same `app.py` and write into the same Analyzer workbook, but they have independent version streams. **Track 1 is at v1.17.2; Track 2 is at v0.2.1; bundled Analyzer substrate is at v0.2.0.**
+Both tracks ship in the same `app.py` and write into the same Analyzer workbook, but they have independent version streams. **Track 1 is at v1.17.3; Track 2 is at v0.2.1; bundled Analyzer substrate is at v0.2.1.**
 
 A persistent forward-looking backlog of UW workbook changes lives at [`UW-BACKLOG.md`](UW-BACKLOG.md). Add items there when a release surfaces a downstream need; close items by moving to the `Shipped` section. Cross-references use `BL-NNNN` IDs that stay stable across releases.
 

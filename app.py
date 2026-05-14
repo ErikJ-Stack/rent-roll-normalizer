@@ -59,7 +59,7 @@ from writer import write_output
 APP_VERSION = "1.14.0"            # alias for RR_VERSION; kept for back-compat
 APP_LAST_UPDATED = "2026-05-08"   # alias for RR_LAST_UPDATED
 
-RR_VERSION = "1.17.2"
+RR_VERSION = "1.17.3"
 RR_LAST_UPDATED = "2026-05-14"
 
 T12_VERSION = "0.2.1"
@@ -131,9 +131,12 @@ def _detect_substrate_version(analyzer_bytes: bytes) -> str:
     for files where that cell has been damaged.
 
     Strategy:
-        1. Try `Cover!B8`. If it matches `v0.1.N` pattern, return as-is.
+        1. Try `Cover!B8`. If it matches `vN.N.N` (any leading-zero
+           components allowed), return as-is.
         2. Fall back to substrate-distinctive sentinel cells (in order
            from newest to oldest):
+             - T12 Raw Data!B16 == "Meal Income" → v0.2.1+
+             - Workbook contains "UW Export" sheet → v0.2.0+
              - Rent Roll Recon!I87 contains "Actual" + "PSF" → v0.1.14+
              - T12 Analytics!A168 contains "Reconciliation" → v0.1.14+
              - Rent Roll Input!AC4 contains "Meal Plan" → v0.1.13+
@@ -149,18 +152,33 @@ def _detect_substrate_version(analyzer_bytes: bytes) -> str:
     try:
         wb = openpyxl.load_workbook(pd.io.common.BytesIO(analyzer_bytes), data_only=True)
 
-        # 1. Primary: Cover!B8 stamp (canonical since v0.1.4)
+        # 1. Primary: Cover!B8 stamp (canonical since v0.1.4). Pattern
+        # widened in v1.17.3 to accept v0.2.x and any future major/minor —
+        # the prior `v0\.1\.\d+` regex misreported v0.2.0 / v0.2.1 because
+        # only the patch component was variable.
         try:
             cover_b8 = wb["Cover"]["B8"].value
             if isinstance(cover_b8, str):
                 import re
-                m = re.match(r"^v0\.1\.\d+$", cover_b8.strip())
+                m = re.match(r"^v\d+\.\d+\.\d+$", cover_b8.strip())
                 if m:
                     return cover_b8.strip()
         except Exception:
             pass
 
         # 2. Fallback: substrate-distinctive sentinel cells (newest → oldest)
+        try:
+            trd = wb["T12 Raw Data"]
+            b16 = trd.cell(16, 2).value
+            if isinstance(b16, str) and b16.strip() == "Meal Income":
+                return "v0.2.1+"
+        except Exception:
+            pass
+        try:
+            if "UW Export" in wb.sheetnames:
+                return "v0.2.0+"
+        except Exception:
+            pass
         try:
             rr = wb["Rent Roll Recon"]
             i87 = rr.cell(87, 9).value
