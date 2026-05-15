@@ -8,6 +8,58 @@ When making a code change in a chat, add an entry here in the same commit.
 
 ---
 
+## [1.17.5] — 2026-05-15
+
+### Summary
+
+**Closes UW-BACKLOG BL-0011** — function + class rename on `analyzer_rr_writer.py` to complete the Track 1 misnamed-T12-symbol cleanup that began with the file renames on 2026-05-10 (`t12_writer.py` → `analyzer_rr_writer.py`) and 2026-05-14 (`t12_translator.py` → `analyzer_rr_translator.py`, BL-0010). Bundled in one tidy-up PR with two cross-cutting docs items: BL-0013 (targeted README modernization) and BL-0014 (CLAUDE.md hygiene — drop stale Open carry-forwards bullets that had drifted, expand openpyxl quirk #4 with the qualified-range-endpoint trap from BL-0001).
+
+No behavioral change. Pure refactor / docs.
+
+### What changed (BL-0011)
+
+- **`analyzer_rr_writer.py`**: `populate_t12()` → `populate_rr_input()`. Function now accurately describes what it populates (the Analyzer's `Rent Roll Input` sheet, not the `T12 Input` sheet). Mirrors the partner `populate_t12_input()` on `t12_normalizer_writer.py` which correctly does populate `T12 Input`.
+- **`analyzer_rr_writer.py`**: `T12CapacityError` → `AnalyzerRRCapacityError`. Exception class name now matches the file rename done 2026-05-10.
+- **`analyzer_rr_writer.py`**: parameter rename `t12_bytes` → `analyzer_bytes` and updated 2 sites of inline error/comment text from "T12 workbook" → "Analyzer workbook" — completes the cleanup at the function-body level too.
+- **`app.py`**: import statement updated; 1 call site (`populate_rr_input(...)`); 1 except clause (`AnalyzerRRCapacityError`).
+- **`CLAUDE.md`** "Module naming gotcha" table: `populate_t12()` → `populate_rr_input()` cell, T12CapacityError note removed (no longer "preserved as historical artifact"). Also added a forward-looking note on the surviving `translate_for_t12()` function name, explaining why it's left alone unless it becomes a confusion source.
+- **`SPEC-T12.md`** module-naming-history paragraph: rewrites the "T12CapacityError retains its old name" sentence to record the BL-0011 rename.
+
+Historical changelog / journal entries (this file's older sections, `CHANGELOG-T12.md`, `journal.md`) are NOT rewritten — they're records of what shipped at past versions, so they keep their original `populate_t12` / `T12CapacityError` references for accuracy. Same convention as the 2026-05-10 file rename.
+
+### What changed (BL-0013 — README modernization)
+
+- **Versions table** at top: bumped to RR v1.17.5 / 2026-05-15.
+- **Data-capture coverage section**: was "At RR v1.16.0 + substrate v0.1.10 (cols A-AB)"; now "At RR v1.17.4 + substrate v0.2.2 (cols A-AH)". Adds the v0.1.13 per-fee ancillary cols (AC-AG) and the v0.2.2 Total Ancillary rollup (AH). Mentions the v0.2.1 5 finer T12 Labels closing the per-fee attribution gap on Section M, and the v1.17.4 parser-side Notes-rerouter for Homestead concession patterns.
+- **Analyzer-at-a-glance section**: reframed as "Track 3 four-branch roadmap fully closed at substrate v0.2.0" (was "post-Branch 3"). Adds Section M description (per-fee capture-rate at rows 121-167) alongside Sections H/K/L. Adds `UW Export` sheet + Pre-Export Gate descriptions (substrate v0.2.0).
+- **Versioning section**: substrate convention `v0.1.N` → `v0.X.Y` (substrate is now on the v0.2.x line).
+- **UW-BACKLOG.md mention**: added to both the Versioning section (forward-looking changes pointer) and the Further Reading table.
+
+### What changed (BL-0014 — CLAUDE.md hygiene)
+
+- **"Open carry-forwards" section**: header date refreshed; the entire "Medium priority (still open)" + "Low priority" sub-sections removed (they were stale by weeks — "Branch 2 — Handoff readiness" was listed as open while it had shipped as BL-0009 / substrate v0.2.0; "Substrate version-detection bug suspected" was listed while it had shipped as BL-0008). Replaced with a single sentence pointing readers at UW-BACKLOG.md as the source of truth.
+- **openpyxl quirk #4**: expanded with the qualified-range-endpoint trap from BL-0001's migration. Documents both the failure mode (`T12_Calc!$N$1:$N$500`'s endpoint is mis-caught by the unqualified-ref regex and shifted on row inserts) and the canonical fix (capture template formulas AFTER the shift sweep, not before — see `tools/migration/migrate_to_v021.py:312-321` for the worked example). Section heading bumped from "Three" to "Four" since quirk #4 is now substantive.
+- **Module naming gotcha table** (also in scope): `populate_t12()` → `populate_rr_input()` cell, T12CapacityError historical-artifact note removed.
+
+### Files
+
+- `analyzer_rr_writer.py` — function/class/parameter renames + docstring updates
+- `app.py` — import + call site + except clause + RR_VERSION 1.17.4 → 1.17.5 + RR_LAST_UPDATED → 2026-05-15
+- `README.md` — targeted updates per BL-0013
+- `CLAUDE.md` — Module naming gotcha + Open carry-forwards section + openpyxl quirk #4
+- `SPEC-T12.md` — module-naming-history paragraph
+- `UW-BACKLOG.md` — BL-0011 / BL-0013 / BL-0014 moved from Pending to Shipped
+- `journal.md` — session entry at top
+- `CHANGELOG-RR.md` (this entry)
+
+### Verification
+
+- `python3 -c "import analyzer_rr_writer"` — module imports cleanly with new symbols (`populate_rr_input`, `AnalyzerRRCapacityError`); old symbols (`populate_t12`, `T12CapacityError`) confirmed removed.
+- `python3 -c "import ast; ast.parse(open('app.py').read())"` — app.py parses cleanly.
+- `grep -E "populate_t12\b|T12CapacityError" *.py` — zero remaining live references in code (historical mentions in CHANGELOG / journal preserved).
+
+---
+
 ## [1.17.4] — 2026-05-14
 
 ### Summary

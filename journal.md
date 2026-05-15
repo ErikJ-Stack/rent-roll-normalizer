@@ -11,6 +11,72 @@ Newest at top.
 
 ---
 
+## 2026-05-15 — RR v1.17.5 (UW-BACKLOG BL-0011 + BL-0013 + BL-0014 tidy-up)
+
+**Started as:** Continuation of the 2026-05-14 chat that shipped substrate v0.2.3 (BL-0015) in PR #24. After PR #24 was opened (still pending merge as of this entry), user asked "what's left open?" then authorized "proceed with BL-0011 + BL-0013 + BL-0014" as a single bundled tidy-up PR.
+
+**Stayed as:** Cross-track docs + refactor chat by explicit user authorization. BL-0011 is Track 1 (RR code), BL-0013 is cross-cutting (README), BL-0014 is Track 3-adjacent (CLAUDE.md). Branched off `origin/main` (not off PR #24's branch) so this PR can merge independently of #24 in either order.
+
+### Scope
+
+**BL-0011 — Function/class renames on `analyzer_rr_writer.py`** (Track 1 refactor, no behavioral change):
+- `populate_t12()` → `populate_rr_input()` (function correctly populates Rent Roll Input, not T12 Input)
+- `T12CapacityError` → `AnalyzerRRCapacityError` (exception class matches the file rename done 2026-05-10)
+- Took the opportunity to also rename the function-body parameter `t12_bytes` → `analyzer_bytes` and clean up two inline "T12 workbook" → "Analyzer workbook" mentions, since the same misnomer rationale applies inside the function too.
+- Updated callers in `app.py` (1 import, 1 call site, 1 except clause).
+- Live docs updated: `CLAUDE.md` "Module naming gotcha" table cell + `SPEC-T12.md` module-naming-history paragraph.
+- Historical CHANGELOG / journal references to the old names left intact (records of what shipped at past versions — same convention as the 2026-05-10 file rename).
+
+**BL-0013 — README modernization** (targeted updates, NOT a full rewrite):
+The README had been substantially modernized since the BL ticket was opened — dual-pipeline framing and T12 coverage were already in place. Actual updates needed were narrower:
+- Versions table bumped to RR v1.17.5 / 2026-05-15.
+- Data-capture coverage section refreshed from "RR v1.16.0 + substrate v0.1.10 (cols A-AB)" to "RR v1.17.4 + substrate v0.2.2 (cols A-AH)" — adds the v0.1.13 per-fee ancillary cols (AC-AG), the v0.2.2 Total Ancillary rollup (AH), the v0.2.1 5 finer T12 Labels closing the per-fee attribution gap on Section M, and the v1.17.4 parser-side Notes-rerouter.
+- Analyzer-at-a-glance reframed as "Track 3 four-branch roadmap fully closed at substrate v0.2.0" with Section M, UW Export sheet, and Pre-Export Gate descriptions.
+- Versioning section: substrate convention `v0.1.N` → `v0.X.Y`.
+- UW-BACKLOG.md mention added in two places (Versioning section + Further Reading table).
+
+**BL-0014 — CLAUDE.md hygiene** (two parts):
+- **Open carry-forwards section**: header date refreshed; entire "Medium priority" + "Low priority" sub-sections removed (they were stale by weeks — Branch 2 / version-detection bug both shipped). Replaced with a single sentence pointing at UW-BACKLOG.md as the source of truth.
+- **openpyxl quirk #4**: expanded with the qualified-range-endpoint trap from BL-0001's migration. Documents both the failure mode (`T12_Calc!$N$1:$N$500`'s endpoint mis-caught by the unqualified-ref regex and shifted on row inserts) and the canonical fix (capture template formulas AFTER the shift sweep). Section heading bumped from "Three" to "Four" since the quirk is now substantive.
+
+### Implementation calls made
+
+- **Branch off `origin/main`, not off PR #24's branch.** PR #24 hadn't merged yet at session start. Branching off main keeps this PR independent — user can merge in either order. Some doc files (CLAUDE.md, journal.md) will conflict trivially with #24 if #24 merges first; that's a known mechanical rebase, not a design issue.
+- **Bundle as a single PR despite cross-track scope.** User explicitly authorized "BL-0011 + BL-0013 + BL-0014" as one tidy-up PR. Coherent change set: docs/refactor maintenance, no behavioral risk, no substrate change. Same precedent as the 2026-05-11 multi-track session (where user said "Perform all tracks").
+- **Leave `translate_for_t12()` alone.** It's the last `t12_*` symbol on the Track 1 side, but `for_t12` reads as "for the destination workbook" rather than "for T12 data" — and renaming it would touch every caller of the translator. CLAUDE.md note records this decision so a future chat doesn't re-litigate.
+- **Don't back-fill v0.1.11 → v0.2.2 journal entries.** I noted this gap in my BL-0015 journal entry as an observation. BL-0014's formal scope doesn't include it (the description only mentions the carry-forwards section + openpyxl quirk #4). Doing it now would expand scope and require chat archaeology against 8 missed releases. Leaving it as an open observation, not formally backlogged. The journal.md "Note 2026-05-14" I added in the v0.2.3 PR already flags the gap for any future reader.
+- **Don't rewrite historical CHANGELOG / journal references.** Same convention as the 2026-05-10 file rename — historical entries are records of what shipped at past versions; renaming would falsify history. Live docs (CLAUDE.md gotcha table, SPEC-T12.md naming paragraph) get updated; everything else stays.
+
+### Verification
+
+- `python3 -c "import analyzer_rr_writer"` — module imports cleanly with new symbols (`populate_rr_input`, `AnalyzerRRCapacityError`); old symbols (`populate_t12`, `T12CapacityError`) confirmed removed via `assert not hasattr(...)`.
+- `python3 -c "import ast; ast.parse(open('app.py').read())"` — app.py parses cleanly.
+- `grep -rn "populate_t12\b\|T12CapacityError" --include="*.py"` (excluding `populate_t12_input` which is the legitimate Track 2 partner) — zero remaining live references in code; the only mentions are in CHANGELOG / journal historical entries (intentional).
+- README.md and CLAUDE.md edits visually inspected; no broken markdown.
+
+### Files at session end
+
+- `analyzer_rr_writer.py` — function/class/parameter renames + docstring updates
+- `app.py` — import + call site + except clause + RR_VERSION 1.17.4 → 1.17.5 + RR_LAST_UPDATED → 2026-05-15
+- `README.md` — targeted updates per BL-0013
+- `CLAUDE.md` — Module naming gotcha + Open carry-forwards section condensed + openpyxl quirk #4 expansion
+- `SPEC-T12.md` — module-naming-history paragraph
+- `UW-BACKLOG.md` — BL-0011 / BL-0013 / BL-0014 moved from Pending to Shipped (one-paragraph summaries each)
+- `CHANGELOG-RR.md` — new `[1.17.5] — 2026-05-15` entry at top
+- `journal.md` — this entry
+
+### Carry-forwards opened
+
+None new. UW-BACKLOG Pending shrinks from 4 items to 1: only BL-0012 (Misc/Diabetes credit reconciliation) remains, and that's conditional on observing the same negative-residual pattern in a non-Homestead deal — may stay deferred indefinitely.
+
+### Process lessons
+
+1. **The BL ticket descriptions can be stale themselves.** BL-0013's description claimed the README was "RR-Normalizer-only project" — but reading the actual file showed it had been substantially modernized since the ticket was opened. The right work was a targeted update of 4-5 sections, not a full rewrite. Lesson: read the current state before trusting a backlog ticket's description; tickets age.
+2. **Bundling refactor + docs in one PR works well when there's no behavioral risk.** All three BLs are zero-runtime-risk: BL-0011 is symbol renames with import + call-site updates, BL-0013/14 are pure docs. Bundling kept context together (the same chat reviews CLAUDE.md gotcha, README, and the renamed file) and reduced PR overhead. Wouldn't bundle if any one item touched substrate or parser logic.
+3. **The "preserved as historical artifact" note becomes a debt that compounds.** When BL-0010 shipped the file rename on 2026-05-14, leaving `populate_t12()` and `T12CapacityError` as artifacts felt surgical. By BL-0011 today (one day later), the artifact rationale already needed updating ("could be renamed to X in a follow-up" → "renamed to X on Y"). Each artifact adds a maintenance footnote. Better to bundle the full rename when scope allows; deferring just moves text-editing cost forward.
+
+---
+
 ## 2026-05-14 — Substrate v0.2.3 (Rent Roll Recon row 16 GPR fix · BL-0015)
 
 **Started as:** Continuation of the 2026-05-12 chat that shipped (or thought it shipped) substrate v0.1.11 in PR #12 — the Rent Roll Recon row 16 GPR realignment. User asked for "review current status" two days after the PR was opened. Local branch was 23 commits behind origin/main, and PR #12 was still open + conflicting because main had moved through v0.1.12 → v0.2.2 (with v0.1.11 substrate number reused for an unrelated chart-axis fix at `tools/migration/migrate_to_v0111.py`).

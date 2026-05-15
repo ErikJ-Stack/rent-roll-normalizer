@@ -48,7 +48,7 @@ from t12_normalizer_writer import (
     populate_t12_input,
 )
 from analyzer_rr_translator import translate_for_t12
-from analyzer_rr_writer import T12CapacityError, populate_t12
+from analyzer_rr_writer import AnalyzerRRCapacityError, populate_rr_input
 from writer import write_output
 
 
@@ -59,8 +59,8 @@ from writer import write_output
 APP_VERSION = "1.14.0"            # alias for RR_VERSION; kept for back-compat
 APP_LAST_UPDATED = "2026-05-08"   # alias for RR_LAST_UPDATED
 
-RR_VERSION = "1.17.4"
-RR_LAST_UPDATED = "2026-05-14"
+RR_VERSION = "1.17.5"
+RR_LAST_UPDATED = "2026-05-15"
 
 T12_VERSION = "0.2.1"
 T12_LAST_UPDATED = "2026-05-11"
@@ -885,7 +885,7 @@ with dl_col2:
         try:
             # Step 1: Write RR data into the resolved Analyzer.
             translated = translate_for_t12(c)
-            populated_after_rr = populate_t12(
+            populated_after_rr = populate_rr_input(
                 analyzer_bytes_cached,
                 translated,
                 period_date_input,
@@ -928,7 +928,7 @@ with dl_col2:
                 use_container_width=True,
                 key="dl_combined",
             )
-        except T12CapacityError as e:
+        except AnalyzerRRCapacityError as e:
             st.error(f"Rent Roll exceeds Analyzer capacity: {e}")
         except T12NormalizerCapacityError as e:
             st.error(f"T12 exceeds Analyzer capacity: {e}")
