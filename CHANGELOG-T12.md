@@ -8,6 +8,60 @@ When making a code change in a T12-related chat, add an entry here in the same c
 
 ---
 
+## [Substrate template v0.2.3] — 2026-05-14
+
+### Summary
+
+**Closes UW-BACKLOG BL-0015.** Track 3 single-cell fix realigning `Rent Roll Recon!B16:D16` with the intent already documented in column H ("Gross contracted rates before concessions"). Old formula summed Actual Rate (`'Rent Roll Input'!$H`) over occupied units only, producing "current contracted at actual rate" rather than the Gross Potential Rent at 100% occupancy that the row's role as the underwriting anchor demands. New formula sums Market Rate (`$G`) over all units regardless of status, by care type. On Homestead populated: E16 reconciles from $565,140 → **$809,567** (IL $167k + AL $328k + MC $315k). Rows 17-20 unchanged — row 17's `H + I` was already correct because concessions are negative-signed.
+
+This fix was originally implemented as substrate v0.1.11 in [PR #12](https://github.com/ErikJ-Stack/rent-roll-normalizer/pull/12) on 2026-05-12. The PR went stale while main moved through v0.1.12 → v0.2.2 (and the v0.1.11 substrate number was reused on main for an unrelated chart-axis fix). PR #12 was closed unmerged + re-implemented here as v0.2.3 with the current 14-sheet anchor list.
+
+### What changed (migrate_to_v023.py)
+
+- **A. Row 16 formulas rewritten** at `Rent Roll Recon!B16:D16`:
+  ```
+  Old:  SUMIFS('Rent Roll Input'!$H, ..., E<>Vacant, E<>Eviction, D=<care>)
+  New:  SUMIFS('Rent Roll Input'!$G, ..., D=<care>)
+  ```
+  Status filter removed (`E<>Vacant`, `E<>Eviction`) because GPR is by definition at 100% occupancy. `E16 = SUM(B16:D16)` is unchanged.
+- **B. Row 16 label** at `A16` rewritten from "RR gross contracted base rent / mo" to "RR Gross Potential Rent / mo  (Market × all units)". "Contracted" was misleading once vacants are included.
+- **C. Row 16 note** at `H16` rewritten from "Gross contracted rates before concessions" to "Gross Potential Rent — Market Rate × all units at 100% occupancy. Excludes concessions & vacancy loss. Row 16 − Row 17 = vacancy + market-vs-actual gap." Now states the GPR semantics explicitly and identifies what the row16-vs-row17 gap measures (Homestead: $244,427).
+- **D. Stamp** `Cover!B8` and all 14 anchor `AZ4` cells to `v0.2.3`.
+
+### Why this is a Track 3 fix, not a Track 1/2 code change
+
+The bug was in the Analyzer template's formula, not in any RR or T12 parser code. Both writers were correctly populating columns G (Market Rate) and H (Actual Rate) on Rent Roll Input — the formula was just reading the wrong column. Substrate-only fix.
+
+### Idempotency
+
+Gate (`is_already_v023()`) checks BOTH the version stamp AND that B16 references `$G`. Re-running on a v0.2.3 file is a no-op (just re-saves).
+
+### Verification
+
+9 checks: Cover!B8 stamp, all 14 AZ4 stamps, B16/C16/D16 each sum `$G` with the right care code, row 16 has no Vacant/Eviction filter, E16 still `=SUM(B16:D16)`, A16 label updated, H16 note updated, row 17 untouched (still `$H + $I` with status filter — sanity check that we didn't accidentally rewrite the wrong row).
+
+### Cross-checks on populated Homestead sample
+
+| Quantity | v0.2.2 | v0.2.3 |
+|---|---|---|
+| Row 16 IL / AL / MC | $133,730 / $226,457 / $204,953 | $167,156 / $327,776 / $314,635 |
+| **Row 16 total** | **$565,140** | **$809,567** |
+| Row 17 total | $565,140 | $565,140 (unchanged) |
+| Row 16 − Row 17 | $0 | $244,427 (= vacancy loss + market-vs-actual premium) |
+
+The post-fix gap of $244k on Homestead matches independent occupancy + premium math: 43 vacant units × ~$2.5k market × occupancy mix + small actual-vs-market premium on occupied units.
+
+### Files
+
+- `tools/migration/migrate_to_v023.py` (new)
+- `ALF_Financial_Analyzer_Only.xlsx` (regenerated)
+- `UW-BACKLOG.md` (BL-0015 added to Shipped)
+- `SPEC-T12.md` (current substrate version bumped, v0.2.3 entry added to history)
+- `CLAUDE.md` (last-updated, current substrate version, closed-item note)
+- `journal.md` (session entry at top)
+
+---
+
 ## [Substrate template v0.2.2] — 2026-05-14
 
 ### Summary

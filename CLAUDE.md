@@ -2,7 +2,7 @@
 
 > Onboarding doc for any Claude session (chat or Claude Code) working on this repo. Read this first — it points to canonical truth and surfaces facts that previously had to be grubbed for.
 
-**Last updated:** 2026-05-14 (after RR v1.17.4 + substrate v0.2.2 — user-feedback round against the Homestead populated v0.2.1 workbook. Rent Roll Input cols V–AH formatting consistency, T (Total LOC $) split into pure LOC, new col AH (Total Ancillary $) added, U (Total Monthly Rev) rewritten for transparency. Companion parser change in `normalizer.py` adds `_reroute_recurring_concessions()` post-process pass — concession dollars buried in Notes now route to `Concession $` instead of `Other LOC $` for recurring concessions, with end-date extraction.)
+**Last updated:** 2026-05-14 (after substrate v0.2.3 — Track 3 single-cell fix on Rent Roll Recon row 16 closing UW-BACKLOG BL-0015. Realigns "RR gross contracted base rent / mo" to Gross Potential Rent (Market Rate × all units) per the row's H-note intent; was previously summing Actual Rate × occupied. Originally implemented as v0.1.11 in PR #12 on 2026-05-12; that PR went stale while main moved through v0.1.12 → v0.2.2 and was closed unmerged + re-implemented here.)
 
 ---
 
@@ -51,7 +51,7 @@ The repo runs three parallel tracks. They share an Analyzer but are otherwise in
 | Migration scripts | `tools/migration/migrate_to_v01N.py` (one per substrate version) |
 | Verification harness | `tools/verify_t12_v020.py` (parser-side; runs all four reference fixtures) |
 | Current code version | T12 v0.2.1 |
-| Current substrate version | v0.2.0 |
+| Current substrate version | v0.2.3 |
 
 **Module naming gotcha (updated 2026-05-14 after BL-0010).** Four modules historically shared a `t12_` prefix because the destination workbook was originally a standalone T12 intake template — the prefix meant "operates on the T12-shaped destination workbook," not "operates on T12 data." Once the bundled Analyzer flow shipped (RR v1.12.0) the prefix became misleading. The two Track 1 modules have now been renamed; the remaining `t12_*` files are the legitimate T12-data modules. All four are imported by `app.py` and serve distinct roles:
 
@@ -95,11 +95,15 @@ Conversational examples should label placeholder text as `<REPLACE THIS>` so the
 
 ---
 
-## Open carry-forwards (as of 2026-05-13, post-substrate v0.1.12)
+## Open carry-forwards (as of 2026-05-14, post-substrate v0.2.3)
 
 **The authoritative forward-looking list now lives in [`UW-BACKLOG.md`](UW-BACKLOG.md).** When a release surfaces a need it can't ship, log a `BL-NNNN` entry there. The historical "closed" notes below stay here for context and traceability of how prior chats deferred work.
 
 These are real backlogged items that previous chats deferred. They have a home; they're just not staffed yet.
+
+### Closed 2026-05-14 (Substrate v0.2.3 — Rent Roll Recon row 16 GPR fix · BL-0015)
+
+- ✓ **Rent Roll Recon row 16 — "RR gross contracted base rent / mo" mis-calculating against its own H-note intent.** User-reported on 2026-05-12 against the populated Homestead v0.1.10 Analyzer: row 16 read $565,140 but the Rent Roll Input Market Rate total was $809,567 — and the row's H-column note ("Gross contracted rates before concessions") clearly described the latter. Originally implemented as substrate v0.1.11 in PR #12; PR went stale while main moved through v0.1.12 → v0.2.2 (and v0.1.11 substrate number was reused on main for an unrelated chart-axis fix). Re-implemented here as v0.2.3 against the current 14-sheet anchor list. Fix: B16/C16/D16 rewritten to sum `'Rent Roll Input'!$G` over all units (no status filter) by care type, A16 label rewritten to "RR Gross Potential Rent / mo  (Market × all units)", H16 note rewritten to state GPR semantics + identify row16-vs-row17 gap = vacancy + market-vs-actual premium. Rows 17-20 unchanged. Migration via `migrate_to_v023.py` (3 ops, 9-check verify, idempotent). Closes UW-BACKLOG BL-0015.
 
 ### Closed 2026-05-11 (RR v1.16.0 + Substrate v0.1.10 — Data-capture expansion)
 

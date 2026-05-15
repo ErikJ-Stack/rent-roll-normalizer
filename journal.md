@@ -7,6 +7,77 @@ particular commit looks the way it does.
 
 Newest at top.
 
+> **Note (2026-05-14):** journal.md was not updated as substrate moved through v0.1.11 → v0.1.12 → v0.1.13 → v0.1.14 → v0.1.15 → v0.2.0 → v0.2.1 → v0.2.2 (8 releases since the v0.1.10 entry below). Those releases lived in `CHANGELOG-T12.md` and `UW-BACKLOG.md` only. The 2026-05-14 v0.2.3 entry below (BL-0015) is the first journal entry in 3 days. Back-filling the missing ones is on the BL-0014 docket.
+
+---
+
+## 2026-05-14 — Substrate v0.2.3 (Rent Roll Recon row 16 GPR fix · BL-0015)
+
+**Started as:** Continuation of the 2026-05-12 chat that shipped (or thought it shipped) substrate v0.1.11 in PR #12 — the Rent Roll Recon row 16 GPR realignment. User asked for "review current status" two days after the PR was opened. Local branch was 23 commits behind origin/main, and PR #12 was still open + conflicting because main had moved through v0.1.12 → v0.2.2 (with v0.1.11 substrate number reused for an unrelated chart-axis fix at `tools/migration/migrate_to_v0111.py`).
+
+**Stayed as:** Track 3 chat. The fix is workbook-only — no RR / T12 code touched. User authorized close-and-re-implement after the status review.
+
+### Status review findings
+
+Verified directly against `origin/main` that the row 16 bug from 2026-05-12 was still present in production:
+- `Cover!B8 = v0.2.2`
+- `A16 = "RR gross contracted base rent / mo"` (old label)
+- `B16` still `SUMIFS($H, ..., E<>Vacant, E<>Eviction, ...)` (old formula)
+- `H16 = "Gross contracted rates before concessions"` (old note)
+
+Meanwhile main had shipped substantial work I needed to absorb before re-implementing:
+- **Branch 2 — Handoff readiness** (BL-0009) shipped at substrate v0.2.0 with a new `UW Export` sheet → `ANCHOR_SHEETS` is now 14 sheets (was 13)
+- **`t12_translator.py` → `analyzer_rr_translator.py` rename** (BL-0010, RR v1.17.2)
+- **`UW-BACKLOG.md` system formalized** with `BL-NNNN` IDs (this superseded the ad-hoc "carry-forwards" lists I was working from)
+- **Rent Roll Input cols A→AH** (was A→AB in v0.1.10) — but col G (Market Rate) at the same position, so the fix targets unchanged
+- **Section M added at Rent Roll Recon rows 121-167** — well below row 16, no collision
+
+Several of my originally-listed open carry-forwards from the v1.16.0 journal entry had been closed: Branch 2 → BL-0009, translator rename → BL-0010, version-detection → BL-0008, 2P recon row → BL-0004, Workbook Health AR → BL-0005, PSF stats → BL-0006.
+
+### Re-implementation calls made
+
+- **Same fix, new substrate number.** The v0.1.11 → v0.2.3 transition is a number bump only — formula, label, and note text identical to the 2026-05-12 implementation. Numerical result on Homestead populated identical too: $565,140 → **$809,567** (E16), row 17 unchanged at $565,140, gap = $244,427.
+- **`ANCHOR_SHEETS` extended to 14.** Added `UW Export` (from BL-0009 / v0.2.0) so the AZ4 stamp covers it.
+- **Idempotency gate keyed on `$G$7:$G$606` in B16.** Same shape as v0.1.11 gate — version stamp + structural marker — but the marker is now the new column reference rather than a chart-axis state.
+- **PR #12 closed unmerged with replacement pointer.** Comment links to the new PR. Migration script numbering convention has shifted (`migrate_to_v0NN.py` → `migrate_to_v0NN.py` with 3 digits compressed; new is `migrate_to_v023.py`) and the v0.1.11 number is permanently reused on main for the chart-axis patch.
+- **journal.md sees its first new entry in 3 days.** Back-filling v0.1.11 → v0.2.2 entries deferred to BL-0014 (CLAUDE.md hygiene).
+
+### Verification
+
+End-to-end on both fixtures:
+
+1. **Bundled template Analyzer** — `Cover!B8 = v0.2.3`, all 14 AZ4 stamped, all 9 verifier checks green. Idempotency confirmed (re-run on the migrated file = no-op).
+2. **Populated Homestead Analyzer** (Dropbox; latest copy at `Analyzer with 2026-04-24 Homestead Village Rent Roll v2 + March 2026 T12 2026-04-24.xlsx`, no longer the `(1)` variant from 2026-05-12) — same 9 checks green. Simulated SUMIFS by care type against actual data:
+   - B16 IL: $167,155.63 (62 units)
+   - C16 AL: $327,776.35 (62 units)
+   - D16 MC: $314,635.03 (52 units)
+   - **E16 = $809,567.01** ← matches user's $809k expectation
+   - Row 16 − Row 17 = **$244,426.97** = vacancy + market-vs-actual gap
+
+### Infrastructure side-effect
+
+`gh` CLI from 2026-05-12 install (Homebrew, v2.92.0, authenticated as `ErikJ-Stack`) reused for PR creation + PR #12 close. No new infrastructure work this session.
+
+### Files at session end
+
+- New: `tools/migration/migrate_to_v023.py` (3 ops, 9-check verify, idempotent — gate checks both `Cover!B8` AND that B16 references `$G`)
+- Updated: `ALF_Financial_Analyzer_Only.xlsx` (regenerated v0.2.3)
+- Updated: `UW-BACKLOG.md` (BL-0015 added to Shipped section)
+- Updated: `CHANGELOG-T12.md` (v0.2.3 entry at top with cross-reference to PR #12 history)
+- Updated: `SPEC-T12.md` (current substrate version line + v0.2.3 history entry)
+- Updated: `CLAUDE.md` (last-updated, current substrate version, new "Closed 2026-05-14" entry, "post-substrate v0.2.3" version-stamp on the carry-forwards section)
+- Updated: `journal.md` (this entry + the 3-day-gap note above)
+
+### Carry-forwards opened
+
+None new. The remaining UW-BACKLOG pending items are unchanged: BL-0011 (function/class renames), BL-0012 (Misc/Diabetes credit recon), BL-0013 (README modernization), BL-0014 (CLAUDE.md hygiene + journal.md back-fill).
+
+### Process lessons
+
+1. **A PR that doesn't merge for 2 days against an active main is a dead PR.** Main moved 23 commits past PR #12 in two days. The v0.1.11 substrate number was reused on main for an unrelated patch, structurally guaranteeing the original PR could never merge cleanly. Lesson: when a one-shot substrate-version-number PR is opened, follow up within hours; if it can't be reviewed promptly, withdraw it explicitly so the version number is freed for other work.
+2. **The UW-BACKLOG system would have caught this earlier.** If the original 2026-05-12 work had been logged as a `BL-NNNN` item before opening the PR, the next chat would have seen it as "Pending" while main moved forward, and either picked it up or explicitly deferred. The ad-hoc "carry-forwards in CLAUDE.md" approach we used at v0.1.11 didn't survive the cadence.
+3. **Re-implementing a known-good fix against a moved-target main is cheap when the fix is single-cell.** Total turnaround on the re-implementation today was minutes — formula, label, and note all copy-pasted from the v0.1.11 implementation; only the version constants and `ANCHOR_SHEETS` list needed editing. If the original fix had been larger / more interleaved with surrounding state, a 2-day gap on main would have made it expensive to revive.
+
 ---
 
 ## 2026-05-11 — RR v1.16.0 + Substrate v0.1.10 (Data-capture expansion)
