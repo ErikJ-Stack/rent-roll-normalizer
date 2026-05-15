@@ -22,36 +22,6 @@ truth.
 
 ## Pending
 
-### [BL-0011] Function/class renames — `populate_t12()` → `populate_rr_input()` + `T12CapacityError` → `AnalyzerRRCapacityError`
-- **Track:** Refactor (Track 1) · target **whenever bundled**
-- **Surfaced in:** RR v1.17.2 (BL-0010) `analyzer_rr_writer.py` rename — the
-  CLAUDE.md note explicitly deferred the function/class renames as a
-  "separate, more invasive follow-up."
-- **Description:** The 2026-05-10 file rename (`t12_writer.py` →
-  `analyzer_rr_writer.py`) and the 2026-05-14 file rename
-  (`t12_translator.py` → `analyzer_rr_translator.py`) together completed
-  the Track 1 file disambiguation. Two `t12_*` symbols inside those
-  files are still misnamed and were left untouched to keep the file
-  renames surgical:
-    1. `populate_t12(...)` on `analyzer_rr_writer.py` — populates the
-       Analyzer's `Rent Roll Input` sheet, NOT the `T12 Input` sheet.
-       Rename to `populate_rr_input()` mirrors the partner
-       `populate_t12_input()` on `t12_normalizer_writer.py` (which
-       correctly populates `T12 Input`).
-    2. `T12CapacityError` on `analyzer_rr_writer.py` — exception class
-       raised when the rent roll exceeds the Rent Roll Input capacity
-       (DATA_END_ROW - DATA_START_ROW + 1). Rename to
-       `AnalyzerRRCapacityError`.
-- **Scope:** ~5 line updates across `analyzer_rr_writer.py` (def +
-  class), `app.py` (import + 1-2 call sites), `analyzer_rr_translator.py`
-  (probably nothing — translator doesn't call writer), CHANGELOG-RR /
-  CLAUDE.md / SPEC-RR (file inventory + "Module naming gotcha" table
-  on CLAUDE.md). No behavioral change. No substrate change.
-- **Why deferred from BL-0010:** function-rename ripples touch every
-  caller; class-rename ripples touch every except-clause. BL-0010 was
-  scoped to "file rename + import + docs" deliberately. Bundle this
-  with the next non-emergency Track 1 PR.
-
 ### [BL-0012] Section M — Misc/Diabetes credit reconciliation against T12 `Concessions & specials`
 - **Track:** Substrate (Track 3) · target **substrate v0.2.2+**
 - **Surfaced in:** RR v1.17.0 (BL-0003) "Side observation worth tracking"
@@ -82,62 +52,28 @@ truth.
 - **Depends on:** nothing structural. Reads existing Section M data
   + existing T12 Raw Data `Concessions & specials` Label.
 
-### [BL-0013] README.md modernization — T12 + bundled-Analyzer framing
-- **Track:** Documentation (cross-cutting) · target **whenever bundled**
-- **Surfaced in:** RR v1.14.0 (CHANGELOG-RR.md line 537-538) and earlier
-  releases. Flagged as a known carry-forward across multiple chats.
-- **Description:** README.md was written when this repo was a
-  RR-Normalizer-only project. It doesn't mention:
-    1. The T12 Normalizer pipeline (Track 2) — `t12_normalizer.py` /
-       `t12_normalizer_writer.py` / the four format-registry classes.
-    2. The bundled-Analyzer flow that became default in RR v1.12.0 —
-       app no longer requires a user-uploaded Analyzer; the bundled
-       template at `ALF_Financial_Analyzer_Only.xlsx` is the default
-       destination.
-    3. The substrate version stream (currently v0.2.1) and the
-       migration script chain in `tools/migration/`.
-    4. UW-BACKLOG.md as the forward-looking change list.
-    5. The four-branch Track 3 roadmap (Correctness / Handoff /
-       Analytical coverage / Substrate) and its closure status.
-- **Scope:** rewrite README.md "What this is" + add a new "Pipelines"
-  section + add a "Bundled Analyzer" section + cross-reference
-  CLAUDE.md for the contributor onboarding details (no need to
-  duplicate). Versions table at top is already current.
-- **Why low-pri:** README is for prospective contributors / external
-  readers; both CLAUDE.md and the SPECs are accurate and that's what
-  any active session reads first. Worth doing before any external
-  visibility push.
-
-### [BL-0014] CLAUDE.md hygiene — refresh "Open carry-forwards" + expand openpyxl quirk #4
-- **Track:** Documentation (Track 3-adjacent) · target **whenever bundled**
-- **Surfaced in:** This sweep (2026-05-14, post-substrate v0.2.1).
-- **Description:** Two CLAUDE.md sections drifted:
-    1. **"Open carry-forwards (as of 2026-05-13, post-substrate
-       v0.1.12)"** — header date is stale; substrate is now v0.2.1.
-       Two bullets are stale-or-resolved: "Branch 2 — Handoff
-       readiness" closed in BL-0009 (substrate v0.2.0), and
-       "Substrate version-detection bug suspected" closed in BL-0008
-       (RR v1.17.1) with regex further widened in BL-0001 companion
-       (RR v1.17.3). Section can be condensed to point at UW-BACKLOG
-       as the single source of truth, with the historical "Closed"
-       bullets retained for traceability.
-    2. **openpyxl quirks #4** — currently reads "Lookbehind regex
-       must include colons to catch range endpoints (`F15:Q15`)."
-       BL-0001's migration surfaced the dual issue: the unqualified-
-       ref regex ALSO catches qualified-range endpoints
-       (`T12_Calc!$N$1:$N$500`'s `$N$500` falls outside the
-       qualified-pattern's first-cell match), causing accidental
-       row-shifts on cross-sheet range endpoints. The migration
-       worked around it by capturing template formulas AFTER the
-       shift sweep — that pattern should be documented as the
-       canonical fix, not buried in v0.2.1's CHANGELOG.
-- **Scope:** ~30-line edit to CLAUDE.md. No code change.
-- **Why deferred:** docs hygiene, no consumer-visible impact. Bundle
-  with the next CLAUDE.md edit (probably the next migration PR).
 
 ---
 
 ## Shipped
+
+### [BL-0011] Function/class renames — `populate_t12()` → `populate_rr_input()` + `T12CapacityError` → `AnalyzerRRCapacityError`
+- **Shipped in:** RR v1.17.5 (2026-05-15)
+- **Track:** Refactor (Track 1)
+- **Originally surfaced in:** RR v1.17.2 (BL-0010) `analyzer_rr_writer.py` rename — the CLAUDE.md note explicitly deferred the function/class renames as a "separate, more invasive follow-up."
+- **Summary:** Completes the Track 1 misnamed-T12-symbol cleanup at file + function + class level. Changed: function `populate_t12()` → `populate_rr_input()` (mirrors the partner `populate_t12_input()` on `t12_normalizer_writer.py` which correctly populates `T12 Input`); exception `T12CapacityError` → `AnalyzerRRCapacityError` (matches the 2026-05-10 file rename); also took the opportunity to rename the function-body parameter `t12_bytes` → `analyzer_bytes` and clean up two "T12 workbook" → "Analyzer workbook" references in inline error text. Updated callers in `app.py` (1 import, 1 call site, 1 except clause). Updated live docs (CLAUDE.md "Module naming gotcha" table, SPEC-T12.md module-naming-history paragraph). Historical CHANGELOG / journal references to the old names left intact (records of what shipped at past versions). Verified: `analyzer_rr_writer` imports cleanly with new symbols, old symbols confirmed removed; `app.py` parses cleanly; zero remaining live `populate_t12\b` / `T12CapacityError` references in `*.py`. The only surviving `t12_*` symbol on the Track 1 side is the function name `translate_for_t12()` on `analyzer_rr_translator.py` — left alone since `for_t12` reads as "for the destination workbook" and renaming it would touch every caller of the translator. Bundled in one tidy-up PR with BL-0013 + BL-0014.
+
+### [BL-0013] README.md modernization — T12 + bundled-Analyzer framing
+- **Shipped in:** RR v1.17.5 (2026-05-15)
+- **Track:** Documentation (cross-cutting)
+- **Originally surfaced in:** RR v1.14.0 and earlier releases. Flagged as a known carry-forward across multiple chats.
+- **Summary:** Targeted README updates (NOT a full rewrite — README had been substantially modernized since the BL ticket was opened, with dual-pipeline framing and T12 coverage already in place). Bumped the versions table to RR v1.17.5 / 2026-05-15. Refreshed the Data-capture coverage section from "RR v1.16.0 + substrate v0.1.10 (cols A-AB)" to "RR v1.17.4 + substrate v0.2.2 (cols A-AH)" — adds the v0.1.13 per-fee ancillary cols (AC-AG), the v0.2.2 Total Ancillary rollup (AH), the v0.2.1 5 finer T12 Labels closing the per-fee attribution gap on Section M, and the v1.17.4 parser-side Notes-rerouter for Homestead concession patterns. Reframed the Analyzer-at-a-glance section as "Track 3 four-branch roadmap fully closed at substrate v0.2.0" with Section M description and the v0.2.0 UW Export sheet + Pre-Export Gate descriptions. Updated the Versioning section (substrate convention `v0.1.N` → `v0.X.Y`) and added UW-BACKLOG.md mentions in both the Versioning section and the Further Reading table. Bundled in one tidy-up PR with BL-0011 + BL-0014.
+
+### [BL-0014] CLAUDE.md hygiene — refresh "Open carry-forwards" + expand openpyxl quirk #4
+- **Shipped in:** RR v1.17.5 (2026-05-15)
+- **Track:** Documentation (Track 3-adjacent)
+- **Originally surfaced in:** Sweep 2026-05-14, post-substrate v0.2.1.
+- **Summary:** Two CLAUDE.md sections fixed. (1) **Open carry-forwards section** — header date refreshed to 2026-05-15 / post-substrate v0.2.3 + RR v1.17.5; the entire "Medium priority (still open)" + "Low priority" sub-sections deleted (they were stale by weeks — "Branch 2 — Handoff readiness" was listed as open while it had shipped as BL-0009 / substrate v0.2.0; "Substrate version-detection bug suspected" was listed while it had shipped as BL-0008). Replaced with a single sentence pointing readers at UW-BACKLOG.md as the source of truth. (2) **openpyxl quirk #4** — expanded with the qualified-range-endpoint trap from BL-0001's migration. Documents both the failure mode (`T12_Calc!$N$1:$N$500`'s endpoint is mis-caught by the unqualified-ref regex and shifted on row inserts, causing off-by-N SUMIF/SUMIFS drift after migrations) and the canonical fix (capture template formulas AFTER the shift sweep, not before — see `tools/migration/migrate_to_v021.py:312-321`). Section heading bumped from "Three" to "Four" since quirk #4 is now substantive. Module naming gotcha table also updated as part of BL-0011. Bundled in one tidy-up PR with BL-0011 + BL-0013. Did NOT include the journal.md back-fill of v0.1.11 → v0.2.2 entries — that observation remains unstaffed.
 
 ### [BL-0015] Rent Roll Recon row 16 — GPR realignment (`$H` × occupied → `$G` × all units)
 - **Shipped in:** substrate v0.2.3 (2026-05-14)

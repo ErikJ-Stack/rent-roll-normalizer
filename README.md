@@ -10,7 +10,7 @@ A Streamlit app that turns a senior-housing rent roll AND a T12 financial statem
 
 | Stream | Version | Last updated |
 | --- | --- | --- |
-| RR Normalizer (`RR_VERSION`) | v1.17.4 | 2026-05-14 |
+| RR Normalizer (`RR_VERSION`) | v1.17.5 | 2026-05-15 |
 | T12 Normalizer (`T12_VERSION`) | v0.2.1 | 2026-05-11 |
 | Bundled Analyzer substrate | v0.2.2 | 2026-05-14 |
 
@@ -38,27 +38,28 @@ Both writers derive a property name from the uploaded filename (date stamps, `T-
 
 ### Data-capture coverage (per-resident fields)
 
-At RR v1.16.0 + substrate v0.1.10, the Analyzer's `Rent Roll Input` sheet captures (cols A-AB):
+At RR v1.17.4 + substrate v0.2.2, the Analyzer's `Rent Roll Input` sheet captures (cols A-AH):
 
 - **Core identity** (A-F): Unit # / Room # / Sq Ft / Care Type / Status / Apt Type
 - **Pricing** (G-J): Market Rate / Actual Rate / Concession $ / Concession End Date
-- **Care** (K-O): Care Level / Care Level $ / Med Mgmt $ / Pharmacy $ / Other LOC $ (auto-catches Pet, H/K, Laundry, Misc., Diabetes per v1.15.1)
+- **Care** (K-O): Care Level / Care Level $ / Med Mgmt $ / Pharmacy $ / Other LOC $ (auto-catches anything unrecognized so revenue never disappears)
 - **Resident** (P-R): Payer Type / Move-in Date / Resident Name
-- **Period + formulas** (S-U): Period Date / Total LOC $ formula / Total Monthly Rev formula (now includes 2nd Person Rent)
+- **Period + formulas** (S-U): Period Date / Total LOC $ formula (pure LOC = L+M+N+O after the v0.2.2 split) / Total Monthly Rev formula `=H + IFERROR(I,0) + T + AH`
 - **v1.16.0 extension** (V-AB): 2nd Person Rent $ / Move-out Date / Balance / Notes / Market PSF / Actual PSF / ACH
+- **v0.1.13 per-fee ancillary cols** (AC-AG): Meal Plan $ / Scooter Fee $ / Housekeeping $ / Laundry $ / Pet $
+- **v0.2.2 ancillary rollup** (AH): Total Ancillary $ = V + AC + AD + AE + AF + AG
 
-2nd Person Rent reconciles 1:1 against the T12 substrate's `2nd Person Revenue` Label (added at v0.1.5). Notes column preserves free-form rate-negotiation / lease-anomaly context from the source RR.
+2nd Person Rent reconciles 1:1 against the T12 substrate's `2nd Person Revenue` Label (added at v0.1.5). The 5 per-fee ancillary cols (AC-AG) reconcile against the 5 finer-grained T12 Labels added at v0.2.1 (Meal / Housekeeping / Laundry Income, Scooter / Transfer Fee Revenue) — closing the per-fee attribution gap on Rent Roll Recon Section M. Notes column preserves free-form rate-negotiation / lease-anomaly context; v1.17.4 adds a parser-side rerouter that detects concession dollars buried in Notes (Homestead pattern) and moves them from `Other LOC $` to `Concession $` automatically.
 
-### Analyzer at a glance (post-Branch 3)
+### Analyzer at a glance (Track 3 four-branch roadmap fully closed at substrate v0.2.0)
 
-The bundled Analyzer (substrate v0.1.8) renders five underwriting visuals on `T12 Analytics!K1:V44` — occupancy by care type (stacked column), rate dispersion (3-series histogram), payer mix (doughnut), 12-month revenue trend (line), and AL acuity mix (doughnut). Each chart has a conditional formula-driven note cell below it that fires only when its threshold is hit (e.g. "⚠ Medicaid revenue share 35% — reimbursement rate risk" only appears when Medicaid > 30%).
+The Analyzer's analytical depth was built out across a four-branch Track 3 roadmap: **Branches 1 + 4** (Correctness + Substrate) shipped in v0.1.6; **Branch 3** (Analytical coverage) shipped across v0.1.8 → v0.1.14; **Branch 2** (Handoff readiness) was the flagship close at v0.2.0. The Analyzer now ships:
 
-`Rent Roll Recon` adds two IL/MC deep-dive sections beyond the existing AL Care Level Distribution:
-
-- **Section K — IL Unit-Type Mix, Size & Rate Dispersion** (rows 86-100): Studio / 1BR / 2BR / Cottage / Other × count / % / avg-min-max rate / avg sqft / $-per-sqft, plus a rate-CV proxy that flags wide dispersion as legacy in-place rates.
-- **Section L — MC Care Structure** (rows 102-117): auto-detects flat-rate / tiered / fee-for-service from the distinct-count of K-column values, then renders tier-specific metrics + a pattern-specific conditional note.
-
-`Rent Roll Recon!B2` (period selector) defaults to the latest period in the uploaded RR via `LOOKUP(9.99E+307, ...)`, with a dropdown for analyst override.
+- **5 underwriting visuals** on `T12 Analytics!K1:V44` (substrate v0.1.8): occupancy by care type (stacked column), rate dispersion (3-series histogram), payer mix (doughnut), 12-month revenue trend (line), and AL acuity mix (doughnut). Each chart has a conditional formula-driven note cell below it (e.g. "⚠ Medicaid revenue share 35% — reimbursement rate risk" only appears when Medicaid > 30%).
+- **Three Rent Roll Recon deep-dive sections** (substrate v0.1.8 / v0.1.12 / v0.1.13): Section H (AL Care Level Distribution), **Section K** (IL Unit-Type Mix, Size & Rate Dispersion at rows 86-100 — Studio / 1BR / 2BR / Cottage / Other × count / % / avg-min-max rate / avg sqft / $-per-sqft, plus a rate-CV proxy), **Section L** (MC Care Structure at rows 102-117 — auto-detects flat-rate / tiered / fee-for-service), and **Section M** (per-fee ancillary capture-rate + implied-rate at rows 121-167, computed via INDIRECT against the v0.1.13 per-fee RR Input cols).
+- **`Rent Roll Recon!B2`** (period selector) defaults to the latest period via `MAX('Rent Roll Input'!$S$7:$S$606)`, with a dropdown for analyst override.
+- **`UW Export` sheet** (substrate v0.2.0): values-only mirror of UW Output via `='UW Output'!{cell}` formulas with a 5-row metadata header (Property / RR period / T12 period / Substrate version / Generated timestamp). Downstream consumer copies-as-values into their template.
+- **Pre-Export Gate** on `Workbook Health` (substrate v0.2.0): four P-checks aggregating the existing V1-V8 validation rows into a single ✓/⚠ "READY FOR EXPORT" cell.
 
 ### What's normalized
 
@@ -199,9 +200,9 @@ Cross-track follow-ups (where the substrate opens a writer-side carry-forward �
 
 ## Versioning
 
-Three independent counters: RR app version (`v1.X.Y`), T12 code version (`v0.X.Y`), Analyzer substrate version (`v0.1.N`). Each version stream has its own changelog. Substrate version is stamped on `Cover!B8` and every sheet's `AZ4` anchor cell.
+Three independent counters: RR app version (`v1.X.Y`), T12 code version (`v0.X.Y`), Analyzer substrate version (`v0.X.Y`). Each version stream has its own changelog. Substrate version is stamped on `Cover!B8` and every sheet's `AZ4` anchor cell.
 
-When making a code change in a chat, add an entry to the relevant `CHANGELOG-*.md` in the same commit. See `CLAUDE.md` for the full session-handoff conventions.
+When making a code change in a chat, add an entry to the relevant `CHANGELOG-*.md` in the same commit. Forward-looking changes (items the analytical sheets need but haven't shipped yet) live in [`UW-BACKLOG.md`](UW-BACKLOG.md) as numbered `BL-NNNN` items — that's the authoritative pending list. See `CLAUDE.md` for the full session-handoff conventions.
 
 ---
 
@@ -213,5 +214,6 @@ When making a code change in a chat, add an entry to the relevant `CHANGELOG-*.m
 | `SPEC-RR.md` | Track 1 source of truth: RR parser, writer, sidebar, period-date detection |
 | `SPEC-T12.md` | Track 2 source of truth: T12 format registry, writer, Description_Map lookup, UNMATCHED matcher |
 | `CHANGELOG-RR.md` / `CHANGELOG-T12.md` | Per-release notes, newest at top |
+| `UW-BACKLOG.md` | Forward-looking change list — `BL-NNNN` items, Pending → Shipped |
 | `OPTIMIZATION-DECISIONS.md` | Track 3 (Analyzer-only) decisions and roadmap |
 | `journal.md` | Per-chat session log — read the top entry before starting a new chat |

@@ -53,16 +53,16 @@ The repo runs three parallel tracks. They share an Analyzer but are otherwise in
 | Current code version | T12 v0.2.1 |
 | Current substrate version | v0.2.3 |
 
-**Module naming gotcha (updated 2026-05-14 after BL-0010).** Four modules historically shared a `t12_` prefix because the destination workbook was originally a standalone T12 intake template — the prefix meant "operates on the T12-shaped destination workbook," not "operates on T12 data." Once the bundled Analyzer flow shipped (RR v1.12.0) the prefix became misleading. The two Track 1 modules have now been renamed; the remaining `t12_*` files are the legitimate T12-data modules. All four are imported by `app.py` and serve distinct roles:
+**Module naming gotcha (updated 2026-05-15 after BL-0011 — Track 1 disambiguation now fully complete at file + function + class level).** Four modules historically shared a `t12_` prefix because the destination workbook was originally a standalone T12 intake template — the prefix meant "operates on the T12-shaped destination workbook," not "operates on T12 data." Once the bundled Analyzer flow shipped (RR v1.12.0) the prefix became misleading. The two Track 1 modules have now been renamed; the remaining `t12_*` files are the legitimate T12-data modules. All four are imported by `app.py` and serve distinct roles:
 
 | File | Function | Role |
 | --- | --- | --- |
-| `analyzer_rr_translator.py` | `translate_for_t12()` | Translates Condensed_RR vocabulary → Analyzer data-validation vocabulary (e.g. `1BR` → `1 Bedroom`). RR-side (Track 1). Was named `t12_translator.py` until 2026-05-14 (BL-0010) — see CHANGELOG-RR.md for the rename. |
-| `analyzer_rr_writer.py` | `populate_t12()` | Writes the translated RR into the Analyzer's `Rent Roll Input` sheet. RR-side (Track 1). Was named `t12_writer.py` until 2026-05-10 — see CHANGELOG-RR.md and journal.md for the rename. The exception class it exports is still `T12CapacityError` (preserved to keep the rename surgical; could be renamed to `AnalyzerRRCapacityError` in a follow-up). |
+| `analyzer_rr_translator.py` | `translate_for_t12()` | Translates Condensed_RR vocabulary → Analyzer data-validation vocabulary (e.g. `1BR` → `1 Bedroom`). RR-side (Track 1). Was named `t12_translator.py` until 2026-05-14 (BL-0010) — see CHANGELOG-RR.md for the rename. The function name `translate_for_t12()` is the last `t12_` symbol on the Track 1 side; left alone for now since `for_t12` reads as "for the destination" rather than "for T12 data" — rename only if it becomes a confusion source. |
+| `analyzer_rr_writer.py` | `populate_rr_input()` | Writes the translated RR into the Analyzer's `Rent Roll Input` sheet. RR-side (Track 1). Was named `t12_writer.py` until 2026-05-10. The function `populate_t12()` was renamed to `populate_rr_input()` and the exception class `T12CapacityError` was renamed to `AnalyzerRRCapacityError` on 2026-05-15 (BL-0011). |
 | `t12_normalizer.py` | `parse_t12()` | Parses raw T12 financial statements (Yardi / MRI / BrokerFinancialSummary format registry). T12-side (Track 2). |
 | `t12_normalizer_writer.py` | `populate_t12_input()` | Writes parsed T12 GL detail into the Analyzer's `T12 Input` sheet. T12-side (Track 2). |
 
-If a future chat is tempted to delete one as "duplicate," check `app.py` lines 46-51 and 795-806 — all four are wired into the orchestration. The function name `populate_t12()` on `analyzer_rr_writer.py` is also a historical artifact (it populates Rent Roll Input, not T12 Input) — leave it for now; renaming the function is a separate, more invasive follow-up.
+If a future chat is tempted to delete one as "duplicate," check `app.py` lines 46-51 (imports) and the orchestration block around 880-940 — all four are wired in. The two surviving `t12_*` files now legitimately operate on T12 data; the prior cross-track artifacts are all cleaned up.
 
 ### Track 3 — Analyzer optimization (workbook-only, no code)
 
@@ -95,11 +95,9 @@ Conversational examples should label placeholder text as `<REPLACE THIS>` so the
 
 ---
 
-## Open carry-forwards (as of 2026-05-14, post-substrate v0.2.3)
+## Open carry-forwards (refreshed 2026-05-15, post-substrate v0.2.3 + RR v1.17.5)
 
-**The authoritative forward-looking list now lives in [`UW-BACKLOG.md`](UW-BACKLOG.md).** When a release surfaces a need it can't ship, log a `BL-NNNN` entry there. The historical "closed" notes below stay here for context and traceability of how prior chats deferred work.
-
-These are real backlogged items that previous chats deferred. They have a home; they're just not staffed yet.
+**The authoritative forward-looking list lives in [`UW-BACKLOG.md`](UW-BACKLOG.md).** Read that file for what's pending. The historical "closed" notes below stay here purely for traceability of how prior chats deferred work; the "Medium / Low priority" sub-sections that used to live here have been removed because they had drifted (e.g. "Branch 2 — Handoff readiness" was open for weeks here while it had already shipped as BL-0009 / substrate v0.2.0). When you want to know what's open, check UW-BACKLOG.md, not this section.
 
 ### Closed 2026-05-14 (Substrate v0.2.3 — Rent Roll Recon row 16 GPR fix · BL-0015)
 
@@ -130,14 +128,6 @@ These are real backlogged items that previous chats deferred. They have a home; 
 - ✓ **`T12 Analytics!R102` lease formula** — fixed in substrate v0.1.7 with INDEX/MATCH against `T12 Raw Data!R:R`. UW Output R61 Lease will now display real values when source has lease data.
 - ✓ **`T12 Raw Data` SUMIFS N501 vs N500 cosmetic** — swept (636 cells) in v0.1.7 migration.
 
-### Medium priority (still open)
-
-- **Branch 2 — Handoff readiness.** Pre-export gate, UW Export sheet (values-only mirror), metadata header, source trail. **Track 3 chat — Branch 2 was sequenced after Branch 3 per OPTIMIZATION-DECISIONS.md.** With Branch 3 + the Track 1/2 writer-side follow-ups all closed in the 2026-05-11 session, Branch 2 is the only remaining open Analyzer-optimization workstream.
-
-### Low priority
-
-- **Substrate version-detection bug suspected.** App's `_detect_substrate_version()` looks for `2nd Person Revenue` (v0.1.5 marker) in the Description_Map column B; v0.1.6/v0.1.7/v0.1.8/v0.1.9/v0.1.10 add no new Labels there, so the detector returns `v0.1.5` for any of v0.1.5+. Cosmetic — worth widening the marker list when the bundle next changes Label vocabulary. Could now use the new `2nd Person Rent $` header at Rent Roll Input V4 as a v0.1.10+ marker.
-
 ---
 
 ## Conventions worth knowing
@@ -152,14 +142,18 @@ These are real backlogged items that previous chats deferred. They have a home; 
 
 ---
 
-## Three openpyxl quirks that bite migrations
+## Four openpyxl quirks that bite migrations
 
 Documented from real bugs hit during migration script work:
 
 1. `wb.defined_names[name] = DefinedName(...)` is the v3.x assignment form. `defined_names.append()` was removed.
 2. Empty-string cell values render as `0` in Excel/Calc when read back. Leave the cell truly unset, or wrap with `=IF(ref="","",ref)` in formula context.
 3. `Cell.alignment` is read-only. To mutate one attribute (e.g. indent), re-assign the whole `Alignment(...)` object preserving the others. Same for `Font`, `PatternFill`, `Border`.
-4. (From 2026-05-06) `insert_rows()` shifts cells but not formula text — full-workbook regex sweep needed to update shifted refs. Lookbehind regex must include colons to catch range endpoints (`F15:Q15`). `insert_rows()` doesn't shift merged-cell range definitions; use `mr.shift(row_shift=delta)` to mutate bounds in-place — `unmerge_cells()` wipes displaced cell content.
+4. (From 2026-05-06, expanded 2026-05-15 after BL-0001) `insert_rows()` shifts cells but not formula text — full-workbook regex sweep needed to update shifted refs. Lookbehind regex must include colons to catch range endpoints (`F15:Q15`). `insert_rows()` doesn't shift merged-cell range definitions; use `mr.shift(row_shift=delta)` to mutate bounds in-place — `unmerge_cells()` wipes displaced cell content.
+
+   **The qualified-range-endpoint trap (BL-0001 / `migrate_to_v021.py`).** When a formula contains a cross-sheet qualified range like `T12_Calc!$N$1:$N$500`, the qualified-pattern regex matches the *first* cell (`$N$1`) as a single cross-sheet ref — the *endpoint* (`$N$500`) falls outside that match and is then re-caught by the unqualified-ref regex, which assumes it's a same-sheet reference and bumps it on row inserts. Result: the endpoint shifts (e.g. `$N$500` → `$N$505` after a 5-row insert) while everything else in the qualified range stays put. Surfaces as off-by-N SUMIF/SUMIFS drift after migrations.
+
+   **Canonical fix:** capture template formulas you intend to *replicate* (e.g. for new rows) **AFTER** the shift sweep, not before. Reading post-shift bakes in any drift on the template row's own range endpoints, so every replicated row's endpoints stay consistent with each other (even if they're all "wrong" relative to the table size — but consistent matters more than absolute, and the v0.1.7 sweep proved harmless when endpoints are one row past the data). See `tools/migration/migrate_to_v021.py` `step_t12_raw_data()` lines 312-321 for the worked example. The v0.1.6 / v0.1.7 "SUMIFS N501 vs N500 cosmetic" was the first symptom of this same artifact.
 
 ---
 

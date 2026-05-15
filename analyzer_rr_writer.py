@@ -24,9 +24,13 @@ Critical preservation guarantees:
 
 Limit: max 600 bed rows per run (matches the formula extent in cols T-U).
 
-The module's `T12CapacityError` exception name is also a historical
-artifact — preserved for now to keep the rename surgical. A follow-up
-could rename it to `AnalyzerRRCapacityError` for consistency.
+Companion renames shipped 2026-05-15 (UW-BACKLOG BL-0011):
+  - `populate_t12()` -> `populate_rr_input()` (matches what the function
+    actually populates — the Rent Roll Input sheet, not the T12 Input
+    sheet — and mirrors the partner `populate_t12_input()` on
+    `t12_normalizer_writer.py`)
+  - `T12CapacityError` -> `AnalyzerRRCapacityError` (matches the file
+    rename done on 2026-05-10)
 """
 
 from __future__ import annotations
@@ -118,8 +122,8 @@ SOURCE_COLUMNS_AC_TO_AG = [
 ]
 
 
-class T12CapacityError(Exception):
-    """Raised when the rent roll has more rows than the T12 can hold."""
+class AnalyzerRRCapacityError(Exception):
+    """Raised when the rent roll has more rows than Rent Roll Input can hold."""
 
 
 def _coerce_value(v):
@@ -156,17 +160,17 @@ def _coerce_value(v):
     return v
 
 
-def populate_t12(
-    t12_bytes: bytes,
+def populate_rr_input(
+    analyzer_bytes: bytes,
     translated_df: pd.DataFrame,
     period_date: Optional[dt.date],
     *,
     source_filename: str = "",
 ) -> bytes:
-    """Populate a T12 workbook with translated rent roll data and return as bytes.
+    """Populate the Analyzer's Rent Roll Input sheet with translated rent roll data and return as bytes.
 
     Args:
-        t12_bytes: Raw bytes of the user-uploaded T12 .xlsx file
+        analyzer_bytes: Raw bytes of the destination Analyzer .xlsx file
         translated_df: DataFrame from analyzer_rr_translator.translate_for_t12()
             — must have the 18 source columns in SOURCE_COLUMNS_A_TO_R
         period_date: Date written to col S on every populated row. Required.
@@ -176,28 +180,28 @@ def populate_t12(
             string leaves A3 untouched.
 
     Raises:
-        T12CapacityError: if the rent roll exceeds DATA_END_ROW - DATA_START_ROW + 1 rows
-        ValueError: if the T12 doesn't contain the expected sheet
+        AnalyzerRRCapacityError: if the rent roll exceeds DATA_END_ROW - DATA_START_ROW + 1 rows
+        ValueError: if the Analyzer doesn't contain the expected sheet
     """
     if period_date is None:
-        raise ValueError("period_date is required to populate the T12.")
+        raise ValueError("period_date is required to populate the Analyzer.")
 
     n_rows = len(translated_df)
     max_rows = DATA_END_ROW - DATA_START_ROW + 1
     if n_rows > max_rows:
-        raise T12CapacityError(
-            f"Rent roll has {n_rows} bed rows, but the T12 'Rent Roll Input' "
+        raise AnalyzerRRCapacityError(
+            f"Rent roll has {n_rows} bed rows, but the Analyzer 'Rent Roll Input' "
             f"sheet's formulas only extend to row {DATA_END_ROW} "
             f"(max {max_rows} rows). Either trim the rent roll or extend "
-            f"the T12 formulas to additional rows."
+            f"the Analyzer formulas to additional rows."
         )
 
-    # Load the user's T12 (preserves formulas, formatting, validations, other tabs)
-    wb = openpyxl.load_workbook(io.BytesIO(t12_bytes), data_only=False)
+    # Load the destination Analyzer (preserves formulas, formatting, validations, other tabs)
+    wb = openpyxl.load_workbook(io.BytesIO(analyzer_bytes), data_only=False)
 
     if SHEET_NAME not in wb.sheetnames:
         raise ValueError(
-            f"T12 workbook is missing the required '{SHEET_NAME}' sheet. "
+            f"Analyzer workbook is missing the required '{SHEET_NAME}' sheet. "
             f"Found sheets: {wb.sheetnames}"
         )
 
