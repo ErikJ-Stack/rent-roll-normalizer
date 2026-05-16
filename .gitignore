@@ -6,3 +6,6 @@ Sample Files/
 # RR pipeline outputs — analyst-specific, not source data. The RR Normalizer
 # writes files matching this pattern; they don't belong in the repo.
 *Normalized [0-9]*.xlsx
+# Streamlit local secrets — auth password hashes live here for local dev.
+# Cloud secrets are configured via share.streamlit.io and never enter the repo.
+.streamlit/secrets.toml
