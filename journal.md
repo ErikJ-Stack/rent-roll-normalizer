@@ -11,6 +11,66 @@ Newest at top.
 
 ---
 
+## 2026-05-16 — Substrate v0.2.4 (UW-BACKLOG BL-0016 + BL-0017 cosmetic cleanup)
+
+**Started as:** User opened a chat to ask "why is the normalized value for F52 different from E52" on the populated Homestead v0.2.3 Analyzer. Conversation produced three artifacts before the substrate work began: (1) diagnosed E52/F52 gap as B10 (IL target occupancy) being blank — IL pillar of normalized stack zeros out; (2) discussed F48 concession pass-through, user confirmed intentional posture (saved as user-level feedback memory `feedback_concessions_normalization.md`); (3) diagnosed E36/G36 vs E37 confusion across three threads, with E36/G36 flagged as a literal-quote-text substrate bug. Then user flagged a third defect: "rent roll input tab has a missing label on row 4" — diagnosed as AH4 invisible due to missing PatternFill since the v0.2.2 column add.
+
+**Pivoted to:** Track 3 substrate fix once user said "fix now" — bundled BL-0016 (AH4 fill) + BL-0017 (E36/G36 literal-quote text) as one substrate v0.2.4 release.
+
+### Scope
+
+**BL-0016 — Rent Roll Input!AH4 fill.** Apply green `FF1F6B52` PatternFill to match T4 / U4 (computed-column header palette). One cell.
+
+**BL-0017 — workbook-wide "intentionally blank" visual convention.** 144 cells across the workbook (T12 Analytics E36/G36, UW Output cols B/C/D × 47 rows, Rent Roll Recon D109) restyled with a coherent convention: value=`—` em-dash + fill=solid light gray `FFF2F2F2` + font color=medium gray `FFA0A0A0` + center alignment. Establishes a user-facing rule going forward: gray + em-dash = "blank by design"; truly empty = "data not yet populated".
+
+### Implementation calls made
+
+- **Bundle as one substrate release.** Both fixes are tightly-scoped, surfaced in the same chat against the same populated v0.2.3 workbook, both Track 3, both styling-only.
+
+- **Scope of BL-0017 expanded from 2 cells to 144 mid-chat.** Initial diagnosis flagged only T12 Analytics E36/G36 as the `"-"` literal-text bug. Pre-flight migration draft did a workbook-wide sweep for cells matching `data_type=='s'` + `value=='"-"'`. First test run cleared **144 cells** — 2 on T12 Analytics + 141 on UW Output + 1 on Rent Roll Recon!D109. Investigation showed the UW Output + Rent Roll Recon cells were *intentional "not applicable per care type" placeholders* for the analyst-facing handoff sheet. First instinct was to narrow scope (clear only E36/G36, leave the other 142 alone). Reported back to user with the proposal. User redirected: all 144 cells share the same design intent ("intentionally blank"), so they should all get **consistent** styling — and proposed "shaded dots or some format" so blanks-by-design read differently from blanks-by-missing-data. Final treatment chosen via 3-option `AskUserQuestion`: solid light gray fill + faint em-dash text + center alignment (winning option, beat dotted/lattice variants).
+
+- **Em-dash `—` not hyphen `-` as the text.** Em-dash is typographically the "no value here" character in spreadsheets and avoids confusion with the minus sign. Plain text payload (not `="—"` formula) — no need for a formula round-trip and keeps it consistent with other plain-text label cells.
+
+- **Preserve original Font + Alignment attributes** (per CLAUDE.md openpyxl quirk #3). Construct new `Font(...)` and `Alignment(...)` objects passing through size, bold, italic, vertical/wrap/indent — only override `color` and `horizontal` respectively.
+
+- **Sentinel-cell gate.** Gate checks (i) substrate stamp, (ii) AH4 fill green, (iii) UW Output!B8 sentinel is fully styled. Per-cell styling step also independently skips already-styled cells, so partial-state files re-apply cleanly without double-work.
+
+- **Explicit target list, not a workbook-wide sweep.** `build_blank_targets()` constructs the 144-cell list from explicit row groups + sheet/coord pairs. A future reader inspecting the migration sees the scope intent. A future migration that adds new "intentionally blank" cells should extend this list (and CLAUDE.md notes this convention).
+
+- **Formula-conditional blanks deliberately out of scope.** Cells like T12 Analytics E37/G37/H38 return `""` from formulas when source data is missing — they're "blank when data isn't here" not "blank by design". Permanent styling would mislead when they populate. A future BL can add Excel conditional formatting if that distinction matters.
+
+- **Don't touch any code, parser, or writer.** Both defects originate in the substrate template authoring. No RR or T12 parser change needed.
+
+### Verification
+
+12 checks pass on bundled Analyzer + populated Homestead workbook:
+- Cover!B8 + all 14 AZ4 anchors stamped `v0.2.4`.
+- AH4 fill = `FF1F6B52`; text + bold font intact.
+- T4 / U4 reference fills unchanged (still green); AG4 still navy.
+- **All 144 placeholder cells fully styled** (em-dash value + gray fill).
+- Sentinel font color = `FFA0A0A0`; sentinel alignment center.
+- Zero literal `"-"` cells remaining anywhere in the workbook.
+
+Idempotency: gate checks substrate stamp + AH4 fill + sentinel styled state. Re-run on v0.2.4 file is a no-op (just re-saves). Confirmed.
+
+User-data integrity: spot-checked populated Homestead workbook post-migration. A3 = "Homestead Village", R7 = "Janet (Francis) Pierson", AH7 formula intact, UW Output cells outside the target list (formula cells in cols A/E/F/G) untouched.
+
+### Files at session end
+
+- `tools/migration/migrate_to_v024.py` — new idempotent migration script
+- `ALF_Financial_Analyzer_Only.xlsx` — bundled Analyzer migrated to v0.2.4
+- `CHANGELOG-T12.md` — new v0.2.4 entry at top
+- `SPEC-T12.md` — current-substrate line bumped + v0.2.4 summary
+- `CLAUDE.md` — Last updated date + current substrate version + closed-items note
+- `UW-BACKLOG.md` — BL-0016 and BL-0017 added to Shipped
+- `journal.md` — this entry
+
+### Memory side-effect
+
+Earlier in the same chat (during the F48 concession discussion), saved a user-level feedback memory at `~/.claude/projects/.../memory/feedback_concessions_normalization.md`: don't auto-zero F48 concessions in normalized EGI; user keeps them pass-through by default because they can't always tell ex-ante if a property's concessions are burn-off or systematic.
+
+---
+
 ## 2026-05-15 — RR v1.17.5 (UW-BACKLOG BL-0011 + BL-0013 + BL-0014 tidy-up)
 
 **Started as:** Continuation of the 2026-05-14 chat that shipped substrate v0.2.3 (BL-0015) in PR #24. After PR #24 was opened (still pending merge as of this entry), user asked "what's left open?" then authorized "proceed with BL-0011 + BL-0013 + BL-0014" as a single bundled tidy-up PR.

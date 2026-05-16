@@ -8,6 +8,82 @@ When making a code change in a T12-related chat, add an entry here in the same c
 
 ---
 
+## [Substrate template v0.2.4] — 2026-05-16
+
+### Summary
+
+**Two coordinated substrate fixes, both surfaced by the user inspecting the populated Homestead v0.2.3 Analyzer:** closes UW-BACKLOG **BL-0016** (Rent Roll Input header AH4 invisible — missing fill) and **BL-0017** (workbook-wide "intentionally blank" visual treatment — replaces 144 cells of literal `"-"` text with a coherent gray-fill + em-dash convention). No code change, no formula change, no math change. Substrate template cleanup.
+
+### What changed (migrate_to_v024.py)
+
+#### A. Rent Roll Input!AH4 header fill (BL-0016)
+
+Applied the green `FF1F6B52` PatternFill matching T4 ("Total LOC $") and U4 ("Total Monthly Rev"). Before: fill `00000000` (transparent), making the white-bold header text white-on-default — invisible. The AH column ("Total Ancillary $") was added in substrate v0.2.2 with correct white font but no fill; this fixes the missed step. By the substrate's existing header palette, AH is a *computed* column so green (not navy `FF1F3864`) is correct.
+
+#### B. Workbook-wide "intentionally blank" treatment (BL-0017)
+
+**144 cells** across the substrate held the 3-character literal text `"-"` (with quote chars in the payload, `data_type='s'`) as an "intentionally blank" placeholder marker. In Excel, the quote chars rendered visibly — so what should have signaled "no data by design" instead read as a typo. v0.2.4 replaces the per-cell payload with a consistent visual convention:
+
+| Property | Value |
+|---|---|
+| `value` | `—` (em-dash, plain text — no formula, no quotes) |
+| `fill` | solid `FFF2F2F2` (very light gray) |
+| `font color` | `FFA0A0A0` (medium gray), preserving size/bold/italic/etc. |
+| `alignment` | horizontal=`center`, preserving vertical/wrap/indent |
+
+**Distribution of the 144 targets:**
+
+| Sheet | Coords | Count | Semantics |
+|---|---|---|---|
+| T12 Analytics | E36, G36 | 2 | H36 design note: "col E blank by design — T12 does not report market rates" |
+| Rent Roll Recon | D109 | 1 | MC "Other / unmapped" Avg Care Level — no avg-rate concept for unmapped care levels |
+| UW Output | B/C/D × rows {8-12, 22-28, 30-36, 38-56, 58-60, 62-64, 66-68} | 141 | Per-care-type columns adjacent to total-only formulas (cols E/F) — "not applicable per care type" |
+
+The user-facing rule going forward: **gray + em-dash = blank by design; truly empty = data not yet populated.** A future reader inspecting any sheet can distinguish "no data here, ever" from "no data here, yet" at a glance.
+
+**Not touched** — formula-conditional blanks like T12 Analytics E37/G37/H38 that return `""` only when source data is missing. Those are "blank when data isn't here" not "blank by design"; styling them permanently would mislead when they populate. A future BL can add conditional formatting if that distinction matters in practice.
+
+#### C. Stamp Cover!B8 + all 14 anchor AZ4 cells to v0.2.4
+
+### Development note — narrow scope chosen after over-broad first draft
+
+Initial migration draft kept BL-0017 narrow to just T12 Analytics E36/G36 (cleared to `None`). Pre-flight scan found `"-"` literals in 144 cells total, but the over-eager workbook-wide sweep would have nuked 142 intentional placeholders on the analyst-facing UW Output handoff sheet. After user pointed out that all 144 cells share the same design intent (just authored inconsistently), the migration was expanded to apply *consistent* styling across all of them. The em-dash + gray fill + center alignment was chosen after presenting three visual options to the user.
+
+### Idempotency
+
+Gate (`is_already_v024()`) checks all three: (i) substrate stamp = `v0.2.4`, (ii) AH4 fill = `FF1F6B52`, (iii) sentinel `UW Output!B8` value = `—` AND fill = `FFF2F2F2`. Per-cell styling step also independently checks each target's state and skips already-styled cells, so partial-state files (e.g., an aborted earlier run) re-apply cleanly.
+
+### Verification
+
+12 checks: Cover!B8 stamp, all 14 AZ4 stamps, AH4 fill green, AH4 text + bold font intact, T4 / U4 reference fills still green, AG4 (last input col) still navy, **all 144 placeholder cells fully styled** (em-dash value + gray fill), sentinel font color = `FFA0A0A0`, sentinel alignment center, **zero literal `"-"` text remaining anywhere in the workbook**.
+
+### Cross-checks on populated Homestead sample
+
+| Quantity | v0.2.3 | v0.2.4 |
+|---|---|---|
+| Rent Roll Input!AH4 visible | ❌ (invisible white-on-default) | ✓ (green header) |
+| T12 Analytics!E36 + G36 | `"-"` (with quote chars) | gray + `—` |
+| UW Output!B8..D68 (141 placeholders) | `"-"` (with quote chars) | gray + `—` |
+| Rent Roll Recon!D109 | `"-"` (with quote chars) | gray + `—` |
+| User data (residents, rates, periods) | populated | populated (untouched) |
+| All formulas | unchanged | unchanged |
+| Total literal `"-"` cells | 144 | 0 |
+
+### Why this is a Track 3 fix
+
+Both defects originate in the substrate template, not in any RR or T12 parser code. AH4's missing fill was a styling step skipped in the v0.2.2 column add; the `"-"` literal-text placeholders are a substrate authoring choice that pre-dated the visual-convention decision. No writer change needed — writers populate data rows, not header cells or layout cells.
+
+### Files
+
+- `tools/migration/migrate_to_v024.py` (new)
+- `ALF_Financial_Analyzer_Only.xlsx` (regenerated)
+- `UW-BACKLOG.md` (BL-0016 + BL-0017 added to Shipped)
+- `SPEC-T12.md` (current substrate version bumped)
+- `CLAUDE.md` (last-updated + current substrate version)
+- `journal.md` (session entry at top)
+
+---
+
 ## [Substrate template v0.2.3] — 2026-05-14
 
 ### Summary

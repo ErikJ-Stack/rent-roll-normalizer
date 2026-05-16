@@ -57,6 +57,18 @@ truth.
 
 ## Shipped
 
+### [BL-0016] Rent Roll Input!AH4 — missing header fill made "Total Ancillary $" label invisible
+- **Shipped in:** substrate v0.2.4 (2026-05-16)
+- **Track:** Substrate (Track 3)
+- **Surfaced in:** User report on 2026-05-16 while inspecting the populated Homestead v0.2.3 Analyzer: "rent roll input tab has a missing label on row 4."
+- **Summary:** Diagnosis confirmed the header text + white bold font were present at AH4 but the cell's PatternFill was transparent (`fill_type=None`, fgColor `00000000`), so white text rendered on the default white/default background — the column header was effectively invisible. AH was the new "Total Ancillary $" column added in substrate v0.2.2; the header palette step (green `FF1F6B52` for computed-column headers like T4 / U4, navy `FF1F3864` for input columns) was missed for AH specifically. v0.2.4 applies the green fill (AH is computed via `=IFERROR(V+AC+AD+AE+AF+AG,0)`, so green is correct per the substrate's existing convention). One-cell fix via `migrate_to_v024.py` Step A, shipped bundled with BL-0017.
+
+### [BL-0017] Workbook-wide "intentionally blank" visual convention
+- **Shipped in:** substrate v0.2.4 (2026-05-16)
+- **Track:** Substrate (Track 3)
+- **Surfaced in:** User report on 2026-05-16 (same chat as BL-0016): "T12 Analysis tab E36:E37 doesn't add up." Diagnosis split into three threads — (1) E vs. F columns are independent T12-vs-RR comparisons, not row totals; (2) E37 is correctly blank because Homestead's T12 reports `Gross Rent Revenue=0` per the H37 design note; (3) E36 + G36 store the 3-character string `"-"` with quotation marks as part of the text payload (`data_type='s'`), so Excel renders them as `"-"` with visible quote marks. Initial fix scoped narrow (just E36/G36 cleared to None) was then expanded after user pointed out the same literal `"-"` appears in 142 other cells on UW Output + 1 on Rent Roll Recon and all share the same design intent.
+- **Summary:** v0.2.4 establishes a workbook-wide "intentionally blank" visual convention. **144 cells** — T12 Analytics E36/G36 (2), UW Output cols B/C/D × rows {8-12, 22-28, 30-36, 38-56, 58-60, 62-64, 66-68} (141), Rent Roll Recon D109 (1) — restyled as: **value=`—` (em-dash plain text, not formula or quoted) + fill=solid `FFF2F2F2` (light gray) + font color=`FFA0A0A0` (medium gray, preserving size/bold/italic) + horizontal alignment=center (preserving vertical/wrap/indent)**. New user-facing rule: gray + em-dash = "blank by design"; truly empty = "data not yet populated". The 144-cell target list is enumerated explicitly in `migrate_to_v024.py` `build_blank_targets()` — future migrations adding new "intentionally blank" cells should extend this list and apply the same treatment. **Out of scope:** formula-conditional blanks like T12 Analytics E37/G37/H38 that return `""` only when source data is missing. Those are "blank when data isn't here" not "blank by design"; permanent styling would mislead. A future BL can add Excel conditional formatting if that distinction matters in practice. Shipped bundled with BL-0016 via `migrate_to_v024.py` Step B.
+
 ### [BL-0011] Function/class renames — `populate_t12()` → `populate_rr_input()` + `T12CapacityError` → `AnalyzerRRCapacityError`
 - **Shipped in:** RR v1.17.5 (2026-05-15)
 - **Track:** Refactor (Track 1)

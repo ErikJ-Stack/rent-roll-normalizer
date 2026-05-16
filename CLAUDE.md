@@ -2,7 +2,7 @@
 
 > Onboarding doc for any Claude session (chat or Claude Code) working on this repo. Read this first — it points to canonical truth and surfaces facts that previously had to be grubbed for.
 
-**Last updated:** 2026-05-14 (after substrate v0.2.3 — Track 3 single-cell fix on Rent Roll Recon row 16 closing UW-BACKLOG BL-0015. Realigns "RR gross contracted base rent / mo" to Gross Potential Rent (Market Rate × all units) per the row's H-note intent; was previously summing Actual Rate × occupied. Originally implemented as v0.1.11 in PR #12 on 2026-05-12; that PR went stale while main moved through v0.1.12 → v0.2.2 and was closed unmerged + re-implemented here.)
+**Last updated:** 2026-05-16 (after substrate v0.2.4 — Track 3 cleanup closing UW-BACKLOG BL-0016 + BL-0017. (1) Applies the missing green fill to `Rent Roll Input!AH4` ("Total Ancillary $" header was invisible white-on-default since the v0.2.2 column add). (2) Establishes a workbook-wide "intentionally blank" visual convention — 144 cells across T12 Analytics, UW Output, and Rent Roll Recon that previously held literal `"-"` text (rendering with visible quote marks) are now styled as em-dash `—` + light-gray fill `FFF2F2F2` + medium-gray font + center alignment. The convention: gray + em-dash = "blank by design"; truly empty = "data not yet populated".)
 
 ---
 
@@ -51,7 +51,7 @@ The repo runs three parallel tracks. They share an Analyzer but are otherwise in
 | Migration scripts | `tools/migration/migrate_to_v01N.py` (one per substrate version) |
 | Verification harness | `tools/verify_t12_v020.py` (parser-side; runs all four reference fixtures) |
 | Current code version | T12 v0.2.1 |
-| Current substrate version | v0.2.3 |
+| Current substrate version | v0.2.4 |
 
 **Module naming gotcha (updated 2026-05-15 after BL-0011 — Track 1 disambiguation now fully complete at file + function + class level).** Four modules historically shared a `t12_` prefix because the destination workbook was originally a standalone T12 intake template — the prefix meant "operates on the T12-shaped destination workbook," not "operates on T12 data." Once the bundled Analyzer flow shipped (RR v1.12.0) the prefix became misleading. The two Track 1 modules have now been renamed; the remaining `t12_*` files are the legitimate T12-data modules. All four are imported by `app.py` and serve distinct roles:
 
@@ -95,9 +95,15 @@ Conversational examples should label placeholder text as `<REPLACE THIS>` so the
 
 ---
 
-## Open carry-forwards (refreshed 2026-05-15, post-substrate v0.2.3 + RR v1.17.5)
+## Open carry-forwards (refreshed 2026-05-16, post-substrate v0.2.4)
 
 **The authoritative forward-looking list lives in [`UW-BACKLOG.md`](UW-BACKLOG.md).** Read that file for what's pending. The historical "closed" notes below stay here purely for traceability of how prior chats deferred work; the "Medium / Low priority" sub-sections that used to live here have been removed because they had drifted (e.g. "Branch 2 — Handoff readiness" was open for weeks here while it had already shipped as BL-0009 / substrate v0.2.0). When you want to know what's open, check UW-BACKLOG.md, not this section.
+
+### Closed 2026-05-16 (Substrate v0.2.4 — AH4 fill + workbook-wide "intentionally blank" convention · BL-0016 + BL-0017)
+
+- ✓ **Rent Roll Input!AH4 — header invisible (BL-0016).** User-reported on 2026-05-16: "rent roll input tab has a missing label on row 4." Root cause: when col AH ("Total Ancillary $") was added in substrate v0.2.2, the header cell received correct white-bold font but `fill_type=None` (transparent). White-on-default renders as a blank cell — the column header was effectively invisible in Excel. v0.2.4 applies the green `FF1F6B52` PatternFill matching T4/U4 (the substrate's existing "computed-column header" palette; AH is computed via `=IFERROR(V+AC+AD+AE+AF+AG,0)`). One-cell fix.
+
+- ✓ **Workbook-wide "intentionally blank" visual convention (BL-0017).** User-reported on 2026-05-16 (same chat as BL-0016): T12 Analytics E36/G36 render as `"-"` with visible quote marks because they're stored as the 3-char literal string `"-"`, not as a formula `="-"` or em-dash. Initial fix scoped narrow (clear E36/G36 to None). User then expanded scope: 144 cells across the workbook (T12 Analytics E36/G36, UW Output cols B/C/D × 47 rows, Rent Roll Recon D109) all share the same "intentionally blank, not just missing data" design intent, but the substrate had no consistent visual treatment for them. v0.2.4 establishes the convention: **value=`—` (em-dash plain text) + fill=solid `FFF2F2F2` (light gray) + font color=`FFA0A0A0` (medium gray) + horizontal alignment=center**. The user-facing rule going forward: gray + em-dash = "blank by design"; truly empty = "data not yet populated". Formula-conditional blanks (E37/G37/H38 etc. that return `""` only when source data is missing) were deliberately left out — they're "blank when data isn't here" not "blank by design", so permanent styling would mislead. A future BL can add Excel conditional formatting if that distinction matters in practice. The 144-cell target list is enumerated explicitly in `tools/migration/migrate_to_v024.py` `build_blank_targets()` — any future migration that adds new "intentionally blank" cells should extend this list and apply the same treatment.
 
 ### Closed 2026-05-14 (Substrate v0.2.3 — Rent Roll Recon row 16 GPR fix · BL-0015)
 
