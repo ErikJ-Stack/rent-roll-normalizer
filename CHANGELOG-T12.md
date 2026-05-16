@@ -8,6 +8,71 @@ When making a code change in a T12-related chat, add an entry here in the same c
 
 ---
 
+## [Substrate template v0.2.4] — 2026-05-16
+
+### Summary
+
+Track 3 additive: new top-of-workbook **`Investment Dashboard`** sheet inserted at index 1, immediately after `Cover`. Pure formula-reference layer over `T12 Analytics` and `Rent Roll Recon` — every value cell is either a static label or a cross-sheet formula reference into one of those two sheets. No source-of-truth data lives on the dashboard; **no existing formula on any other sheet changes**; no row inserts; no named-range additions. Sheet count goes 14 → 15.
+
+Why this matters: the existing analytical sheets (`T12 Analytics`, `Rent Roll Recon`, `UW Output`) are dense reference grids — useful for an analyst working line-by-line, but slow to scan when you just want to know "is this deal interesting?" The Investment Dashboard collapses the headline numbers an underwriter wants at first contact (occupancy, EGI, EBITDARM margin, going-in cap, price-per-bed, payer mix, acuity, key risk flags) onto a single sheet at the front of the workbook. Because it lives at index 1, it's also what a recipient sees when they open a populated Analyzer for the first time.
+
+Sourced from the Beaufort Rent Roll 1.31.26 + Beaufort T-12 1.31.26 populated Analyzer (in `Sample Files/`, gitignored). Only the dashboard sheet was extracted into the migration's template asset — the rest of that workbook is property-specific data and does not enter the repo.
+
+### What changed (migrate_to_v024.py)
+
+- **A. Insert `Investment Dashboard` worksheet at index 1** (immediately after `Cover`). Copied cell-by-cell from `tools/migration/v024_assets/investment_dashboard_template.xlsx` — 335 styled cells preserving fonts / fills / borders / alignment / number formats / protections, 7 column widths (A=2 narrow gutter; B=29 label; C-E ~16 each for IL/AL/MC; G/H ~16-22 for total + status), 9 row heights (R2=24 title, R8=26 headline tile, section banners at R11/19/30/48/59/70/85 = 16). No merged cells, no charts, no conditional formatting, no data validations on the dashboard itself.
+- **B. Stamp AZ1:AZ5 anchor metadata** on `Investment Dashboard` per Workbook Health convention:
+  - `AZ1` = "Investment-grade KPI roll-up of T12 Analytics + Rent Roll Recon" (purpose)
+  - `AZ2` = "Analytical (handoff)" (category)
+  - `AZ3` = "visible" (visibility)
+  - `AZ4` = `v0.2.4` (version)
+  - `AZ5` = "All cells are formula references into T12 Analytics and Rent Roll Recon. No source-of-truth data lives here." (notes)
+- **C. Stamp** `Cover!B8` → `v0.2.4` and all **15 anchor `AZ4` cells** (was 14 through v0.2.3 — Investment Dashboard joins the anchor list).
+
+### Sheet contents — seven sections
+
+| Section | Rows | What it surfaces | Source |
+|---|---|---|---|
+| AT-A-GLANCE T12 ACTUAL | 6-9 | Headline tiles: Licensed Beds · Physical Occupancy · EGI · EBITDARM Margin · Going-In Cap · Price/Bed. Each with a sub-label (target gap, normalized sibling, stabilized cap, etc.) | `T12 Analytics!E6/E8/E52/E162/E118/E123` + sub-cells |
+| 1 · OCCUPANCY & CAPACITY | 11-17 | IL/AL/MC/Total grid: licensed beds, avg occupied, occupancy %, vacant, beds-to-fill-to-stabilization. Status column: `=IF(F15>=G15,"✓ At target",IF(F15>=G15-0.1,"⚠ Below","✗ Distressed"))` | `T12 Analytics!B6:E11` + `Rent Roll Recon!B9:E9` |
+| 2 · REVENUE & RATE PERFORMANCE | 19-28 | ADR / RevPOR / RevPAB / LOC% / Base rent / LOC rev / EGI by IL/AL/MC + Blended + Normalized + Delta. RR-vs-T12 base rent gap (annualized %) | `T12 Analytics!E141:E146/E16/E23/E52` + `Rent Roll Recon!E19:E20` |
+| 3 · MARGIN & COST STRUCTURE | 30-46 | Total OpEx + 8 cost-ratio rows with benchmark column (labor 55-65%, agency ≤3%, OT ≤5%, food 6-9%, food PPD $8-14, P&C 4-7%, bad debt ≤2%, mgmt 5-7%) + EBITDARM/EBITDAR $/% T12-vs-normalized | `T12 Analytics!E105/E148:E160/E108/F108/E110/F110/E162/F162/E164/F164` |
+| 4 · VALUATION & ACQUISITION | 48-57 | Purchase price / going-in caps (EBITDARM, EBITDAR post-mgmt) / price-per-bed splits (AL, MC) / gross revenue multiple / EBITDARM multiple. Cap-rate expansion shown as `=D51-C51` formatted "+X.XX%" | `T12 Analytics!E117/E118/E120/E123:E125/E127/E128` |
+| 5 · PAYER MIX | 59-68 | 7-row × 4-col grid: Private Pay / Medicaid / LTC Insurance / VA / Managed Care / Self-Pay / Other × Residents / % Mix / Monthly Rev / % Revenue. Total row sums | `Rent Roll Recon!B40:I46` |
+| 6 · AL CARE LEVEL DISTRIBUTION | 70-81 | Basic + L2-L7 × Residents / % Occupied / Total $/mo / Avg $/Res / % LOC Rev. Total row sums | `Rent Roll Recon!B59:G65` |
+| 7 · KEY RISKS & NORMALIZATION CALLOUTS | 85-94 | 7 risk flags with 🔴🟠🟢 marker, observation, linked metric value, UW impact narrative. Example: "🔴 Going-in EBITDARM cap is negative on T12 actuals → Deal underwrites only on stabilization" | mostly `T12 Analytics` + a few `Rent Roll Recon` cross-refs |
+
+### Why a template asset rather than programmatic construction
+
+The dashboard has 335 styled cells with bold section banners, banded section-header backgrounds, borders, indents, percent / currency / general number formats, and conditional emoji glyphs in formulas. Encoding all of that as Python `Font` / `Fill` / `Border` / `Alignment` / number-format objects would balloon the migration script by an order of magnitude and make every future styling tweak require a Python diff. Instead, the source sheet is captured once into a committed template xlsx, and the migration copies it cell-by-cell at runtime. Trade-off: the template xlsx is now a permanent fixture in the repo (`tools/migration/v024_assets/investment_dashboard_template.xlsx`); future style edits go through Excel/LibreOffice on that file, not through code.
+
+### Idempotency
+
+Gate (`is_already_v024()`) checks **both** `Cover!B8 == "v0.2.4"` **AND** `Investment Dashboard` exists at sheetnames index 1. Re-running on a v0.2.4 file is a no-op (just re-saves). The script also handles the partial-state case where the sheet exists but the version stamp is older: anchors are refreshed without re-copying the sheet, so post-migration cell edits aren't blown away.
+
+### Verification (11 checks)
+
+`Cover!B8 == "v0.2.4"`, `Investment Dashboard` sheet exists, sheet at sheetnames index 1, dimensions ≥ 90 rows × 7 cols, B2 title contains "INVESTMENT DASHBOARD", B8 is a `T12 Analytics` formula reference, B15 label contains "occupancy", AZ1 purpose stamped, AZ3 visibility stamped, AZ4 self-stamp = `v0.2.4`, all 15 anchor `AZ4` = `v0.2.4`.
+
+### Cross-checks against the destination Analyzer's referenced cells
+
+Pre-migration sweep of the 56 distinct `T12 Analytics` cells the dashboard references against the destination's pre-v0.2.4 `T12 Analytics` (max_row = 170) confirmed all but one resolve to existing populated cells. The single exception is `T12 Analytics!E117` (Purchase price) — that's a manual analyst-input cell, expected to be blank in the template (the cap-rate formulas at `E118`/`E120` IFERROR-out cleanly when E117 is empty). All 27 distinct `Rent Roll Recon` references resolve against the destination's pre-v0.2.4 Rent Roll Recon (max_row = 176). No dangling references after migration.
+
+### Files
+
+- `tools/migration/migrate_to_v024.py` (new — 280 lines)
+- `tools/migration/v024_assets/investment_dashboard_template.xlsx` (new — single-sheet template, source for the dashboard copy)
+- `ALF_Financial_Analyzer_Only.xlsx` (regenerated — sheet count 14 → 15, substrate stamp v0.2.4)
+- `SPEC-T12.md` (current substrate version bumped, v0.2.4 entry added to history)
+- `CLAUDE.md` (last-updated line, current substrate version, closed-item note)
+- `journal.md` (new 2026-05-16 entry)
+
+### Cross-track note
+
+This is Track 3 (workbook-only) work — no Track 1 or Track 2 code changed. Per CLAUDE.md scope discipline, dashboard work was user-authorized for this chat (2026-05-16).
+
+---
+
 ## [Substrate template v0.2.3] — 2026-05-14
 
 ### Summary
