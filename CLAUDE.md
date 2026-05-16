@@ -2,7 +2,7 @@
 
 > Onboarding doc for any Claude session (chat or Claude Code) working on this repo. Read this first — it points to canonical truth and surfaces facts that previously had to be grubbed for.
 
-**Last updated:** 2026-05-14 (after substrate v0.2.3 — Track 3 single-cell fix on Rent Roll Recon row 16 closing UW-BACKLOG BL-0015. Realigns "RR gross contracted base rent / mo" to Gross Potential Rent (Market Rate × all units) per the row's H-note intent; was previously summing Actual Rate × occupied. Originally implemented as v0.1.11 in PR #12 on 2026-05-12; that PR went stale while main moved through v0.1.12 → v0.2.2 and was closed unmerged + re-implemented here.)
+**Last updated:** 2026-05-16 (after substrate v0.2.4 — Track 3 additive: new `Investment Dashboard` sheet inserted at workbook index 1, immediately after `Cover`. Pure formula-reference layer over T12 Analytics + Rent Roll Recon; no existing-data mutation; sheet count 14 → 15. Surfaces at-a-glance underwriting KPIs — occupancy, EGI, EBITDARM margin, going-in cap, price-per-bed, payer mix, AL acuity, key risk flags — on a single front-of-workbook sheet. Sourced from the Beaufort populated Analyzer.)
 
 ---
 
@@ -51,7 +51,7 @@ The repo runs three parallel tracks. They share an Analyzer but are otherwise in
 | Migration scripts | `tools/migration/migrate_to_v01N.py` (one per substrate version) |
 | Verification harness | `tools/verify_t12_v020.py` (parser-side; runs all four reference fixtures) |
 | Current code version | T12 v0.2.1 |
-| Current substrate version | v0.2.3 |
+| Current substrate version | v0.2.4 |
 
 **Module naming gotcha (updated 2026-05-15 after BL-0011 — Track 1 disambiguation now fully complete at file + function + class level).** Four modules historically shared a `t12_` prefix because the destination workbook was originally a standalone T12 intake template — the prefix meant "operates on the T12-shaped destination workbook," not "operates on T12 data." Once the bundled Analyzer flow shipped (RR v1.12.0) the prefix became misleading. The two Track 1 modules have now been renamed; the remaining `t12_*` files are the legitimate T12-data modules. All four are imported by `app.py` and serve distinct roles:
 
@@ -95,9 +95,13 @@ Conversational examples should label placeholder text as `<REPLACE THIS>` so the
 
 ---
 
-## Open carry-forwards (refreshed 2026-05-15, post-substrate v0.2.3 + RR v1.17.5)
+## Open carry-forwards (refreshed 2026-05-16, post-substrate v0.2.4 Investment Dashboard)
 
 **The authoritative forward-looking list lives in [`UW-BACKLOG.md`](UW-BACKLOG.md).** Read that file for what's pending. The historical "closed" notes below stay here purely for traceability of how prior chats deferred work; the "Medium / Low priority" sub-sections that used to live here have been removed because they had drifted (e.g. "Branch 2 — Handoff readiness" was open for weeks here while it had already shipped as BL-0009 / substrate v0.2.0). When you want to know what's open, check UW-BACKLOG.md, not this section.
+
+### Closed 2026-05-16 (Substrate v0.2.4 — Investment Dashboard sheet)
+
+- ✓ **Investment Dashboard sheet added at workbook front.** New `Investment Dashboard` sheet inserted at index 1, immediately after `Cover` (sheet count 14 → 15). 97 rows × 7 cols (B2:H98), 335 styled cells, sourced from the Beaufort populated Analyzer (Rent Roll 1.31.26 + T-12 1.31.26). Pure formula-reference layer over `T12 Analytics` + `Rent Roll Recon` — no existing-data mutation, no row inserts, no named-range additions, no formula on any other sheet changes. Seven sections: (1) AT-A-GLANCE headline tiles (rows 7-9: Beds / Occupancy / EGI / EBITDARM margin / Going-In Cap / Price-per-Bed), (2) OCCUPANCY & CAPACITY (rows 11-17), (3) REVENUE & RATE PERFORMANCE (rows 19-28), (4) MARGIN & COST STRUCTURE (rows 30-46), (5) VALUATION & ACQUISITION (rows 48-57), (6) PAYER MIX (rows 59-68), (7) AL CARE LEVEL DISTRIBUTION (rows 70-81), plus KEY RISKS & NORMALIZATION CALLOUTS (rows 85-94, 🔴🟠🟢 flagged). Migration via `tools/migration/migrate_to_v024.py` — copies sheet from a committed template asset at `tools/migration/v024_assets/investment_dashboard_template.xlsx` (335 cells with full style preservation), 11-check verify, idempotent (gate checks both version stamp AND sheet-exists-at-position-1). Substrate version stamp v0.2.3 → v0.2.4 across `Cover!B8` and all 15 anchor `AZ4` cells (anchor list grows 14 → 15 because Investment Dashboard joins). All but one of the 56 distinct dashboard cell refs into `T12 Analytics` resolve to populated cells (`T12 Analytics!E117` Purchase Price is an analyst-input cell, expected blank). Cross-track work — user-authorized 2026-05-16 (chat was originally a Track 1 password-gate session for the Streamlit app; user explicitly pivoted).
 
 ### Closed 2026-05-14 (Substrate v0.2.3 — Rent Roll Recon row 16 GPR fix · BL-0015)
 

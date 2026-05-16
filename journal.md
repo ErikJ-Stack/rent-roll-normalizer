@@ -11,6 +11,45 @@ Newest at top.
 
 ---
 
+## 2026-05-16 — Substrate v0.2.4 (Investment Dashboard) + (separately) Streamlit password gate
+
+**Started as:** Track 1 chat to add a password gate to the Streamlit app — multi-user, SHA-256 hashes in `st.secrets["auth"]["users"]`, login events printed to stdout for Cloud-log audit trail. Built `auth.py`, wired it into `app.py` immediately after `st.set_page_config()`, added `tools/hash_password.py` CLI helper, added `.gitignore` entry for `.streamlit/secrets.toml`. Shipped as [PR #28](https://github.com/ErikJ-Stack/rent-roll-normalizer/pull/28) — `claude/relaxed-moser-309127` branch — still open at time of this entry.
+
+**Pivoted to (with user authorization, fresh branch off origin/main):** Track 3 substrate work — add a new `Investment Dashboard` sheet to the bundled Analyzer, sourced from a Beaufort populated sample the user pointed at (`Sample Files/Analyzer with Beaufort Rent Roll 1.31.26 + Beaufort T-12 1.31.26 2026-01-31.xlsx`). Explicit cross-track confirmation per the CLAUDE.md scope-discipline convention.
+
+### Scope (substrate v0.2.4)
+
+**Single op: add `Investment Dashboard` at workbook index 1.** 97 rows × 7 cols (B2:H98), 335 styled cells. Pure formula-reference layer over `T12 Analytics` + `Rent Roll Recon`. No existing-data mutation; no row inserts; no named-range additions; no formula on any other sheet changes. Sheet count 14 → 15. Seven sections: AT-A-GLANCE T12 ACTUAL (rows 7-9), Occupancy & Capacity (11-17), Revenue & Rate Performance (19-28), Margin & Cost Structure (30-46), Valuation & Acquisition (48-57), Payer Mix (59-68), AL Care Level Distribution (70-81), plus a Key Risks & Normalization Callouts table (85-94, 🔴🟠🟢 flagged).
+
+**Approach decision:** rather than encode the dashboard's 335 styled cells programmatically (would balloon the migration ~10×), extracted the source sheet once into a committed template asset at `tools/migration/v024_assets/investment_dashboard_template.xlsx`. Migration copies it cell-by-cell at runtime, preserving fonts / fills / borders / alignment / number formats / protections. Template asset becomes a permanent fixture in the repo; future style edits go through Excel/LibreOffice on that file, not through code. Trade-off noted in SPEC-T12.md and CHANGELOG-T12.md.
+
+**Pre-flight cross-checks** against the destination Analyzer's referenced cells: 56 distinct `T12 Analytics` references — 55 resolve to populated cells, 1 expected blank (`T12 Analytics!E117` Purchase Price, manual analyst input). 27 distinct `Rent Roll Recon` references — all resolve. No dangling references after migration.
+
+### Deliverables
+
+- `tools/migration/migrate_to_v024.py` (280 lines, idempotent with the dual-gate `Cover!B8 == v0.2.4 AND Investment Dashboard at sheetnames[1]`, 11-check verification).
+- `tools/migration/v024_assets/investment_dashboard_template.xlsx` (new — single-sheet template).
+- `ALF_Financial_Analyzer_Only.xlsx` regenerated to v0.2.4 (sheet count 14 → 15, all 15 AZ4 anchors stamped, Cover!B8 stamped).
+- SPEC-T12.md current-version line bumped + v0.2.4 entry added to history.
+- CHANGELOG-T12.md v0.2.4 entry inserted above v0.2.3 (newest at top).
+- CLAUDE.md last-updated line, current substrate version table cell, and new closed carry-forward entry.
+
+### Worktree topology
+
+- `claude/relaxed-moser-309127` — PR #28 (password gate, Track 1) — held intentionally on its own branch.
+- `claude/investment-dashboard-substrate-v024` — new worktree off `origin/main` (commit `e6c5279`) for this entry. Independent PR so password gate + dashboard can merge in either order.
+
+### Scope-discipline note
+
+Same chat session served two tracks (Track 1 password gate, then Track 3 dashboard), but each got its own branch off main, each got its own PR, and the cross-track pivot was explicitly confirmed with the user before proceeding. CLAUDE.md "one track at a time" preserved at the PR level, not at the chat level — which matches the precedent set by the 2026-05-15 RR v1.17.5 BL-0011 + BL-0013 + BL-0014 cross-cutting tidy-up entry below.
+
+### Carry-forwards opened
+
+- None substrate-side at v0.2.4.
+- The Beaufort sample file lives in `Sample Files/` (gitignored). Future style updates to the Investment Dashboard go through the template asset, not the sample — the sample is property-specific data and stays out of the repo.
+
+---
+
 ## 2026-05-15 — RR v1.17.5 (UW-BACKLOG BL-0011 + BL-0013 + BL-0014 tidy-up)
 
 **Started as:** Continuation of the 2026-05-14 chat that shipped substrate v0.2.3 (BL-0015) in PR #24. After PR #24 was opened (still pending merge as of this entry), user asked "what's left open?" then authorized "proceed with BL-0011 + BL-0013 + BL-0014" as a single bundled tidy-up PR.
