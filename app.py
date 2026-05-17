@@ -34,6 +34,7 @@ import openpyxl
 import pandas as pd
 import streamlit as st
 
+from auth import require_login
 from mappings import MappingSet, load_mapping_workbook
 from normalizer import CONDENSED_COLUMNS, normalize_rent_roll
 from period_date import detect_period_date
@@ -270,6 +271,10 @@ st.set_page_config(
     page_icon="🏢",
     layout="wide",
 )
+
+# Password gate — multi-user, SHA-256 hashes from st.secrets["auth"]["users"].
+# Successful logins are printed to stdout (visible in Streamlit Cloud logs).
+require_login()
 
 # Title row with version badge on the right.
 title_col, version_col = st.columns([5, 1])
