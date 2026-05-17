@@ -268,3 +268,40 @@ The fail-safe answer is always: **re-clone from GitHub to a non-OneDrive
 location and copy your uncommitted work over manually**. Takes 5 minutes, has
 no failure modes. GitHub is the source of truth — the OneDrive copy is just
 sync convenience.
+
+---
+
+## Line-ending policy (CRLF / LF)
+
+The repo's [`.gitattributes`](.gitattributes) declares `* text=auto eol=lf`,
+which means git stores **and** checks out every text file with LF endings —
+on Windows and on macOS alike. This is enforced because OneDrive itself
+does not preserve line endings when syncing text files between Windows and
+macOS. Without `.gitattributes`, every cross-OS sync flips CRLF ↔ LF on
+all text files in the repo and produces ~12,000 fake "modifications" in
+`git status`, blocking a clean `git pull`.
+
+### If `git status` shows a wall of modified text files
+
+You're seeing CRLF/LF churn. The canonical files in the index are LF; your
+working tree has CRLF. Reset the working tree to match the index:
+
+```
+git restore .
+```
+
+This is **non-destructive** (it only undoes the line-ending flip; file
+contents are byte-identical apart from line endings). Run it from the repo
+root. Afterward `git status` should be clean.
+
+If you want to verify before running: `git diff --stat` should show
+balanced insertion/deletion counts (e.g. "12622 insertions, 12622 deletions"
+across N files), which is the smoking-gun signature of pure line-ending
+churn. Any file with an asymmetric count has at least some real edits in it
+and you'll want to inspect that file individually before restoring.
+
+### Why `.gitattributes` instead of `core.autocrlf`
+
+`core.autocrlf` is per-user config; `.gitattributes` is per-repo and
+travels with the clone. With `.gitattributes` in place, no per-user setup
+is needed, and a fresh clone on any machine inherits the policy automatically.

@@ -1,0 +1,32 @@
+# Line-ending policy
+#
+# Repo is checked out on both Windows (primary) and macOS (when working from
+# the OneDrive-synced clone on a MacBook). Without this file, every cross-OS
+# OneDrive sync flips CRLF ↔ LF on text files and produces ~12,600 fake "modifications"
+# in `git status`, blocking clean pulls. See ONEDRIVE-WORKFLOW.md.
+#
+# `text=auto eol=lf` tells git:
+#   - Auto-detect text vs binary on first add
+#   - Store text files with LF in the index
+#   - Check text files out with LF on every platform (Windows included)
+#
+# Binary file types are listed explicitly so git never tries to normalize them.
+
+* text=auto eol=lf
+
+# Binary file types — explicit overrides
+*.xlsx binary
+*.xlsm binary
+*.xls  binary
+*.pdf  binary
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.zip  binary
+*.gz   binary
+*.tar  binary
+
+# PowerShell scripts: keep LF too — modern PowerShell on Windows reads either.
+# (No override needed; the `* text=auto eol=lf` line already covers them.)
