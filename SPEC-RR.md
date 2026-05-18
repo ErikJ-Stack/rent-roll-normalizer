@@ -73,7 +73,7 @@ Local Windows machine: C:\Users\erikj\Downloads\rent_roll_app
 | `period_date.py` | 4.5 KB | Extracts period date from filename across 6 patterns |
 | `property_name.py` | — | Cross-track helper. `derive_property_name(filename)` strips date stamps and report-type boilerplate to recover the property name. Used by `analyzer_rr_writer.py` (writes to `Rent Roll Input!A3`) and `t12_normalizer_writer.py` (writes to `T12 Input!A10`). |
 | `mapping_template.xlsx` | 11.7 KB | Editable mapping override workbook for analysts |
-| `ALF_Financial_Analyzer_Only.xlsx` | ~150 KB | **Bundled Analyzer.** Loaded silently as the default destination workbook. Substrate at v0.1.5. |
+| `ALF_Financial_Analyzer_Only.xlsx` | ~225 KB | **Bundled Analyzer.** Loaded silently as the default destination workbook. Substrate at v0.2.5. |
 | `tools/migration/migrate_analyzer.py` | one-shot | Applied the v0.1.0 → v0.1.4 substrate migration to the master Analyzer (2026-05-02). Archived for traceability. |
 | `tools/migration/migrate_to_v015.py` | one-shot | Applied the v0.1.4 → v0.1.5 substrate migration (2026-05-04). Idempotent — detects `2nd Person Revenue` in `T12 Raw Data` and exits if already applied. |
 | `tools/migration/verify_e2e.py` | one-shot | Pre-v0.1.0 verification harness with throwaway extractors. Superseded by `t12_normalizer.py`'s format registry; retained as reference. |

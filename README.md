@@ -12,7 +12,7 @@ A Streamlit app that turns a senior-housing rent roll AND a T12 financial statem
 | --- | --- | --- |
 | RR Normalizer (`RR_VERSION`) | v1.17.5 | 2026-05-15 |
 | T12 Normalizer (`T12_VERSION`) | v0.2.1 | 2026-05-11 |
-| Bundled Analyzer substrate | v0.2.2 | 2026-05-14 |
+| Bundled Analyzer substrate | v0.2.5 | 2026-05-16 |
 
 ---
 
@@ -104,7 +104,7 @@ rent_roll_app/
 ├── analyzer_rr_writer.py               # Writes the translated RR into the Analyzer's Rent Roll Input sheet (Track 1; renamed from t12_writer.py on 2026-05-10)
 ├── property_name.py                    # Cross-track helper: derives property name from filename for both writers
 │
-├── ALF_Financial_Analyzer_Only.xlsx    # Bundled Analyzer template (substrate v0.2.2)
+├── ALF_Financial_Analyzer_Only.xlsx    # Bundled Analyzer template (substrate v0.2.5)
 ├── mapping_template.xlsx               # Editable RR mapping override template (optional sidebar upload)
 │
 ├── tools/
@@ -125,6 +125,9 @@ rent_roll_app/
 │       ├── migrate_to_v020.py          # Substrate v0.1.15 → v0.2.0 flagship migration (UW Export sheet + Pre-Export Gate + Workbook Map extension)
 │       ├── migrate_to_v021.py          # Substrate v0.2.0 → v0.2.1 migration (5 new ancillary Labels: Meal/HK/Laundry/Scooter/Transfer Income — BL-0001)
 │       ├── migrate_to_v022.py          # Substrate v0.2.1 → v0.2.2 migration (Rent Roll Input V-AH formatting + T split + new Total Ancillary col AH + U rewrite)
+│       ├── migrate_to_v023.py          # Substrate v0.2.2 → v0.2.3 migration (Rent Roll Recon row 16 GPR realignment — BL-0015)
+│       ├── migrate_to_v024.py          # Substrate v0.2.3 → v0.2.4 migration (new Investment Dashboard sheet at workbook front)
+│       ├── migrate_to_v025.py          # Substrate v0.2.4 → v0.2.5 migration (Rent Roll Recon Section M6 — negative residual check vs T12 Concessions — BL-0012)
 │       └── verify_e2e.py               # End-to-end Analyzer verification
 │
 ├── CLAUDE.md                           # Onboarding doc for any Claude session — read first
