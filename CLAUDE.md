@@ -2,7 +2,7 @@
 
 > Onboarding doc for any Claude session (chat or Claude Code) working on this repo. Read this first — it points to canonical truth and surfaces facts that previously had to be grubbed for.
 
-**Last updated:** 2026-05-16 (after substrate v0.2.5 — closes BL-0012: new Section M6 on `Rent Roll Recon` rows 178-183 catches negative residuals on M5's Misc. Income bucket and reconciles them against the T12 `Concessions & specials` Label. Fires on the negative branch only (non-overlapping with M5), with a 10%-of-T12-Concessions threshold for the ⚠ warning. Pure formula-reference addition — no existing-data mutation, no row inserts.)
+**Last updated:** 2026-05-18 (after substrate v0.2.6 — closes BL-0016 + BL-0017. BL-0016: `Rent Roll Input!AH4` header fill set to green `FF1F6B52` (was transparent → invisible white-on-default). BL-0017: 144 cells across T12 Analytics (E36/G36) + Rent Roll Recon (D109) + UW Output (cols B/C/D × selected rows) converted from the literal `"-"` text payload to the user-approved "intentionally blank" treatment — em-dash + light gray fill + medium gray font + center alignment. Both were originally deferred to manual Excel handling on 2026-05-16; user re-confirmed on 2026-05-18 to ship as substrate migration. UW-BACKLOG is now empty.)
 
 ---
 
@@ -51,7 +51,7 @@ The repo runs three parallel tracks. They share an Analyzer but are otherwise in
 | Migration scripts | `tools/migration/migrate_to_v01N.py` (one per substrate version) |
 | Verification harness | `tools/verify_t12_v020.py` (parser-side; runs all four reference fixtures) |
 | Current code version | T12 v0.2.1 |
-| Current substrate version | v0.2.5 |
+| Current substrate version | v0.2.6 |
 
 **Module naming gotcha (updated 2026-05-15 after BL-0011 — Track 1 disambiguation now fully complete at file + function + class level).** Four modules historically shared a `t12_` prefix because the destination workbook was originally a standalone T12 intake template — the prefix meant "operates on the T12-shaped destination workbook," not "operates on T12 data." Once the bundled Analyzer flow shipped (RR v1.12.0) the prefix became misleading. The two Track 1 modules have now been renamed; the remaining `t12_*` files are the legitimate T12-data modules. All four are imported by `app.py` and serve distinct roles:
 
