@@ -2,7 +2,7 @@
 
 > Onboarding doc for any Claude session (chat or Claude Code) working on this repo. Read this first — it points to canonical truth and surfaces facts that previously had to be grubbed for.
 
-**Last updated:** 2026-05-16 (after substrate v0.2.4 — Track 3 additive: new `Investment Dashboard` sheet inserted at workbook index 1, immediately after `Cover`. Pure formula-reference layer over T12 Analytics + Rent Roll Recon; no existing-data mutation; sheet count 14 → 15. Surfaces at-a-glance underwriting KPIs — occupancy, EGI, EBITDARM margin, going-in cap, price-per-bed, payer mix, AL acuity, key risk flags — on a single front-of-workbook sheet. Sourced from the Beaufort populated Analyzer.)
+**Last updated:** 2026-05-16 (after substrate v0.2.5 — closes BL-0012: new Section M6 on `Rent Roll Recon` rows 178-183 catches negative residuals on M5's Misc. Income bucket and reconciles them against the T12 `Concessions & specials` Label. Fires on the negative branch only (non-overlapping with M5), with a 10%-of-T12-Concessions threshold for the ⚠ warning. Pure formula-reference addition — no existing-data mutation, no row inserts.)
 
 ---
 
@@ -51,7 +51,7 @@ The repo runs three parallel tracks. They share an Analyzer but are otherwise in
 | Migration scripts | `tools/migration/migrate_to_v01N.py` (one per substrate version) |
 | Verification harness | `tools/verify_t12_v020.py` (parser-side; runs all four reference fixtures) |
 | Current code version | T12 v0.2.1 |
-| Current substrate version | v0.2.4 |
+| Current substrate version | v0.2.5 |
 
 **Module naming gotcha (updated 2026-05-15 after BL-0011 — Track 1 disambiguation now fully complete at file + function + class level).** Four modules historically shared a `t12_` prefix because the destination workbook was originally a standalone T12 intake template — the prefix meant "operates on the T12-shaped destination workbook," not "operates on T12 data." Once the bundled Analyzer flow shipped (RR v1.12.0) the prefix became misleading. The two Track 1 modules have now been renamed; the remaining `t12_*` files are the legitimate T12-data modules. All four are imported by `app.py` and serve distinct roles:
 

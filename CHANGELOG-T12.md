@@ -1,10 +1,87 @@
 # Changelog — T12 Normalizer
 
-All notable changes to the T12 Normalizer (Track 2). Independent version stream from the Rent Roll Normalizer (Track 1, currently v1.17.4). This changelog covers T12 work only — see `CHANGELOG-RR.md` for RR releases.
+All notable changes to the T12 Normalizer (Track 2). Independent version stream from the Rent Roll Normalizer (Track 1, currently v1.17.5). This changelog covers T12 work only — see `CHANGELOG-RR.md` for RR releases.
 
 Format: each version has a section with date, summary, and per-file change notes. Newest at top.
 
 When making a code change in a T12-related chat, add an entry here in the same commit.
+
+---
+
+## [Substrate template v0.2.5] — 2026-05-16
+
+### Summary
+
+**UW-BACKLOG BL-0012 closed — Section M Misc/Diabetes credit reconciliation against T12 `Concessions & specials`.** Pure substrate addition: new Section M6 on `Rent Roll Recon` (rows 178-183) that catches **negative** residuals on the M5 "Misc. Income" bucket and reconciles them against the T12 `Concessions & specials` Label. M5 already handles positive residuals; M6 fires only on the negative branch (`B173 < 0`) so the two sections are non-overlapping.
+
+### Why
+
+Surfaced in CHANGELOG-RR.md v1.17.0 (BL-0003) "Side observation worth tracking": Homestead's residual `Other LOC $` post-split is **-$12,146.75** (Diabetes + Misc, both partially negative — net credit). The hypothesis was that operators sometimes route discount/credit postings through the Other LOC bucket instead of the formal `Concessions` GL. Section M5 currently treats negative residuals the same as positive, so it surfaces a misleading "✓ Misc. income share within band" note when the bucket is actually a net credit.
+
+The original BL ticket gated this on "observing the same negative-residual pattern in one more deal." Ungated per user direction to close out the remaining backlog item.
+
+### What changed (migrate_to_v025.py)
+
+Section M6 layout on `Rent Roll Recon`:
+
+```
+R178:  M6  —  Negative residual check  (Misc. credits vs T12 Concessions & specials)
+                                                           [merged A178:G178, navy header style]
+R179:  Residual from M5 (annual)                | =B173
+R180:  T12 'Concessions & specials' — annual    | =IFERROR(VLOOKUP("Concessions & specials",
+                                                          'T12 Raw Data'!$B:$R, 17, 0), 0)
+R181:  Residual / T12 Concessions (abs)         | =IFERROR(ABS(B179)/ABS(B180), 0)
+R183:  (merged A183:I183) conditional note — 4 branches:
+         IF B179 >= 0:                                "" (positive — M5's domain)
+         ELIF B180 == 0:                              ⚠ "Negative residual = $X in Other LOC bucket,
+                                                          but T12 has no Concessions & specials line
+                                                          for reconciliation. Verify GL routing."
+         ELIF ABS(B179)/ABS(B180) > 10%:              ⚠ "Negative residual = $X is N.N% of T12
+                                                          Concessions ($Y). Likely misposted
+                                                          concessions — review GL routing for
+                                                          Other LOC credits."
+         ELSE:                                        ✓ "Negative residual = $X within reconciliation
+                                                          tolerance (≤10% of T12 Concessions $Y)."
+```
+
+Threshold: **10%** of `|T12 Concessions & specials|`. Hard-coded — easy to surface to a tunable cell in a future v0.2.6+ if multiple deals show the residual-to-concessions ratio varying meaningfully.
+
+Styling mirrors the existing M5 block (R169 header, R170 data row, R176 conditional note) — same fonts, fills, alignment, number formats. M6 sits in the previously-empty rows 178+ (max_row was 199 pre-migration; no shift required).
+
+### Idempotency
+
+Gate checks both `Cover!B8 == "v0.2.5"` AND `Rent Roll Recon!A178` starts with `"M6"`. Re-run on already-migrated workbook is a no-op.
+
+### Verification
+
+9/9 verification checks pass on the bundled Analyzer:
+
+```
+  1. Cover!B8 = 'v0.2.5'                                              : True
+  2. All 15 AZ4 = v0.2.5                                              : True (15 sheets)
+  3. M6 header at R178 starts with 'M6'                               : True
+  4. R179 B references B173 (M5 residual)                             : True
+  5. R180 B = VLOOKUP('Concessions & specials', ...)                  : True
+  6. R181 B = ABS(B179)/ABS(B180) ratio                               : True
+  7. R183 conditional note (4 branches)                               : True
+  8. R183 merged A:I                                                  : True
+  9. R178 merged A:G                                                  : True
+```
+
+### Out of scope (carry-forwards opened)
+
+None. The Section M6 surface is self-contained and fires off existing M5 + T12 Raw Data inputs.
+
+### Files changed
+
+- `tools/migration/migrate_to_v025.py` — new idempotent migration script (~270 lines)
+- `ALF_Financial_Analyzer_Only.xlsx` — bundled Analyzer migrated to v0.2.5
+- `CHANGELOG-T12.md` — this entry
+- `SPEC-T12.md` — current-version line
+- `SPEC-RR.md` — bundled-substrate version stamp
+- `README.md` — versions table + migration script listing
+- `CLAUDE.md` — Last updated line
+- `UW-BACKLOG.md` — BL-0012 moved Pending → Shipped
 
 ---
 

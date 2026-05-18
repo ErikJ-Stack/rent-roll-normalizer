@@ -35,40 +35,19 @@ truth.
 - **Out of scope (was deliberately separated as a follow-up BL):** formula-conditional blanks like T12 Analytics E37/G37/H38 that return `""` only when source data is missing. Those are "blank when data isn't here" not "blank by design"; permanent styling would mislead when they populate. Excel conditional formatting with a `DifferentialStyle` (PatternFill + Font + NumberFormat `;;;"—"` triggered by `LEN(cell)=0`) was prototyped in this chat as a potential v0.2.5 follow-up — proven feasible via openpyxl — but never implemented; user cancelled and chose to handle the styling manually.
 - **Status — handled manually by user, NOT via substrate migration.** Originally implemented as substrate v0.2.4 Step B in [PR #26](https://github.com/ErikJ-Stack/rent-roll-normalizer/pull/26) bundled with BL-0016; PR was closed unmerged on 2026-05-16. **Do not re-attempt as a substrate migration without re-confirming with the user** — they explicitly chose to handle styling in Excel rather than via a 144-cell migration. The abandoned v0.2.4 migration script (`tools/migration/migrate_to_v024.py` on branch `claude/serene-panini-3ad41d`, commit `fac129d`) has the full target list in `build_blank_targets()` if anyone needs to reference the cell inventory.
 
-### [BL-0012] Section M — Misc/Diabetes credit reconciliation against T12 `Concessions & specials`
-- **Track:** Substrate (Track 3) · target **substrate v0.2.2+**
-- **Surfaced in:** RR v1.17.0 (BL-0003) "Side observation worth tracking"
-  in CHANGELOG-RR.md.
-- **Description:** Homestead's residual `Other LOC $` post-split is
-  **-$12,146.75** (Diabetes + Misc, both partially negative — net
-  credit). The residual was negative before BL-0003 too (entire OCR was
-  -$9,966.75); the per-fee split just makes the negative-net portion
-  visible as a residual after attributing the named buckets. The
-  hypothesis is that the negative residual reflects discount/credit
-  postings that operators sometimes route through Other LOC instead of
-  the formal `Concessions` GL — but Section M5 currently treats
-  negative residuals the same as positive, so it surfaces a misleading
-  "✓ Misc. income share within band" note when the bucket is actually
-  negative.
-- **Scope:** add a Section M6 (or extend M5) on Rent Roll Recon that
-  compares the residual `Other LOC $` (when negative) against the
-  T12 `Concessions & specials` Label total. If the negative residual
-  is plausible as misposted concessions, flag a reconciliation note;
-  if not, surface a data-quality warning. Rough implementation: ~5-10
-  cells on Rent Roll Recon below the existing Section M, conditional
-  formula-driven with a ⚠ trigger when |negative residual| > 10% of
-  T12 Concessions absolute value.
-- **Conditional on:** observing the same negative-residual pattern in
-  one more Homestead-format deal (or any non-Homestead operator). If
-  it's idiosyncratic to this single Homestead fixture, defer
-  indefinitely. If it persists, ship as part of substrate v0.2.2.
-- **Depends on:** nothing structural. Reads existing Section M data
-  + existing T12 Raw Data `Concessions & specials` Label.
-
-
 ---
 
 ## Shipped
+
+### [BL-0012] Section M — Misc/Diabetes credit reconciliation against T12 `Concessions & specials`
+- **Shipped in:** substrate v0.2.5 (2026-05-16)
+- **Track:** Substrate (Track 3)
+- **Originally surfaced in:** RR v1.17.0 (BL-0003) "Side observation worth tracking" in CHANGELOG-RR.md.
+- **Summary:** New Section M6 on `Rent Roll Recon` (rows 178-183). Fires only on **negative** residuals on the M5 "Misc. Income" bucket (`B173 < 0`); positive residuals are still M5's domain — the two sections are non-overlapping. Three data rows:
+    - R179: Residual from M5 (`=B173`)
+    - R180: T12 `Concessions & specials` annual (`=IFERROR(VLOOKUP("Concessions & specials", 'T12 Raw Data'!$B:$R, 17, 0), 0)`)
+    - R181: `=IFERROR(ABS(B179)/ABS(B180), 0)` (residual / T12 Concessions, abs)
+  And a 4-branch conditional note at R183 (merged A:I): empty when residual is positive; ⚠ when residual exists but T12 has no Concessions line for reconciliation; ⚠ when ratio > 10% ("Likely misposted concessions — review GL"); ✓ when ratio ≤ 10% ("Within reconciliation tolerance"). Threshold hard-coded at 10% — easy to surface to a tunable cell in a future v0.2.6+ if multiple deals show the ratio varying meaningfully. Styling mirrors the existing M5 block (R169 header, R170 data row, R176 note). Migration via `migrate_to_v025.py` — 9-check verify, idempotent (gate checks `Cover!B8 == "v0.2.5"` AND `Rent Roll Recon!A178` starts with "M6"). The original BL ticket gated this on "observing the same negative-residual pattern in one more deal"; user ungated to close out the remaining backlog item.
 
 ### [BL-0011] Function/class renames — `populate_t12()` → `populate_rr_input()` + `T12CapacityError` → `AnalyzerRRCapacityError`
 - **Shipped in:** RR v1.17.5 (2026-05-15)
