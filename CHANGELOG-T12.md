@@ -8,6 +8,91 @@ When making a code change in a T12-related chat, add an entry here in the same c
 
 ---
 
+## [Substrate template v0.2.6] — 2026-05-18
+
+### Summary
+
+**Closes UW-BACKLOG BL-0016 + BL-0017** — both originally deferred to manual Excel handling on 2026-05-16. User re-confirmed on 2026-05-18 to ship via substrate migration after all. The abandoned v0.2.4 implementation at commit `fac129d` on branch `claude/serene-panini-3ad41d` was ported forward and re-numbered to chain after v0.2.5 / BL-0012.
+
+Two coordinated Track 3 fixes on visual conventions — no formula changes, no row inserts, no named-range additions.
+
+### What changed (migrate_to_v026.py)
+
+#### A. BL-0016 — `Rent Roll Input!AH4` header fill
+
+The AH "Total Ancillary $" header was added in substrate v0.2.2 with correct white-bold font but `fill_type=None` (transparent). White-on-default renders as a blank cell — the column header was invisible. v0.2.6 applies the green `FF1F6B52` `PatternFill` matching `T4` / `U4` (the substrate's computed-column header palette; navy `FF1F3864` is for input columns).
+
+One-cell change. Header text + font preserved unchanged.
+
+#### B. BL-0017 — Workbook-wide "intentionally blank" visual convention
+
+144 cells across 3 sheets currently store the literal 3-character string `"-"` (a double-quote, dash, double-quote payload — renders in Excel with visible quote marks). All 144 share the same "intentionally blank, not just missing data" design intent. v0.2.6 applies the user-approved gray-with-em-dash treatment:
+
+| Attribute | Treatment |
+| --- | --- |
+| Value | `"—"` (em-dash, plain text — no quote chars) |
+| Fill | `PatternFill(start_color="FFF2F2F2", solid)` — light gray |
+| Font color | `FFA0A0A0` — medium gray (preserves size/bold/italic/name/underline/strike) |
+| Horizontal alignment | `center` (preserves vertical/wrap/indent/shrink/rotation) |
+
+**New user-facing rule:** *gray + em-dash = "blank by design"; truly empty = "data not yet populated".*
+
+**Target cell inventory (144 total):**
+
+| Sheet | Cells | Count |
+| --- | --- | --- |
+| T12 Analytics | E36, G36 | 2 |
+| Rent Roll Recon | D109 (MC "Other / unmapped" Avg Care Level) | 1 |
+| UW Output | cols B/C/D × rows {8-12, 22-28, 30-36, 38-56, 58-60, 62-64, 66-68} | 141 |
+
+UW Output rows enumerated as: 5 (Other-revenue+EGI) + 7 (OpEx S1) + 7 (OpEx S2) + 19 (OpEx detail) + 3 (Total OpEx+NOI) + 3 (Capex) + 3 (Below-the-line) = 47 rows × 3 cols = 141.
+
+**Out of scope (intentionally deferred):** formula-conditional blanks like `T12 Analytics!E37/G37/H38` that return `""` only when source data is missing. Those are "blank when data isn't here" — permanent styling would mislead when they populate. Excel `DifferentialStyle` conditional formatting prototyped on 2026-05-16 but never shipped; defer to a future v0.2.7+ if a clean approach surfaces.
+
+### Idempotency
+
+Gate checks BOTH:
+1. `Cover!B8 == "v0.2.6"`,
+2. `Rent Roll Input!AH4` fill is the green `FF1F6B52`,
+3. `UW Output!B8` already has the styled-blank treatment.
+
+Per-cell idempotency on the blank-styling pass: each cell tested via `_is_already_styled()` (em-dash value AND gray fill); already-styled cells are skipped, not re-applied. Partial pre-state (e.g. some cells styled, some not) is gracefully re-converged on rerun.
+
+### Verification
+
+10/10 checks pass on the bundled Analyzer:
+
+```
+  1. Cover!B8 = 'v0.2.6'                                              : True
+  2. All 15 AZ4 = v0.2.6                                              : True (15 sheets)
+  3. AH4 fill = 'FF1F6B52' (target 'FF1F6B52')                        : True
+  4. AH4 text 'Total\nAncillary $' preserved                          : True
+  5. AH4 font bold preserved                                          : True
+  6. All 144 blank-targets styled (144/144)                           : True
+  7. Sample (T12 Analytics E36):
+       value='—' (target '—')
+       fill='FFF2F2F2' (target 'FFF2F2F2')
+       font color='FFA0A0A0' (target 'FFA0A0A0')
+       align horizontal='center' (target 'center')
+```
+
+### Files changed
+
+- `tools/migration/migrate_to_v026.py` — new idempotent migration script (~300 lines, ported from the abandoned `claude/serene-panini-3ad41d` commit `fac129d`)
+- `ALF_Financial_Analyzer_Only.xlsx` — bundled Analyzer migrated to v0.2.6
+- `CHANGELOG-T12.md` — this entry
+- `SPEC-T12.md` — current-version line
+- `SPEC-RR.md` — bundled-substrate version stamp
+- `README.md` — versions table + migration script listing
+- `CLAUDE.md` — Last updated line + current substrate version
+- `UW-BACKLOG.md` — BL-0016 + BL-0017 moved Pending → Shipped
+
+### Out of scope (carry-forwards opened)
+
+None. **UW-BACKLOG is now empty** for the second time (first was 2026-05-14 after BL-0001 closed — that emptiness lasted ~4 hours before BL-0011..BL-0014 got teed up).
+
+---
+
 ## [Substrate template v0.2.5] — 2026-05-16
 
 ### Summary
