@@ -22,7 +22,17 @@ truth.
 
 ## Pending
 
-*(empty — all BL-NNNN items closed as of 2026-05-19)*
+### [BL-0019] Persistent audit log for password gate (external store + manual sync)
+- **Track:** RR (Track 1)
+- **Target:** TBD (likely RR v1.18.0 + new `tools/sync_audit_log.py`)
+- **Originally surfaced in:** chat 2026-05-19. Current `auth.py` `_log()` writes `[AUTH] <ts> user=<u> <event>` lines to stdout only; Streamlit Cloud captures the stream but logs are ephemeral (wiped on reboot), have no per-user query, and provide no long-term audit trail. User wants persistent login history that ends up in the repo folder and can be pulled to local.
+- **Summary:** Adopt **option 3 architecture** (chosen over option 1 — App commits to GitHub via contents API, rejected for noisy git history; and option 2 — GitHub Actions cron sync, rejected for added Action complexity):
+    - **Write side** — `auth.py` `_log()` posts each event (`login_ok` / `login_fail` / `logout`) to an external persistent store at write time. Candidate stores: Supabase (free tier — Postgres + REST, simplest), S3 (append-style one-object-per-event with daily prefix, no DB), or Logtail (logging-as-a-service, lightweight but adds vendor). Final pick deferred to implementation chat; recommend Supabase for SQL queryability and free-tier fit.
+    - **Sync side** — new `tools/sync_audit_log.py` run locally by user on demand. Pulls events from the external store since the last successful sync (using a local `tools/.audit_sync_state` marker file with the last-fetched timestamp or event-id, gitignored), appends new rows to `audit_log.csv` at repo root. Idempotent — re-running pulls no duplicates. CSV columns: `timestamp_utc`, `username`, `event`.
+    - **Repo-side decision deferred:** whether `audit_log.csv` is committed (audit trail in git history) or gitignored (privacy preference, plus avoids constant churn). Default recommendation: gitignored, with `audit_log.csv.example` committed showing the schema.
+    - **Secrets** — new `[audit]` table in Streamlit Cloud Secrets with the external-store credentials. Also added to `.streamlit/secrets.toml` for local dev.
+    - **Failure mode** — if the external-store write fails, `auth.py` falls back to the existing stdout `[AUTH]` line and does NOT block the login. Audit logging is best-effort, never a gate.
+- **Notes:** User-deferred to "later" on 2026-05-19. Implementation should happen in a fresh Track 1 chat (this chat was Track 3 / substrate v0.2.7). Confirm with user before implementation: (a) external-store choice, (b) commit vs gitignore the CSV, (c) whether to also expose an in-app admin view of recent audit events.
 
 ---
 
