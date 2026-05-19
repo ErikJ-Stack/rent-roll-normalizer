@@ -22,11 +22,17 @@ truth.
 
 ## Pending
 
-*(empty — all BL-NNNN items closed as of 2026-05-18)*
+*(empty — all BL-NNNN items closed as of 2026-05-19)*
 
 ---
 
 ## Shipped
+
+### [BL-0018] Dashboard sheet redesign — replace Investment Dashboard with chart-rich Dashboard
+- **Shipped in:** substrate v0.2.7 (2026-05-19)
+- **Track:** Substrate (Track 3)
+- **Originally surfaced in:** user-authored externally in Excel and dropped in on 2026-05-19. Replaces the v0.2.4 Investment Dashboard (BL ticket retroactively assigned at close).
+- **Summary:** Removes the v0.2.4 `Investment Dashboard` sheet (340 cells, 0 charts, 52-col layout) and inserts a redesigned `Dashboard` sheet at the same index 1 position (437 cells, **6 native Excel charts**, 72 merged ranges, 17-col visible layout, navy tab color `FF1F4E79`). Sheet count remains 15. Pure formula-reference layer over T12 Analytics + Rent Roll Recon + Monthly Trending + Cover — 96 unique cross-sheet refs total, 95 resolve to populated cells on the v0.2.6 baseline; the one outlier is `Cover!B5` (Property Name) which is user-populated at runtime via the `Property_Name` named range. Migration via `migrate_to_v027.py` — sources from committed template asset at `tools/migration/v027_assets/dashboard_template.xlsx` (26 KB single-sheet workbook), 14-check verify, idempotent (gate checks Cover!B8 == v0.2.7 AND Dashboard at index 1 AND Investment Dashboard absent). Charts copied via `copy.deepcopy(chart)` since openpyxl Chart objects carry their series references as string formulas that survive deep-copy. The user's source file was based on v0.2.4 and had drifted (Google Sheets / LibreOffice round-trip artifacts plus accidental T12 Analytics anchor relocation AZ→AM); **none of those regressions were carried forward** — the migration starts from the current v0.2.6 base and only adds the Dashboard. v0.2.5 (Section M6) + v0.2.6 (BL-0016 AH4 fill, BL-0017 144-cell intentional-blank styling) work confirmed intact post-migration.
 
 ### [BL-0016] Rent Roll Input!AH4 — header invisible (white-bold font on transparent fill)
 - **Shipped in:** substrate v0.2.6 (2026-05-18) — bundled with BL-0017.

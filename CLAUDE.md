@@ -2,7 +2,7 @@
 
 > Onboarding doc for any Claude session (chat or Claude Code) working on this repo. Read this first — it points to canonical truth and surfaces facts that previously had to be grubbed for.
 
-**Last updated:** 2026-05-18 (after substrate v0.2.6 — closes BL-0016 + BL-0017. BL-0016: `Rent Roll Input!AH4` header fill set to green `FF1F6B52` (was transparent → invisible white-on-default). BL-0017: 144 cells across T12 Analytics (E36/G36) + Rent Roll Recon (D109) + UW Output (cols B/C/D × selected rows) converted from the literal `"-"` text payload to the user-approved "intentionally blank" treatment — em-dash + light gray fill + medium gray font + center alignment. Both were originally deferred to manual Excel handling on 2026-05-16; user re-confirmed on 2026-05-18 to ship as substrate migration. UW-BACKLOG is now empty.)
+**Last updated:** 2026-05-19 (after substrate v0.2.7 — closes BL-0018. Replaces the v0.2.4 `Investment Dashboard` sheet at index 1 with a redesigned `Dashboard` sheet authored externally by the user in Excel. New sheet: 437 cells, **6 native Excel charts**, 72 merged ranges, 17-col layout, navy tab color `FF1F4E79`. Pure formula-reference layer over T12 Analytics + Rent Roll Recon + Monthly Trending + Cover — 96 unique cross-sheet refs, 95 of which resolve to populated cells under v0.2.6. Sheet count stays at 15. The user's authored source was based on v0.2.4 and had drifted (Google Sheets / LibreOffice round-trip artifacts plus accidental T12 Analytics anchor relocation AZ→AM); none of those regressions were carried forward — the migration starts from the current v0.2.6 base and only adds the Dashboard. v0.2.5 + v0.2.6 substrate work confirmed intact post-migration. UW-BACKLOG is now empty.)
 
 ---
 
@@ -51,7 +51,7 @@ The repo runs three parallel tracks. They share an Analyzer but are otherwise in
 | Migration scripts | `tools/migration/migrate_to_v01N.py` (one per substrate version) |
 | Verification harness | `tools/verify_t12_v020.py` (parser-side; runs all four reference fixtures) |
 | Current code version | T12 v0.2.1 |
-| Current substrate version | v0.2.6 |
+| Current substrate version | v0.2.7 |
 
 **Module naming gotcha (updated 2026-05-15 after BL-0011 — Track 1 disambiguation now fully complete at file + function + class level).** Four modules historically shared a `t12_` prefix because the destination workbook was originally a standalone T12 intake template — the prefix meant "operates on the T12-shaped destination workbook," not "operates on T12 data." Once the bundled Analyzer flow shipped (RR v1.12.0) the prefix became misleading. The two Track 1 modules have now been renamed; the remaining `t12_*` files are the legitimate T12-data modules. All four are imported by `app.py` and serve distinct roles:
 
@@ -95,9 +95,13 @@ Conversational examples should label placeholder text as `<REPLACE THIS>` so the
 
 ---
 
-## Open carry-forwards (refreshed 2026-05-16, post-substrate v0.2.4 Investment Dashboard)
+## Open carry-forwards (refreshed 2026-05-19, post-substrate v0.2.7 Dashboard redesign)
 
 **The authoritative forward-looking list lives in [`UW-BACKLOG.md`](UW-BACKLOG.md).** Read that file for what's pending. The historical "closed" notes below stay here purely for traceability of how prior chats deferred work; the "Medium / Low priority" sub-sections that used to live here have been removed because they had drifted (e.g. "Branch 2 — Handoff readiness" was open for weeks here while it had already shipped as BL-0009 / substrate v0.2.0). When you want to know what's open, check UW-BACKLOG.md, not this section.
+
+### Closed 2026-05-19 (Substrate v0.2.7 — Dashboard sheet redesign · BL-0018)
+
+- ✓ **`Investment Dashboard` sheet replaced with redesigned `Dashboard` sheet.** Sheet count stays at 15. User authored the new sheet externally in Excel and dropped it in on 2026-05-19. New sheet: 437 cells, **6 native Excel charts** (BarChart × 2 + DoughnutChart + 3 more titled charts), 72 merged ranges, 17-col visible layout (B:Q), navy tab color `FF1F4E79`, AZ1:AZ5 anchor block. Pure formula-reference layer — 96 unique cross-sheet refs (Cover B5, T12 Analytics × 52, Rent Roll Recon × 31, Monthly Trending × 12); 95 resolve to populated cells on v0.2.6, the one outlier is `Cover!B5` (Property Name, user-populated at runtime via `Property_Name` named range). Migration via `tools/migration/migrate_to_v027.py` — sources from committed template asset `tools/migration/v027_assets/dashboard_template.xlsx` (26 KB single-sheet workbook). Cells copied via the established `_copy_cell` helper; charts copied via `copy.deepcopy(chart)` since openpyxl Chart objects carry their series references as string formulas that survive deep-copy. Anchor list re-roll: 15-sheet list updated `"Investment Dashboard"` → `"Dashboard"`. 14-check verify, idempotent (gate checks Cover!B8 == v0.2.7 AND Dashboard at index 1 AND Investment Dashboard absent). **Drift not carried forward:** the user's authored file was based on v0.2.4 and had been round-tripped through Google Sheets / LibreOffice (re-introducing `_xludf.MINIFS` / lowercase `minifs` prefixes on RR_Calc + Rent Roll Recon, missing the v0.2.5 Section M6 rows, missing the v0.2.6 BL-0016 AH4 fill, missing the v0.2.6 BL-0017 144-cell intentional-blank styling, plus an accidental T12 Analytics anchor relocation AZ→AM). Migration starts from the current v0.2.6 base and only adds the Dashboard, preserving all v0.2.5 + v0.2.6 substrate work intact (post-migration spot-checks confirmed). UW-BACKLOG is now empty.
 
 ### Closed 2026-05-16 (Substrate v0.2.4 — Investment Dashboard sheet)
 
