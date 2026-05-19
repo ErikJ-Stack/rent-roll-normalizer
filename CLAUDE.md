@@ -2,7 +2,7 @@
 
 > Onboarding doc for any Claude session (chat or Claude Code) working on this repo. Read this first — it points to canonical truth and surfaces facts that previously had to be grubbed for.
 
-**Last updated:** 2026-05-19 (after substrate v0.2.7 — closes BL-0018. Replaces the v0.2.4 `Investment Dashboard` sheet at index 1 with a redesigned `Dashboard` sheet authored externally by the user in Excel. New sheet: 437 cells, **6 native Excel charts**, 72 merged ranges, 17-col layout, navy tab color `FF1F4E79`. Pure formula-reference layer over T12 Analytics + Rent Roll Recon + Monthly Trending + Cover — 96 unique cross-sheet refs, 95 of which resolve to populated cells under v0.2.6. Sheet count stays at 15. The user's authored source was based on v0.2.4 and had drifted (Google Sheets / LibreOffice round-trip artifacts plus accidental T12 Analytics anchor relocation AZ→AM); none of those regressions were carried forward — the migration starts from the current v0.2.6 base and only adds the Dashboard. v0.2.5 + v0.2.6 substrate work confirmed intact post-migration. UW-BACKLOG is now empty.)
+**Last updated:** 2026-05-19 (after substrate v0.2.8 — closes BL-0020. Fixes three Dashboard chart-data-link bugs from v0.2.7 that shipped earlier the same day. Bug 1: "Monthly EGI Trend" line chart was plotting Housekeeping Income — `Dashboard!C97:C108` references corrected from `Monthly Trending!B21:M21` (Housekeeping) → `B26:M26` (EGI, the canonical row since v0.1.7 BL-0001). Bug 2: "Payer Mix — Revenue Share" pie chart was plotting unit counts — `Dashboard!F90:F93` references corrected from `Rent Roll Recon!B40:B43` (COUNTIFS for unit counts) → `I40:I43` (revenue ratios, matching the chart title). Bug 3: Doughnut chart [1] series range covered empty rows — data consolidated from `O15:O19` up to `O9:O13`, series range shortened from `$O$8:$O$19` → `$O$8:$O$14`. Migration via `migrate_to_v028.py` using the same template-asset pattern as v0.2.7. The user's local Excel file still has the v0.2.4-baseline drift from before (Google Sheets / LibreOffice artifacts, missing v0.2.5 + v0.2.6 work, AM anchor relocation) — only the Dashboard chart-data-link corrections were carried forward. v0.2.5 + v0.2.6 + v0.2.7 work all confirmed intact. BL-0019 (persistent audit log) remains the only Pending item.)
 
 ---
 
@@ -51,7 +51,7 @@ The repo runs three parallel tracks. They share an Analyzer but are otherwise in
 | Migration scripts | `tools/migration/migrate_to_v01N.py` (one per substrate version) |
 | Verification harness | `tools/verify_t12_v020.py` (parser-side; runs all four reference fixtures) |
 | Current code version | T12 v0.2.1 |
-| Current substrate version | v0.2.7 |
+| Current substrate version | v0.2.8 |
 
 **Module naming gotcha (updated 2026-05-15 after BL-0011 — Track 1 disambiguation now fully complete at file + function + class level).** Four modules historically shared a `t12_` prefix because the destination workbook was originally a standalone T12 intake template — the prefix meant "operates on the T12-shaped destination workbook," not "operates on T12 data." Once the bundled Analyzer flow shipped (RR v1.12.0) the prefix became misleading. The two Track 1 modules have now been renamed; the remaining `t12_*` files are the legitimate T12-data modules. All four are imported by `app.py` and serve distinct roles:
 
@@ -95,9 +95,13 @@ Conversational examples should label placeholder text as `<REPLACE THIS>` so the
 
 ---
 
-## Open carry-forwards (refreshed 2026-05-19, post-substrate v0.2.7 Dashboard redesign)
+## Open carry-forwards (refreshed 2026-05-19, post-substrate v0.2.8 Dashboard bug fixes)
 
 **The authoritative forward-looking list lives in [`UW-BACKLOG.md`](UW-BACKLOG.md).** Read that file for what's pending. The historical "closed" notes below stay here purely for traceability of how prior chats deferred work; the "Medium / Low priority" sub-sections that used to live here have been removed because they had drifted (e.g. "Branch 2 — Handoff readiness" was open for weeks here while it had already shipped as BL-0009 / substrate v0.2.0). When you want to know what's open, check UW-BACKLOG.md, not this section.
+
+### Closed 2026-05-19 (Substrate v0.2.8 — Dashboard chart-data-link bug fixes · BL-0020)
+
+- ✓ **Three Dashboard bugs from v0.2.7 fixed.** User noticed in Excel hours after the v0.2.7 release that several charts were rendering wrong data. **Bug 1 — Monthly EGI Trend line chart** was plotting Housekeeping Income: `Dashboard!C97:C108` referenced `Monthly Trending!B21:M21` (row 21 = Housekeeping Income since v0.1.7's BL-0001 ancillary-revenue Labels expansion moved EGI to row 26). Corrected to row 26. **Bug 2 — Payer Mix Revenue Share pie chart** was plotting unit counts instead of revenue ratios: `Dashboard!F90:F93` referenced `Rent Roll Recon!B40:B43` (COUNTIFS for unit counts), corrected to `I40:I43` (revenue ratios `H/H47` matching the chart title). **Bug 3 — Doughnut chart [1]** series range `$O$8:$O$19` covered 6 empty rows: v0.2.8 consolidates the 5 data rows from `O15:O19` up to `O9:O13` (contiguous with `O8`) and shortens the series range to `$O$8:$O$14`. Migration via `tools/migration/migrate_to_v028.py` — same template-asset pattern as v0.2.7, 13-check verify including per-bug-fix checks (Fix-1 / Fix-2 / Fix-3a / Fix-3b), idempotent (gate: `Cover!B8 == "v0.2.8"` AND `Dashboard!C97` references row 26). User's local Excel file still has the v0.2.4-baseline drift from before; **only the Dashboard chart-data-link corrections were carried forward**, all other drift discarded. Post-migration spot-checks confirmed v0.2.5 + v0.2.6 + v0.2.7 substrate work all intact. Lesson learned for next Dashboard ship: v0.2.7's verification confirmed all 96 cross-refs resolved to *populated cells*, but didn't validate that the targets matched the chart titles — future Dashboard migrations should spot-check chart titles vs source row labels (e.g. "is the EGI series actually pointing at the EGI row?").
 
 ### Closed 2026-05-19 (Substrate v0.2.7 — Dashboard sheet redesign · BL-0018)
 

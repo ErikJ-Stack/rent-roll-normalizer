@@ -8,6 +8,48 @@ When making a code change in a T12-related chat, add an entry here in the same c
 
 ---
 
+## [Substrate template v0.2.8] — 2026-05-19
+
+### Summary
+
+**Closes UW-BACKLOG BL-0020** — Dashboard chart-data-link bug fixes. v0.2.7 shipped with three stale / incorrect cross-sheet references on the Dashboard sheet that the user noticed in Excel after the v0.2.7 release. v0.2.8 ports the user's corrections back into the bundled Analyzer.
+
+Track 3 / Substrate only — no RR or T12 code changes, no formula changes on any other sheet, no row inserts, no named-range changes. Same shape as v0.2.7 (sheet count 15, "Dashboard" at index 1).
+
+### What changed (migrate_to_v028.py)
+
+#### Bug 1 — "Monthly EGI Trend" line chart was plotting Housekeeping Income
+
+`Dashboard!C97:C108` (the values feeding chart [3], "Monthly EGI Trend") referenced `Monthly Trending!B21:M21`. Row 21 has been the **Housekeeping Income** row since substrate v0.1.7, when the ancillary-revenue Labels expansion (BL-0001) moved EGI to row 26. The v0.2.7 Dashboard inherited stale row 21 refs from the user's authored copy. Corrected `B21:M21` → `B26:M26`.
+
+#### Bug 2 — "Payer Mix — Revenue Share" pie chart was plotting unit counts
+
+`Dashboard!F90:F93` (the values feeding chart [4], "Payer Mix — Revenue Share") referenced `Rent Roll Recon!B40:B43` — which holds COUNTIFS formulas for unit counts per payer type. The chart title says **Revenue Share**, so the right source is `Rent Roll Recon!I40:I43` (the revenue-ratio formulas computing `H40/H47` etc.). Corrected `B40:B43` → `I40:I43`.
+
+#### Bug 3 — Doughnut chart [1] series range covered empty rows
+
+The doughnut chart series spanned `Dashboard!$O$8:$O$19` (12 rows) but only `O8` and `O15:O19` were populated — the chart was rendering 6 empty slices before the actual data, which looked broken in Excel. v0.2.8 consolidates: the 5 data rows move from `O15:O19` up to `O9:O13` (now contiguous with `O8`), and the chart series range shortens to `Dashboard!$O$8:$O$14`. No category count change (still 5 + header); just layout cleanup.
+
+### Idempotency
+
+Gate checks BOTH `Cover!B8 == "v0.2.8"` AND `Dashboard!C97` references `Monthly Trending'!B26` (the canonical "have the fixes shipped" check). Re-running on already-migrated workbook is a no-op (just re-saves).
+
+### Files
+
+- `tools/migration/migrate_to_v028.py` (new) — 13-check verification block (includes per-bug-fix checks Fix-1 / Fix-2 / Fix-3a / Fix-3b).
+- `tools/migration/v028_assets/dashboard_template.xlsx` (new, 26 KB) — single-sheet workbook with the corrected Dashboard captured from the user's local file.
+- `ALF_Financial_Analyzer_Only.xlsx` — bundled Analyzer re-stamped to v0.2.8.
+
+### Why a fresh substrate version rather than a hotfix to v0.2.7
+
+Substrate versions are immutable once shipped — Cover!B8 + AZ4 anchors are content-addressable for downstream tooling. Mutating v0.2.7's bundled file in place would break the "v0.2.7 == specific known content" invariant. The migration chain stays linear: v0.2.6 → v0.2.7 → v0.2.8. Users on v0.2.7 (anyone who downloaded after PR #33 merged earlier today) run this migration to pick up the fixes; users still on v0.2.6 should run v0.2.7 first, then v0.2.8.
+
+### Out of scope
+
+- The user's local Excel file is still based on the v0.2.4 substrate baseline and has additional drift (Google Sheets / LibreOffice round-trip artifacts on RR_Calc + Rent Roll Recon, missed v0.2.5 Section M6 rows, missed v0.2.6 BL-0016 AH4 fill, missed v0.2.6 BL-0017 144-cell intentional-blank styling, accidental T12 Analytics anchor relocation AZ→AM). **None of that drift was carried forward** — v0.2.8 takes only the Dashboard sheet from the user's file. Post-migration spot-checks confirmed v0.2.5 + v0.2.6 + v0.2.7 substrate work all intact.
+
+---
+
 ## [Substrate template v0.2.7] — 2026-05-19
 
 ### Summary

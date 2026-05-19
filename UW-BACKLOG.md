@@ -38,6 +38,12 @@ truth.
 
 ## Shipped
 
+### [BL-0020] Dashboard chart-data-link bug fixes
+- **Shipped in:** substrate v0.2.8 (2026-05-19)
+- **Track:** Substrate (Track 3)
+- **Originally surfaced in:** user noticed in Excel after the v0.2.7 release (same day, hours later). The v0.2.7 Dashboard was inherited from the user's authored copy and shipped with three stale / incorrect cross-sheet references that hadn't been caught in the v0.2.7 verification (which only confirmed cells resolved to *populated* targets, not that the targets matched chart titles).
+- **Summary:** Three Dashboard bugs corrected: **(1) Monthly EGI Trend** line chart was plotting **Housekeeping Income** — `Dashboard!C97:C108` referenced `Monthly Trending!B21:M21` (row 21 = Housekeeping Income since v0.1.7), corrected to row 26 (EGI). **(2) Payer Mix — Revenue Share** pie chart was plotting **unit counts** instead of revenue ratios — `Dashboard!F90:F93` referenced `Rent Roll Recon!B40:B43` (COUNTIFS for unit counts), corrected to `I40:I43` (`H/H47` revenue-ratio formulas matching the chart title). **(3) Doughnut chart [1] series range** covered `$O$8:$O$19` (12 rows) but only `O8` + `O15:O19` were populated, rendering 6 empty slices in Excel; v0.2.8 moves data from `O15:O19` up to `O9:O13` (contiguous with `O8`) and shortens the series range to `$O$8:$O$14`. Migration via `migrate_to_v028.py` — same template-asset pattern as v0.2.7, 13-check verify including per-bug-fix checks, idempotent (gate: `Cover!B8 == "v0.2.8"` AND `Dashboard!C97` references row 26). The user's local Excel file is still based on v0.2.4 substrate with multiple regressions present (Google Sheets / LibreOffice artifacts, missing v0.2.5 + v0.2.6 work) — **only the Dashboard sheet's chart-data-link corrections** were carried forward; all other drift was discarded. Post-migration spot-checks confirmed v0.2.5 (Section M6) + v0.2.6 (BL-0016 AH4 fill, BL-0017 144-cell intentional-blank) + v0.2.7 (Dashboard structural) work all intact.
+
 ### [BL-0018] Dashboard sheet redesign — replace Investment Dashboard with chart-rich Dashboard
 - **Shipped in:** substrate v0.2.7 (2026-05-19)
 - **Track:** Substrate (Track 3)
