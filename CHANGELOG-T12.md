@@ -8,6 +8,48 @@ When making a code change in a T12-related chat, add an entry here in the same c
 
 ---
 
+## [Bundled Analyzer reset to user-authored copy] — 2026-05-19
+
+> **Not a substrate version bump.** This is a user-directed wholesale replacement of the bundled `ALF_Financial_Analyzer_Only.xlsx`. The substrate migration chain (v0.1.0 → v0.2.7, plus the closed-unmerged v0.2.8 on branch `claude/bl-0020-dashboard-data-link-fixes`) is preserved in `tools/migration/` for reproducibility, but the bundled file no longer represents the output of running that chain.
+
+### Summary
+
+**Closes UW-BACKLOG BL-0021** (regression by user request). Replaces the v0.2.7 bundled Analyzer with the user's locally-edited copy from `C:\One Drive Business\OneDrive - (na)\office\rent_roll_app\ALF_Financial_Analyzer_Only.xlsx`. Adds a "Last updated: 2026-05-19" stamp at `Dashboard!N1` per user request to surface the bundled file's modification date in the workbook itself.
+
+The user prefers their hand-edited Excel copy as canon over the migration-chain-derived bundled file. v0.2.7 (BL-0018) shipped the Dashboard structure successfully but inherited three chart-data-link bugs from the user's source file; v0.2.8 (BL-0020, closed unmerged) tried to fix those bugs on top of v0.2.7. After v0.2.8, user decided they'd rather have their own file as the bundled default than have the repo apply targeted patches.
+
+### What the bundled file is now
+
+- **Substrate stamp:** `Cover!B8 = "v0.2.4"` (from the user's local file, NOT a new version). The migration scripts v0.2.5 / v0.2.6 / v0.2.7 / v0.2.8 are still in `tools/migration/` and can be re-applied if the user later wants to forward-roll the bundled file.
+- **Sheet count:** 15.
+- **Sheet list:** Cover, Dashboard (with user's chart-data-link fixes intact — `Dashboard!C97:C108` references EGI row 26, `Dashboard!F90:F93` references revenue ratios at col I, doughnut chart range $O$8:$O$14 with contiguous data at O9:O13), T12 Analytics, T12 Input, T12 Raw Data, Rent Roll Input, Rent Roll Recon, Monthly Trending, UW Output, UW Export, Mapping Review, Description_Map, RR_Calc, T12_Calc, Workbook Health.
+- **New cell:** `Dashboard!N1` = `"Last updated: 2026-05-19"` (Calibri 10pt italic gray FF595959, right-aligned). Static text, not a TODAY() formula — the intent is to surface the file's edit date, not always show "today."
+
+### What is NOT in the bundled file anymore (vs the v0.2.7 main HEAD)
+
+The user's local file was based on the v0.2.4 substrate baseline before any of v0.2.5 / v0.2.6 / v0.2.7's work was applied to it. Wholesale-copying that file undoes:
+
+- **BL-0012 (v0.2.5)** — Section M6 negative-residual reconciliation rows (`Rent Roll Recon!A178:B183`). The bundled file no longer has the Misc/Diabetes credit reconciliation against T12 Concessions.
+- **BL-0016 (v0.2.6)** — `Rent Roll Input!AH4` green `FF1F6B52` fill. The "Total Ancillary $" header is once again rendered as white-bold on transparent fill (invisible).
+- **BL-0017 (v0.2.6)** — 144-cell "intentionally blank" treatment. T12 Analytics E36/G36, Rent Roll Recon D109, and UW Output cols B/C/D × selected rows all revert from em-dash + light gray fill back to the literal `"-"` text payload (renders with visible quote marks).
+- **BL-0008 (RR v1.17.1) substrate side** — `RR_Calc` MINIFS / MAXIFS formulas have `_xludf.` prefix re-introduced (Google Sheets / LibreOffice round-trip artifact). Works in those tools, may misrender in some Excel versions.
+- **v0.2.7 structural** — `Dashboard!AZ1:AZ5` anchor block is absent (user's local Dashboard lacks the substrate anchor convention). Workbook Health Pivot table refs against `T12 Analytics!AZ1:AZ5` will read empty since the user's file relocated those anchors to `AM1:AM5` (intentional or accidental drift).
+
+### How to forward-roll the bundled file again (if needed)
+
+The migration chain still works against the bundled file (which is at v0.2.4):
+
+```
+python tools/migration/migrate_to_v025.py ALF_Financial_Analyzer_Only.xlsx ALF_Financial_Analyzer_Only.xlsx
+python tools/migration/migrate_to_v026.py ALF_Financial_Analyzer_Only.xlsx ALF_Financial_Analyzer_Only.xlsx
+python tools/migration/migrate_to_v027.py ALF_Financial_Analyzer_Only.xlsx ALF_Financial_Analyzer_Only.xlsx
+python tools/migration/migrate_to_v028.py ALF_Financial_Analyzer_Only.xlsx ALF_Financial_Analyzer_Only.xlsx  # closed PR but script exists on branch
+```
+
+WARNING: this would override the user's Dashboard customizations (v0.2.7's `migrate_to_v027.py` removes any existing Dashboard sheet before inserting its own). Re-running v0.2.7 would lose the user's chart-data-link fixes; v0.2.8 was specifically built to ADD those fixes on top of v0.2.7's structural changes. So forward-rolling needs the v0.2.8 step.
+
+---
+
 ## [Substrate template v0.2.7] — 2026-05-19
 
 ### Summary
