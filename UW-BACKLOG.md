@@ -22,11 +22,27 @@ truth.
 
 ## Pending
 
-*(empty — all BL-NNNN items closed as of 2026-05-18)*
+### [BL-0019] Persistent audit log for password gate (external store + manual sync)
+- **Track:** RR (Track 1)
+- **Target:** TBD (likely RR v1.18.0 + new `tools/sync_audit_log.py`)
+- **Originally surfaced in:** chat 2026-05-19. Current `auth.py` `_log()` writes `[AUTH] <ts> user=<u> <event>` lines to stdout only; Streamlit Cloud captures the stream but logs are ephemeral (wiped on reboot), have no per-user query, and provide no long-term audit trail. User wants persistent login history that ends up in the repo folder and can be pulled to local.
+- **Summary:** Adopt **option 3 architecture** (chosen over option 1 — App commits to GitHub via contents API, rejected for noisy git history; and option 2 — GitHub Actions cron sync, rejected for added Action complexity):
+    - **Write side** — `auth.py` `_log()` posts each event (`login_ok` / `login_fail` / `logout`) to an external persistent store at write time. Candidate stores: Supabase (free tier — Postgres + REST, simplest), S3 (append-style one-object-per-event with daily prefix, no DB), or Logtail (logging-as-a-service, lightweight but adds vendor). Final pick deferred to implementation chat; recommend Supabase for SQL queryability and free-tier fit.
+    - **Sync side** — new `tools/sync_audit_log.py` run locally by user on demand. Pulls events from the external store since the last successful sync (using a local `tools/.audit_sync_state` marker file with the last-fetched timestamp or event-id, gitignored), appends new rows to `audit_log.csv` at repo root. Idempotent — re-running pulls no duplicates. CSV columns: `timestamp_utc`, `username`, `event`.
+    - **Repo-side decision deferred:** whether `audit_log.csv` is committed (audit trail in git history) or gitignored (privacy preference, plus avoids constant churn). Default recommendation: gitignored, with `audit_log.csv.example` committed showing the schema.
+    - **Secrets** — new `[audit]` table in Streamlit Cloud Secrets with the external-store credentials. Also added to `.streamlit/secrets.toml` for local dev.
+    - **Failure mode** — if the external-store write fails, `auth.py` falls back to the existing stdout `[AUTH]` line and does NOT block the login. Audit logging is best-effort, never a gate.
+- **Notes:** User-deferred to "later" on 2026-05-19. Implementation should happen in a fresh Track 1 chat (this chat was Track 3 / substrate v0.2.7). Confirm with user before implementation: (a) external-store choice, (b) commit vs gitignore the CSV, (c) whether to also expose an in-app admin view of recent audit events.
 
 ---
 
 ## Shipped
+
+### [BL-0018] Dashboard sheet redesign — replace Investment Dashboard with chart-rich Dashboard
+- **Shipped in:** substrate v0.2.7 (2026-05-19)
+- **Track:** Substrate (Track 3)
+- **Originally surfaced in:** user-authored externally in Excel and dropped in on 2026-05-19. Replaces the v0.2.4 Investment Dashboard (BL ticket retroactively assigned at close).
+- **Summary:** Removes the v0.2.4 `Investment Dashboard` sheet (340 cells, 0 charts, 52-col layout) and inserts a redesigned `Dashboard` sheet at the same index 1 position (437 cells, **6 native Excel charts**, 72 merged ranges, 17-col visible layout, navy tab color `FF1F4E79`). Sheet count remains 15. Pure formula-reference layer over T12 Analytics + Rent Roll Recon + Monthly Trending + Cover — 96 unique cross-sheet refs total, 95 resolve to populated cells on the v0.2.6 baseline; the one outlier is `Cover!B5` (Property Name) which is user-populated at runtime via the `Property_Name` named range. Migration via `migrate_to_v027.py` — sources from committed template asset at `tools/migration/v027_assets/dashboard_template.xlsx` (26 KB single-sheet workbook), 14-check verify, idempotent (gate checks Cover!B8 == v0.2.7 AND Dashboard at index 1 AND Investment Dashboard absent). Charts copied via `copy.deepcopy(chart)` since openpyxl Chart objects carry their series references as string formulas that survive deep-copy. The user's source file was based on v0.2.4 and had drifted (Google Sheets / LibreOffice round-trip artifacts plus accidental T12 Analytics anchor relocation AZ→AM); **none of those regressions were carried forward** — the migration starts from the current v0.2.6 base and only adds the Dashboard. v0.2.5 (Section M6) + v0.2.6 (BL-0016 AH4 fill, BL-0017 144-cell intentional-blank styling) work confirmed intact post-migration.
 
 ### [BL-0016] Rent Roll Input!AH4 — header invisible (white-bold font on transparent fill)
 - **Shipped in:** substrate v0.2.6 (2026-05-18) — bundled with BL-0017.

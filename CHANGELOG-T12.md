@@ -8,6 +8,74 @@ When making a code change in a T12-related chat, add an entry here in the same c
 
 ---
 
+## [Substrate template v0.2.7] — 2026-05-19
+
+### Summary
+
+**Closes UW-BACKLOG BL-0018** — Dashboard sheet redesign. Replaces the v0.2.4 "Investment Dashboard" with a denser, chart-rich "Dashboard" sheet authored externally by the user in Excel. Sheet count stays at 15; the new Dashboard slots into the same index 1 position immediately after Cover.
+
+Track 3 / Substrate only — no RR or T12 code changes, no formula changes on any other sheet, no row inserts, no named-range changes.
+
+### What changed (migrate_to_v027.py)
+
+#### A. Remove `Investment Dashboard` sheet
+
+The v0.2.4 Investment Dashboard (340 cells, no embedded charts, 52-column layout) is fully superseded by the new Dashboard. Removed via `del wb["Investment Dashboard"]`.
+
+#### B. Insert new `Dashboard` sheet at index 1
+
+437 styled cells, 6 native Excel charts (BarChart × 2, DoughnutChart, plus 3 more titled charts), 72 merged ranges, 17-column visible layout (B:Q with anchor block at AZ), navy tab color `FF1F4E79`.
+
+Sourced from a committed template asset at `tools/migration/v027_assets/dashboard_template.xlsx` (26 KB, single-sheet workbook trimmed from the user's authored copy). Cells copied via the established `_copy_cell` helper (preserves font/fill/border/alignment/number_format/protection); charts copied via `copy.deepcopy(chart)` since openpyxl Chart objects carry their data-series references as string formulas that survive the deep-copy.
+
+**96 unique cross-sheet refs**:
+
+| Source sheet | Refs | Populated on v0.2.6 |
+| --- | --- | --- |
+| T12 Analytics | 52 | 52 |
+| Rent Roll Recon | 31 | 31 |
+| Monthly Trending | 12 | 12 |
+| Cover | 1 (B5) | 0 (user-populated at runtime via `Property_Name` named range) |
+
+No reference to the (now-removed) Investment Dashboard. No new named ranges required.
+
+#### C. AZ1:AZ5 anchor block on new sheet
+
+| Cell | Value |
+| --- | --- |
+| AZ1 | `Underwriting at-a-glance KPI dashboard with embedded charts` |
+| AZ2 | `Analytical (handoff)` |
+| AZ3 | `visible` |
+| AZ4 | `v0.2.7` |
+| AZ5 | `All value cells are formula references into T12 Analytics, Rent Roll Recon, Monthly Trending, and Cover. 6 native Excel charts embedded. No source-of-truth data lives here. Supersedes the v0.2.4-v0.2.6 Investment Dashboard.` |
+
+#### D. Substrate version stamp
+
+`Cover!B8` and all 15 `AZ4` anchors bumped `v0.2.6` → `v0.2.7`. 15-sheet anchor list updated: `"Investment Dashboard"` slot now reads `"Dashboard"`. All other anchor positions unchanged.
+
+### Idempotency
+
+Gate checks ALL FOUR:
+1. `Cover!B8 == "v0.2.7"`
+2. `"Dashboard"` is in `wb.sheetnames`
+3. `wb.sheetnames.index("Dashboard") == 1` (immediately after Cover)
+4. `"Investment Dashboard"` is NOT in `wb.sheetnames`
+
+Re-running on already-migrated workbook is a no-op (`wb.save()` with no mutations). Partial pre-state (e.g. Dashboard inserted but Investment Dashboard not yet removed) is handled by per-step `has_X / has_Y` guards.
+
+### Files
+
+- `tools/migration/migrate_to_v027.py` (new) — 14-check verification block.
+- `tools/migration/v027_assets/dashboard_template.xlsx` (new, 26 KB) — single-sheet workbook with the Dashboard sheet captured from the user's Excel-authored copy.
+- `ALF_Financial_Analyzer_Only.xlsx` — bundled Analyzer re-stamped to v0.2.7 (sheet count 15 → 15, Investment Dashboard → Dashboard).
+
+### Out of scope
+
+- The user's authored file was based on v0.2.4 and had been round-tripped through Google Sheets / LibreOffice, which re-introduced `_xludf.MINIFS` / `minifs` lowercase prefixes on `RR_Calc` and `Rent Roll Recon`, missed the v0.2.5 Section M6 rows, missed the v0.2.6 BL-0016 AH4 fill, missed the v0.2.6 BL-0017 144-cell intentional-blank styling, and accidentally relocated T12 Analytics AZ-column anchors to the AM column. **None of those regressions were carried forward** — the migration starts from the current v0.2.6 base and only adds the Dashboard. v0.2.5 + v0.2.6 substrate work confirmed intact post-migration (Rent Roll Recon!A178-A183 = Section M6 conditional rows; Rent Roll Input!AH4 fill = `FF1F6B52`; 5 spot-checked BL-0017 cells = em-dash + `FFF2F2F2` fill + `FFA0A0A0` font color).
+- "Investment Dashboard" name retained in this changelog and prior CHANGELOG entries (records of what shipped at past versions).
+
+---
+
 ## [Substrate template v0.2.6] — 2026-05-18
 
 ### Summary
