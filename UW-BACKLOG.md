@@ -38,6 +38,12 @@ truth.
 
 ## Shipped
 
+### [BL-0022] `Cover!B5` doesn't auto-resolve the property name
+- **Shipped in:** substrate v0.2.8 (2026-05-20)
+- **Track:** Substrate (Track 3)
+- **Originally surfaced in:** User report 2026-05-19 — "The Cover sheet isn't being populated by the actual name of the property that's in T12 analytics" — against the populated Homestead Village v0.2.5 Analyzer fixture (`Sample Files/Analyzer with 2026-04-24 Homestead Village Rent Roll v2 + March 2026 T12 2026-04-24.xlsx`).
+- **Summary:** `Cover!B5` (the `Property_Name` named-range source) was a static manual-entry cell while RR v1.15.0 + T12 v0.2.1 writers had been auto-stamping the property name into `Rent Roll Input!A3` / `T12 Input!A10` since 2026-05-11. `T12 Analytics!B2`'s 3-priority resolver (RR → T12 → `Property_Name`) picked up the name via path 1, but Cover itself stayed blank — and with it `Dashboard!B2`'s title formula (which references `Cover!B5` directly), `UW Export!B3` (`=IFERROR(Property_Name,"(not set)")`), `Workbook Health!B27`/`C27`, and Pre-Export Gate `B49` all reported "missing" / "(not set)" / empty even though the writer-stamped inputs were present. v0.2.8 rewrites `Cover!B5` to a 2-priority resolver formula (`Rent Roll Input!A3` → `T12 Input!A10` → "") — same priority-1/priority-2 chain that `T12 Analytics!B2` already used, minus the priority-3 `Property_Name` fallback (would be circular since `Property_Name → Cover!B5`). All 5 downstream consumers cascade automatically. `Cover!A19` docstring also updated — old text described B5 as a manual-entry cell, new text describes the auto-resolve. **Defensive skip:** if `Cover!B5` already contains static (non-formula) text at migration time, the rewrite is bypassed and the user's typed value is preserved. Migration via `migrate_to_v028.py` (4 ops, 10-check verify, idempotent — gate on `Cover!B8 == "v0.2.8"`). Pure substrate change — no row inserts, no other-sheet formula edits, no named-range additions, no sheet additions. Chain-tested clean v0.2.4 → v0.2.5 → v0.2.6 → v0.2.7 → v0.2.8 from the bundled file baseline. **Bundled `ALF_Financial_Analyzer_Only.xlsx` not bumped** per the BL-0021 (2026-05-19) "wholesale-replace" directive — migration script is the deliverable; users run the chain against their own workbook.
+
 ### [BL-0021] Bundled Analyzer reset to user-authored copy + Dashboard "Last updated" stamp
 - **Shipped in:** 2026-05-19 (NOT a substrate version bump — see below)
 - **Track:** Substrate-adjacent (Track 3) — bundled-file management, not a migration

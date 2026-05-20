@@ -8,6 +8,80 @@ When making a code change in a T12-related chat, add an entry here in the same c
 
 ---
 
+## [Substrate template v0.2.8] — 2026-05-20
+
+### Summary
+
+**Closes UW-BACKLOG BL-0022.** Track 3 narrow-scope fix: `Cover!B5` (the `Property_Name` named-range source) was a static manual-entry cell while the RR v1.15.0 + T12 v0.2.1 writers had been auto-stamping the property name into `Rent Roll Input!A3` / `T12 Input!A10` since 2026-05-11. `T12 Analytics!B2`'s 3-priority resolver (RR → T12 → `Property_Name`) picked up the name correctly via path 1, but Cover itself stayed blank — and with it `Dashboard!B2`'s title formula (which references `Cover!B5` directly), `UW Export!B3` (`=IFERROR(Property_Name,"(not set)")`), `Workbook Health!B27`, and Pre-Export Gate `B49` all reported "missing" / "(not set)" / empty despite the writer-stamped inputs being present.
+
+v0.2.8 rewrites `Cover!B5` to a 2-priority resolver formula (RR → T12 → "") — no fallback to `Property_Name` since that would be circular (`Property_Name → Cover!B5`). Cover now auto-populates whenever either writer has stamped its input; all 5 downstream consumers cascade automatically.
+
+Pure substrate change. No row inserts, no existing-formula edits on any other sheet, no named-range additions, no sheet additions. Migration is 4 ops, idempotent on the version stamp, with defensive preservation of any user-typed text already in `Cover!B5`.
+
+### What changed (migrate_to_v028.py)
+
+- **A. Rewrite `Cover!B5`** with a 2-priority property-name resolver:
+  ```
+  =IFERROR(
+    IF(LEN(TRIM('Rent Roll Input'!A3))>0,'Rent Roll Input'!A3,
+    IF(LEN(TRIM('T12 Input'!A10))>0,'T12 Input'!A10,
+    "")),
+    "")
+  ```
+  Same priority-1/priority-2 chain that `T12 Analytics!B2` uses, minus the priority-3 `Property_Name` fallback. When neither writer-stamped source has a value, B5 evaluates to "" — consistent with the prior "blank when no data" semantics.
+
+  **Defensive skip:** if `Cover!B5` already contains a static (non-formula) string at migration time, the rewrite is skipped and the user's typed value is preserved. This handles the case where someone has manually set the property name and doesn't want it auto-overwritten.
+
+- **B. Rewrite `Cover!A19` docstring.** Old text: "Property name entered at B5 above propagates to T12 Analytics via the Property_Name named range." (manual-entry framing — now inaccurate). New text: "Property name at B5 auto-resolves from Rent Roll Input!A3 → T12 Input!A10 (writer-stamped). Type into B5 to manually override. Propagates to all consumers via the Property_Name named range." Preserves user customization if A19 has been hand-edited away from the standard docstring lineage.
+
+- **C + D. Stamp** `Cover!B8` → `v0.2.8` and all 15 anchor `AZ4` cells.
+
+### Consumer impact
+
+`Cover!B5` is referenced by 7 cells across 5 sheets. Behavior after v0.2.8:
+
+| Consumer | Before | After |
+|---|---|---|
+| `Cover!B5` (the cell itself, rendered on the Cover tab) | Blank (manual entry) | Property name auto-resolved from writer inputs |
+| `Dashboard!B2` title formula | Renders "UNDERWRITING DASHBOARD" with no property name | Renders "UNDERWRITING DASHBOARD  —  \<PropertyName\>" |
+| `T12 Analytics!B2` (3-priority, falls back to `Property_Name`) | Already resolved via path 1 (RR!A3) | Unchanged — path 1 still wins; if RR + T12 ever both empty, B5 is now the same formula |
+| `UW Export!B3` `=IFERROR(Property_Name,"(not set)")` | "(not set)" | Property name |
+| `Workbook Health!B27` workbook map property name row | "missing" | Property name |
+| `Workbook Health!C27` ✓/⚠ status | ⚠ | ✓ |
+| `Workbook Health!B49` Pre-Export Gate property-name check | ⚠ "Set property name on Cover!B5" | ✓ |
+
+The B49 warning message ("Set property name on Cover!B5") is unchanged — still semantically accurate as a fallback path (typing into B5 still overrides the formula on subsequent re-saves).
+
+### Idempotency
+
+Gate (`is_already_v028()`) checks `Cover!B8 == "v0.2.8"`. Re-running on a v0.2.8 file is a no-op (just re-saves). If a user manually types text into `Cover!B5` after v0.2.8 ships, that text is preserved on subsequent re-runs because the formula-injection step's `looks_like_user_text` guard sees non-formula static text and skips.
+
+### Verification (10 checks)
+
+`Cover!B8 == "v0.2.8"`; all 15 anchor `AZ4` cells = `v0.2.8`; `Cover!B5` either has the new formula OR is user-typed static text (both valid post-states); `Cover!A19` docstring updated or user-customized; sanity checks that M5 (R169) + M6 (R178) on Rent Roll Recon from v0.2.5 are intact; `T12 Analytics!B2` 3-priority formula intact (we deliberately do NOT modify the T12 Analytics resolver — Cover!B5 changes naturally cascade through); Dashboard sheet still at sheetnames index 1 from v0.2.7.
+
+### Chain-test result (bundled v0.2.4 → v0.2.8)
+
+The bundled `ALF_Financial_Analyzer_Only.xlsx` was reset to v0.2.4 in BL-0021 (2026-05-19). Chain-running `migrate_to_v025` → `v026` → `v027` → `v028` against a fresh copy of the bundled file lands cleanly at v0.2.8 with all verification checks green at every step. No regressions to v0.2.5 (Section M6), v0.2.6 (BL-0016 AH4 fill / BL-0017 144-cell intentional-blank), or v0.2.7 (Dashboard sheet + AZ anchors).
+
+### Bundled Analyzer stays at v0.2.4
+
+Per the BL-0021 (2026-05-19) directive — "Future substrate work either accepts the v0.2.4 regressions or runs the migration chain forward first" — this PR does **not** bump the bundled `ALF_Financial_Analyzer_Only.xlsx`. The migration script is the deliverable; the bundled file remains at the user's hand-edited v0.2.4 baseline. Users who want the v0.2.8 behavior run the chain `v025 → v026 → v027 → v028` on their own workbook.
+
+### Files
+
+- `tools/migration/migrate_to_v028.py` (new, ~195 lines, 4 ops / 10-check verify / idempotent)
+- `SPEC-T12.md` (current substrate version bumped, v0.2.8 entry added to history)
+- `CHANGELOG-T12.md` (this file)
+- `CLAUDE.md` (last-updated + Current substrate version bumped)
+- `UW-BACKLOG.md` (BL-0022 closed entry)
+
+### Cross-track note
+
+Track 3 (workbook + migration code only) — no Track 1 / Track 2 code changed. User-authorized for this chat (2026-05-20).
+
+---
+
 ## [Bundled Analyzer reset to user-authored copy] — 2026-05-19
 
 > **Not a substrate version bump.** This is a user-directed wholesale replacement of the bundled `ALF_Financial_Analyzer_Only.xlsx`. The substrate migration chain (v0.1.0 → v0.2.7, plus the closed-unmerged v0.2.8 on branch `claude/bl-0020-dashboard-data-link-fixes`) is preserved in `tools/migration/` for reproducibility, but the bundled file no longer represents the output of running that chain.
