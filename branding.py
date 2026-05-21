@@ -39,7 +39,7 @@ def render_centered_logo(width_px: int = 300) -> None:
     uri = _logo_data_uri(str(LOGO_PATH))
     st.markdown(
         f"""
-        <div style="display:flex; justify-content:center; margin: 0.5rem 0 1.25rem 0;">
+        <div style="display:flex; justify-content:center; margin: 0 0 1.25rem 0;">
             <img src="{uri}" alt="Pingkas Capital"
                  style="width:{width_px}px; max-width:70%; height:auto;" />
         </div>
@@ -54,6 +54,12 @@ def inject_brand_css() -> None:
     st.markdown(
         f"""
         <style>
+        /* Pull the main content up toward the top edge — Streamlit's default
+           block-container top padding leaves a large empty band above the logo. */
+        .block-container, [data-testid="stMainBlockContainer"] {{
+            padding-top: 1.2rem !important;
+        }}
+
         /* Elegant serif display for titles/headers (evokes Trajan Pro). */
         h1, h2, h3 {{
             font-family: Georgia, 'Times New Roman', serif !important;
