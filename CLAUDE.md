@@ -19,7 +19,7 @@ A separate downstream full-underwriting sheet (not in this repo) consumes UW Out
 
 ## Local clone path
 
-`C:\One Drive Business\OneDrive - (na)\office\rent_roll_app` — Windows machine, PowerShell. **The repo now lives inside OneDrive Business** (relocated 2026-05-21 from the former `C:\Users\erikj\Downloads\rent_roll_app` location — that path is dead, do not use it). Because git runs inside an actively-syncing OneDrive folder, follow the safety guidance in [`ONEDRIVE-WORKFLOW.md`](ONEDRIVE-WORKFLOW.md): run `tools\check_onedrive_sync.ps1` before git operations, push promptly after each commit, and never run destructive git ops mid-sync.
+`C:\One Drive Business\OneDrive - (na)\office\rent_roll_app` — Windows machine, PowerShell. **The repo lives inside OneDrive Business** (relocated 2026-05-21 from a former local-only location, which is dead — do not work from any old local copy outside OneDrive). Because git runs inside an actively-syncing OneDrive folder, follow the safety guidance in [`ONEDRIVE-WORKFLOW.md`](ONEDRIVE-WORKFLOW.md): run `tools\check_onedrive_sync.ps1` before git operations, push promptly after each commit, and never run destructive git ops mid-sync.
 
 ## Live deploy
 
