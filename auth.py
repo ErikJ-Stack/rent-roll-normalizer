@@ -81,24 +81,33 @@ def require_login() -> str:
 
     users = _load_user_table()
 
-    st.markdown("### 🔒 Sign in")
-    st.caption("Enter your username and password to access the normalizer.")
+    # Brand the gate — centered logo + brand CSS, login form in a narrow
+    # centered column. Imported lazily to avoid a circular import at module load.
+    from branding import inject_brand_css, render_centered_logo
 
-    with st.form("login_form", clear_on_submit=False):
-        username = st.text_input("Username", key="auth_username_input").strip()
-        password = st.text_input(
-            "Password", type="password", key="auth_password_input"
-        )
-        submitted = st.form_submit_button("Sign in")
+    inject_brand_css()
+    render_centered_logo(width_px=260)
 
-    if submitted:
-        if _verify(username, password, users):
-            st.session_state["auth_user"] = username
-            _log("login OK", username)
-            st.rerun()
-        else:
-            _log("login FAIL", username or "<empty>")
-            st.error("Invalid username or password.")
+    _left, center, _right = st.columns([1, 2, 1])
+    with center:
+        st.markdown("### 🔒 Sign in")
+        st.caption("Enter your username and password to access the normalizer.")
+
+        with st.form("login_form", clear_on_submit=False):
+            username = st.text_input("Username", key="auth_username_input").strip()
+            password = st.text_input(
+                "Password", type="password", key="auth_password_input"
+            )
+            submitted = st.form_submit_button("Sign in")
+
+        if submitted:
+            if _verify(username, password, users):
+                st.session_state["auth_user"] = username
+                _log("login OK", username)
+                st.rerun()
+            else:
+                _log("login FAIL", username or "<empty>")
+                st.error("Invalid username or password.")
 
     st.stop()
     return ""  # unreachable

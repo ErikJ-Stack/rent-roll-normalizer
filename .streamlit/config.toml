@@ -1,0 +1,7 @@
+[theme]
+# Pingkas Capital brand palette (see Pingkas_Capital_PDF.pdf / COSMETIC-CHANGES.md).
+base = "dark"
+primaryColor = "#BE8F3F"            # gold  — buttons, widgets, accents
+backgroundColor = "#0E1D41"         # navy  — main canvas
+secondaryBackgroundColor = "#16294D" # lighter navy — sidebar, widget fills
+textColor = "#FFFFFF"               # white — body text

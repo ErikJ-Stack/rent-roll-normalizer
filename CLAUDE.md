@@ -82,6 +82,7 @@ Optimizing the Analyzer's structure for the downstream UW handoff. Workbook edit
 | `journal.md` | Per-chat session log, newest at top. **Read the top entry before starting a new chat** — it usually has carry-forwards and known follow-ups. |
 | `README.md` | Public-facing. Stale: still RR-only framing, doesn't mention T12 or the bundled-Analyzer flow. Update is a known follow-up but not a priority. |
 | `ARCHITECTURE.md` | Full workflow + data-flow map: module inventory, public contracts (CONDENSED_COLUMNS, GLRow/T12ParseResult, substrate write-targets), Mermaid diagrams of both pipelines + the substrate + migration chain, and the modularity/extension points. Read when you need the system shape rather than the history. |
+| `COSMETIC-CHANGES.md` | Tracker for visual/branding-only changes to the Streamlit app (color scheme, logo, fonts). Does not move the RR/T12/substrate version counters. Newest at top. |
 | `CLAUDE.md` | This file. |
 
 ---

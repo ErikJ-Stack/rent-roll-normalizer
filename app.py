@@ -35,6 +35,7 @@ import pandas as pd
 import streamlit as st
 
 from auth import require_login
+from branding import inject_brand_css, render_centered_logo
 from mappings import MappingSet, load_mapping_workbook
 from normalizer import CONDENSED_COLUMNS, normalize_rent_roll
 from period_date import detect_period_date
@@ -272,9 +273,15 @@ st.set_page_config(
     layout="wide",
 )
 
+# Pingkas Capital brand styling (palette in .streamlit/config.toml).
+inject_brand_css()
+
 # Password gate — multi-user, SHA-256 hashes from st.secrets["auth"]["users"].
 # Successful logins are printed to stdout (visible in Streamlit Cloud logs).
 require_login()
+
+# Centered brand logo at the top of the main page.
+render_centered_logo(width_px=320)
 
 # Title row with version badge on the right.
 title_col, version_col = st.columns([5, 1])
@@ -287,8 +294,9 @@ with version_col:
             <span style="
                 display: inline-block;
                 padding: 4px 12px;
-                background-color: #2B2B2B;
-                color: #FFFFFF;
+                background-color: #16294D;
+                color: #BE8F3F;
+                border: 1px solid #BE8F3F;
                 border-radius: 12px;
                 font-family: 'Calibri', sans-serif;
                 font-size: 13px;
@@ -296,7 +304,7 @@ with version_col:
                 letter-spacing: 0.3px;
             ">RR v{RR_VERSION} · T12 v{T12_VERSION}</span>
             <div style="
-                color: #888888;
+                color: #C9CEDB;
                 font-size: 11px;
                 margin-top: 4px;
                 font-family: 'Calibri', sans-serif;
