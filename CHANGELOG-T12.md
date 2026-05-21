@@ -8,6 +8,51 @@ When making a code change in a T12-related chat, add an entry here in the same c
 
 ---
 
+## [Substrate template v0.2.9] — 2026-05-21
+
+### Summary
+
+**Closes UW-BACKLOG BL-0020** (Dashboard chart-data-link bug fixes) as a proper forward-rolling migration, AND resolves a `v0.2.8` version-number collision.
+
+BL-0020's three chart fixes were originally a `migrate_to_v028.py` on branch `claude/bl-0020-dashboard-data-link-fixes` (PR #34), but that PR was **closed unmerged** when the user wholesale-replaced the bundled Analyzer (BL-0021). The fixes ended up present only in the bundled file, not in any migration on `main` — and the `v0.2.8` number got re-used on `main` for BL-0022 (`Cover!B5` resolver). Net effect: anyone forward-rolling a workbook through the chain got a Dashboard with **broken charts**, because `migrate_to_v027.py` inserts the buggy Dashboard from `v027_assets/dashboard_template.xlsx` and nothing downstream fixed it. This migration restores chain reproducibility and disambiguates the version numbers (BL-0020 → v0.2.9, BL-0022 stays v0.2.8).
+
+### What changed (migrate_to_v029.py)
+
+Surgical cell + chart patch on the Dashboard sheet — **no template asset, no sheet add/remove, no row inserts.**
+
+#### Fix 1 — "Monthly EGI Trend" line chart plotted Housekeeping Income
+
+`Dashboard!C97:C108` (feeds chart [3]) referenced `Monthly Trending!B21:M21`. Row 21 = Housekeeping Income since v0.1.7 / BL-0001 moved EGI to row 26. Rewrote all 12 cells to row 26.
+
+#### Fix 2 — "Payer Mix — Revenue Share" pie plotted unit counts
+
+`Dashboard!F90:F93` (feeds chart [4]) referenced `Rent Roll Recon!B40:B43` (COUNTIFS unit counts). The chart title says Revenue Share, so the source should be col I (`H/H47` revenue ratios). Replaced `!B{row}` → `!I{row}` in all 4 cells (both occurrences per cell).
+
+#### Fix 3 — Doughnut chart [1] rendered 5 empty slices
+
+The doughnut series spanned `Dashboard!$O$8:$O$19` (12 rows) but payer labels sat at `O8` + `O14:O19` with a 5-row gap (`O9:O13` empty) → Excel drew 5 empty slices. Fix: move the `O14:O19` payer rows (Medicaid / LTC Insurance / VA / Managed Care / Self-Pay / Other) up to `O9:O14` (contiguous with the `O8` Private Pay row), clear `O15:O19`, and shrink the chart series range to `$O$8:$O$14` (cat) / `$P$8:$P$14` (val) with rebuilt 7-point caches.
+
+Charts [3] (EGI) and [4] (Payer Mix) auto-pick-up corrected values because only the underlying C/F cell formulas changed, not those charts' own ranges. Only chart [1] (doughnut) needed a range mutation.
+
+### Idempotency
+
+Gate on `Cover!B8 == "v0.2.9"`. The C97:C108 / F90:F93 rewrites are self-idempotent. The doughnut data-move is the only non-idempotent op, so it is **guarded** — it fires only when the Dashboard is in the buggy state (`O9` empty AND `O14 == "Medicaid"`). Verified: running v0.2.9 directly on an already-fixed Dashboard (the user's bundled copy) skips the move and does NOT corrupt the layout.
+
+### Chain test
+
+Full chain `v0.2.4 (bundled) → v0.2.5 → v0.2.6 → v0.2.7 → v0.2.8 → v0.2.9` verified: at v0.2.7 the Dashboard gets the buggy v027-asset charts; v0.2.9 corrects all three. End state confirmed — C97:C108 = row 26, F90:F93 = col I, doughnut O8:O14 contiguous with 7-point cache, plus all v0.2.5 (M6) / v0.2.6 (AH4 fill) / v0.2.8 (Cover!B5 resolver) work intact.
+
+### The v0.2.8 collision (now resolved)
+
+There were briefly two `migrate_to_v028.py` files both stamping v0.2.8: BL-0022's (Cover!B5, merged to `main`) and BL-0020's (Dashboard charts, on the closed PR #34 branch). With BL-0020 now shipping as **v0.2.9**, the collision is gone. The closed branch's `migrate_to_v028.py` is **superseded** — do not revive it; use `migrate_to_v029.py` instead.
+
+### Files
+
+- `tools/migration/migrate_to_v029.py` (new) — surgical chart-link patch, 6-check verification block.
+- Bundled `ALF_Financial_Analyzer_Only.xlsx` **not bumped** (stays at the v0.2.4 user-managed copy per BL-0021). The user's bundled Dashboard already has these fixes; v0.2.9 exists so the *migration chain* reproduces them.
+
+---
+
 ## [Substrate template v0.2.8] — 2026-05-20
 
 ### Summary
