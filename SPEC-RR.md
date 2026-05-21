@@ -42,7 +42,7 @@ Streamlit Cloud (free tier) ── auto-rebuilds on push
 GitHub: ErikJ-Stack/rent-roll-normalizer
         │  pushed from
         ▼
-Local Windows machine: C:\Users\erikj\Downloads\rent_roll_app
+Local Windows machine: C:\One Drive Business\OneDrive - (na)\office\rent_roll_app
 ```
 
 **Standard deploy loop:**
