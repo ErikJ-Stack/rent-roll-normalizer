@@ -2,7 +2,7 @@
 
 > Onboarding doc for any Claude session (chat or Claude Code) working on this repo. Read this first — it points to canonical truth and surfaces facts that previously had to be grubbed for.
 
-**Last updated:** 2026-05-20 (after substrate v0.2.8 — Track 3 narrow-scope closing UW-BACKLOG **BL-0022**: `Cover!B5` rewired from a static manual-entry cell to a 2-priority property-name resolver formula (`Rent Roll Input!A3` → `T12 Input!A10` → ""). Cover now auto-populates whenever a writer has stamped its input; 5 downstream consumers — `Dashboard!B2` title, `UW Export!B3`, `Workbook Health!B27`/`C27`, Pre-Export Gate `B49` — all cascade automatically. `Cover!A19` docstring rewritten to describe the auto-resolve. Manually-typed text in B5 preserved (defensive skip). Migration via `migrate_to_v028.py` (4 ops, 10-check verify, idempotent). Bundled `ALF_Financial_Analyzer_Only.xlsx` stays at v0.2.4 per the BL-0021 (2026-05-19) "wholesale-replace" directive — migration script is the deliverable; users run the chain `v025 → v026 → v027 → v028` against their own workbook. Chain-tested clean from the bundled v0.2.4 baseline.)
+**Last updated:** 2026-05-21 (after substrate v0.2.9 — closes UW-BACKLOG **BL-0020** as a chain migration + resolves a v0.2.8 collision. `migrate_to_v029.py` surgically fixes the three Dashboard chart-data-link bugs that `migrate_to_v027.py` re-introduces mid-chain (the v027 Dashboard asset is buggy): Fix 1 — EGI line chart `Dashboard!C97:C108` rewired from `Monthly Trending` row 21 (Housekeeping Income) → row 26 (EGI); Fix 2 — Payer Mix pie `Dashboard!F90:F93` rewired from `Rent Roll Recon` col B (unit counts) → col I (revenue ratios); Fix 3 — doughnut chart [1] payer rows moved `O14:O19` → `O9:O14` (contiguous), series range shrunk `$O$8:$O$19` → `$O$8:$O$14` with rebuilt caches. No template asset, no row inserts. Idempotent — data-move guarded to the buggy state. Full chain v0.2.4 → v0.2.9 tested clean. **v0.2.8 collision resolved:** BL-0020 is now v0.2.9; BL-0022 (Cover!B5 resolver) keeps v0.2.8; the closed PR #34 branch's `migrate_to_v028.py` is superseded — do not revive. Bundled `ALF_Financial_Analyzer_Only.xlsx` stays at the v0.2.4 user-managed copy per BL-0021; v0.2.9 exists so the migration *chain* reproduces correct charts. **Only Pending backlog item: BL-0019** (persistent audit log, Track 1).)
 
 ---
 
@@ -51,7 +51,7 @@ The repo runs three parallel tracks. They share an Analyzer but are otherwise in
 | Migration scripts | `tools/migration/migrate_to_v01N.py` (one per substrate version) |
 | Verification harness | `tools/verify_t12_v020.py` (parser-side; runs all four reference fixtures) |
 | Current code version | T12 v0.2.1 |
-| Current substrate version | v0.2.4 bundled (user-managed; migration chain defined through v0.2.8) |
+| Current substrate version | v0.2.4 bundled (user-managed; migration chain defined through v0.2.9) |
 
 **Module naming gotcha (updated 2026-05-15 after BL-0011 — Track 1 disambiguation now fully complete at file + function + class level).** Four modules historically shared a `t12_` prefix because the destination workbook was originally a standalone T12 intake template — the prefix meant "operates on the T12-shaped destination workbook," not "operates on T12 data." Once the bundled Analyzer flow shipped (RR v1.12.0) the prefix became misleading. The two Track 1 modules have now been renamed; the remaining `t12_*` files are the legitimate T12-data modules. All four are imported by `app.py` and serve distinct roles:
 
@@ -95,9 +95,13 @@ Conversational examples should label placeholder text as `<REPLACE THIS>` so the
 
 ---
 
-## Open carry-forwards (refreshed 2026-05-19, post-bundled-Analyzer wholesale reset)
+## Open carry-forwards (refreshed 2026-05-21, post-substrate v0.2.9 chart-link fixes)
 
 **The authoritative forward-looking list lives in [`UW-BACKLOG.md`](UW-BACKLOG.md).** Read that file for what's pending. The historical "closed" notes below stay here purely for traceability of how prior chats deferred work; the "Medium / Low priority" sub-sections that used to live here have been removed because they had drifted (e.g. "Branch 2 — Handoff readiness" was open for weeks here while it had already shipped as BL-0009 / substrate v0.2.0). When you want to know what's open, check UW-BACKLOG.md, not this section.
+
+### Closed 2026-05-21 (Substrate v0.2.9 — Dashboard chart-link fixes on the chain · BL-0020)
+
+- ✓ **`migrate_to_v029.py` ports BL-0020's three chart-data-link fixes onto the migration chain.** Problem it solved: `migrate_to_v027.py` inserts the Dashboard from `v027_assets/dashboard_template.xlsx`, which has three buggy chart links — so any workbook forward-rolled through the chain got broken charts, even though the bundled file (user's hand-edited copy) had them fixed. v0.2.9 surgically corrects: Fix 1 — `Dashboard!C97:C108` EGI series `Monthly Trending` row 21 (Housekeeping) → row 26 (EGI); Fix 2 — `Dashboard!F90:F93` Payer Mix pie `Rent Roll Recon` col B (unit counts) → col I (revenue ratios); Fix 3 — doughnut chart [1] payer rows moved `O14:O19` → `O9:O14` contiguous, series range shrunk `$O$8:$O$19` → `$O$8:$O$14` with rebuilt 7-pt caches. No template asset / no row inserts. Idempotent — the data-move is guarded to the buggy state (`O9` empty AND `O14 == "Medicaid"`), so re-runs and already-fixed Dashboards aren't corrupted. Full chain v0.2.4 → v0.2.9 tested clean. **Resolved the v0.2.8 collision** — BL-0020 is now unambiguously v0.2.9, BL-0022 keeps v0.2.8, and the closed PR #34 branch's `migrate_to_v028.py` is superseded (do NOT revive — use `migrate_to_v029.py`). Bundled file unchanged (stays user-managed v0.2.4 per BL-0021); v0.2.9 only makes the *chain* reproduce correct charts.
 
 ### Closed 2026-05-19 (Bundled-Analyzer wholesale reset · BL-0021 + BL-0020)
 
