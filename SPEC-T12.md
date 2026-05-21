@@ -47,7 +47,7 @@ The function and exception class on `analyzer_rr_writer.py` were renamed on 2026
 Inherits the deploy loop from `SPEC-RR.md`:
 
 ```
-Local Windows machine (C:\Users\erikj\Downloads\rent_roll_app)
+Local Windows machine (C:\One Drive Business\OneDrive - (na)\office\rent_roll_app)
         │  git push
         ▼
 GitHub: ErikJ-Stack/rent-roll-normalizer
