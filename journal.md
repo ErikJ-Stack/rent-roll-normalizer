@@ -11,6 +11,37 @@ Newest at top.
 
 ---
 
+## 2026-05-20 — Substrate v0.2.8 (Cover!B5 resolver, BL-0022) + MF product-line Phase 0
+
+Two distinct pieces this session, both shipped/built off a freshly-pulled `origin/main`.
+
+### Part 1 — Substrate v0.2.8 (Track 3, shipped + pushed)
+
+**Cautionary tale up front:** session started ~10 commits behind `origin/main`. First pass built v0.2.5 (Section M6) + a bundled v0.2.6 (Cover!B5 + Dashboard anchors) + doc renames + BL-0018/0019 — *all of which collided with work already on origin* (BL-0012 shipped as v0.2.5 by another session; BL-0016/0017 as v0.2.6; BL-0018 Dashboard redesign as v0.2.7; BL-0019/0020/0021 used). Discarded the entire first pass via `git restore`, pulled, and rebuilt only the genuinely-new piece. **Lesson saved to memory: when session-start gitStatus says "behind by N," fetch + inspect upstream BEFORE planning.**
+
+**What shipped (commit `7af8e0e`):** substrate **v0.2.8 / BL-0022** — `Cover!B5` rewired from a static manual-entry cell to a 2-priority property-name resolver (`Rent Roll Input!A3` → `T12 Input!A10` → ""). RR/T12 writers had been stamping those inputs since 2026-05-11, and `T12 Analytics!B2` resolved via path 1, but Cover itself stayed blank — leaving `Dashboard!B2` title, `UW Export!B3`, `Workbook Health!B27`/`C27`/`B49` all reading "missing"/"(not set)". v0.2.8 fixes Cover; the 5 consumers cascade. `Cover!A19` docstring updated. Defensive skip preserves user-typed B5 text. Migration `migrate_to_v028.py` (4 ops, 10-check verify, idempotent). Bundled file stays at v0.2.4 per BL-0021. Chain-tested v0.2.4 → v0.2.8 clean. Docs: CHANGELOG-T12 / SPEC-T12 / CLAUDE / UW-BACKLOG.
+
+### Part 2 — MF (multifamily) product line, Phase 0 (Track 1, built this session)
+
+**New product dimension.** The whole stack to date is ALF (senior housing). User wants a parallel **MF (multifamily)** pipeline: `login + ALF/MF selector → MF intake mapping of RR/T12/AR/OM (comps + property info) → MF Analyzer (to be built) → UW Template`. Scoped as a multi-phase program; building **Phase 0** first.
+
+**Sample data:** `MF Docs/` (property *Hidden Lakes*, 143-unit, ~46% occupied). Four files inspected — RR ("Rent Roll - Cim", units/floorplans/lease/rent), T12 ("PSI T-12", account#+name+12mo, shaped like the ALF Yardi T12), AR ("Resident Aged Receivables", aging buckets per unit), and a Sortable-RR with a Floor Plan summary tab. No OM sample yet.
+
+**Phase 0 scope (this session):** the ALF/MF mode switch + access seam, MF stubbed.
+- `auth.py` — added `APP_MODES = ("ALF","MF")` + `allowed_modes(username)` returning **both modes for everyone** (Phase 0), with a fully-documented seam for future per-user `[auth.access]` secrets gating. When that lands, `allowed_modes` is the ONLY function that changes — app.py already auto-routes + hides the selector when one mode is returned.
+- `app.py` — captured `username` from `require_login()` (was discarded); added an ALF/MF `st.radio` right after login; `st.stop()` into `_render_mf_placeholder()` for MF; ALF falls through to the existing pipeline **completely unchanged**. Browser tab `page_title` aligned to the new "Underwriting Intake" branding (was "Senior Housing Normalizer (RR + T12)").
+- MF placeholder renders the planned 4-step pipeline as a roadmap ("coming soon").
+
+**Integrated on top of the Pingkas Capital branding commits.** Phase 0 was built before pulling, then origin moved 4 commits ahead (Pingkas brand theme, centered logo, "Underwriting Intake" title, Analyzer-version badge — `branding.py`, `.streamlit/config.toml`, `assets/`). Stashed → fast-forward pulled → popped: only `app.py` conflicted (one import line — kept both `allowed_modes` and `branding` imports). Reordered so `render_centered_logo()` runs **before** the mode selector — the brand logo shows at the top in **both** ALF and MF modes, with the selector beneath it.
+
+**Access-control decision (answering user's Q):** single app + radio selector (not multipage), gated per-user via a future `[auth.access]` secrets table. Per user direction, Phase 0 grants **both modes to all logged-in users**; the per-user access-type restriction is deferred to a later authenticator change. Seam is in place.
+
+**Verified:** `py_compile` clean on `app.py` + `auth.py`; no conflict markers anywhere; `allowed_modes` + both branding helpers coexist; logo-before-selector ordering confirmed; ALF pipeline below the branch untouched.
+
+**Next phases (not started):** Phase 1 = MF RR normalizer → standalone MF workbook (design against Hidden Lakes RR). Phase 2 = MF T12 + AR intake. Phase 3 = OM/comps. Phase 4 = MF Analyzer + UW Template.
+
+---
+
 ## 2026-05-16 — Substrate v0.2.4 (Investment Dashboard) + (separately) Streamlit password gate
 
 **Started as:** Track 1 chat to add a password gate to the Streamlit app — multi-user, SHA-256 hashes in `st.secrets["auth"]["users"]`, login events printed to stdout for Cloud-log audit trail. Built `auth.py`, wired it into `app.py` immediately after `st.set_page_config()`, added `tools/hash_password.py` CLI helper, added `.gitignore` entry for `.streamlit/secrets.toml`. Shipped as [PR #28](https://github.com/ErikJ-Stack/rent-roll-normalizer/pull/28) — `claude/relaxed-moser-309127` branch — still open at time of this entry.

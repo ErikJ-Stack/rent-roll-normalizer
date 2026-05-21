@@ -34,7 +34,7 @@ import openpyxl
 import pandas as pd
 import streamlit as st
 
-from auth import require_login
+from auth import allowed_modes, require_login
 from branding import inject_brand_css, render_centered_logo
 from mappings import MappingSet, load_mapping_workbook
 from normalizer import CONDENSED_COLUMNS, normalize_rent_roll
@@ -271,11 +271,49 @@ def _load_analyzer(uploaded_file) -> tuple[bytes, str, str]:
     )
 
 
+def _render_mf_placeholder() -> None:
+    """MF (multifamily) mode — Phase 0 placeholder.
+
+    The MF product line is under construction. This screen communicates the
+    planned pipeline so the mode is real (selectable, access-gated) while the
+    intake/analyzer work lands in later phases. ALF mode is fully functional;
+    MF mode renders this and stops before the ALF pipeline.
+    """
+    st.title("🏢 Multifamily (MF) — Coming Soon")
+    st.caption(
+        "You're in **Multifamily** mode. The MF intake pipeline is under "
+        "construction — switch to **Senior Housing (ALF)** above for the live "
+        "normalizer."
+    )
+    st.info(
+        "**MF is being built in phases.** Phase 0 (this selector + access "
+        "routing) is live now. The intake and analyzer arrive next.",
+        icon="🚧",
+    )
+    st.markdown("#### Planned MF pipeline")
+    st.markdown(
+        """
+        1. **Login** with an ALF / MF selector *(✅ live — you're using it)*
+        2. **MF intake & mapping** of four document types →
+           - 📄 **RR** — Rent Roll (unit / floorplan / lease / rent)
+           - 📄 **T12** — Trailing-12 income statement
+           - 📄 **AR** — Aged Receivables (delinquency by unit)
+           - 📄 **OM** — Offering Memorandum (comp sets + property info)
+        3. **MF Analyzer** *(to be built)* — underwriting roll-up
+        4. **UW Template** — handoff to the downstream underwriting model
+        """
+    )
+    st.caption(
+        "Sample data for the first build target (property: *Hidden Lakes*) "
+        "lives in the repo's `MF Docs/` folder."
+    )
+
+
 # ---------------------------------------------------------------------------
 # Page setup
 # ---------------------------------------------------------------------------
 st.set_page_config(
-    page_title="Senior Housing Normalizer (RR + T12)",
+    page_title="Underwriting Intake",
     page_icon="🏢",
     layout="wide",
 )
@@ -285,10 +323,44 @@ inject_brand_css()
 
 # Password gate — multi-user, SHA-256 hashes from st.secrets["auth"]["users"].
 # Successful logins are printed to stdout (visible in Streamlit Cloud logs).
-require_login()
+username = require_login()
 
-# Centered brand logo at the top of the main page.
+# Centered brand logo at the top of the main page (shown in both ALF and MF
+# modes — sits above the mode selector).
 render_centered_logo(width_px=320)
+
+# ---------------------------------------------------------------------------
+# Mode selector — ALF (senior housing) vs MF (multifamily)
+# ---------------------------------------------------------------------------
+# Phase 0: every authenticated user may use both modes (see auth.allowed_modes).
+# When exactly one mode is permitted, the selector is hidden and the app
+# auto-routes — so the future per-user access-type gating needs no app.py
+# change. The selected mode routes the whole pipeline; MF renders a placeholder
+# and stops before the ALF pipeline runs.
+_modes = allowed_modes(username)
+if len(_modes) == 1:
+    app_mode = _modes[0]
+else:
+    app_mode = st.radio(
+        "Property type",
+        options=_modes,
+        format_func=lambda m: {
+            "ALF": "🏥 Senior Housing (ALF)",
+            "MF": "🏢 Multifamily (MF)",
+        }.get(m, m),
+        horizontal=True,
+        key="app_mode",
+        help=(
+            "Switch between the senior-housing (ALF) normalizer and the "
+            "multifamily (MF) intake pipeline."
+        ),
+    )
+
+if app_mode == "MF":
+    _render_mf_placeholder()
+    st.stop()
+
+# --- ALF mode (default): the existing pipeline runs below, unchanged. ---
 
 # Title row with version badge on the right.
 title_col, version_col = st.columns([5, 1])

@@ -122,3 +122,49 @@ def _render_sidebar_status(username: str) -> None:
                 st.session_state.pop(k, None)
             st.rerun()
         st.divider()
+
+
+# ---------------------------------------------------------------------------
+# App-mode access control (ALF vs MF)
+# ---------------------------------------------------------------------------
+# The app serves two product lines:
+#   - "ALF" — senior-housing rent-roll + T12 normalizer (the original product)
+#   - "MF"  — multifamily intake (rent roll / T12 / AR / OM) feeding a future
+#             MF Analyzer + UW template
+#
+# Phase 0 (current): every authenticated user may use BOTH modes, so the app
+# always shows the ALF/MF selector. The per-user gating below is a documented
+# seam — NOT yet wired to secrets — so the future authenticator change can be
+# made here without touching app.py.
+APP_MODES = ("ALF", "MF")
+
+
+def allowed_modes(username: str) -> list[str]:
+    """Return the app modes (subset of APP_MODES) this user may access.
+
+    Phase 0: returns BOTH modes for every authenticated user — the selector
+    is always shown and any logged-in user can pick either.
+
+    **Future enhancement (deferred):** read a per-user `[auth.access]` table
+    from `st.secrets`, e.g.::
+
+        [auth.access]
+        alice = ["ALF", "MF"]   # sees the selector
+        bob   = ["ALF"]          # auto-routed to ALF, selector hidden
+        carol = ["MF"]           # auto-routed to MF, selector hidden
+
+    ...defaulting users with no entry to ``["ALF"]`` for backward-compat.
+    When that lands, this is the ONLY function that changes — app.py already
+    hides the selector and auto-routes when exactly one mode is returned.
+
+    Args:
+        username: the authenticated username (from ``require_login()``).
+
+    Returns:
+        Ordered list of allowed mode codes. Always a subset of APP_MODES,
+        never empty.
+    """
+    # Phase 0 behavior — everyone gets both. Keep the username param so the
+    # signature is stable when per-user gating arrives.
+    _ = username
+    return list(APP_MODES)
