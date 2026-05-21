@@ -67,6 +67,13 @@ RR_LAST_UPDATED = "2026-05-15"
 T12_VERSION = "0.2.1"
 T12_LAST_UPDATED = "2026-05-11"
 
+# Bundled Analyzer substrate (stamped at Cover!B8). Hand-maintained like the
+# RR/T12 constants above — bump when the bundled workbook is updated. The
+# runtime "Using Analyzer ..." line still shows the value detected from the
+# file actually in use (handles uploaded overrides).
+ANALYZER_SUBSTRATE_VERSION = "0.2.4"
+ANALYZER_LAST_UPDATED = "2026-05-19"
+
 
 # ---------------------------------------------------------------------------
 # Bundled Analyzer — loaded silently from repo root by default
@@ -286,7 +293,7 @@ render_centered_logo(width_px=320)
 # Title row with version badge on the right.
 title_col, version_col = st.columns([5, 1])
 with title_col:
-    st.title("Rent Roll & T12 Normalizer")
+    st.title("Underwriting Intake")
 with version_col:
     st.markdown(
         f"""
@@ -302,13 +309,13 @@ with version_col:
                 font-size: 13px;
                 font-weight: 600;
                 letter-spacing: 0.3px;
-            ">RR v{RR_VERSION} · T12 v{T12_VERSION}</span>
+            ">RR v{RR_VERSION} · T12 v{T12_VERSION} · Analyzer v{ANALYZER_SUBSTRATE_VERSION}</span>
             <div style="
                 color: #C9CEDB;
                 font-size: 11px;
                 margin-top: 4px;
                 font-family: 'Calibri', sans-serif;
-            ">RR updated {RR_LAST_UPDATED} · T12 updated {T12_LAST_UPDATED}</div>
+            ">RR updated {RR_LAST_UPDATED} · T12 updated {T12_LAST_UPDATED} · Analyzer updated {ANALYZER_LAST_UPDATED}</div>
         </div>
         """,
         unsafe_allow_html=True,
