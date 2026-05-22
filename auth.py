@@ -81,17 +81,18 @@ def require_login() -> str:
 
     users = _load_user_table()
 
-    # Brand the gate — centered logo + brand CSS, login form in a narrow
-    # centered column. Imported lazily to avoid a circular import at module load.
-    from branding import inject_brand_css, render_centered_logo
+    # Brand the gate — white landing canvas + the Pingkas/Fortis logos, login
+    # form in a narrow centered column. Imported lazily to avoid a circular
+    # import at module load.
+    from branding import inject_landing_css, render_centered_logo
 
-    inject_brand_css()
+    inject_landing_css()
     render_centered_logo(width_px=260)
 
     _left, center, _right = st.columns([1, 2, 1])
     with center:
-        st.markdown("### 🔒 Sign in")
-        st.caption("Enter your username and password to access the normalizer.")
+        # Heading/caption intentionally omitted — leave blank space above the form.
+        st.markdown("<div style='height:2.5rem;'></div>", unsafe_allow_html=True)
 
         with st.form("login_form", clear_on_submit=False):
             username = st.text_input("Username", key="auth_username_input").strip()

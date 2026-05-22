@@ -35,7 +35,7 @@ import pandas as pd
 import streamlit as st
 
 from auth import allowed_modes, require_login
-from branding import inject_brand_css, render_centered_logo
+from branding import inject_brand_css
 from mappings import MappingSet, load_mapping_workbook
 from normalizer import CONDENSED_COLUMNS, normalize_rent_roll
 from period_date import detect_period_date
@@ -325,9 +325,9 @@ inject_brand_css()
 # Successful logins are printed to stdout (visible in Streamlit Cloud logs).
 username = require_login()
 
-# Centered brand logo at the top of the main page (shown in both ALF and MF
-# modes — sits above the mode selector).
-render_centered_logo(width_px=320)
+# No logo on the post-login app — the navy dark theme (config.toml) returns and
+# the brand logos live only on the white landing/login page. The mode selector
+# is the first thing inside.
 
 # ---------------------------------------------------------------------------
 # Mode selector — ALF (senior housing) vs MF (multifamily)
