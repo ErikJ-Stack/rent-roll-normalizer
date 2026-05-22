@@ -318,16 +318,16 @@ st.set_page_config(
     layout="wide",
 )
 
-# Pingkas Capital brand styling (palette in .streamlit/config.toml).
-inject_brand_css()
-
-# Password gate — multi-user, SHA-256 hashes from st.secrets["auth"]["users"].
-# Successful logins are printed to stdout (visible in Streamlit Cloud logs).
+# Password gate runs first so it gets a clean slate for inject_landing_css().
+# inject_brand_css() runs AFTER — the landing page never sees navy CSS because
+# require_login() calls st.stop() before we reach this line when unauthenticated.
 username = require_login()
 
-# No logo on the post-login app — the navy dark theme (config.toml) returns and
-# the brand logos live only on the white landing/login page. The mode selector
-# is the first thing inside.
+# Now authenticated — apply brand styling for the post-login navy app.
+inject_brand_css()
+
+# No logo on the post-login app — logos live only on the white landing page.
+# The mode selector is the first element inside.
 
 # ---------------------------------------------------------------------------
 # Mode selector — ALF (senior housing) vs MF (multifamily)
