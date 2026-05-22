@@ -66,10 +66,15 @@ def render_centered_logo(width_px: int = 260) -> None:
         f'style="height:{h:.0f}px; width:auto; max-width:48%;" />'
         for uri, alt, h in imgs
     )
+    # Break out of Streamlit's block container (which is offset right by the
+    # sidebar gutter) so the logos are centered against the full viewport.
     st.markdown(
         f"""
-        <div style="display:flex; justify-content:center; align-items:center;
-                    gap:1.5rem; margin: 0 0 1.25rem 0;">
+        <div style="width:100vw; position:relative; left:50%;
+                    transform:translateX(-50%);
+                    display:flex; justify-content:center; align-items:center;
+                    gap:2rem; padding:1.5rem 1rem 1.25rem;
+                    box-sizing:border-box;">
             {tags}
         </div>
         """,
