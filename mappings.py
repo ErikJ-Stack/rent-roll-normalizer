@@ -60,12 +60,20 @@ DEFAULT_BED_STATUS = [
 ]
 
 # -- Payer type --------------------------------------------------------------
-# Normalized targets: Private Pay, Medicaid, Medicare, VA Benefit, LTC Insurance, Other
-# Fallback: Private Pay (per handoff — avoids false VA classifications)
+# Normalized targets: Private Pay, Medicaid, Medicare, Managed Care, VA Benefit,
+#                     LTC Insurance, Self-Pay + Other
+# Module-level fallback: Private Pay (RR — avoids false VA classifications).
+# AR ingest constructs MappingSet(payer_fallback="Self-Pay + Other") at
+# instantiation; RR behavior unchanged.
 DEFAULT_PAYER = [
     (r"\bmedicaid\b",               "Medicaid"),
     (r"\bwaiver\b",                 "Medicaid"),
+    # Medicare Advantage / MA plans are managed care — must come before bare medicare.
+    (r"\bmedicare\s*advantage\b",   "Managed Care"),
+    (r"\bma\s*plan\b",              "Managed Care"),
     (r"\bmedicare\b",               "Medicare"),
+    (r"\bmanaged\s*care\b",         "Managed Care"),
+    (r"\bmco\b",                    "Managed Care"),
     (r"\bva\b",                     "VA Benefit"),
     (r"\bveteran",                  "VA Benefit"),
     (r"\bltc\b",                    "LTC Insurance"),
