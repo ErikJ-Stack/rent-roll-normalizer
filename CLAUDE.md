@@ -19,6 +19,30 @@ A separate downstream full-underwriting sheet (not in this repo) consumes UW Out
 
 **Two product lines (added 2026-05-20).** Everything above is the **ALF** (senior-housing) product. A second **MF** (multifamily / conventional apartments) product line is being built in phases. The app gates on an **ALF/MF mode selector** shown right after login (`app.py`, just after `require_login()`), driven by `auth.allowed_modes(username)`. **Phase 0 (shipped):** the selector + access seam — every logged-in user currently sees both modes; MF renders a "coming soon" placeholder (`_render_mf_placeholder()`) and `st.stop()`s before the ALF pipeline, which runs **unchanged** in ALF mode. Per-user access-type gating (limiting a user to ALF-only or MF-only via a future `[auth.access]` secrets table) is deferred — `allowed_modes()` is the single seam where it lands. **Future MF phases (not built):** P1 MF RR normalizer → standalone MF workbook; P2 MF T12 + AR intake; P3 OM/comps extraction; P4 MF Analyzer + UW Template. MF has **no Analyzer** and shares none of the ALF care/payer/acuity data model — it's units/floorplans/leases. Sample data: `MF Docs/` (property *Hidden Lakes*: RR / T12 / AR / Sortable-RR). MF docs/specs will be added as those phases land; do not assume ALF conventions apply to MF.
 
+**MF naming convention (locked 2026-05-20 — Option C, asymmetric prefix).** ALF code stays unprefixed (ALF = default, by virtue of being the original). **New MF code lives at the repo root with the `mf_` prefix**, mirroring the ALF module shape one-for-one. Shared utilities stay unprefixed. The MF naming convention:
+
+| Concern | ALF (existing) | MF (planned) |
+| --- | --- | --- |
+| RR parser | `normalizer.py` | `mf_normalizer.py` |
+| RR mappings (closed vocabularies) | `mappings.py` | `mf_mappings.py` |
+| RR pre-cleaner | `pre_cleaner.py` | `mf_pre_cleaner.py` (if MF RR needs banner stripping) |
+| RR reports | `reports.py` | `mf_reports.py` |
+| Standalone RR workbook writer | `writer.py` | `mf_writer.py` |
+| Analyzer RR translator | `analyzer_rr_translator.py` | `mf_analyzer_rr_translator.py` (Phase 4) |
+| Analyzer RR writer | `analyzer_rr_writer.py` | `mf_analyzer_rr_writer.py` (Phase 4) |
+| T12 parser | `t12_normalizer.py` | `mf_t12_normalizer.py` (parallel — MF chart of accounts differs even if file shape is similar) |
+| T12 writer | `t12_normalizer_writer.py` | `mf_t12_normalizer_writer.py` |
+| AR parser | *(none)* | `mf_ar_parser.py` |
+| OM extractor | *(none)* | `mf_om_extractor.py` |
+| Analyzer substrate (workbook) | `ALF_Financial_Analyzer_Only.xlsx` | `MF_Financial_Analyzer_Only.xlsx` (Phase 4) |
+| Substrate migrations | `tools/migration/migrate_to_v0NN.py` | `tools/migration/mf_v0NN.py` (independent version stream) |
+| Spec / changelog | `SPEC-RR.md` / `SPEC-T12.md` / `CHANGELOG-RR.md` / `CHANGELOG-T12.md` | `SPEC-MF.md` / `CHANGELOG-MF.md` |
+| Shared (no prefix) | `auth.py` / `branding.py` / `property_name.py` / `period_date.py` / `app.py` | same — shared utilities stay unprefixed |
+| Sample data | `Sample Files/` (gitignored) | `MF Docs/` (gitignored) |
+| UW-BACKLOG | `UW-BACKLOG.md` | same file; BL-NNNN numbering is continuous across product lines (no separate MF numbering) |
+
+**When the root gets crowded** (probably Phase 3-4 once 6+ `mf_*.py` files exist) — refactor into Option A subdirectory packages (`alf/` + `mf/`) then. The asymmetric prefix is explicitly a *near-term* choice that defers the subdirectory move until MF has enough code to justify it.
+
 ## Local clone path
 
 `C:\One Drive Business\OneDrive - (na)\office\rent_roll_app` — Windows machine, PowerShell. **The repo lives inside OneDrive Business** (relocated 2026-05-21 from a former local-only location, which is dead — do not work from any old local copy outside OneDrive). Because git runs inside an actively-syncing OneDrive folder, follow the safety guidance in [`ONEDRIVE-WORKFLOW.md`](ONEDRIVE-WORKFLOW.md): run `tools\check_onedrive_sync.ps1` before git operations, push promptly after each commit, and never run destructive git ops mid-sync.
