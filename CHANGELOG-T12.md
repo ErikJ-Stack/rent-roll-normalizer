@@ -8,6 +8,75 @@ When making a code change in a T12-related chat, add an entry here in the same c
 
 ---
 
+## [Substrate template v0.2.11] — 2026-05-23
+
+### Summary
+
+**Closes the Track-3-shaped portion of UW-BACKLOG BL-0023** (AR & Collections module). Adds two presentation-layer touches that surface AR signal at the workbook's top-level views without changing any AR computation logic. Pairs with v0.2.10 (sheet + Workbook Health gates) and the parser/writer/UI work shipped alongside in the AR module commits (`ar_normalizer.py`, `ar_writer.py`, `app.py` wiring).
+
+### What changed (migrate_to_v0211.py)
+
+- **A. Dashboard variance tile at K10:L13** (previously empty):
+  - K10:L10 (merged) title "BAD DEBT VARIANCE" matching the REVPOR/EBITDARM headline-tile style (Calibri 9pt bold white on blue FF5B9BD5).
+  - K11:L12 (merged) value formula: `=IF('AR & Collections'!Z1=0,"— upload AR to populate",'AR & Collections'!C56)`. Calibri 12pt bold navy on white, wrapped, centered. Tile is dormant when Z1=0 (no AR uploaded), live ⚪/✓/⚠ when Z1=1.
+  - K13:L13 (merged) footnote "= T12 bad debt − annualized AR write-offs" (Calibri 9pt italic gray on FFF2F2F2).
+- **B. Cover row 11 AR Module version line.** `A11 = "AR Module"`, `B11 = "v0.1.0"`. Sits in the existing empty row between T12 Normalizer (R10) and the Links section (R12) — no row inserts. Style borrowed from A10/B10 for consistency.
+- **C. Cover!B8 stamped v0.2.11 + AZ4 on all 16 sheets.**
+
+### Idempotency
+
+Gate triple-checks Cover!B8, Dashboard!K10 title, Cover!A11 label. Re-run is a clean no-op. Per-op guards mean partial-state migrations recover cleanly (e.g., if A11 has a hand-edit, it's preserved with a warning).
+
+### Regression test
+
+14 untouched sheets differ ONLY on AZ4; Cover diffs limited to {AZ4, B8, A11, B11}; Dashboard diffs limited to {AZ4, K10, K11, K13}. No collateral damage to existing tile layout, charts, or named ranges.
+
+### Files
+
+- `tools/migration/migrate_to_v0211.py` (new) — Dashboard tile + Cover AR line + version stamp.
+- Bundled `ALF_Financial_Analyzer_Only.xlsx` forward-rolled v0.2.10 → v0.2.11.
+- `app.py`: `ANALYZER_SUBSTRATE_VERSION` bumped "0.2.4" → "0.2.11" (was stale — missed when v0.2.10 shipped earlier in the same session; corrected now alongside v0.2.11). `ANALYZER_LAST_UPDATED` → "2026-05-23".
+
+---
+
+## [Substrate template v0.2.10] — 2026-05-23
+
+### Summary
+
+**Opens UW-BACKLOG BL-0023** (AR & Collections module). Substrate-side component of a multi-piece initiative that also ships `ar_normalizer.py` / `ar_writer.py` / Streamlit upload wiring as code (see the commits for the Track 1-shaped pieces). v0.2.10 introduces a new analytical sheet at the workbook's substrate level and extends Workbook Health with AR-conditional logic.
+
+### What changed (migrate_to_v0210.py)
+
+- **A. New "AR & Collections" sheet at index 8** (between Monthly Trending and UW Output), HIDDEN by default. 163 cells across 5 sections:
+  - §1 Aging Summary (rows 7-18) — bucket totals (0-30 / 31-60 / 61-90 / 91-120 / 120+), Total AR at C15, 90+ subtotal at C17, % aged 90+ at C18.
+  - §2 Key Ratios / KPIs (rows 20-26) — DSO, AR÷monthly EGI, %aged 90+, Collection effectiveness, Avg balance per occupied bed. Cross-sheet pins: `Monthly Trending!N26` (annualized EGI), `T12 Analytics!E7` (avg occupied beds).
+  - §3 By-Payer Mix (rows 28-37) — 7 payer rows matching mappings.py normalization targets (Private Pay / Medicaid / Medicare / Managed Care / VA Benefit / LTC Insurance / Self-Pay + Other), with concentration flag.
+  - §4 Roll-Forward & Bad-Debt Reconciliation (rows 40-57) — period roll formula, T-12 bad debt cross-check at row 53 (refs `T12 Analytics!E98`), variance flag at row 56 (⚪/✓/⚠), implied reserve change at row 57.
+  - §5 Flags & Exceptions (rows 60-66) — resident-in-90+-with-concession, vacant-with-AR, payer concentration, sum-check mismatch, period-date mismatch.
+  - `Z1` = AR presence flag (0=no data, 1=populated by ar_writer.py). Pivot enabling Workbook Health B43 + P5 conditional behavior below.
+
+- **B. Workbook Health!B43 wrapped in IF guard:**
+  ```
+  =IF('AR & Collections'!Z1=1, 'AR & Collections'!C15, SUM('Rent Roll Input'!$X$7:$X$606))
+  ```
+  RR-derived fallback (the existing pre-AR formula) preserved bit-for-bit when Z1=0, so non-AR analyses see no surface change.
+
+- **C. P5 gate at Workbook Health row 52** ("AR period matches RR period — inert if no AR"). Formula compares AR sheet's C3 as-of date to `RR_Period_Date`; defaults to "✓" when Z1=0 so non-AR runs don't fail READY-FOR-EXPORT. The READY-FOR-EXPORT summary at row 52 moved to row 53 with B52 ANDed into its formula. Verified no external references to `Workbook Health!B52` before the shift.
+
+- **D. Cover!B8 stamped v0.2.10 + AZ4 on all 16 sheets** (anchor list grows 15 → 16 because AR & Collections joins).
+
+### Idempotency
+
+Gate checks Cover!B8 == "v0.2.10" AND AR & Collections at index 8. 19-check verify, regression-clean against bundled (untouched sheets only differ on AZ4 + Cover!B8).
+
+### Files
+
+- `tools/migration/migrate_to_v0210.py` (new) — sheet build + Workbook Health rewrites + version stamp.
+- Bundled `ALF_Financial_Analyzer_Only.xlsx` forward-applied v0.2.4 → v0.2.10 directly (per BL-0021 carry-forward; bundled still lacks v0.2.5-v0.2.9 substrate features).
+- `mappings.py` (Track 1 shared infra) — extended `DEFAULT_PAYER` with Managed Care + Medicare-Advantage / MCO rules; `PAYER_FALLBACK` unchanged (RR behavior preserved). AR ingest constructs `MappingSet(payer_fallback="Self-Pay + Other")` per-instance.
+
+---
+
 ## [Substrate template v0.2.9] — 2026-05-21
 
 ### Summary

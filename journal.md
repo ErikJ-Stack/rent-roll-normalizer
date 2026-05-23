@@ -11,6 +11,51 @@ Newest at top.
 
 ---
 
+## 2026-05-23 — AR & Collections module (BL-0023) — substrate v0.2.10 + v0.2.11
+
+Cross-cutting session: ALF underwriting now has a third operator input (AR aging) alongside RR and T12, with end-to-end pipeline from Streamlit upload → parser → writer → populated Analyzer sheet → Dashboard tile.
+
+### What shipped (commits on `main`)
+
+- `e2f26d5` feat: AR module foundation — substrate v0.2.10 + mappings extension
+- `05ebf7a` feat: AR aging parser (ar_normalizer.py) + synthetic fixture
+- `41db0bd` feat: AR writer + Streamlit upload — wire AR pipeline end-to-end
+- `983573c` feat: substrate v0.2.11 — Dashboard AR variance tile + Cover AR version line
+- (this commit) docs: finalize AR module — CHANGELOG-T12 / UW-BACKLOG / journal / CLAUDE updates
+
+### Design decisions — Cowork handoff review
+
+User-supplied design handoff (`2026-05-23-AR-Collections-Claude-Code-Handoff.md`) reviewed against codebase. **12 spec issues raised:** terminology (xlsx vs webapp), payer taxonomy (spec's 6 buckets vs Dashboard's 6 vs mappings.py's 5+fallback — three different mental models in tension), impossible sheet position ("after T12 Analytics, before Dashboard" can't be since Dashboard is at index 1), Workbook Health AR-replace claimed additive but actually disruptive, 3 Dashboard tiles requested but only K10:L13 free, missing cell pins, etc. All 12 decided in conversation to fit current webapp flow; handoff-back-to-Cowork block produced for spec Rev 2.
+
+**Key decisions made and shipped:**
+- Sheet at index 8 (between Monthly Trending and UW Output)
+- AR fully optional (default = no AR file → AR sheet hidden, Z1=0, all integrations inert)
+- Workbook Health B43 wrapped in IF guard — RR fallback preserved bit-for-bit
+- P5 gate inserted at row 52, summary moved to row 53 (verified zero external refs to WH!B52)
+- Only ONE Dashboard tile (variance flag at K10:L13); DSO + %aged 90+ live on AR tab
+- 7 payer rows on AR §3 (matches mappings.py normalization targets, not spec's 6)
+- mappings.py `PAYER_FALLBACK` unchanged ("Private Pay") — AR uses per-instance `"Self-Pay + Other"` via `MappingSet(payer_fallback=...)`
+
+### Bundled file state
+
+Forward-applied v0.2.4 → v0.2.10 → v0.2.11 directly (per BL-0021 carry-forward; bundled still skips v0.2.5-v0.2.9 substrate features — those are chain-only). Bundled now at v0.2.11. `ANALYZER_SUBSTRATE_VERSION` in `app.py` was stale at "0.2.4" — bumped to "0.2.11" along with the v0.2.11 commit.
+
+### Live operator AR sample — PENDING
+
+Built against synthetic only (`tests/fixtures/ar/ar_synthetic_v01.xlsx`: 12 residents × 14 cols, exercises all 7 payer buckets including the new Managed Care via "Medicare Advantage" / "MCO" / "UHC MA Plan" rows). When a real operator AR aging file lands (in `Sample Files/` per the T12 convention — gitignored), the fuzzy header rules will need expansion to absorb operator-specific naming variations. Documented in `tests/fixtures/ar/README.md`.
+
+### Carry-forwards
+
+- AR↔RR row-level join for §5 C62/C63 flags (resident-in-90+-with-concession, vacant-with-non-zero-AR) — needs ar_writer extension to read Rent Roll Input from the same workbook. Stubbed to 0 for now.
+- Live operator sample triage + fuzzy-rule expansion (per above).
+- Standalone CHANGELOG-AR.md (deferred until live-sample work matures; consolidated into CHANGELOG-T12.md under v0.2.10/v0.2.11 for now).
+
+### Open backlog after this session
+
+UW-BACKLOG.md Pending: BL-0019 only (persistent audit log, Track 1 — still deferred from before this session).
+
+---
+
 ## 2026-05-20 — Substrate v0.2.8 (Cover!B5 resolver, BL-0022) + MF product-line Phase 0
 
 Two distinct pieces this session, both shipped/built off a freshly-pulled `origin/main`.

@@ -38,6 +38,19 @@ truth.
 
 ## Shipped
 
+### [BL-0023] AR & Collections module — operator AR aging ingest + Analyzer integration
+- **Shipped in:** substrate v0.2.10 + v0.2.11 (2026-05-23); AR module v0.1.0; mappings.py extension (additive, no RR version bump)
+- **Track:** Cross-cutting (Substrate-Track 3 + parser/writer/UI similar to Track 1)
+- **Originally surfaced in:** chat 2026-05-23. User-supplied design handoff (`2026-05-23-AR-Collections-Claude-Code-Handoff.md`) authored in Cowork; reviewed against codebase, 12 spec issues raised and decided here (handoff-back-to-Cowork block produced for spec Rev 2).
+- **Summary:** New operator-input dimension (alongside RR + T12). Three coordinated pieces shipped:
+    1. **Substrate (v0.2.10 + v0.2.11)** — New `AR & Collections` sheet at index 8 with all 5 spec sections (Aging Summary / KPIs / By-Payer Mix / Roll-Forward & Bad-Debt / Flags). Workbook Health B43 wrapped in AR-presence IF guard (RR fallback preserved bit-for-bit). P5 pre-export gate at row 52, summary shifted to row 53. v0.2.11 adds Dashboard variance tile at K10:L13 + Cover AR module version line at A11/B11. All migrations idempotent + regression-clean.
+    2. **Parser (`ar_normalizer.py` v0.1.0)** — Fuzzy header matcher (13 rule patterns, first-match-wins), per-row sum-check, `_coerce_number` for $/comma/(parens) handling. Per-instance MappingSet with `payer_fallback="Self-Pay + Other"` so unmapped AR payers route to explicit Other (not RR's Private Pay default). Public API: `parse_ar_file(path_or_buffer) -> AROutput`. Supports both .xlsx (incl. file-like w/ .name) and .csv inputs.
+    3. **Writer + UI (`ar_writer.py` + `app.py`)** — `populate_ar_collections(bytes, AROutput, ...) -> bytes` matching the RR/T12 writer pipeline shape. Writes Z1=1 (presence pivot), §1 aging totals, §3 payer mix, §4 roll-forward optionals, §5 flag cells (computed payer-concentration logic inline; RR-join flags stubbed to 0 pending future work). Flips sheet_state hidden → visible. Streamlit upload widget after the T12 block; orchestration Step 3 after RR/T12 writers; AR is optional throughout (no gating; non-AR downloads unchanged).
+    4. **`mappings.py` extension** — Managed Care bucket added with rules for Medicare Advantage / MA Plan / MCO. MA rules ordered BEFORE bare `\bmedicare\b` (first-match-wins). `PAYER_FALLBACK` constant unchanged — RR behavior preserved.
+- **Fixtures:** Synthetic AR aging at `tests/fixtures/ar/ar_synthetic_v01.xlsx` (12 residents × 14 cols, exercises all 7 payer buckets including the new Managed Care via "Medicare Advantage" / "MCO" / "UHC MA Plan" rows). Live operator sample **PENDING** — fuzzy header rules will need expansion once real headers arrive (documented in fixtures README).
+- **Cowork handoff:** Spec Rev 1 had 12 issues vs codebase (terminology xlsx-vs-webapp, payer taxonomy mismatch between spec/Dashboard/mappings, impossible sheet position "after T12 Analytics before Dashboard" since Dashboard is index 1, Workbook Health AR-replace claimed additive but actually disruptive, 3 Dashboard tiles requested but only K10:L13 free, missing cell pins, etc.). All 12 decided here to fit current webapp flow; handoff-back-to-Cowork block produced for spec Rev 2 update. See chat 2026-05-23 for the canonical block.
+- **Deferred (out of scope for v0.1.0):** AR↔RR row-level join for §5 C62/C63 flags (90+ with concession, vacant with AR) — needs ar_writer extension to read Rent Roll Input from the same workbook, stubbed to 0 for now. Live-sample-driven header rules expansion. Standalone CHANGELOG-AR.md (will create when AR pipeline matures with live samples; for now consolidated into CHANGELOG-T12.md under v0.2.10/v0.2.11).
+
 ### [BL-0022] `Cover!B5` doesn't auto-resolve the property name
 - **Shipped in:** substrate v0.2.8 (2026-05-20)
 - **Track:** Substrate (Track 3)
