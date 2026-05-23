@@ -268,8 +268,14 @@ def parse_ar_file(
 # ---------------------------------------------------------------------------
 
 def _load_dataframe(path_or_buffer, sheet_name: Optional[str]) -> pd.DataFrame:
-    is_path = isinstance(path_or_buffer, (str, Path))
-    is_csv = is_path and str(path_or_buffer).lower().endswith(".csv")
+    # CSV detection: str/Path extension OR uploaded-file .name attribute
+    # (Streamlit's UploadedFile carries .name even though it's a BytesIO).
+    name = None
+    if isinstance(path_or_buffer, (str, Path)):
+        name = str(path_or_buffer)
+    elif hasattr(path_or_buffer, "name"):
+        name = str(getattr(path_or_buffer, "name", ""))
+    is_csv = bool(name) and name.lower().endswith(".csv")
 
     if is_csv:
         return pd.read_csv(path_or_buffer)
@@ -280,6 +286,10 @@ def _load_dataframe(path_or_buffer, sheet_name: Optional[str]) -> pd.DataFrame:
         try:
             xl = pd.ExcelFile(path_or_buffer)
             sheet_name = "AR Aging" if "AR Aging" in xl.sheet_names else xl.sheet_names[0]
+            # pd.ExcelFile consumes the buffer's read position — rewind for
+            # the read_excel call below.
+            if hasattr(path_or_buffer, "seek"):
+                path_or_buffer.seek(0)
         except Exception:
             sheet_name = 0
 

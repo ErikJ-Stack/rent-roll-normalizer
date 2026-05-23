@@ -51,6 +51,8 @@ from t12_normalizer_writer import (
 )
 from analyzer_rr_translator import translate_for_t12
 from analyzer_rr_writer import AnalyzerRRCapacityError, populate_rr_input
+from ar_normalizer import parse_ar_file
+from ar_writer import AROutputError, populate_ar_collections
 from writer import write_output
 
 
@@ -66,6 +68,9 @@ RR_LAST_UPDATED = "2026-05-15"
 
 T12_VERSION = "0.2.1"
 T12_LAST_UPDATED = "2026-05-11"
+
+AR_VERSION = "0.1.0"
+AR_LAST_UPDATED = "2026-05-23"
 
 # Bundled Analyzer substrate (stamped at Cover!B8). Hand-maintained like the
 # RR/T12 constants above — bump when the bundled workbook is updated. The
@@ -461,6 +466,32 @@ with st.sidebar:
         ),
     )
 
+    ar_file = st.file_uploader(
+        "AR Aging (.xlsx / .csv) — optional",
+        type=["xlsx", "xlsm", "csv"],
+        key="ar_aging_uploader",
+        help=(
+            "Optional. Upload an AR aging report from the operator. The app "
+            "parses bucket totals (Current / 31-60 / 61-90 / 91-120 / 120+), "
+            "payer mix, and roll-forward fields, then writes them into the "
+            "Analyzer's 'AR & Collections' sheet (hidden by default; revealed "
+            "when AR is uploaded). Adds Workbook Health P5 pre-export gate."
+        ),
+    )
+
+    ar_as_of_override = None
+    if ar_file is not None:
+        ar_as_of_override = st.date_input(
+            "AR as-of date (optional override)",
+            value=period_date_input,
+            key="ar_as_of_input",
+            help=(
+                "Defaults to the RR period date. Override if the operator's "
+                "AR report carries a different as-of date — the P5 pre-export "
+                "gate will flag if the AR date doesn't match RR."
+            ),
+        )
+
     st.divider()
     st.subheader("Property Defaults")
     care_type_default = st.selectbox(
@@ -513,7 +544,7 @@ with st.sidebar:
         )
 
     st.divider()
-    st.caption(f"RR v{RR_VERSION} · T12 v{T12_VERSION}")
+    st.caption(f"RR v{RR_VERSION} · T12 v{T12_VERSION} · AR v{AR_VERSION}")
 
 
 # ---------------------------------------------------------------------------
@@ -967,9 +998,14 @@ with dl_col2:
         t12_caption = (
             f"T12 data → `T12 Input!A12+`. " if has_t12 else ""
         )
+        ar_caption = (
+            f"AR data → `AR & Collections` (revealed). "
+            if ar_file is not None else ""
+        )
         st.caption(
             f"RR data → `Rent Roll Input!A7+`. "
             f"{t12_caption}"
+            f"{ar_caption}"
             f"Period {period_date_input.isoformat()} written to RR col S."
         )
 
@@ -999,18 +1035,33 @@ with dl_col2:
             else:
                 final_bytes = populated_after_rr
 
+            # Step 3: If AR was uploaded, parse it and write to the
+            # AR & Collections sheet on top of the RR(+T12) result.
+            if ar_file is not None:
+                ar_result = parse_ar_file(ar_file)
+                as_of_str = (
+                    ar_as_of_override.isoformat()
+                    if ar_as_of_override is not None
+                    else None
+                )
+                final_bytes = populate_ar_collections(
+                    final_bytes,
+                    ar_result,
+                    as_of_date=as_of_str,
+                    source_filename=getattr(ar_file, "name", "ar_aging.xlsx"),
+                    ar_version=AR_VERSION,
+                )
+
             rr_stem = Path(getattr(rr_file, "name", "rent_roll.xlsx")).stem
+            name_parts = [rr_stem]
             if has_t12:
-                t12_stem = Path(getattr(raw_t12_file, "name", "raw_t12.xlsx")).stem
-                combined_out_name = (
-                    f"Analyzer with {rr_stem} + {t12_stem} "
-                    f"{period_date_input.isoformat()}.xlsx"
-                )
-            else:
-                combined_out_name = (
-                    f"Analyzer with {rr_stem} "
-                    f"{period_date_input.isoformat()}.xlsx"
-                )
+                name_parts.append(Path(getattr(raw_t12_file, "name", "raw_t12.xlsx")).stem)
+            if ar_file is not None:
+                name_parts.append("AR")
+            combined_out_name = (
+                f"Analyzer with {' + '.join(name_parts)} "
+                f"{period_date_input.isoformat()}.xlsx"
+            )
 
             st.download_button(
                 label=f"⬇️ Download {combined_out_name[:60]}{'…' if len(combined_out_name) > 60 else ''}",
@@ -1024,8 +1075,13 @@ with dl_col2:
             st.error(f"Rent Roll exceeds Analyzer capacity: {e}")
         except T12NormalizerCapacityError as e:
             st.error(f"T12 exceeds Analyzer capacity: {e}")
+        except AROutputError as e:
+            st.error(
+                f"Analyzer override is missing the 'AR & Collections' sheet "
+                f"(substrate v0.2.10+ required to use AR upload). {e}"
+            )
         except ValueError as e:
-            st.error(f"Analyzer / T12 error: {e}")
+            st.error(f"Analyzer / T12 / AR error: {e}")
         except Exception as e:
             st.error(f"Could not produce combined output: {e}")
     else:
