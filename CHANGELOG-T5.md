@@ -6,6 +6,54 @@ See [SPEC-T5.md](SPEC-T5.md) for the canonical spec.
 
 ---
 
+## v0.1.5 — Responsive 1-row headline (CSS grid, auto-fit) (2026-05-25)
+
+Headline panel rebuilt with native HTML/CSS grid instead of nested
+`st.columns(2)` rows. The grid uses
+`grid-template-columns: repeat(auto-fit, minmax(140px, 1fr))` so the
+browser packs as many tiles as the viewport allows:
+
+| Viewport | Tiles per row |
+| --- | --- |
+| Desktop wide (≥ 1200px) | **8** — single elegant strip |
+| Tablet (~700-900px) | **4-5** — auto |
+| Phone landscape (~600px) | **3-4** — auto |
+| Phone portrait (~375px) | **2** — auto |
+| Very narrow (~280px) | **1** — auto |
+
+Native `st.columns(N)` doesn't reflow — it keeps `N` columns at every
+viewport, squeezing tiles thinner. CSS grid with `auto-fit` is the
+only way to get real responsive behavior in Streamlit without a custom
+component.
+
+Tile styling honors Streamlit's theme via `var(--text-color)` so it
+adapts to light / dark modes. A `@media (max-width: 480px)` block
+shrinks the value font from 1.85rem → 1.45rem on phones so the larger
+compact-money values (`$102,273`, `$1.77M`) don't wrap.
+
+### Tradeoff
+
+Native `st.metric`'s delta arrows + theme-tinted color states are not
+reproduced — but the headline panel never used deltas anyway (it
+shows current values, not changes), and theme tinting wasn't visible
+on the dark navy background either.
+
+### Files
+
+- `dashboard_ui.py` — `_render_headline()` rewritten as a single
+  `st.markdown(unsafe_allow_html=True)` block emitting the CSS-grid
+  hero panel. Removed `st.container(border=True)` wrapper (border is
+  now in the CSS).
+- `app.py` — `T5_VERSION` bumped to `0.1.5`.
+
+### Verification
+
+- 27 / 27 dashboard regression tests pass.
+- HTML output spot-checked against a sample model — eight `t5-tile`
+  divs plus the `t5-headline-eyebrow` title cell.
+
+---
+
 ## v0.1.4 — Compact auth strip (2026-05-25)
 
 Sidebar auth section ("Signed in: erik" + chunky Sign out button + divider)

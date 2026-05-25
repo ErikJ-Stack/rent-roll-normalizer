@@ -58,30 +58,86 @@ def _fmt_int(v: Optional[float]) -> str:
 # ---------------------------------------------------------------------------
 
 def _render_headline(m: DashboardModel) -> None:
-    # Box the headline so it reads as the hero panel — st.container(border=True)
-    # paints a subtle outlined card; metrics inside stay native st.metric tiles.
-    with st.container(border=True):
-        st.markdown(
-            "<div style='text-align:center; font-size:0.85rem; "
-            "letter-spacing:0.12em; color:#7a8696; font-weight:600; "
-            "margin-bottom:0.5rem;'>HEADLINE</div>",
-            unsafe_allow_html=True,
-        )
-        # Row 1 — the four "must-see" tiles
-        r1c1, r1c2 = st.columns(2)
-        r1c1.metric("Occupancy", _fmt_pct(m.occupancy_pct))
-        r1c2.metric("EBITDARM margin", _fmt_pct(m.ebitdarm_margin))
-        r2c1, r2c2 = st.columns(2)
-        r2c1.metric("Going-in cap rate", _fmt_pct(m.going_in_cap, digits=2))
-        r2c2.metric("RevPOR", _fmt_money(m.revpor))
-        st.divider()
-        # Row 3-4 — supporting financial scale tiles
-        r3c1, r3c2 = st.columns(2)
-        r3c1.metric("EGI (annual)", _fmt_money_compact(m.egi))
-        r3c2.metric("EBITDAR", _fmt_money_compact(m.ebitdar))
-        r4c1, r4c2 = st.columns(2)
-        r4c1.metric("EBITDARM", _fmt_money_compact(m.ebitdarm))
-        r4c2.metric("Price / bed", _fmt_money(m.price_per_bed))
+    # CSS-grid hero panel (Track 5 v0.1.5) — replaces st.metric tiles in
+    # st.columns(2) with a native HTML grid that uses
+    # `grid-template-columns: repeat(auto-fit, minmax(140px, 1fr))` so the
+    # browser packs as many tiles as the viewport allows: 8 across on a
+    # wide desktop, reflowing to 4 → 2 → 1 as the viewport narrows. Native
+    # st.columns doesn't reflow; CSS grid is the only way to get true
+    # responsive behavior in Streamlit without a custom component.
+    tiles = [
+        ("Occupancy",         _fmt_pct(m.occupancy_pct)),
+        ("EBITDARM margin",   _fmt_pct(m.ebitdarm_margin)),
+        ("Going-in cap rate", _fmt_pct(m.going_in_cap, digits=2)),
+        ("RevPOR",            _fmt_money(m.revpor)),
+        ("EGI (annual)",      _fmt_money_compact(m.egi)),
+        ("EBITDAR",           _fmt_money_compact(m.ebitdar)),
+        ("EBITDARM",          _fmt_money_compact(m.ebitdarm)),
+        ("Price / bed",       _fmt_money(m.price_per_bed)),
+    ]
+    tile_html = "".join(
+        f'<div class="t5-tile">'
+        f'<div class="t5-tile-label">{label}</div>'
+        f'<div class="t5-tile-value">{value}</div>'
+        f'</div>'
+        for label, value in tiles
+    )
+    st.markdown(
+        f"""
+        <style>
+        .t5-headline-grid {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+            padding: 1.1rem 1.1rem 1.3rem;
+            border: 1px solid rgba(150, 160, 180, 0.25);
+            border-radius: 0.5rem;
+            margin: 0.5rem 0 1rem;
+        }}
+        .t5-headline-eyebrow {{
+            grid-column: 1 / -1;
+            text-align: center;
+            font-size: 0.75rem;
+            letter-spacing: 0.18em;
+            color: #7a8696;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }}
+        .t5-tile {{
+            padding: 0.35rem 0.25rem;
+            min-width: 0;
+        }}
+        .t5-tile-label {{
+            font-size: 0.85rem;
+            color: var(--text-color, #c9ced8);
+            opacity: 0.7;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 0.15rem;
+        }}
+        .t5-tile-value {{
+            font-size: 1.85rem;
+            font-weight: 600;
+            color: var(--text-color, #ffffff);
+            line-height: 1.15;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }}
+        @media (max-width: 480px) {{
+            .t5-tile-value {{ font-size: 1.45rem; }}
+            .t5-tile-label {{ font-size: 0.78rem; }}
+            .t5-headline-grid {{ padding: 0.85rem; gap: 0.6rem; }}
+        }}
+        </style>
+        <div class="t5-headline-grid">
+            <div class="t5-headline-eyebrow">HEADLINE</div>
+            {tile_html}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def _render_capacity(m: DashboardModel) -> None:
