@@ -8,6 +8,49 @@ When making a code change in a T12-related chat, add an entry here in the same c
 
 ---
 
+## [Hotfix on v0.2.10 + v0.2.11] — 2026-05-24
+
+### Summary
+
+Bundled `ALF_Financial_Analyzer_Only.xlsx` was throwing **"Repair Result … Removed Records: Formula from /xl/worksheets/sheet2.xml part"** when opened in Excel. Root-caused to two label strings in the AR-module migration scripts that started with `"="`, which openpyxl auto-classifies as formulas (writing them into `<f>`). Excel then tries to parse the body and fails. The K13 footnote was stripped by Excel's repair; B47 would render as `#NAME?`. Both cells fixed; substrate stamp unchanged at v0.2.11. No new substrate version — this is a fix to the existing v0.2.10/v0.2.11 content.
+
+### Root cause
+
+openpyxl's `Cell.value` setter classifies any `str` whose first character is `=` as a formula. Two label strings tripped it:
+
+- `migrate_to_v0211.py` line 87 — `TILE_FOOTNOTE_TEXT = "= T12 bad debt − annualized AR write-offs"` → written to `Dashboard!K13`. **This is the one Excel stripped.**
+- `migrate_to_v0210.py` line 442 — `_set(ws, "B47", "= Implied closing AR", ...)` → written to `AR & Collections!B47`. Excel didn't strip it but would render `#NAME?` for any user opening the workbook fresh.
+
+Both labels used the leading `=` for typographic effect ("this row equals the formula next to/below it"). The structural relationship is already obvious from the layout; the `=` was redundant.
+
+### Fix
+
+- **`migrate_to_v0211.py`** — `TILE_FOOTNOTE_TEXT` rewritten to `"T12 bad debt − annualized AR write-offs"` (dropped the leading `"= "`). Docstring + inline comment added explaining why future labels must not start with `=`.
+- **`migrate_to_v0210.py`** — B47 label rewritten to `"Implied closing AR"` (dropped the leading `"= "`). Inline comment added.
+- **Bundled `ALF_Financial_Analyzer_Only.xlsx`** — `Dashboard!K13` re-written with the corrected footnote string (post-repair file had K13 empty after Excel stripped it); `AR & Collections!B47` re-written as a plain string. Styling preserved on both via openpyxl style-copy. Round-trip verification: both cells come back as `data_type='s'`.
+
+### Verification
+
+Whole-workbook openpyxl scan after fix: **zero** remaining text-shaped cells classified as formulas. Sheet2.xml round-trip via unzip + ET confirms `K10:L13` all read as inline strings or valid formulas, all three merges intact (K10:L10, K11:L12, K13:L13). The valid `K11` AR variance formula (`IF('AR & Collections'!Z1=0, ..., 'AR & Collections'!C56)`) was untouched — Excel kept it through the repair pass and the fix does not modify it.
+
+### Files
+
+- `tools/migration/migrate_to_v0210.py` (modified — B47 label fix + inline comment).
+- `tools/migration/migrate_to_v0211.py` (modified — `TILE_FOOTNOTE_TEXT` fix + docstring/inline comments).
+- `ALF_Financial_Analyzer_Only.xlsx` (modified — K13 and B47 re-written in place).
+
+### Cross-file follow-up
+
+- `CLAUDE.md` — new 5th entry added to the "openpyxl quirks that bite migrations" section formalizing the rule and the detection snippet (whole-workbook scan flagging `data_type=='f'` cells whose formula body parses as plain English).
+
+### Commits
+
+- `53c2484` chore: push Excel-repaired bundled Analyzer (post v0.2.11) — captured Excel's post-repair state so users stopped seeing the repair dialog while diagnosis continued.
+- `24dbafe` fix: text-as-formula bug in v0.2.10/v0.2.11 migrations (sheet2.xml repair).
+- (this commit) docs: CLAUDE.md / journal / CHANGELOG-T12 follow-up.
+
+---
+
 ## [Substrate template v0.2.11] — 2026-05-23
 
 ### Summary
@@ -19,7 +62,7 @@ When making a code change in a T12-related chat, add an entry here in the same c
 - **A. Dashboard variance tile at K10:L13** (previously empty):
   - K10:L10 (merged) title "BAD DEBT VARIANCE" matching the REVPOR/EBITDARM headline-tile style (Calibri 9pt bold white on blue FF5B9BD5).
   - K11:L12 (merged) value formula: `=IF('AR & Collections'!Z1=0,"— upload AR to populate",'AR & Collections'!C56)`. Calibri 12pt bold navy on white, wrapped, centered. Tile is dormant when Z1=0 (no AR uploaded), live ⚪/✓/⚠ when Z1=1.
-  - K13:L13 (merged) footnote "= T12 bad debt − annualized AR write-offs" (Calibri 9pt italic gray on FFF2F2F2).
+  - K13:L13 (merged) footnote "T12 bad debt − annualized AR write-offs" (Calibri 9pt italic gray on FFF2F2F2). _(originally written with a leading "= " for typographic effect; dropped on 2026-05-24 — see the hotfix entry above.)_
 - **B. Cover row 11 AR Module version line.** `A11 = "AR Module"`, `B11 = "v0.1.0"`. Sits in the existing empty row between T12 Normalizer (R10) and the Links section (R12) — no row inserts. Style borrowed from A10/B10 for consistency.
 - **C. Cover!B8 stamped v0.2.11 + AZ4 on all 16 sheets.**
 

@@ -11,6 +11,42 @@ Newest at top.
 
 ---
 
+## 2026-05-24 — Hotfix: text-as-formula bug in v0.2.10/v0.2.11 (sheet2.xml repair)
+
+Short session, started from a user-reported Excel repair dialog: opening the bundled `ALF_Financial_Analyzer_Only.xlsx` produced
+
+> Repair Result to ALF_Financial_Analyzer_Only0.xml
+> Removed Records: Formula from /xl/worksheets/sheet2.xml part
+
+### Diagnosis
+
+`sheet2.xml` = Dashboard (per the v0.2.7 sheet order). Inspecting the pre-repair file's sheet2.xml found the corrupted formula at **`Dashboard!K13`** — the v0.2.11 AR variance tile footnote: `"= T12 bad debt − annualized AR write-offs"`. openpyxl's `Cell.value` setter classifies any `str` whose first character is `=` as a formula and writes it into the `<f>` element (with the leading `=` stripped per OOXML spec). When Excel opened the file it tried to parse ` T12 bad debt − annualized AR write-offs` as a formula, failed, and removed it.
+
+The legitimate `K11` AR variance formula (`IF('AR & Collections'!Z1=0, ..., 'AR & Collections'!C56)`) was untouched — Excel kept that one through the repair pass because it's valid Excel.
+
+A whole-workbook re-scan found a **sibling instance** of the same bug at **`AR & Collections!B47`** from `migrate_to_v0210.py` line 442: `"= Implied closing AR"`. Excel didn't fail-repair on this one but would have rendered `#NAME?`. Same bug class, fixed in the same pass.
+
+### What shipped (commits on `main`)
+
+- `53c2484` chore: push Excel-repaired bundled Analyzer (post v0.2.11) — captured the post-repair state of the bundled xlsx (Excel had removed K13's bogus formula); diagnosis deferred to a follow-up commit so the repair dialog stopped firing immediately.
+- `24dbafe` fix: text-as-formula bug in v0.2.10/v0.2.11 migrations — patched both migration scripts (drop leading `"= "` from both label strings; added inline + docstring notes), re-wrote `Dashboard!K13` and `AR & Collections!B47` in the bundled file as plain strings (styling preserved on both). Substrate stamp unchanged at v0.2.11.
+- (this commit) docs: CLAUDE.md / journal / CHANGELOG-T12 follow-up. Added the 5th openpyxl quirk to the "openpyxl quirks that bite migrations" section in CLAUDE.md.
+
+### Verification
+
+Whole-workbook openpyxl scan after fix: **zero** remaining text-shaped cells classified as formulas. Round-trip confirms K13 and B47 come back as `data_type='s'`, K11 comes back as `data_type='f'`. Diagnostic snippet preserved inline in commit `24dbafe`.
+
+### Carry-forwards
+
+- The bundled-file edits in `53c2484` + `24dbafe` did NOT bump the substrate version stamp (still v0.2.11) — this was a fix to existing v0.2.11 content, not a new substrate revision. If you re-run the migration chain v0.2.4 → v0.2.10 → v0.2.11 from a clean source after pulling these fixes, you'll get the same corrected output the bundled file now has.
+- New 5th entry in CLAUDE.md's openpyxl quirks section formalizes the rule: **never start a label string with `=`** when writing via openpyxl. Inline migration-script comments enforce locally; the CLAUDE.md note is the cross-session reminder for future label adds.
+
+### Open backlog after this session
+
+UW-BACKLOG.md Pending: BL-0019 only (persistent audit log, Track 1 — unchanged from the 2026-05-23 session).
+
+---
+
 ## 2026-05-23 — AR & Collections module (BL-0023) — substrate v0.2.10 + v0.2.11
 
 Cross-cutting session: ALF underwriting now has a third operator input (AR aging) alongside RR and T12, with end-to-end pipeline from Streamlit upload → parser → writer → populated Analyzer sheet → Dashboard tile.

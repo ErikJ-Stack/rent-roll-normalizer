@@ -2,7 +2,7 @@
 
 > Onboarding doc for any Claude session (chat or Claude Code) working on this repo. Read this first — it points to canonical truth and surfaces facts that previously had to be grubbed for.
 
-**Last updated:** 2026-05-23 (substrate v0.2.10 + v0.2.11 — opens AND closes UW-BACKLOG **BL-0023** (AR & Collections module). New `AR & Collections` analytical sheet at index 8 (hidden by default; revealed when an AR aging file is uploaded). New `ar_normalizer.py` + `ar_writer.py` modules give the Streamlit app a third operator input (AR aging .xlsx/.csv) alongside RR and T12. Workbook Health B43 wrapped in AR-presence IF guard — `=IF('AR & Collections'!Z1=1, AR.C15, SUM('Rent Roll Input'!$X))` — so the RR-derived fallback is preserved bit-for-bit when no AR uploaded. P5 pre-export gate added at WH row 52 (inert "✓" when Z1=0, compares AR as-of to `RR_Period_Date` when Z1=1); READY-FOR-EXPORT summary shifted from row 52 → row 53 with B52 ANDed in. v0.2.11 adds Dashboard variance tile at K10:L13 + Cover AR module version line at A11/B11. `mappings.py` `DEFAULT_PAYER` extended with Managed Care + Medicare-Advantage / MCO rules (MA rules ordered BEFORE bare `\bmedicare\b`); `PAYER_FALLBACK` constant unchanged — AR ingest constructs `MappingSet(payer_fallback="Self-Pay + Other")` per-instance, RR behavior preserved. Bundled `ALF_Financial_Analyzer_Only.xlsx` forward-applied v0.2.4 → v0.2.10 → v0.2.11 directly per BL-0021 carry-forward (still skips intermediate v0.2.5-v0.2.9 substrate features). Live operator AR sample **PENDING** — built against synthetic at `tests/fixtures/ar/ar_synthetic_v01.xlsx` (12 residents × 14 cols, exercises all 7 payer buckets); fuzzy header rules will need expansion when real samples arrive. Cowork-authored design handoff (`2026-05-23-AR-Collections-Claude-Code-Handoff.md`) reviewed against codebase, 12 spec issues raised and decided here; handoff-back-to-Cowork block produced for spec Rev 2. **Only Pending backlog item: BL-0019** (persistent audit log, Track 1).)
+**Last updated:** 2026-05-24 (Hotfix on v0.2.10/v0.2.11 bundled Analyzer — Excel was throwing "Repair Result … Removed Records: Formula from /xl/worksheets/sheet2.xml part" on open. Root cause: two label strings in the AR-module migrations started with `=` (`Dashboard!K13` v0.2.11 footnote `"= T12 bad debt − annualized AR write-offs"` and `AR & Collections!B47` v0.2.10 label `"= Implied closing AR"`). openpyxl's value setter classifies any leading-`=` string as a formula and writes it into `<f>`; Excel then strips the K13 one on open (couldn't parse it) and renders B47 as `#NAME?`. Both label strings rewritten with the leading `"= "` dropped — the "this row equals the formula next to it" relationship is structurally obvious from layout. Migration scripts (`migrate_to_v0210.py`, `migrate_to_v0211.py`) patched with inline comments + docstring notes so future label adds avoid the same trap; bundled `ALF_Financial_Analyzer_Only.xlsx` re-written in place (styling preserved). New 5th openpyxl quirk added to the "openpyxl quirks that bite migrations" section below. Whole-workbook re-scan shows zero remaining text-shaped formula cells. Dashboard!K11 AR variance formula was always valid and survived Excel's repair pass intact. Substrate stamp unchanged at v0.2.11. Earlier on 2026-05-23: Track 4 — UW Template integration Phase 0 ships: 72-concept modular mapping registry at `tools/uw_template/registry.json` against `ALF_UW_Template_v4.xlsx`, generator script + interactive HTML mind-map + MD/CSV trackers, `SPEC-UWT.md` + `CHANGELOG-UWT.md` seeded. UWT v0.1.0 — registry + docs only, no writer yet. 57/72 concepts cleanly mapped; 15 concepts flagged for Phase 1 disposition (Bad Debt placement, 2nd Person Revenue, monthly grid widening, EBITDA row, occupied beds, RR Analysis date format, monthly header overwrite). Earlier on 2026-05-23: substrate v0.2.10 + v0.2.11 — opens AND closes UW-BACKLOG **BL-0023** (AR & Collections module). New `AR & Collections` analytical sheet at index 8 (hidden by default; revealed when an AR aging file is uploaded). New `ar_normalizer.py` + `ar_writer.py` modules give the Streamlit app a third operator input (AR aging .xlsx/.csv) alongside RR and T12. Workbook Health B43 wrapped in AR-presence IF guard — `=IF('AR & Collections'!Z1=1, AR.C15, SUM('Rent Roll Input'!$X))` — so the RR-derived fallback is preserved bit-for-bit when no AR uploaded. P5 pre-export gate added at WH row 52 (inert "✓" when Z1=0, compares AR as-of to `RR_Period_Date` when Z1=1); READY-FOR-EXPORT summary shifted from row 52 → row 53 with B52 ANDed in. v0.2.11 adds Dashboard variance tile at K10:L13 + Cover AR module version line at A11/B11. `mappings.py` `DEFAULT_PAYER` extended with Managed Care + Medicare-Advantage / MCO rules (MA rules ordered BEFORE bare `\bmedicare\b`); `PAYER_FALLBACK` constant unchanged — AR ingest constructs `MappingSet(payer_fallback="Self-Pay + Other")` per-instance, RR behavior preserved. Bundled `ALF_Financial_Analyzer_Only.xlsx` forward-applied v0.2.4 → v0.2.10 → v0.2.11 directly per BL-0021 carry-forward (still skips intermediate v0.2.5-v0.2.9 substrate features). Live operator AR sample **PENDING** — built against synthetic at `tests/fixtures/ar/ar_synthetic_v01.xlsx` (12 residents × 14 cols, exercises all 7 payer buckets); fuzzy header rules will need expansion when real samples arrive. Cowork-authored design handoff (`2026-05-23-AR-Collections-Claude-Code-Handoff.md`) reviewed against codebase, 12 spec issues raised and decided here; handoff-back-to-Cowork block produced for spec Rev 2. **Only Pending backlog item: BL-0019** (persistent audit log, Track 1).)
 
 ---
 
@@ -53,9 +53,9 @@ https://rrnormalizer.streamlit.app/ — Streamlit Community Cloud, auto-deploys 
 
 ---
 
-## Three workstream tracks
+## Workstream tracks
 
-The repo runs three parallel tracks. They share an Analyzer but are otherwise independent. **Track 1 chats do not edit Track 2 or Track 3 files** — see "Scope discipline" below.
+The repo runs four parallel tracks. They share an Analyzer / UW pipeline but are otherwise independent. **Track N chats do not edit Track M files** without explicit cross-track authorization — see "Scope discipline" below.
 
 ### Track 1 — RR Normalizer (RR-side code)
 
@@ -99,6 +99,27 @@ Optimizing the Analyzer's structure for the downstream UW handoff. Workbook edit
 | --- | --- |
 | Decisions log | `OPTIMIZATION-DECISIONS.md` |
 | Roadmap | 4 branches: 1 Correctness, 2 Handoff, 3 Analytical coverage, 4 Substrate. Branches 1+4 closed in v0.1.6. Branch 3 next. Branch 2 last. |
+
+### Track 4 — ALF UW Template integration (downstream consumer)
+
+Wiring the Analyzer's `UW Output` / `UW Export` surface into the downstream **ALF UW Template** workbook (per-deal populated copy). Workstream began 2026-05-23. Phase 0 (this initial release) is inspection + mapping only — no writer yet.
+
+| What | Where |
+| --- | --- |
+| Spec | `SPEC-UWT.md` |
+| Changelog | `CHANGELOG-UWT.md` |
+| Handoff contract (Analyzer side) | `UW-OUTPUT-HANDOFF-CONTRACT.md` |
+| Mapping registry (data) | `tools/uw_template/registry.json` |
+| Artifact generator | `tools/uw_template/build_mapping_artifacts.py` |
+| Mind-map visualizer | `tools/uw_template/mapping_mindmap.html` |
+| Tracker (human-readable) | `tools/uw_template/MAPPING_TRACKER.md` |
+| Tracker (diffable CSV) | `tools/uw_template/mapping_tracker.csv` |
+| Template source file | `Sample Files/ALF_UW_Template_v4.xlsx` (gitignored) |
+| Current code version | UWT v0.1.0 (Phase 0 seed — registry + docs only) |
+| Mapped against template | `v4` |
+| Mapped against substrate | v0.2.9 (Phase 0 was scoped before v0.2.10/v0.2.11 AR module shipped — substrate refresh deferred to Phase 1 since neither v0.2.10 nor v0.2.11 added new `UW Output` rows) |
+
+**Modular registry pattern.** `registry.json` is keyed on semantic concepts (`egi`, `labor_care_staff`, `licensed_beds_il`, ...) with version-keyed targets (`targets.v4 = {...}`). Adding template `v5` later means extending the registry — no code change to the generator or future writer. Re-run `python tools/uw_template/build_mapping_artifacts.py` after any registry edit to regenerate the HTML / MD / CSV artifacts.
 
 ---
 
@@ -211,7 +232,7 @@ Conversational examples should label placeholder text as `<REPLACE THIS>` so the
 
 ---
 
-## Four openpyxl quirks that bite migrations
+## Five openpyxl quirks that bite migrations
 
 Documented from real bugs hit during migration script work:
 
@@ -223,6 +244,10 @@ Documented from real bugs hit during migration script work:
    **The qualified-range-endpoint trap (BL-0001 / `migrate_to_v021.py`).** When a formula contains a cross-sheet qualified range like `T12_Calc!$N$1:$N$500`, the qualified-pattern regex matches the *first* cell (`$N$1`) as a single cross-sheet ref — the *endpoint* (`$N$500`) falls outside that match and is then re-caught by the unqualified-ref regex, which assumes it's a same-sheet reference and bumps it on row inserts. Result: the endpoint shifts (e.g. `$N$500` → `$N$505` after a 5-row insert) while everything else in the qualified range stays put. Surfaces as off-by-N SUMIF/SUMIFS drift after migrations.
 
    **Canonical fix:** capture template formulas you intend to *replicate* (e.g. for new rows) **AFTER** the shift sweep, not before. Reading post-shift bakes in any drift on the template row's own range endpoints, so every replicated row's endpoints stay consistent with each other (even if they're all "wrong" relative to the table size — but consistent matters more than absolute, and the v0.1.7 sweep proved harmless when endpoints are one row past the data). See `tools/migration/migrate_to_v021.py` `step_t12_raw_data()` lines 312-321 for the worked example. The v0.1.6 / v0.1.7 "SUMIFS N501 vs N500 cosmetic" was the first symptom of this same artifact.
+
+5. (From 2026-05-24, after the v0.2.10/v0.2.11 sheet2.xml repair fix) **Label strings that start with `"="` are silently misclassified as formulas.** openpyxl's `Cell.value` setter routes any `str` whose first character is `=` into `data_type='f'` and writes it into the `<f>` element on save. Excel then tries to parse the body as a formula — best case it renders `#NAME?`, worst case it strips the cell on open with the dreaded "Removed Records: Formula from /xl/worksheets/sheetN.xml part" repair dialog. This bit `Dashboard!K13` (v0.2.11 footnote `"= T12 bad debt − annualized AR write-offs"`) and `AR & Collections!B47` (v0.2.10 label `"= Implied closing AR"`) — both intended as plain labels with a leading `=` for typographic effect.
+
+   **Canonical fix:** **never start a label string with `=`.** The "this row/tile equals the formula to its right/below" relationship is structurally obvious from the surrounding layout; the `=` prefix is implied. If you absolutely need the visible `=` glyph, use a non-`=` look-alike (`≈`, `≡`, `:`) or prefix the literal text with a non-breaking space (`" = ..."`) so `startswith("=")` returns False. Either way, add an inline comment so the next reader doesn't "fix" it back. Detection: a whole-workbook scan that flags any `data_type=='f'` cell whose formula body parses as a plain English phrase (no parens, no operators) catches this class — see the diagnostic snippet under commit `24dbafe`.
 
 ---
 
