@@ -75,7 +75,7 @@ T12_LAST_UPDATED = "2026-05-11"
 AR_VERSION = "0.1.0"
 AR_LAST_UPDATED = "2026-05-23"
 
-T5_VERSION = "0.1.1"              # Track 5 — Webapp Dashboard Surface
+T5_VERSION = "0.1.2"              # Track 5 — Webapp Dashboard Surface
 T5_LAST_UPDATED = "2026-05-24"
 
 # Bundled Analyzer substrate (stamped at Cover!B8). Hand-maintained like the
@@ -415,8 +415,24 @@ st.caption(
 # ---------------------------------------------------------------------------
 # Sidebar
 # ---------------------------------------------------------------------------
+def _parse_currency(raw: str) -> int:
+    """Parse '$18,000,000' / '18000000' / '18M' → int. Returns 0 if blank/invalid."""
+    if not raw:
+        return 0
+    s = raw.replace("$", "").replace(",", "").strip().upper()
+    mult = 1
+    if s.endswith("M"):
+        s, mult = s[:-1], 1_000_000
+    elif s.endswith("K"):
+        s, mult = s[:-1], 1_000
+    try:
+        return int(float(s) * mult)
+    except ValueError:
+        return 0
+
+
 with st.sidebar:
-    st.header("Inputs")
+    st.markdown("##### 📁 Uploads")
 
     rr_file = st.file_uploader(
         "Rent Roll (.xlsx) — required",
@@ -429,7 +445,7 @@ with st.sidebar:
         auto_detected_date = detect_period_date(getattr(rr_file, "name", ""))
 
     period_date_input = st.date_input(
-        "Rent Roll Period Date",
+        "RR Period Date",
         value=auto_detected_date or dt.date.today(),
         help=(
             "Written to column S of the Analyzer's Rent Roll Input sheet on "
@@ -438,9 +454,9 @@ with st.sidebar:
         ),
     )
     if auto_detected_date:
-        st.caption(f"Auto-detected from filename: **{auto_detected_date.isoformat()}**")
+        st.caption(f"Auto-detected: **{auto_detected_date.isoformat()}**")
     elif rr_file is not None:
-        st.caption("Could not auto-detect a date from the filename — set manually.")
+        st.caption("Could not auto-detect — set manually.")
 
     raw_t12_file = st.file_uploader(
         "Raw T12 (.xlsx) — optional",
@@ -488,7 +504,7 @@ with st.sidebar:
     ar_as_of_override = None
     if ar_file is not None:
         ar_as_of_override = st.date_input(
-            "AR as-of date (optional override)",
+            "AR as-of date (override)",
             value=period_date_input,
             key="ar_as_of_input",
             help=(
@@ -498,27 +514,24 @@ with st.sidebar:
             ),
         )
 
-    st.divider()
-    st.subheader("Underwriting Inputs")
-    purchase_price_input = st.number_input(
-        "Purchase price ($)",
-        min_value=0,
-        value=0,
-        step=100_000,
-        format="%d",
+    st.markdown("##### 💵 Underwriting")
+    _pp_raw = st.text_input(
+        "Purchase price",
+        value="",
+        placeholder="$18,000,000",
         help=(
-            "Used to compute the Going-in cap rate, EBITDAR cap rate, "
-            "and Price / bed tiles on the Dashboard tab. Leave at 0 to "
-            "leave those tiles unpopulated (you can still set the "
-            "value later in the downloaded Analyzer at "
-            "T12 Analytics!E117)."
+            "Drives the Going-in cap rate, EBITDAR cap, and Price/bed "
+            "tiles on the Dashboard. Accepts `$18,000,000`, `18000000`, or "
+            "shorthand `18M` / `500K`. Leave blank to skip — you can set "
+            "it later in the downloaded Analyzer at T12 Analytics!E117."
         ),
     )
+    purchase_price_input = _parse_currency(_pp_raw)
+    if purchase_price_input > 0:
+        st.caption(f"💰 **${purchase_price_input:,}**")
 
-    st.divider()
-    st.subheader("Property Defaults")
     care_type_default = st.selectbox(
-        "Care Type",
+        "Care Type default",
         options=["(none — flag missing)", "IL", "AL", "MC"],
         index=0,
         help=(
@@ -532,41 +545,33 @@ with st.sidebar:
     if care_type_default.startswith("("):
         care_type_default = ""
 
-    st.divider()
-    st.subheader("Optional")
-    mapping_file = st.file_uploader(
-        "Rent Roll Mapping (.xlsx)",
-        type=["xlsx"],
-        help=(
-            "Override defaults for Apartment_Type_Rules, Bed_Status_Rules, "
-            "Payer_Type_Rules, Care_Level_Rules, Care_Bucket_Rules. "
-            "Any sheet you omit falls back to built-in defaults."
-        ),
-    )
-
-    st.divider()
-    st.subheader("Output")
-    sheet_override = st.text_input(
-        "Sheet name (leave blank to auto-detect)",
-        value="",
-        help="Defaults to 'Details' if present, otherwise the first sheet.",
-    )
-
-    st.divider()
-    with st.expander("Advanced — override Analyzer template"):
-        st.caption(
-            "By default the app uses the bundled Analyzer (`ALF_Financial_"
-            "Analyzer_Only.xlsx` in the repo root). Upload a custom Analyzer "
-            "here to override for this session only — uploads do not modify "
-            "the bundled file."
+    with st.expander("⚙️ Advanced"):
+        sheet_override = st.text_input(
+            "RR sheet name (auto if blank)",
+            value="",
+            help="Defaults to 'Details' if present, otherwise the first sheet.",
+        )
+        mapping_file = st.file_uploader(
+            "RR Mapping override (.xlsx)",
+            type=["xlsx"],
+            help=(
+                "Override defaults for Apartment_Type_Rules, Bed_Status_Rules, "
+                "Payer_Type_Rules, Care_Level_Rules, Care_Bucket_Rules. "
+                "Any sheet you omit falls back to built-in defaults."
+            ),
         )
         analyzer_override_file = st.file_uploader(
-            "ALF Financial Analyzer (.xlsx)",
+            "Analyzer template override (.xlsx)",
             type=["xlsx"],
             key="analyzer_override_uploader",
+            help=(
+                "By default the app uses the bundled Analyzer "
+                "(`ALF_Financial_Analyzer_Only.xlsx`). Upload to override "
+                "for this session only — uploads do not modify the bundled "
+                "file."
+            ),
         )
 
-    st.divider()
     st.caption(f"RR v{RR_VERSION} · T12 v{T12_VERSION} · AR v{AR_VERSION} · T5 v{T5_VERSION}")
 
 # ---------------------------------------------------------------------------

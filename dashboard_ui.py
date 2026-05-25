@@ -58,16 +58,30 @@ def _fmt_int(v: Optional[float]) -> str:
 # ---------------------------------------------------------------------------
 
 def _render_headline(m: DashboardModel) -> None:
-    st.subheader("Headline")
-    c1, c2 = st.columns(2)
-    c1.metric("Occupancy", _fmt_pct(m.occupancy_pct))
-    c2.metric("EBITDARM margin", _fmt_pct(m.ebitdarm_margin))
-    c1.metric("Going-in cap rate", _fmt_pct(m.going_in_cap, digits=2))
-    c2.metric("RevPOR", _fmt_money(m.revpor))
-    c1.metric("EGI (annual)", _fmt_money_compact(m.egi))
-    c2.metric("EBITDAR", _fmt_money_compact(m.ebitdar))
-    c1.metric("EBITDARM", _fmt_money_compact(m.ebitdarm))
-    c2.metric("Price / bed", _fmt_money(m.price_per_bed))
+    # Box the headline so it reads as the hero panel — st.container(border=True)
+    # paints a subtle outlined card; metrics inside stay native st.metric tiles.
+    with st.container(border=True):
+        st.markdown(
+            "<div style='text-align:center; font-size:0.85rem; "
+            "letter-spacing:0.12em; color:#7a8696; font-weight:600; "
+            "margin-bottom:0.5rem;'>HEADLINE</div>",
+            unsafe_allow_html=True,
+        )
+        # Row 1 — the four "must-see" tiles
+        r1c1, r1c2 = st.columns(2)
+        r1c1.metric("Occupancy", _fmt_pct(m.occupancy_pct))
+        r1c2.metric("EBITDARM margin", _fmt_pct(m.ebitdarm_margin))
+        r2c1, r2c2 = st.columns(2)
+        r2c1.metric("Going-in cap rate", _fmt_pct(m.going_in_cap, digits=2))
+        r2c2.metric("RevPOR", _fmt_money(m.revpor))
+        st.divider()
+        # Row 3-4 — supporting financial scale tiles
+        r3c1, r3c2 = st.columns(2)
+        r3c1.metric("EGI (annual)", _fmt_money_compact(m.egi))
+        r3c2.metric("EBITDAR", _fmt_money_compact(m.ebitdar))
+        r4c1, r4c2 = st.columns(2)
+        r4c1.metric("EBITDARM", _fmt_money_compact(m.ebitdarm))
+        r4c2.metric("Price / bed", _fmt_money(m.price_per_bed))
 
 
 def _render_capacity(m: DashboardModel) -> None:

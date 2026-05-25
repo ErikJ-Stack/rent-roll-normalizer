@@ -6,6 +6,44 @@ See [SPEC-T5.md](SPEC-T5.md) for the canonical spec.
 
 ---
 
+## v0.1.2 — UI polish: currency input, headline box, compressed sidebar (2026-05-24)
+
+Three UX polish changes following walkthrough of v0.1.1:
+
+- **Currency-formatted purchase price.** Sidebar input is now a
+  `st.text_input` with a `_parse_currency()` helper that accepts
+  `$18,000,000`, `18000000`, `18,000,000`, or shorthand `18M` / `500K`.
+  A `💰 **$18,000,000**` confirmation caption renders underneath when
+  the parsed value is > 0. Smoke-tested against 12 input shapes.
+- **Headline panel boxed in.** `_render_headline()` now wraps its
+  metric tiles in `st.container(border=True)` with a centered
+  "HEADLINE" eyebrow label, splits into two row-groups (must-see
+  ratios above an `st.divider()`, financial-scale tiles below). Reads
+  as a hero panel instead of just-another-section.
+- **Sidebar compressed.** Removed `Property Defaults`, `Optional`,
+  `Output` subheaders and the 5 dividers between them. New structure:
+  `📁 Uploads` group (everything file-shaped), `💵 Underwriting` group
+  (purchase price + care type default), `⚙️ Advanced` expander
+  (collapsed by default — combines the RR sheet-name override, RR
+  mapping override, and Analyzer template override into one place).
+  Drops ~30% of sidebar vertical space on a 13" laptop.
+
+### Files
+
+- `app.py` — sidebar restructure, `_parse_currency()` module-level
+  helper, `T5_VERSION` bumped to `0.1.2`.
+- `dashboard_ui.py` — `_render_headline()` boxed via
+  `st.container(border=True)`.
+
+### Verification
+
+- `python3 -m unittest tests.test_dashboard_model` → **27 / 27 pass**.
+- Currency parser smoke: 12/12 input shapes parse as expected (incl.
+  empty, garbage, whitespace, `$` prefix, comma thousands, `M`/`K`
+  shorthand, decimal-M).
+
+---
+
 ## v0.1.1 — Top-level Dashboard / Workspace tabs + purchase price input (2026-05-24)
 
 Two UX changes following live walkthrough of v0.1.0:
