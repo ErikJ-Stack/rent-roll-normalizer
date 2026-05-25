@@ -6,6 +6,33 @@ See [SPEC-T5.md](SPEC-T5.md) for the canonical spec.
 
 ---
 
+## v0.1.9 — Balance user-strip against Sign-out button (2026-05-25)
+
+The v0.1.4 compact auth strip looked unbalanced — `👤 erik` was at
+`st.caption` size (~0.85rem) while the gold "Sign out" button next to
+it rendered at default button size (~1.1rem). The button visually
+dominated.
+
+Fix in `auth.py _render_sidebar_status()`:
+
+- Username row rebuilt via `st.markdown` with inline HTML for precise
+  sizing: 👤 icon at `1.7rem`, username chip at `1.05rem` in a navy
+  `<code>` pill.
+- Column ratio shifted from `[2, 1]` to `[3, 2]` so the button has
+  enough width to render "Sign out" on one line (was wrapping in some
+  viewports).
+
+The two now feel like peers rather than the button shouting over the
+caption.
+
+### Files
+
+- `auth.py` — `_render_sidebar_status()` markdown rewrite + column
+  ratio bump.
+- `app.py` — `T5_VERSION` bumped to `0.1.9`.
+
+---
+
 ## v0.1.8 — Loading overlay visible across tabs + fires during work (2026-05-25)
 
 v0.1.7's overlay only worked when the user was on the Workspace tab,

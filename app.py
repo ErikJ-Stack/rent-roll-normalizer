@@ -75,7 +75,7 @@ T12_LAST_UPDATED = "2026-05-11"
 AR_VERSION = "0.1.0"
 AR_LAST_UPDATED = "2026-05-23"
 
-T5_VERSION = "0.1.8"              # Track 5 — Webapp Dashboard Surface
+T5_VERSION = "0.1.9"              # Track 5 — Webapp Dashboard Surface
 T5_LAST_UPDATED = "2026-05-25"
 
 # Bundled Analyzer substrate (stamped at Cover!B8). Hand-maintained like the
