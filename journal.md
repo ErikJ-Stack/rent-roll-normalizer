@@ -11,6 +11,56 @@ Newest at top.
 
 ---
 
+## 2026-05-25 — Substrate v0.2.12 — Dashboard blended-vs-segment formula fixes (BL-0024)
+
+Track 3 follow-up to yesterday's Track 5 build. Yesterday's `dashboard_model.py` regression test discovered that three xlsx Dashboard headline tiles (B6 OCCUPANCY, F20 ADR, K6 REVPOR) reference segment-specific T12 Analytics cells (`F134` = AL-only, `F140` = MC-only, `F143` = MC-only) while their Dashboard labels say "Normalized community occupancy" / "Blended ADR" / "Normalized RevPOR." A worktree task was spawned to fix the xlsx side; that task's deliverable arrived as patch `0001fixDashboardblendedvssegmentformulamisrefssu.patch` at the repo root and was applied this morning.
+
+A surface-wide audit of Dashboard during patch authoring widened the scope from the 3 headline tiles to **12 cells** sharing the same bug pattern. The 9 additional derivative cells: B8 (status text), C21 (occupancy row), D35 (occupancy card), E55 (gap-to-market delta), G55 (risk flag emoji), H55 (risk flag text), P5 (upper-right blended anchor), K8 (REVPOR status text), F21 (RevPOR detail row).
+
+### What shipped (commit `1c0fecb`)
+
+- `tools/migration/migrate_to_v0212.py` — 12 cell rewrites + 17 version stamps. 5-check + 12-per-cell verify. Idempotent — gate checks `Cover!B8 == "v0.2.12"` AND `Dashboard!B6` does NOT contain substring `"F134"`; each per-cell patch is also self-idempotent.
+- Formulas: occupancy cells → `'T12 Analytics'!E11/'T12 Analytics'!E6`; F20 → `'T12 Analytics'!E20/('T12 Analytics'!E11*12)`; REVPOR cells → `('T12 Analytics'!E20+'T12 Analytics'!E27)/('T12 Analytics'!E11*12)`. All wrapped in `IFERROR(...,"—")`. Threshold-comparison shapes (B8/G55/H55) preserve existing ✓/⚠/✗ branches + "— Source not populated" fallback exactly.
+- Bundled `ALF_Financial_Analyzer_Only.xlsx` updated in place v0.2.11 → v0.2.12.
+- Docs: CHANGELOG-T12.md, CLAUDE.md "Last updated" line + Closed-2026-05-25 section, SPEC-T12.md "Current version" + template-iteration list, UW-BACKLOG.md (BL-0024 moved to Shipped).
+
+### Why inline (not "add rows to T12 Analytics Section 5")
+
+The alternative was to add Blended ADR + Blended RevPOR rows to T12 Analytics Section 5 KPI Dashboard and point Dashboard at them. Inline keeps blast radius to Dashboard only — zero T12 Analytics surface change, no risk of disturbing downstream consumers of T12 Analytics (UW Output, Workbook Health, Pre-Export Gate).
+
+### Cross-pipeline impact
+
+Track 5's `dashboard_model.py` already computes correct blended values. Before v0.2.12, the xlsx Dashboard was the diverging side. After v0.2.12, both surfaces agree:
+- OCCUPANCY: xlsx now 72.7% (was 64.5% AL-only) — matches Python
+- ADR: xlsx now $4,546 (was $6,802 MC-only) — matches Python
+- REVPOR: xlsx now $4,562 (was $6,802 MC-only) — matches Python
+
+### Conflict resolution during `git am`
+
+Patch was authored against a CLAUDE.md state that pre-dated yesterday's T5 v0.1.0 entry. CLAUDE.md's "Last updated" line conflicted. Resolved by leading with v0.2.12 (newest, today) and folding Track 5 into the "Earlier on 2026-05-24" retrospective alongside the text-as-formula hotfix. The patch file is otherwise applied byte-for-byte.
+
+### Verification
+
+- `Cover!B8 == "v0.2.12"` ✓
+- 12 / 12 Dashboard cells rewritten; 0 buggy F134/F140/F143 refs remaining
+- AR variance tile at K10:L13 unaffected (K11 formula + K13 plain-text footnote both intact from the 2026-05-24 hotfix)
+- 6 charts preserved, 75 merged ranges preserved
+- Hidden sheet states preserved (AR & Collections, RR_Calc, T12_Calc, Workbook Health)
+- Migration idempotency confirmed (re-run on v0.2.12 file → no-op)
+- Track 5 regression test: **27 / 27 pass**
+
+### Carry-forwards
+
+- **Track 5 regression fixture rebuild against v0.2.12** — the fixture at `Sample Files/dashboard/regression_v0211.xlsx` is still v0.2.11. Once rebuilt against v0.2.12, the three `test_known_divergence_*` cases (which currently assert divergence between Python's blended values and xlsx's segment-specific values) can flip to equality assertions. Currently passing only because the fixture is stale.
+- **Streamlit Cloud reboot + visual smoke** — auto-deploy from `origin/main` lands within ~30-60s; CLAUDE.md "reboot-first rule" recommends a hard reboot from share.streamlit.io before debugging any divergence.
+- **Patch file cleanup** — `0001fixDashboardblendedvssegmentformulamisrefssu.patch` at repo root is now applied; deleted in the same session as housekeeping.
+
+### Open backlog after this session
+
+UW-BACKLOG.md Pending: **BL-0019 only** (persistent audit log, Track 1 — unchanged since 2026-05-19, user-deferred to "later").
+
+---
+
 ## 2026-05-24 — Track 5 (Webapp Dashboard Surface) v0.1.0 — initial release
 
 User attached a Homestead populated Analyzer and asked: "I want this Dashboard replicated into the webapp after it parses through the data. What's the best approach here for modularity?" Discovery confirmed the attached Dashboard is bit-identical to the bundled v0.2.11 substrate Dashboard (0 cell diffs, same 6 charts, same 442 cells) — the ask is to **surface that data inside the Streamlit UI**, not to populate a different xlsx.
