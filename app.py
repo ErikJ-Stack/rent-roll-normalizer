@@ -39,6 +39,7 @@ from branding import inject_brand_css
 from mappings import MappingSet, load_mapping_workbook
 from normalizer import CONDENSED_COLUMNS, normalize_rent_roll
 from period_date import detect_period_date
+from property_name import derive_property_name
 from reports import build_by_type, build_exceptions, build_summary
 from t12_normalizer import (
     UnknownT12FormatError,
@@ -53,6 +54,8 @@ from analyzer_rr_translator import translate_for_t12
 from analyzer_rr_writer import AnalyzerRRCapacityError, populate_rr_input
 from ar_normalizer import parse_ar_file
 from ar_writer import AROutputError, populate_ar_collections
+from dashboard_model import compute_dashboard
+from dashboard_ui import render_dashboard
 from writer import write_output
 
 
@@ -71,6 +74,9 @@ T12_LAST_UPDATED = "2026-05-11"
 
 AR_VERSION = "0.1.0"
 AR_LAST_UPDATED = "2026-05-23"
+
+T5_VERSION = "0.1.0"              # Track 5 — Webapp Dashboard Surface
+T5_LAST_UPDATED = "2026-05-24"
 
 # Bundled Analyzer substrate (stamped at Cover!B8). Hand-maintained like the
 # RR/T12 constants above — bump when the bundled workbook is updated. The
@@ -544,7 +550,7 @@ with st.sidebar:
         )
 
     st.divider()
-    st.caption(f"RR v{RR_VERSION} · T12 v{T12_VERSION} · AR v{AR_VERSION}")
+    st.caption(f"RR v{RR_VERSION} · T12 v{T12_VERSION} · AR v{AR_VERSION} · T5 v{T5_VERSION}")
 
 
 # ---------------------------------------------------------------------------
@@ -919,175 +925,214 @@ with tab_audit:
 
 
 # ---------------------------------------------------------------------------
-# Download buttons
+# Dashboard + Download (Track 5: webapp dashboard surface)
 # ---------------------------------------------------------------------------
+# Dashboard tab shows the same data as the downloaded Analyzer's Dashboard
+# sheet but rendered as native Streamlit (mobile-friendly, no Excel needed).
+# Download tab holds the existing standalone-RR + combined-Analyzer downloads.
 st.divider()
-st.subheader("Export")
+tab_dashboard, tab_download = st.tabs(["📊 Dashboard", "⬇️ Download"])
 
-run_meta = {
-    "RR Version":          RR_VERSION,
-    "RR Last Updated":     RR_LAST_UPDATED,
-    "T12 Version":         T12_VERSION,
-    "T12 Last Updated":    T12_LAST_UPDATED,
-    "Run Timestamp":       dt.datetime.now().isoformat(timespec="seconds"),
-    "Source File":         getattr(rr_file, "name", "uploaded"),
-    "Mapping File":        getattr(mapping_file, "name", "(defaults only)"),
-    "Analyzer Source":     analyzer_source_label,
-    "Analyzer Substrate":  analyzer_substrate_ver,
-    "Property Care Type Default": result.property_care_type_default or "(none)",
-    "Header Row (1-idx)":  result.header_row_idx + 1,
-    "Care Groups Detected": len(result.care_groups),
-    "Total Beds":          len(n),
-    "Occupied Beds":       occ_beds,
-    "T12 File":            getattr(raw_t12_file, "name", "(not uploaded)"),
-    "T12 Format Detected": t12_parse_result.format_name if t12_parse_result else "(n/a)",
-    "T12 GL Rows":         len(t12_parse_result.gl_rows) if t12_parse_result else 0,
-}
-
-xlsx_bytes = write_output(
-    condensed=c,
-    normalized=n,
-    mapping_audit=result.mapping_audit,
-    summary=summary,
-    by_type=by_type,
-    exceptions=exceptions,
-    run_metadata=run_meta,
-)
-
-out_name = _build_output_name(getattr(rr_file, "name", "rent_roll.xlsx"))
-
-dl_col1, dl_col2 = st.columns(2)
-
-# --- Download 1: Standalone Normalized Rent Roll (always available) ---
-with dl_col1:
-    st.markdown("**Normalized Rent Roll**")
-    st.caption("6-tab analyst workbook with formatting.")
-    st.download_button(
-        label=f"⬇️ Download {out_name}",
-        data=xlsx_bytes,
-        file_name=out_name,
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        use_container_width=True,
-        key="dl_rr",
-    )
-
-# --- Download 2: Combined Analyzer (RR + optional T12) ---
-with dl_col2:
-    st.markdown("**Analyzer with data**")
-
-    # Gating: rent roll always required. T12 is optional. If T12 is uploaded,
-    # all UNMATCHED descriptions must be resolved before download.
-    has_t12 = raw_t12_file is not None
-    t12_parsed_ok = t12_parse_result is not None
-    t12_unmatched_remaining = (
-        len([
-            d for d in t12_parse_result.unmatched
-            if d not in st.session_state.t12_resolutions
-        ]) if t12_parsed_ok else 0
-    )
-    t12_blocking = has_t12 and (not t12_parsed_ok or t12_unmatched_remaining > 0)
-
-    can_download = rr_file is not None and not t12_blocking
-
-    if t12_blocking:
-        if not t12_parsed_ok:
-            st.caption("T12 parse failed — see error above.")
-        else:
-            st.caption(f"Resolve {t12_unmatched_remaining} UNMATCHED description(s) above to enable.")
+with tab_dashboard:
+    if t12_parse_result is None:
+        st.info(
+            "Upload a T12 file in the sidebar to populate the dashboard. "
+            "Most metrics (EGI, EBITDARM, cap rate, monthly trend) need T12 data."
+        )
     else:
-        t12_caption = (
-            f"T12 data → `T12 Input!A12+`. " if has_t12 else ""
-        )
-        ar_caption = (
-            f"AR data → `AR & Collections` (revealed). "
-            if ar_file is not None else ""
-        )
-        st.caption(
-            f"RR data → `Rent Roll Input!A7+`. "
-            f"{t12_caption}"
-            f"{ar_caption}"
-            f"Period {period_date_input.isoformat()} written to RR col S."
-        )
-
-    if can_download:
         try:
-            # Step 1: Write RR data into the resolved Analyzer.
-            translated = translate_for_t12(c)
-            populated_after_rr = populate_rr_input(
-                analyzer_bytes_cached,
-                translated,
-                period_date_input,
-                source_filename=getattr(rr_file, "name", ""),
+            _period_lbl = (
+                t12_parse_result.month_labels[-1]
+                if t12_parse_result.month_labels and t12_parse_result.month_labels[-1]
+                else period_date_input.isoformat()
+            )
+            _property_name = (
+                derive_property_name(getattr(rr_file, "name", "")) or "Property"
             )
 
-            # Step 2: If T12 was uploaded, append session-state UNMATCHED
-            # resolutions and write GL detail on top of the RR-populated Analyzer.
-            if has_t12 and t12_parse_result is not None:
-                new_descmap_entries = list(st.session_state.t12_resolutions.values())
-                final_bytes = populate_t12_input(
-                    populated_after_rr,
-                    t12_parse_result,
-                    new_descmap_entries=new_descmap_entries,
-                    source_filename=getattr(raw_t12_file, "name", "raw_t12.xlsx"),
-                    t12_version=T12_VERSION,
-                    t12_last_updated=T12_LAST_UPDATED,
-                )
-            else:
-                final_bytes = populated_after_rr
-
-            # Step 3: If AR was uploaded, parse it and write to the
-            # AR & Collections sheet on top of the RR(+T12) result.
-            if ar_file is not None:
-                ar_result = parse_ar_file(ar_file)
-                as_of_str = (
-                    ar_as_of_override.isoformat()
-                    if ar_as_of_override is not None
-                    else None
-                )
-                final_bytes = populate_ar_collections(
-                    final_bytes,
-                    ar_result,
-                    as_of_date=as_of_str,
-                    source_filename=getattr(ar_file, "name", "ar_aging.xlsx"),
-                    ar_version=AR_VERSION,
-                )
-
-            rr_stem = Path(getattr(rr_file, "name", "rent_roll.xlsx")).stem
-            name_parts = [rr_stem]
-            if has_t12:
-                name_parts.append(Path(getattr(raw_t12_file, "name", "raw_t12.xlsx")).stem)
-            if ar_file is not None:
-                name_parts.append("AR")
-            combined_out_name = (
-                f"Analyzer with {' + '.join(name_parts)} "
-                f"{period_date_input.isoformat()}.xlsx"
+            _model = compute_dashboard(
+                rr_result=result,
+                t12_result=t12_parse_result,
+                ar_result=None,  # AR is parsed lazily at download time; future: lift up
+                property_name=_property_name,
+                period_label=_period_lbl,
+                purchase_price=None,  # analyst input; lives in T12 Analytics!E117
+            )
+            render_dashboard(_model)
+        except Exception as e:  # noqa: BLE001 — surface any compute issue without breaking the tab
+            st.error(f"Dashboard could not be rendered: {e}")
+            st.caption(
+                "This shouldn't happen — the downloaded Analyzer will still work. "
+                "Please report the error above."
             )
 
-            st.download_button(
-                label=f"⬇️ Download {combined_out_name[:60]}{'…' if len(combined_out_name) > 60 else ''}",
-                data=final_bytes,
-                file_name=combined_out_name,
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True,
-                key="dl_combined",
-            )
-        except AnalyzerRRCapacityError as e:
-            st.error(f"Rent Roll exceeds Analyzer capacity: {e}")
-        except T12NormalizerCapacityError as e:
-            st.error(f"T12 exceeds Analyzer capacity: {e}")
-        except AROutputError as e:
-            st.error(
-                f"Analyzer override is missing the 'AR & Collections' sheet "
-                f"(substrate v0.2.10+ required to use AR upload). {e}"
-            )
-        except ValueError as e:
-            st.error(f"Analyzer / T12 / AR error: {e}")
-        except Exception as e:
-            st.error(f"Could not produce combined output: {e}")
-    else:
-        st.button(
-            "⬇️ Combined download not yet available",
-            disabled=True,
+with tab_download:
+    st.subheader("Export")
+
+    run_meta = {
+        "RR Version":          RR_VERSION,
+        "RR Last Updated":     RR_LAST_UPDATED,
+        "T12 Version":         T12_VERSION,
+        "T12 Last Updated":    T12_LAST_UPDATED,
+        "Run Timestamp":       dt.datetime.now().isoformat(timespec="seconds"),
+        "Source File":         getattr(rr_file, "name", "uploaded"),
+        "Mapping File":        getattr(mapping_file, "name", "(defaults only)"),
+        "Analyzer Source":     analyzer_source_label,
+        "Analyzer Substrate":  analyzer_substrate_ver,
+        "Property Care Type Default": result.property_care_type_default or "(none)",
+        "Header Row (1-idx)":  result.header_row_idx + 1,
+        "Care Groups Detected": len(result.care_groups),
+        "Total Beds":          len(n),
+        "Occupied Beds":       occ_beds,
+        "T12 File":            getattr(raw_t12_file, "name", "(not uploaded)"),
+        "T12 Format Detected": t12_parse_result.format_name if t12_parse_result else "(n/a)",
+        "T12 GL Rows":         len(t12_parse_result.gl_rows) if t12_parse_result else 0,
+    }
+
+    xlsx_bytes = write_output(
+        condensed=c,
+        normalized=n,
+        mapping_audit=result.mapping_audit,
+        summary=summary,
+        by_type=by_type,
+        exceptions=exceptions,
+        run_metadata=run_meta,
+    )
+
+    out_name = _build_output_name(getattr(rr_file, "name", "rent_roll.xlsx"))
+
+    dl_col1, dl_col2 = st.columns(2)
+
+    # --- Download 1: Standalone Normalized Rent Roll (always available) ---
+    with dl_col1:
+        st.markdown("**Normalized Rent Roll**")
+        st.caption("6-tab analyst workbook with formatting.")
+        st.download_button(
+            label=f"⬇️ Download {out_name}",
+            data=xlsx_bytes,
+            file_name=out_name,
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True,
-            key="dl_combined_disabled",
+            key="dl_rr",
         )
+
+    # --- Download 2: Combined Analyzer (RR + optional T12) ---
+    with dl_col2:
+        st.markdown("**Analyzer with data**")
+
+        # Gating: rent roll always required. T12 is optional. If T12 is uploaded,
+        # all UNMATCHED descriptions must be resolved before download.
+        has_t12 = raw_t12_file is not None
+        t12_parsed_ok = t12_parse_result is not None
+        t12_unmatched_remaining = (
+            len([
+                d for d in t12_parse_result.unmatched
+                if d not in st.session_state.t12_resolutions
+            ]) if t12_parsed_ok else 0
+        )
+        t12_blocking = has_t12 and (not t12_parsed_ok or t12_unmatched_remaining > 0)
+
+        can_download = rr_file is not None and not t12_blocking
+
+        if t12_blocking:
+            if not t12_parsed_ok:
+                st.caption("T12 parse failed — see error above.")
+            else:
+                st.caption(f"Resolve {t12_unmatched_remaining} UNMATCHED description(s) above to enable.")
+        else:
+            t12_caption = (
+                f"T12 data → `T12 Input!A12+`. " if has_t12 else ""
+            )
+            ar_caption = (
+                f"AR data → `AR & Collections` (revealed). "
+                if ar_file is not None else ""
+            )
+            st.caption(
+                f"RR data → `Rent Roll Input!A7+`. "
+                f"{t12_caption}"
+                f"{ar_caption}"
+                f"Period {period_date_input.isoformat()} written to RR col S."
+            )
+
+        if can_download:
+            try:
+                # Step 1: Write RR data into the resolved Analyzer.
+                translated = translate_for_t12(c)
+                populated_after_rr = populate_rr_input(
+                    analyzer_bytes_cached,
+                    translated,
+                    period_date_input,
+                    source_filename=getattr(rr_file, "name", ""),
+                )
+
+                # Step 2: If T12 was uploaded, append session-state UNMATCHED
+                # resolutions and write GL detail on top of the RR-populated Analyzer.
+                if has_t12 and t12_parse_result is not None:
+                    new_descmap_entries = list(st.session_state.t12_resolutions.values())
+                    final_bytes = populate_t12_input(
+                        populated_after_rr,
+                        t12_parse_result,
+                        new_descmap_entries=new_descmap_entries,
+                        source_filename=getattr(raw_t12_file, "name", "raw_t12.xlsx"),
+                        t12_version=T12_VERSION,
+                        t12_last_updated=T12_LAST_UPDATED,
+                    )
+                else:
+                    final_bytes = populated_after_rr
+
+                # Step 3: If AR was uploaded, parse it and write to the
+                # AR & Collections sheet on top of the RR(+T12) result.
+                if ar_file is not None:
+                    ar_result = parse_ar_file(ar_file)
+                    as_of_str = (
+                        ar_as_of_override.isoformat()
+                        if ar_as_of_override is not None
+                        else None
+                    )
+                    final_bytes = populate_ar_collections(
+                        final_bytes,
+                        ar_result,
+                        as_of_date=as_of_str,
+                        source_filename=getattr(ar_file, "name", "ar_aging.xlsx"),
+                        ar_version=AR_VERSION,
+                    )
+
+                rr_stem = Path(getattr(rr_file, "name", "rent_roll.xlsx")).stem
+                name_parts = [rr_stem]
+                if has_t12:
+                    name_parts.append(Path(getattr(raw_t12_file, "name", "raw_t12.xlsx")).stem)
+                if ar_file is not None:
+                    name_parts.append("AR")
+                combined_out_name = (
+                    f"Analyzer with {' + '.join(name_parts)} "
+                    f"{period_date_input.isoformat()}.xlsx"
+                )
+
+                st.download_button(
+                    label=f"⬇️ Download {combined_out_name[:60]}{'…' if len(combined_out_name) > 60 else ''}",
+                    data=final_bytes,
+                    file_name=combined_out_name,
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True,
+                    key="dl_combined",
+                )
+            except AnalyzerRRCapacityError as e:
+                st.error(f"Rent Roll exceeds Analyzer capacity: {e}")
+            except T12NormalizerCapacityError as e:
+                st.error(f"T12 exceeds Analyzer capacity: {e}")
+            except AROutputError as e:
+                st.error(
+                    f"Analyzer override is missing the 'AR & Collections' sheet "
+                    f"(substrate v0.2.10+ required to use AR upload). {e}"
+                )
+            except ValueError as e:
+                st.error(f"Analyzer / T12 / AR error: {e}")
+            except Exception as e:
+                st.error(f"Could not produce combined output: {e}")
+        else:
+            st.button(
+                "⬇️ Combined download not yet available",
+                disabled=True,
+                use_container_width=True,
+                key="dl_combined_disabled",
+            )

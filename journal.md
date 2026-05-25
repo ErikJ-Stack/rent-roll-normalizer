@@ -11,6 +11,64 @@ Newest at top.
 
 ---
 
+## 2026-05-24 — Track 5 (Webapp Dashboard Surface) v0.1.0 — initial release
+
+User attached a Homestead populated Analyzer and asked: "I want this Dashboard replicated into the webapp after it parses through the data. What's the best approach here for modularity?" Discovery confirmed the attached Dashboard is bit-identical to the bundled v0.2.11 substrate Dashboard (0 cell diffs, same 6 charts, same 442 cells) — the ask is to **surface that data inside the Streamlit UI**, not to populate a different xlsx.
+
+After ruling out Streamlit `st.dialog` modals (too cramped on phone screens, ~700px width cap), user picked: a `📊 Dashboard` tab in the post-parse output, full-width on mobile.
+
+### What shipped
+
+- **`dashboard_model.py`** — pure-Python compute layer. 44-field `DashboardModel` dataclass; `compute_dashboard(rr_result, t12_result, ar_result=None, ...)` mirrors T12 Analytics col-E aggregation (`totals[label] += row.total` over GLRows grouped by Description_Map label). Constants for the 24 non-labor labels, 8 direct-labor labels, 6 payroll-burden labels match the T12 Analytics sheet structure exactly. No Streamlit imports.
+- **`dashboard_ui.py`** — Streamlit-only renderer. `render_dashboard(model)` produces mobile-friendly single-scroll layout: `st.metric` tiles in `st.columns(2)` (auto-narrows on phones), `st.dataframe(use_container_width=True, hide_index=True)` for tables, Altair donut + bar charts via `st.altair_chart(use_container_width=True)`, `st.success/warning/error/info` for risk flags.
+- **`app.py`** — wraps the existing post-parse Export section in `st.tabs(["📊 Dashboard", "⬇️ Download"])`. Dashboard tab calls `compute_dashboard` + `render_dashboard` (graceful info-banner when T12 absent). Download tab holds the unchanged RR + combined-Analyzer download buttons. New imports: `compute_dashboard`, `render_dashboard`, `derive_property_name` (hoisted to module top).
+- **`tests/test_dashboard_model.py`** — 27-case regression suite. Reconstructs `NormalizeResult` + `T12ParseResult` from a populated Analyzer fixture's Rent Roll Input + T12 Input cells, runs `compute_dashboard()`, asserts each metric matches the xlsx's `data_only=True` cached values within tolerance. All 27 pass.
+- **`SPEC-T5.md`** + **`CHANGELOG-T5.md`** + **`tests/fixtures/dashboard/README.md`**. CLAUDE.md gets the Track 5 row added to the Workstream tracks table.
+- **Last-updated stamp** on CLAUDE.md bumped to 2026-05-24 with the Track 5 summary.
+
+### Why pure Python (and not a formula evaluator)
+
+openpyxl can't evaluate Excel formulas — reading `data_only=True` on a Python-written workbook returns `None` for every formula cell. The Dashboard is a formula-reference layer over T12 Analytics (itself a formula sheet). Three paths considered:
+
+1. Add `formulas` / `pycel` dependency + recalc — heavy on Streamlit Cloud, library quirks across the formula surface, slow.
+2. LibreOffice headless subprocess — won't run on Streamlit Cloud.
+3. Re-derive metrics in Python ← **chosen**. Bounded scope (~60 metrics), simple arithmetic over parsed objects, zero new dependency, testable.
+
+The regression test against the xlsx fixture is the drift guard in either direction.
+
+### Cross-track work disclosed and authorized
+
+This is a new track (Track 5). It touches `app.py` (Track 1 territory) and adds two new modules. CLAUDE.md scope discipline was raised explicitly: "this is a new workstream — doesn't cleanly fit Tracks 1-4." User authorized as Track 5 and asked to "proceed through work using track 5 as dashboard track."
+
+### Xlsx Dashboard cross-reference bugs discovered (Track 3 follow-up spawned)
+
+Three cells on the bundled v0.2.11 Dashboard reference single-care-type cells in T12 Analytics while being labeled as blended/community values on the Dashboard:
+
+| Dashboard cell | Labeled as | Pulls from | Actual content |
+| --- | --- | --- | --- |
+| `B6` | "Normalized community occupancy" | `T12 Analytics!F134` (`=C11/C6`) | **AL-only** occupancy |
+| `F20` | "Blended ADR / day" | `T12 Analytics!F140` (`=D20/(D11*12)`) | **MC-only** ADR |
+| `K6` | "Normalized RevPOR per resident" | `T12 Analytics!F143` (`=(D20+D27)/(D11*12)`) | **MC-only** RevPOR |
+
+Homestead fixture impact: occupancy 64.5% (AL-only, xlsx) vs 72.7% (blended, Python correct); ADR $6,802 (MC-only, xlsx) vs $4,546 (blended, Python correct); RevPOR $6,802 (MC-only, xlsx) vs $4,562 (blended, Python correct). Python is structurally correct; xlsx Dashboard has the cross-reference bug. Regression test has explicit `test_known_divergence_*` cases.
+
+A Track 3 substrate-fix task was **spawned** (worktree chip on user's screen) to rewrite the three Dashboard cells to reference the correct blended cells in T12 Analytics. When that lands, webapp Dashboard tab and downloaded xlsx Dashboard will align.
+
+### Verification
+
+- `python3 -m unittest tests.test_dashboard_model` → **27 / 27 pass**.
+- `python3 -c "import ast; ast.parse(open('app.py').read())"` → app.py parses cleanly.
+- Manual smoke against the bundled Analyzer + Homestead populated fixture: every metric matches the xlsx within 0.5% relative tolerance except the three known-divergence cells.
+- Live deploy verification (Streamlit Community Cloud reboot after push) — pending.
+
+### Carry-forwards
+
+- Streamlit Cloud reboot + visual smoke after push.
+- Track 3 spawned task: Dashboard cell B6/F20/K6 cross-reference rewrites (substrate v0.2.12 or whatever the next bump is).
+- T5 v0.2.0 follow-ups: lift purchase price input into the UI (currently `None` → cap-rate tiles dim until user opens xlsx and sets `T12 Analytics!E117`); lift AR parse before the Dashboard tab so AR variance is visible immediately (currently AR is parsed at download time only).
+
+---
+
 ## 2026-05-24 — Hotfix: text-as-formula bug in v0.2.10/v0.2.11 (sheet2.xml repair)
 
 Short session, started from a user-reported Excel repair dialog: opening the bundled `ALF_Financial_Analyzer_Only.xlsx` produced
