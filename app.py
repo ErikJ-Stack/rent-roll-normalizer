@@ -75,8 +75,8 @@ T12_LAST_UPDATED = "2026-05-11"
 AR_VERSION = "0.1.0"
 AR_LAST_UPDATED = "2026-05-23"
 
-T5_VERSION = "0.1.2"              # Track 5 — Webapp Dashboard Surface
-T5_LAST_UPDATED = "2026-05-24"
+T5_VERSION = "0.1.3"              # Track 5 — Webapp Dashboard Surface
+T5_LAST_UPDATED = "2026-05-25"
 
 # Bundled Analyzer substrate (stamped at Cover!B8). Hand-maintained like the
 # RR/T12 constants above — bump when the bundled workbook is updated. The
@@ -515,20 +515,37 @@ with st.sidebar:
         )
 
     st.markdown("##### 💵 Underwriting")
-    _pp_raw = st.text_input(
+
+    # Auto-format-on-blur pattern: the on_change callback fires when the user
+    # presses Enter or tabs away, parses whatever they typed, and writes the
+    # formatted value back into session_state. Streamlit re-reads the widget's
+    # value from session_state on the next rerun, so the field shows
+    # "$18,000,000" after blur. Live per-keystroke formatting is not possible
+    # with vanilla st.text_input (no per-key callback) — would require a
+    # custom HTML/JS component.
+    if "pp_input" not in st.session_state:
+        st.session_state["pp_input"] = ""
+
+    def _reformat_pp() -> None:
+        n = _parse_currency(st.session_state["pp_input"])
+        if n > 0:
+            st.session_state["pp_input"] = f"${n:,}"
+        # Invalid → leave raw intact so the user can correct it.
+
+    st.text_input(
         "Purchase price",
-        value="",
+        key="pp_input",
+        on_change=_reformat_pp,
         placeholder="$18,000,000",
         help=(
             "Drives the Going-in cap rate, EBITDAR cap, and Price/bed "
-            "tiles on the Dashboard. Accepts `$18,000,000`, `18000000`, or "
-            "shorthand `18M` / `500K`. Leave blank to skip — you can set "
-            "it later in the downloaded Analyzer at T12 Analytics!E117."
+            "tiles on the Dashboard. Accepts `$18,000,000`, `18000000`, "
+            "`18M`, `500K`, etc. Auto-formats to `$#,###,###` on Enter "
+            "or tab-out. Leave blank to skip — you can set it later in "
+            "the downloaded Analyzer at T12 Analytics!E117."
         ),
     )
-    purchase_price_input = _parse_currency(_pp_raw)
-    if purchase_price_input > 0:
-        st.caption(f"💰 **${purchase_price_input:,}**")
+    purchase_price_input = _parse_currency(st.session_state.get("pp_input", ""))
 
     care_type_default = st.selectbox(
         "Care Type default",

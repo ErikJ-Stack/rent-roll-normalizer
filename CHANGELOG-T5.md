@@ -6,6 +6,41 @@ See [SPEC-T5.md](SPEC-T5.md) for the canonical spec.
 
 ---
 
+## v0.1.3 — Purchase price auto-formats on Enter / tab-out (2026-05-25)
+
+The standalone `💰 $18,000,000` echo caption beneath the purchase-price
+field is gone. The **field itself** now reformats to `$#,###,###` when
+the user presses Enter or tabs away.
+
+### How it works
+
+Streamlit's `st.text_input` doesn't expose a per-keystroke callback, so
+true live "format-as-you-type" isn't possible without a custom HTML/JS
+component. The pattern used here:
+
+1. `on_change=_reformat_pp` fires on blur / Enter.
+2. The callback reads `st.session_state["pp_input"]`, runs it through
+   `_parse_currency()`, and writes the formatted string back into the
+   same session-state key.
+3. On the next rerun, `st.text_input(..., key="pp_input")` reads the
+   widget value from session_state and shows `"$18,000,000"`.
+
+Invalid input is left intact so the user can correct it (rather than
+being silently blanked).
+
+### Files
+
+- `app.py` — `_reformat_pp()` callback + `key="pp_input"` on the
+  text_input; removed the now-redundant `💰` echo caption below the
+  field. `T5_VERSION` bumped to `0.1.3`.
+
+### Verification
+
+- 27 / 27 dashboard regression tests pass.
+- Parser behavior unchanged (12 / 12 input-shape smoke cases).
+
+---
+
 ## v0.1.2 — UI polish: currency input, headline box, compressed sidebar (2026-05-24)
 
 Three UX polish changes following walkthrough of v0.1.1:
