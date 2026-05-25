@@ -6,6 +6,51 @@ See [SPEC-T5.md](SPEC-T5.md) for the canonical spec.
 
 ---
 
+## v0.1.8 — Loading overlay visible across tabs + fires during work (2026-05-25)
+
+v0.1.7's overlay only worked when the user was on the Workspace tab,
+and only flashed briefly at the end of the operation. Two root causes:
+
+1. **Tab-scoped DOM:** `st.spinner` rendered inside `with top_tab_workspace:`,
+   placing the spinner DOM inside the workspace tab subtree. Streamlit
+   hides inactive tabs with `display: none`, which kills all descendants
+   including `position: fixed` ones. So the spinner was invisible when
+   the Dashboard tab was active.
+2. **Late paint:** Streamlit's native `st.spinner` widget DOM appeared
+   to lag behind the work for fast operations.
+
+Fix:
+
+- New module-level `st.empty()` slot (`_overlay_slot`) created above
+  the top-level tabs in `app.py`. Its DOM position is fixed above both
+  tab containers, so the overlay is never inside an inactive tab.
+- New `_show_loading(label)` `contextlib.contextmanager` that writes a
+  custom `<div class="t5-overlay">` markup into the slot on entry and
+  clears the slot on exit. The slot's `DeltaGenerator` is bound to its
+  module-level position, so calls from inside either tab still render
+  at the top.
+- Three operations in `app.py` switched from `st.spinner(...)` to
+  `_show_loading(...)`: rent roll parse, T12 parse, populated Analyzer
+  build.
+- CSS in `branding.py` now targets the `.t5-overlay` class directly
+  (the `[data-testid="stSpinner"]` selectors and the
+  `transform: scale(2.0)` / `::before` workarounds are gone — we own
+  the markup now).
+
+### Files
+
+- `app.py` — module-level `_overlay_slot` + `_show_loading()` helper;
+  three call-sites updated. `T5_VERSION` bumped to `0.1.8`.
+- `branding.py` — CSS rewritten to target `.t5-overlay`,
+  `.t5-overlay-ring`, `.t5-overlay-label` (custom markup we own).
+
+### Verification
+
+- 27 / 27 dashboard regression tests pass.
+- `ast.parse` clean on both files.
+
+---
+
 ## v0.1.7 — Custom ring spinner (replaces invisible Streamlit icon) (2026-05-25)
 
 v0.1.6 dimmed the page but the spinner icon itself wasn't visible —

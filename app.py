@@ -75,7 +75,7 @@ T12_LAST_UPDATED = "2026-05-11"
 AR_VERSION = "0.1.0"
 AR_LAST_UPDATED = "2026-05-23"
 
-T5_VERSION = "0.1.7"              # Track 5 — Webapp Dashboard Surface
+T5_VERSION = "0.1.8"              # Track 5 — Webapp Dashboard Surface
 T5_LAST_UPDATED = "2026-05-25"
 
 # Bundled Analyzer substrate (stamped at Cover!B8). Hand-maintained like the
@@ -592,6 +592,43 @@ with st.sidebar:
     st.caption(f"RR v{RR_VERSION} · T12 v{T12_VERSION} · AR v{AR_VERSION} · T5 v{T5_VERSION}")
 
 # ---------------------------------------------------------------------------
+# Module-level loading overlay slot (Track 5 v0.1.8)
+# ---------------------------------------------------------------------------
+# Created here, ABOVE the top-level tabs, so the overlay's DOM is never
+# inside an inactive tab (Streamlit uses display:none on inactive tabs,
+# which kills all descendants including position:fixed ones). The slot
+# captures a DeltaGenerator bound to this DOM position; later calls to
+# _show_loading(...) from inside either tab still render at this
+# module-level position.
+import contextlib  # local import to keep the heavy imports at the top of the file
+
+_overlay_slot = st.empty()
+
+
+@contextlib.contextmanager
+def _show_loading(label: str):
+    """Full-page loading overlay context manager.
+
+    Renders a custom HTML overlay into the module-level `_overlay_slot`
+    so the spinner is visible across tabs. CSS for `.t5-overlay` lives
+    in `branding.inject_brand_css()`.
+    """
+    _overlay_slot.markdown(
+        f"""
+        <div class="t5-overlay" role="status" aria-live="polite">
+            <div class="t5-overlay-ring"></div>
+            <div class="t5-overlay-label">{label}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    try:
+        yield
+    finally:
+        _overlay_slot.empty()
+
+
+# ---------------------------------------------------------------------------
 # Top-level switch tabs — Dashboard (clean slate) vs Workspace (everything else)
 # ---------------------------------------------------------------------------
 top_tab_dashboard, top_tab_workspace = st.tabs(["📊 Dashboard", "🛠️ Workspace"])
@@ -657,7 +694,7 @@ with top_tab_workspace:
     # Process — Rent Roll
     # ---------------------------------------------------------------------------
     try:
-        with st.spinner("Parsing rent roll…"):
+        with _show_loading("Parsing rent roll…"):
             mappings = load_mapping_workbook(mapping_file) if mapping_file else MappingSet()
             result = normalize_rent_roll(
                 rr_file,
@@ -702,7 +739,7 @@ with top_tab_workspace:
             )
             descmap = read_descmap_descriptions(analyzer_wb_for_descmap)
             descmap_labels_cached = _read_descmap_labels(analyzer_bytes_cached)
-            with st.spinner("Parsing T12…"):
+            with _show_loading("Parsing T12…"):
                 t12_parse_result = parse_t12(
                     raw_t12_file.getvalue(),
                     descmap,
@@ -1065,7 +1102,7 @@ with top_tab_workspace:
 
         if can_download:
             try:
-                with st.spinner("Building populated Analyzer…"):
+                with _show_loading("Building populated Analyzer…"):
                     # Step 1: Write RR data into the resolved Analyzer.
                     translated = translate_for_t12(c)
                     populated_after_rr = populate_rr_input(

@@ -164,55 +164,35 @@ def inject_brand_css() -> None:
         a, a:visited {{ color: {GOLD} !important; }}
 
         /* ───────────────────────────────────────────────────────────────
-           Full-page loading overlay (Track 5 v0.1.7)
-           Every st.spinner(...) becomes a modal-style overlay: dark
-           translucent backdrop covering the entire viewport, prominent
-           centered ring spinner + label. We DRAW our own spinner via
-           ::before on the overlay (instead of relying on Streamlit's
-           internal icon, whose DOM placement varies across versions and
-           may be tiny/hidden after our position:fixed override).
+           Full-page loading overlay (Track 5 v0.1.8)
+           Driven by a custom .t5-overlay element written into a
+           module-level st.empty() slot via the _show_loading
+           contextmanager in app.py. Lives ABOVE the top-level tabs
+           in the DOM, so it's not hidden when the inactive tab's
+           subtree has display:none. position:fixed makes it cover
+           the whole viewport regardless of slot height.
            ─────────────────────────────────────────────────────────────── */
-        [data-testid="stSpinner"], div.stSpinner {{
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            bottom: 0 !important;
-            width: 100vw !important;
-            height: 100vh !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            background: rgba(10, 22, 44, 0.86) !important;
+        .t5-overlay {{
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(10, 22, 44, 0.86);
             backdrop-filter: blur(3px);
             -webkit-backdrop-filter: blur(3px);
-            z-index: 999999 !important;
-            display: flex !important;
-            flex-direction: column !important;
-            align-items: center !important;
-            justify-content: center !important;
+            z-index: 999999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             gap: 1.6rem;
-            animation: t5-overlay-fade 0.18s ease-out;
-        }}
-        @keyframes t5-overlay-fade {{
-            from {{ opacity: 0; }}
-            to   {{ opacity: 1; }}
         }}
 
-        /* Hide Streamlit's tiny built-in spinner icon — we draw our own. */
-        [data-testid="stSpinner"] > div:first-child,
-        div.stSpinner > div:first-child,
-        [data-testid="stSpinner"] svg,
-        div.stSpinner svg,
-        [data-testid="stSpinner"] i,
-        div.stSpinner i {{
-            display: none !important;
-        }}
-
-        /* Our prominent ring spinner — drawn via ::before on the overlay. */
-        [data-testid="stSpinner"]::before,
-        div.stSpinner::before {{
-            content: "";
-            display: block;
+        /* Our prominent ring spinner — 90px gold-on-faint-white ring. */
+        .t5-overlay-ring {{
             width: 90px;
             height: 90px;
             border: 8px solid rgba(255, 255, 255, 0.12);
@@ -226,18 +206,14 @@ def inject_brand_css() -> None:
             to   {{ transform: rotate(360deg); }}
         }}
 
-        /* Spinner label text — large, white serif, centered below ring. */
-        [data-testid="stSpinner"] p,
-        div.stSpinner p,
-        [data-testid="stSpinner"] [data-testid="stMarkdownContainer"],
-        [data-testid="stSpinner"] [data-testid="stMarkdownContainer"] p {{
-            color: {WHITE} !important;
-            font-size: 1.25rem !important;
-            font-weight: 500 !important;
+        /* Overlay label — large, white serif, centered below ring. */
+        .t5-overlay-label {{
+            color: {WHITE};
+            font-size: 1.25rem;
+            font-weight: 500;
             letter-spacing: 0.03em;
             text-align: center;
-            margin: 0 !important;
-            font-family: Georgia, 'Times New Roman', serif !important;
+            font-family: Georgia, 'Times New Roman', serif;
             text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
         }}
         </style>
