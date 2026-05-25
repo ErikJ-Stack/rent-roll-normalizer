@@ -6,6 +6,41 @@ See [SPEC-T5.md](SPEC-T5.md) for the canonical spec.
 
 ---
 
+## v0.1.10 — Horizontal compact file uploader (2026-05-25)
+
+After a file is selected, Streamlit stacks the dropzone "+" button
+above the file card, taking ~60px of vertical sidebar space per
+uploader (180px total for RR + T12 + AR). Compressed via CSS in
+`branding.py`:
+
+- When `[data-testid="stFileUploader"]:has([data-testid="stFileUploaderFile"])`
+  matches (file is selected), the inner wrapper becomes
+  `display:flex; flex-direction:row`.
+- Dropzone shrinks to a `56px × 56px` square on the left with just
+  the "+" icon (the "Drag and drop or browse" instruction text is
+  hidden in this state since it doesn't fit).
+- File list expands to fill the remaining width on the right.
+
+Empty-state (no file uploaded) is unchanged — the wide drag-and-drop
+zone with instructions still renders normally.
+
+### Caveat
+
+CSS hacks on Streamlit's internal layout can break across Streamlit
+version bumps. Selectors target stable `data-testid` attributes
+(`stFileUploader`, `stFileUploaderDropzone`, `stFileUploaderFile`,
+`stFileUploaderFileList`) for resilience, but a future Streamlit DOM
+refactor could still require revisiting. If the file uploader looks
+broken after a Streamlit update, the offending block in
+`branding.py inject_brand_css()` is the prime suspect.
+
+### Files
+
+- `branding.py` — added the compact file-uploader CSS block.
+- `app.py` — `T5_VERSION` bumped to `0.1.10`.
+
+---
+
 ## v0.1.9 — Balance user-strip against Sign-out button (2026-05-25)
 
 The v0.1.4 compact auth strip looked unbalanced — `👤 erik` was at

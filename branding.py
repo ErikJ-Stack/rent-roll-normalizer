@@ -164,6 +164,57 @@ def inject_brand_css() -> None:
         a, a:visited {{ color: {GOLD} !important; }}
 
         /* ───────────────────────────────────────────────────────────────
+           Compact file uploader (Track 5 v0.1.10)
+           After a file is selected, lay the small "+" dropzone on the
+           left and the file card on the right (horizontal), instead of
+           stacking them vertically. Saves ~60px of sidebar space per
+           uploader. Uses :has() to scope the side-by-side rule to the
+           "file already uploaded" state — the empty-state dropzone keeps
+           its wide drag-and-drop UI. Targets stable data-testid
+           attributes for version resilience.
+           ─────────────────────────────────────────────────────────────── */
+
+        /* Tighten vertical rhythm globally inside file uploaders. */
+        [data-testid="stFileUploader"] section[data-testid="stFileUploaderDropzone"] {{
+            min-height: 56px !important;
+            padding: 0.5rem 0.75rem !important;
+        }}
+        [data-testid="stFileUploader"] [data-testid="stFileUploaderDeleteBtn"] {{
+            padding: 0.15rem !important;
+        }}
+
+        /* When a file is present (file-list contains items), make the inner
+           wrapper a horizontal flex row: dropzone shrinks to a square + button
+           on the left, file list expands on the right. */
+        [data-testid="stFileUploader"]:has([data-testid="stFileUploaderFile"]) > section,
+        [data-testid="stFileUploader"]:has([data-testid="stFileUploaderFile"]) > div {{
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: stretch !important;
+            gap: 0.5rem;
+        }}
+        [data-testid="stFileUploader"]:has([data-testid="stFileUploaderFile"]) section[data-testid="stFileUploaderDropzone"] {{
+            flex: 0 0 56px !important;
+            width: 56px !important;
+            min-width: 56px !important;
+            padding: 0 !important;
+            justify-content: center;
+        }}
+        /* Hide the dropzone instructions text when a file is already selected
+           (the wide "Drag and drop or browse" copy doesn't fit in 56px). */
+        [data-testid="stFileUploader"]:has([data-testid="stFileUploaderFile"]) section[data-testid="stFileUploaderDropzone"] > div:not(:has(button)),
+        [data-testid="stFileUploader"]:has([data-testid="stFileUploaderFile"]) section[data-testid="stFileUploaderDropzone"] small,
+        [data-testid="stFileUploader"]:has([data-testid="stFileUploaderFile"]) section[data-testid="stFileUploaderDropzone"] span {{
+            display: none !important;
+        }}
+        /* The file-list pane on the right grows to fill remaining width. */
+        [data-testid="stFileUploader"]:has([data-testid="stFileUploaderFile"]) [data-testid="stFileUploaderFileList"],
+        [data-testid="stFileUploader"]:has([data-testid="stFileUploaderFile"]) ul {{
+            flex: 1 1 auto !important;
+            margin: 0 !important;
+        }}
+
+        /* ───────────────────────────────────────────────────────────────
            Full-page loading overlay (Track 5 v0.1.8)
            Driven by a custom .t5-overlay element written into a
            module-level st.empty() slot via the _show_loading
