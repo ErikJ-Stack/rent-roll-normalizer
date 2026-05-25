@@ -75,7 +75,7 @@ T12_LAST_UPDATED = "2026-05-11"
 AR_VERSION = "0.1.0"
 AR_LAST_UPDATED = "2026-05-23"
 
-T5_VERSION = "0.1.0"              # Track 5 — Webapp Dashboard Surface
+T5_VERSION = "0.1.1"              # Track 5 — Webapp Dashboard Surface
 T5_LAST_UPDATED = "2026-05-24"
 
 # Bundled Analyzer substrate (stamped at Cover!B8). Hand-maintained like the
@@ -499,6 +499,23 @@ with st.sidebar:
         )
 
     st.divider()
+    st.subheader("Underwriting Inputs")
+    purchase_price_input = st.number_input(
+        "Purchase price ($)",
+        min_value=0,
+        value=0,
+        step=100_000,
+        format="%d",
+        help=(
+            "Used to compute the Going-in cap rate, EBITDAR cap rate, "
+            "and Price / bed tiles on the Dashboard tab. Leave at 0 to "
+            "leave those tiles unpopulated (you can still set the "
+            "value later in the downloaded Analyzer at "
+            "T12 Analytics!E117)."
+        ),
+    )
+
+    st.divider()
     st.subheader("Property Defaults")
     care_type_default = st.selectbox(
         "Care Type",
@@ -552,421 +569,389 @@ with st.sidebar:
     st.divider()
     st.caption(f"RR v{RR_VERSION} · T12 v{T12_VERSION} · AR v{AR_VERSION} · T5 v{T5_VERSION}")
 
-
 # ---------------------------------------------------------------------------
-# Resolve Analyzer source — bundled by default, override wins when present
+# Top-level switch tabs — Dashboard (clean slate) vs Workspace (everything else)
 # ---------------------------------------------------------------------------
-try:
-    analyzer_bytes_cached, analyzer_source_label, analyzer_substrate_ver = _load_analyzer(
-        analyzer_override_file
-    )
-except FileNotFoundError as e:
-    st.error(str(e))
-    st.stop()
+top_tab_dashboard, top_tab_workspace = st.tabs(["📊 Dashboard", "🛠️ Workspace"])
+
+with top_tab_workspace:
 
 
-# ---------------------------------------------------------------------------
-# Main — empty state
-# ---------------------------------------------------------------------------
-if rr_file is None:
-    st.info(f"Using Analyzer: **{analyzer_source_label}** (substrate {analyzer_substrate_ver}). Upload a rent roll to begin.")
-    with st.expander("What the app does"):
-        st.markdown(
-            """
-            **Track 1 — Rent Roll Normalizer**
-
-            - Detects the header row in the first ~20 rows.
-            - Parses parent-apartment / child-bed layouts: apartment rows
-              establish context, child rows become normalized beds.
-            - Auto-groups care charges by header prefix. Recognized buckets
-              (AL, Med Mgmt, Pharmacy) get their own columns; others roll
-              into **Other LOC $**.
-            - Normalizes apt type, bed status, payer type, and care level.
-            - Preserves vacant beds.
-            - Exports a 6-tab Excel.
-
-            **Track 2 — T12 Normalizer** *(new in T12 v0.1.0)*
-
-            - Detects T12 format (Yardi `Income to Budget`, MRI `R12MINCS`).
-            - Reads month labels from the source and normalizes to `MMM YYYY`.
-            - Drops grand-total rows and explicit non-operating lines.
-            - Writes GL detail to the Analyzer's `T12 Input` sheet.
-            - Surfaces UNMATCHED descriptions for in-app mapping; new
-              mappings persist in your downloaded Analyzer.
-
-            **Combined output:** When you upload a rent roll plus a raw T12,
-            you get a single populated Analyzer with both data sets, plus
-            any new mappings you supplied through the matcher form.
-
-            **Analyzer source:** The app uses the bundled Analyzer
-            (`ALF_Financial_Analyzer_Only.xlsx`) by default. To use a
-            different Analyzer for one session, expand
-            "Advanced — override Analyzer template" in the sidebar.
-            """
-        )
-    st.stop()
-
-
-# ---------------------------------------------------------------------------
-# Process — Rent Roll
-# ---------------------------------------------------------------------------
-try:
-    mappings = load_mapping_workbook(mapping_file) if mapping_file else MappingSet()
-    result = normalize_rent_roll(
-        rr_file,
-        sheet_name=sheet_override.strip() or None,
-        mappings=mappings,
-        property_care_type_default=care_type_default or None,
-    )
-except Exception as e:
-    st.error(f"Failed to process rent roll: {e}")
-    st.stop()
-
-n = result.normalized
-c = result.condensed
-
-if n.empty:
-    st.warning(
-        "No bed rows detected. Check that the file has a parent-apartment / "
-        "child-bed layout and that 'Bed' (or a similar column) identifies "
-        "child rows."
-    )
-    st.stop()
-
-summary    = build_summary(n)
-by_type    = build_by_type(n)
-exceptions = build_exceptions(n, result.unmapped)
-
-
-# ---------------------------------------------------------------------------
-# Process — T12 (if uploaded)
-# ---------------------------------------------------------------------------
-# T12 parsing requires the Analyzer's Description_Map. Since the Analyzer is
-# always available now (bundled default + optional override), T12 parsing
-# proceeds whenever a raw T12 is uploaded — no Analyzer-upload prerequisite.
-t12_parse_result = None
-t12_parse_error = None
-descmap_labels_cached: list[str] = []
-
-if raw_t12_file is not None:
+    # ---------------------------------------------------------------------------
+    # Resolve Analyzer source — bundled by default, override wins when present
+    # ---------------------------------------------------------------------------
     try:
-        analyzer_wb_for_descmap = openpyxl.load_workbook(
-            pd.io.common.BytesIO(analyzer_bytes_cached), data_only=True
+        analyzer_bytes_cached, analyzer_source_label, analyzer_substrate_ver = _load_analyzer(
+            analyzer_override_file
         )
-        descmap = read_descmap_descriptions(analyzer_wb_for_descmap)
-        descmap_labels_cached = _read_descmap_labels(analyzer_bytes_cached)
-        t12_parse_result = parse_t12(
-            raw_t12_file.getvalue(),
-            descmap,
-            annualize_partial_year=annualize_partial_year,
+    except FileNotFoundError as e:
+        st.error(str(e))
+        st.stop()
+
+
+    # ---------------------------------------------------------------------------
+    # Main — empty state
+    # ---------------------------------------------------------------------------
+    if rr_file is None:
+        st.info(f"Using Analyzer: **{analyzer_source_label}** (substrate {analyzer_substrate_ver}). Upload a rent roll to begin.")
+        with st.expander("What the app does"):
+            st.markdown(
+                """
+                **Track 1 — Rent Roll Normalizer**
+
+                - Detects the header row in the first ~20 rows.
+                - Parses parent-apartment / child-bed layouts: apartment rows
+                  establish context, child rows become normalized beds.
+                - Auto-groups care charges by header prefix. Recognized buckets
+                  (AL, Med Mgmt, Pharmacy) get their own columns; others roll
+                  into **Other LOC $**.
+                - Normalizes apt type, bed status, payer type, and care level.
+                - Preserves vacant beds.
+                - Exports a 6-tab Excel.
+
+                **Track 2 — T12 Normalizer** *(new in T12 v0.1.0)*
+
+                - Detects T12 format (Yardi `Income to Budget`, MRI `R12MINCS`).
+                - Reads month labels from the source and normalizes to `MMM YYYY`.
+                - Drops grand-total rows and explicit non-operating lines.
+                - Writes GL detail to the Analyzer's `T12 Input` sheet.
+                - Surfaces UNMATCHED descriptions for in-app mapping; new
+                  mappings persist in your downloaded Analyzer.
+
+                **Combined output:** When you upload a rent roll plus a raw T12,
+                you get a single populated Analyzer with both data sets, plus
+                any new mappings you supplied through the matcher form.
+
+                **Analyzer source:** The app uses the bundled Analyzer
+                (`ALF_Financial_Analyzer_Only.xlsx`) by default. To use a
+                different Analyzer for one session, expand
+                "Advanced — override Analyzer template" in the sidebar.
+                """
+            )
+        st.stop()
+
+
+    # ---------------------------------------------------------------------------
+    # Process — Rent Roll
+    # ---------------------------------------------------------------------------
+    try:
+        mappings = load_mapping_workbook(mapping_file) if mapping_file else MappingSet()
+        result = normalize_rent_roll(
+            rr_file,
+            sheet_name=sheet_override.strip() or None,
+            mappings=mappings,
+            property_care_type_default=care_type_default or None,
         )
-    except UnknownT12FormatError as e:
-        t12_parse_error = (
-            f"T12 format not recognized: {e}\n\n"
-            "Currently supported: Yardi (Income to Budget), MRI (R12MINCS), "
-            "Broker Financial Summary (`Historical Performance` header at A4). "
-            "Adding a new format requires extending the format-registry in "
-            "t12_normalizer.py — see SPEC-T12.md §\"Parser data flow\"."
-        )
-    except ValueError as e:
-        t12_parse_error = f"T12 parse error: {e}"
     except Exception as e:
-        t12_parse_error = f"Could not parse T12: {e}"
+        st.error(f"Failed to process rent roll: {e}")
+        st.stop()
 
+    n = result.normalized
+    c = result.condensed
 
-# ---------------------------------------------------------------------------
-# UNMATCHED matcher form — session-state driven
-# ---------------------------------------------------------------------------
-if "t12_resolutions" not in st.session_state:
-    st.session_state.t12_resolutions = {}
-
-unresolved_descriptions: list[str] = []
-if t12_parse_result is not None:
-    unresolved_descriptions = [
-        d for d in t12_parse_result.unmatched
-        if d not in st.session_state.t12_resolutions
-    ]
-
-
-# ---------------------------------------------------------------------------
-# Headline KPIs
-# ---------------------------------------------------------------------------
-colA, colB, colC, colD, colE = st.columns(5)
-total_beds = len(n)
-occ_beds = int((n["Status"] == "Occupied").sum())
-colA.metric("Total Beds", total_beds)
-colB.metric("Occupied", occ_beds)
-colC.metric(
-    "Bed Occupancy",
-    f"{100*occ_beds/total_beds:.1f}%" if total_beds else "0.0%",
-)
-colD.metric(
-    "Avg Actual (occ)",
-    f"${n.loc[n['Status']=='Occupied','Actual Rate'].mean():,.0f}" if occ_beds else "$0",
-)
-colE.metric("In-Place Monthly Rev", f"${n['Total Monthly Revenue'].sum():,.0f}")
-
-st.caption(
-    f"Header detected on row {result.header_row_idx + 1} (1-indexed). "
-    f"{len(result.care_groups)} care/ancillary column group(s) identified. "
-    f"Analyzer: {analyzer_source_label} (substrate {analyzer_substrate_ver})."
-)
-
-if result.property_care_type_default:
-    default_count = int((n["Care Type Source"] == "Property Default").sum())
-    source_count = int((n["Care Type Source"] == "Source").sum())
-    st.info(
-        f"**Property Care Type default applied: {result.property_care_type_default}** — "
-        f"used for {default_count} bed(s) where source had no Care Type. "
-        f"{source_count} bed(s) used an explicit source value."
-    )
-
-
-# ---------------------------------------------------------------------------
-# T12 status panel (only when relevant)
-# ---------------------------------------------------------------------------
-if raw_t12_file is not None:
-    st.divider()
-    st.subheader("T12 Normalizer")
-    if t12_parse_error is not None:
-        st.error(t12_parse_error)
-    elif t12_parse_result is not None:
-        # 5-column layout (was 4, with a duplicate-tc bug). Each metric in its
-        # own column so all five display.
-        ta, tb, tc, td, te = st.columns(5)
-        ta.metric("Format", t12_parse_result.format_name)
-        tb.metric("GL Rows Extracted", len(t12_parse_result.gl_rows))
-        # Use the most-recent populated label as period. Partial-year files may
-        # have leading "" labels (padded); skip those when picking display.
-        labels = [lbl for lbl in t12_parse_result.month_labels if lbl]
-        first_label = labels[0] if labels else "—"
-        last_label = labels[-1] if labels else "—"
-        tc.metric("Period (first month)", first_label)
-        td.metric("Period (last month)", last_label)
-        te.metric(
-            "UNMATCHED",
-            len(t12_parse_result.unmatched),
-            help="Descriptions not found in the Analyzer's Description_Map.",
+    if n.empty:
+        st.warning(
+            "No bed rows detected. Check that the file has a parent-apartment / "
+            "child-bed layout and that 'Bed' (or a similar column) identifies "
+            "child rows."
         )
+        st.stop()
 
-        # Cluster B (B-2): partial-year detection. Surface as a warning when
-        # < 12 months are populated. Annualization (if requested in the sidebar)
-        # has already been applied by parse_t12; the warning text reflects that.
-        if t12_parse_result.populated_months < 12:
-            n = t12_parse_result.populated_months
-            if t12_parse_result.was_annualized:
-                st.warning(
-                    f"⚠ T12 is partial-year ({n} months populated). Values were "
-                    f"scaled by 12/{n} per the sidebar checkbox. Ratios assume "
-                    f"flat seasonality — review against rent roll occupancy."
-                )
-            else:
-                st.warning(
-                    f"⚠ T12 is partial-year ({n} months populated). Ratios will "
-                    f"be misleading without annualization. Toggle "
-                    f"'Annualize partial-year T12' in the sidebar to scale "
-                    f"values by 12/{n}, or proceed knowing downstream metrics "
-                    f"reflect a {n}-month period."
-                )
-
-        # Cluster B (B-1): sign-convention guards. Defensive — none of the
-        # current verified fixtures trip these on standard signs.
-        for warning in t12_parse_result.sign_warnings:
-            st.warning(warning)
-
-        if t12_parse_result.unmatched:
-            n_resolved = len(t12_parse_result.unmatched) - len(unresolved_descriptions)
-            if unresolved_descriptions:
-                st.warning(
-                    f"⚠️ {len(unresolved_descriptions)} description(s) need mapping "
-                    f"before the combined Analyzer download is enabled. "
-                    f"({n_resolved} already resolved this session.)"
-                )
-
-                with st.form("unmatched_matcher", clear_on_submit=False):
-                    st.markdown(
-                        "**Map these descriptions before download.** Mappings "
-                        "will be appended to your Analyzer's Description_Map "
-                        "and persist for future uploads of the same operator."
-                    )
-                    new_resolutions: dict[str, dict] = {}
-
-                    for i, desc in enumerate(unresolved_descriptions):
-                        st.markdown(f"**{desc}**")
-                        c1, c2, c3, c4 = st.columns([3, 2, 1, 2])
-                        with c1:
-                            label_options = ["(select…)"] + descmap_labels_cached
-                            chosen_label = st.selectbox(
-                                "Label",
-                                options=label_options,
-                                key=f"label_{i}",
-                                label_visibility="collapsed",
-                            )
-                        with c2:
-                            chosen_section = st.selectbox(
-                                "Section",
-                                options=["(select…)"] + DESCMAP_SECTIONS,
-                                key=f"section_{i}",
-                                label_visibility="collapsed",
-                            )
-                        with c3:
-                            chosen_caretype = st.selectbox(
-                                "Care",
-                                options=DESCMAP_CARETYPES,
-                                index=0,
-                                key=f"caretype_{i}",
-                                label_visibility="collapsed",
-                            )
-                        with c4:
-                            chosen_flag = st.selectbox(
-                                "Flag",
-                                options=DESCMAP_FLAGS,
-                                index=0,
-                                key=f"flag_{i}",
-                                label_visibility="collapsed",
-                            )
-                        new_resolutions[desc] = {
-                            "description": desc,
-                            "label": None if chosen_label == "(select…)" else chosen_label,
-                            "section": None if chosen_section == "(select…)" else chosen_section,
-                            "caretype": chosen_caretype,
-                            "flag": chosen_flag or None,
-                        }
-
-                    submitted = st.form_submit_button(
-                        "✓ Apply mappings & enable download",
-                        use_container_width=True,
-                    )
-                    if submitted:
-                        bad = [
-                            d for d, m in new_resolutions.items()
-                            if not m["label"] or not m["section"]
-                        ]
-                        if bad:
-                            st.error(
-                                f"Each row needs a Label and Section. Missing: "
-                                f"{', '.join(bad[:3])}"
-                                f"{'…' if len(bad) > 3 else ''}"
-                            )
-                        else:
-                            st.session_state.t12_resolutions.update(new_resolutions)
-                            st.rerun()
-            else:
-                st.success(
-                    f"✓ All {len(t12_parse_result.unmatched)} UNMATCHED descriptions "
-                    "resolved. Combined Analyzer download is enabled."
-                )
-        else:
-            st.success("✓ Zero UNMATCHED — every description in the T12 already "
-                       "maps to a Label.")
+    summary    = build_summary(n)
+    by_type    = build_by_type(n)
+    exceptions = build_exceptions(n, result.unmapped)
 
 
-# ---------------------------------------------------------------------------
-# Tabs
-# ---------------------------------------------------------------------------
-st.divider()
-tab_condensed, tab_full, tab_summary, tab_bytype, tab_excep, tab_audit = st.tabs([
-    "Condensed RR",
-    "Normalized (full)",
-    "Summary",
-    "By Type",
-    "Exceptions",
-    "Mapping Audit",
-])
+    # ---------------------------------------------------------------------------
+    # Process — T12 (if uploaded)
+    # ---------------------------------------------------------------------------
+    # T12 parsing requires the Analyzer's Description_Map. Since the Analyzer is
+    # always available now (bundled default + optional override), T12 parsing
+    # proceeds whenever a raw T12 is uploaded — no Analyzer-upload prerequisite.
+    t12_parse_result = None
+    t12_parse_error = None
+    descmap_labels_cached: list[str] = []
 
-with tab_condensed:
-    st.subheader("Condensed RR — underwriting view")
-    st.caption(
-        "Filter and sort columns before exporting. Use the three-dot menu on "
-        "any column header to sort. Use the search box above the table to filter."
-    )
-    st.dataframe(
-        c,
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "Market Rate":   st.column_config.NumberColumn(format="$%.0f"),
-            "Actual Rate":   st.column_config.NumberColumn(format="$%.0f"),
-            "Concession $":  st.column_config.NumberColumn(format="$%.0f"),
-            "Care Level $":  st.column_config.NumberColumn(format="$%.0f"),
-            "Med Mgmt $":    st.column_config.NumberColumn(format="$%.0f"),
-            "Pharmacy $":    st.column_config.NumberColumn(format="$%.0f"),
-            "Other LOC $":   st.column_config.NumberColumn(format="$%.0f"),
-        },
-    )
-
-with tab_full:
-    st.subheader("Normalized_Beds — full detail")
-    st.dataframe(n, use_container_width=True, hide_index=True)
-
-with tab_summary:
-    st.subheader("RR_Summary — KPIs")
-    st.dataframe(summary, use_container_width=True, hide_index=True)
-
-with tab_bytype:
-    st.subheader("RR_By_Type — mix analysis")
-    st.dataframe(by_type, use_container_width=True, hide_index=True)
-
-with tab_excep:
-    st.subheader("RR_Exceptions — rows needing review")
-    if exceptions.empty:
-        st.success("No exceptions flagged.")
-    else:
-        st.warning(f"{len(exceptions)} issue(s) flagged.")
-        st.dataframe(exceptions, use_container_width=True, hide_index=True)
-
-with tab_audit:
-    st.subheader("Mapping_Reference — how source columns were classified")
-    st.dataframe(result.mapping_audit, use_container_width=True, hide_index=True)
-    with st.expander("Detected source headers"):
-        st.write(result.source_headers)
-    with st.expander("Unmapped values (add to your mapping workbook to clean up)"):
-        st.json(result.unmapped)
-
-
-# ---------------------------------------------------------------------------
-# Dashboard + Download (Track 5: webapp dashboard surface)
-# ---------------------------------------------------------------------------
-# Dashboard tab shows the same data as the downloaded Analyzer's Dashboard
-# sheet but rendered as native Streamlit (mobile-friendly, no Excel needed).
-# Download tab holds the existing standalone-RR + combined-Analyzer downloads.
-st.divider()
-tab_dashboard, tab_download = st.tabs(["📊 Dashboard", "⬇️ Download"])
-
-with tab_dashboard:
-    if t12_parse_result is None:
-        st.info(
-            "Upload a T12 file in the sidebar to populate the dashboard. "
-            "Most metrics (EGI, EBITDARM, cap rate, monthly trend) need T12 data."
-        )
-    else:
+    if raw_t12_file is not None:
         try:
-            _period_lbl = (
-                t12_parse_result.month_labels[-1]
-                if t12_parse_result.month_labels and t12_parse_result.month_labels[-1]
-                else period_date_input.isoformat()
+            analyzer_wb_for_descmap = openpyxl.load_workbook(
+                pd.io.common.BytesIO(analyzer_bytes_cached), data_only=True
             )
-            _property_name = (
-                derive_property_name(getattr(rr_file, "name", "")) or "Property"
+            descmap = read_descmap_descriptions(analyzer_wb_for_descmap)
+            descmap_labels_cached = _read_descmap_labels(analyzer_bytes_cached)
+            t12_parse_result = parse_t12(
+                raw_t12_file.getvalue(),
+                descmap,
+                annualize_partial_year=annualize_partial_year,
+            )
+        except UnknownT12FormatError as e:
+            t12_parse_error = (
+                f"T12 format not recognized: {e}\n\n"
+                "Currently supported: Yardi (Income to Budget), MRI (R12MINCS), "
+                "Broker Financial Summary (`Historical Performance` header at A4). "
+                "Adding a new format requires extending the format-registry in "
+                "t12_normalizer.py — see SPEC-T12.md §\"Parser data flow\"."
+            )
+        except ValueError as e:
+            t12_parse_error = f"T12 parse error: {e}"
+        except Exception as e:
+            t12_parse_error = f"Could not parse T12: {e}"
+
+
+    # ---------------------------------------------------------------------------
+    # UNMATCHED matcher form — session-state driven
+    # ---------------------------------------------------------------------------
+    if "t12_resolutions" not in st.session_state:
+        st.session_state.t12_resolutions = {}
+
+    unresolved_descriptions: list[str] = []
+    if t12_parse_result is not None:
+        unresolved_descriptions = [
+            d for d in t12_parse_result.unmatched
+            if d not in st.session_state.t12_resolutions
+        ]
+
+
+    # ---------------------------------------------------------------------------
+    # Headline KPIs
+    # ---------------------------------------------------------------------------
+    colA, colB, colC, colD, colE = st.columns(5)
+    total_beds = len(n)
+    occ_beds = int((n["Status"] == "Occupied").sum())
+    colA.metric("Total Beds", total_beds)
+    colB.metric("Occupied", occ_beds)
+    colC.metric(
+        "Bed Occupancy",
+        f"{100*occ_beds/total_beds:.1f}%" if total_beds else "0.0%",
+    )
+    colD.metric(
+        "Avg Actual (occ)",
+        f"${n.loc[n['Status']=='Occupied','Actual Rate'].mean():,.0f}" if occ_beds else "$0",
+    )
+    colE.metric("In-Place Monthly Rev", f"${n['Total Monthly Revenue'].sum():,.0f}")
+
+    st.caption(
+        f"Header detected on row {result.header_row_idx + 1} (1-indexed). "
+        f"{len(result.care_groups)} care/ancillary column group(s) identified. "
+        f"Analyzer: {analyzer_source_label} (substrate {analyzer_substrate_ver})."
+    )
+
+    if result.property_care_type_default:
+        default_count = int((n["Care Type Source"] == "Property Default").sum())
+        source_count = int((n["Care Type Source"] == "Source").sum())
+        st.info(
+            f"**Property Care Type default applied: {result.property_care_type_default}** — "
+            f"used for {default_count} bed(s) where source had no Care Type. "
+            f"{source_count} bed(s) used an explicit source value."
+        )
+
+
+    # ---------------------------------------------------------------------------
+    # T12 status panel (only when relevant)
+    # ---------------------------------------------------------------------------
+    if raw_t12_file is not None:
+        st.divider()
+        st.subheader("T12 Normalizer")
+        if t12_parse_error is not None:
+            st.error(t12_parse_error)
+        elif t12_parse_result is not None:
+            # 5-column layout (was 4, with a duplicate-tc bug). Each metric in its
+            # own column so all five display.
+            ta, tb, tc, td, te = st.columns(5)
+            ta.metric("Format", t12_parse_result.format_name)
+            tb.metric("GL Rows Extracted", len(t12_parse_result.gl_rows))
+            # Use the most-recent populated label as period. Partial-year files may
+            # have leading "" labels (padded); skip those when picking display.
+            labels = [lbl for lbl in t12_parse_result.month_labels if lbl]
+            first_label = labels[0] if labels else "—"
+            last_label = labels[-1] if labels else "—"
+            tc.metric("Period (first month)", first_label)
+            td.metric("Period (last month)", last_label)
+            te.metric(
+                "UNMATCHED",
+                len(t12_parse_result.unmatched),
+                help="Descriptions not found in the Analyzer's Description_Map.",
             )
 
-            _model = compute_dashboard(
-                rr_result=result,
-                t12_result=t12_parse_result,
-                ar_result=None,  # AR is parsed lazily at download time; future: lift up
-                property_name=_property_name,
-                period_label=_period_lbl,
-                purchase_price=None,  # analyst input; lives in T12 Analytics!E117
-            )
-            render_dashboard(_model)
-        except Exception as e:  # noqa: BLE001 — surface any compute issue without breaking the tab
-            st.error(f"Dashboard could not be rendered: {e}")
-            st.caption(
-                "This shouldn't happen — the downloaded Analyzer will still work. "
-                "Please report the error above."
-            )
+            # Cluster B (B-2): partial-year detection. Surface as a warning when
+            # < 12 months are populated. Annualization (if requested in the sidebar)
+            # has already been applied by parse_t12; the warning text reflects that.
+            if t12_parse_result.populated_months < 12:
+                n = t12_parse_result.populated_months
+                if t12_parse_result.was_annualized:
+                    st.warning(
+                        f"⚠ T12 is partial-year ({n} months populated). Values were "
+                        f"scaled by 12/{n} per the sidebar checkbox. Ratios assume "
+                        f"flat seasonality — review against rent roll occupancy."
+                    )
+                else:
+                    st.warning(
+                        f"⚠ T12 is partial-year ({n} months populated). Ratios will "
+                        f"be misleading without annualization. Toggle "
+                        f"'Annualize partial-year T12' in the sidebar to scale "
+                        f"values by 12/{n}, or proceed knowing downstream metrics "
+                        f"reflect a {n}-month period."
+                    )
 
-with tab_download:
+            # Cluster B (B-1): sign-convention guards. Defensive — none of the
+            # current verified fixtures trip these on standard signs.
+            for warning in t12_parse_result.sign_warnings:
+                st.warning(warning)
+
+            if t12_parse_result.unmatched:
+                n_resolved = len(t12_parse_result.unmatched) - len(unresolved_descriptions)
+                if unresolved_descriptions:
+                    st.warning(
+                        f"⚠️ {len(unresolved_descriptions)} description(s) need mapping "
+                        f"before the combined Analyzer download is enabled. "
+                        f"({n_resolved} already resolved this session.)"
+                    )
+
+                    with st.form("unmatched_matcher", clear_on_submit=False):
+                        st.markdown(
+                            "**Map these descriptions before download.** Mappings "
+                            "will be appended to your Analyzer's Description_Map "
+                            "and persist for future uploads of the same operator."
+                        )
+                        new_resolutions: dict[str, dict] = {}
+
+                        for i, desc in enumerate(unresolved_descriptions):
+                            st.markdown(f"**{desc}**")
+                            c1, c2, c3, c4 = st.columns([3, 2, 1, 2])
+                            with c1:
+                                label_options = ["(select…)"] + descmap_labels_cached
+                                chosen_label = st.selectbox(
+                                    "Label",
+                                    options=label_options,
+                                    key=f"label_{i}",
+                                    label_visibility="collapsed",
+                                )
+                            with c2:
+                                chosen_section = st.selectbox(
+                                    "Section",
+                                    options=["(select…)"] + DESCMAP_SECTIONS,
+                                    key=f"section_{i}",
+                                    label_visibility="collapsed",
+                                )
+                            with c3:
+                                chosen_caretype = st.selectbox(
+                                    "Care",
+                                    options=DESCMAP_CARETYPES,
+                                    index=0,
+                                    key=f"caretype_{i}",
+                                    label_visibility="collapsed",
+                                )
+                            with c4:
+                                chosen_flag = st.selectbox(
+                                    "Flag",
+                                    options=DESCMAP_FLAGS,
+                                    index=0,
+                                    key=f"flag_{i}",
+                                    label_visibility="collapsed",
+                                )
+                            new_resolutions[desc] = {
+                                "description": desc,
+                                "label": None if chosen_label == "(select…)" else chosen_label,
+                                "section": None if chosen_section == "(select…)" else chosen_section,
+                                "caretype": chosen_caretype,
+                                "flag": chosen_flag or None,
+                            }
+
+                        submitted = st.form_submit_button(
+                            "✓ Apply mappings & enable download",
+                            use_container_width=True,
+                        )
+                        if submitted:
+                            bad = [
+                                d for d, m in new_resolutions.items()
+                                if not m["label"] or not m["section"]
+                            ]
+                            if bad:
+                                st.error(
+                                    f"Each row needs a Label and Section. Missing: "
+                                    f"{', '.join(bad[:3])}"
+                                    f"{'…' if len(bad) > 3 else ''}"
+                                )
+                            else:
+                                st.session_state.t12_resolutions.update(new_resolutions)
+                                st.rerun()
+                else:
+                    st.success(
+                        f"✓ All {len(t12_parse_result.unmatched)} UNMATCHED descriptions "
+                        "resolved. Combined Analyzer download is enabled."
+                    )
+            else:
+                st.success("✓ Zero UNMATCHED — every description in the T12 already "
+                           "maps to a Label.")
+
+
+    # ---------------------------------------------------------------------------
+    # Tabs
+    # ---------------------------------------------------------------------------
+    st.divider()
+    tab_condensed, tab_full, tab_summary, tab_bytype, tab_excep, tab_audit = st.tabs([
+        "Condensed RR",
+        "Normalized (full)",
+        "Summary",
+        "By Type",
+        "Exceptions",
+        "Mapping Audit",
+    ])
+
+    with tab_condensed:
+        st.subheader("Condensed RR — underwriting view")
+        st.caption(
+            "Filter and sort columns before exporting. Use the three-dot menu on "
+            "any column header to sort. Use the search box above the table to filter."
+        )
+        st.dataframe(
+            c,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Market Rate":   st.column_config.NumberColumn(format="$%.0f"),
+                "Actual Rate":   st.column_config.NumberColumn(format="$%.0f"),
+                "Concession $":  st.column_config.NumberColumn(format="$%.0f"),
+                "Care Level $":  st.column_config.NumberColumn(format="$%.0f"),
+                "Med Mgmt $":    st.column_config.NumberColumn(format="$%.0f"),
+                "Pharmacy $":    st.column_config.NumberColumn(format="$%.0f"),
+                "Other LOC $":   st.column_config.NumberColumn(format="$%.0f"),
+            },
+        )
+
+    with tab_full:
+        st.subheader("Normalized_Beds — full detail")
+        st.dataframe(n, use_container_width=True, hide_index=True)
+
+    with tab_summary:
+        st.subheader("RR_Summary — KPIs")
+        st.dataframe(summary, use_container_width=True, hide_index=True)
+
+    with tab_bytype:
+        st.subheader("RR_By_Type — mix analysis")
+        st.dataframe(by_type, use_container_width=True, hide_index=True)
+
+    with tab_excep:
+        st.subheader("RR_Exceptions — rows needing review")
+        if exceptions.empty:
+            st.success("No exceptions flagged.")
+        else:
+            st.warning(f"{len(exceptions)} issue(s) flagged.")
+            st.dataframe(exceptions, use_container_width=True, hide_index=True)
+
+    with tab_audit:
+        st.subheader("Mapping_Reference — how source columns were classified")
+        st.dataframe(result.mapping_audit, use_container_width=True, hide_index=True)
+        with st.expander("Detected source headers"):
+            st.write(result.source_headers)
+        with st.expander("Unmapped values (add to your mapping workbook to clean up)"):
+            st.json(result.unmapped)
+
+
+    # ---------------------------------------------------------------------------
+    # Export downloads (Track 1 standalone + Track 2/3 combined Analyzer)
+    # ---------------------------------------------------------------------------
+    st.divider()
     st.subheader("Export")
 
     run_meta = {
@@ -1135,4 +1120,45 @@ with tab_download:
                 disabled=True,
                 use_container_width=True,
                 key="dl_combined_disabled",
+            )
+
+
+# ---------------------------------------------------------------------------
+# Top-level Dashboard tab — clean-slate render (Track 5)
+# ---------------------------------------------------------------------------
+with top_tab_dashboard:
+    if rr_file is None:
+        st.info("👈 Upload a Rent Roll in the **Workspace** tab to populate the dashboard.")
+    elif t12_parse_result is None:
+        st.info(
+            "📊 Rent Roll is parsed — upload a T12 in the **Workspace** tab "
+            "to populate the financial metrics on the dashboard."
+        )
+    else:
+        try:
+            _period_lbl = (
+                t12_parse_result.month_labels[-1]
+                if t12_parse_result.month_labels and t12_parse_result.month_labels[-1]
+                else period_date_input.isoformat()
+            )
+            _property_name = (
+                derive_property_name(getattr(rr_file, "name", "")) or "Property"
+            )
+            _purchase_price = (
+                float(purchase_price_input) if purchase_price_input and purchase_price_input > 0 else None
+            )
+            _model = compute_dashboard(
+                rr_result=result,
+                t12_result=t12_parse_result,
+                ar_result=None,
+                property_name=_property_name,
+                period_label=_period_lbl,
+                purchase_price=_purchase_price,
+            )
+            render_dashboard(_model)
+        except Exception as e:  # noqa: BLE001
+            st.error(f"Dashboard could not be rendered: {e}")
+            st.caption(
+                "This shouldn't happen — the downloaded Analyzer will still work. "
+                "Please report the error above."
             )

@@ -6,6 +6,41 @@ See [SPEC-T5.md](SPEC-T5.md) for the canonical spec.
 
 ---
 
+## v0.1.1 — Top-level Dashboard / Workspace tabs + purchase price input (2026-05-24)
+
+Two UX changes following live walkthrough of v0.1.0:
+
+- **Top-level switch tabs.** `st.tabs(["📊 Dashboard", "🛠️ Workspace"])` now
+  sits directly under the "Underwriting Intake" title. The Dashboard tab is
+  a clean slate — only the dashboard renders, no analyst review tables, no
+  parsing UI, no download buttons cluttering the view. The Workspace tab
+  holds everything else (RR + T12 + AR upload review, analyst sub-tabs,
+  Export downloads). v0.1.0's bottom-of-page nested `[Dashboard, Download]`
+  tabs are removed; downloads are now a flat `Export` section inside the
+  Workspace tab.
+- **Purchase price input** (`st.number_input`) added to the sidebar under
+  a new "Underwriting Inputs" section. Pipes through `compute_dashboard()`
+  as `purchase_price=<value>` so the **Going-in cap rate**, **EBITDAR cap**,
+  and **Price / bed** tiles populate without the analyst needing to open
+  the downloaded xlsx and set `T12 Analytics!E117`. Leave at 0 for the
+  default behavior (cap-rate tiles dim).
+
+### Files
+
+- `app.py` — restructured: top-level tabs after title, all main-pane
+  content wrapped in `with top_tab_workspace:`, clean dashboard render in
+  `with top_tab_dashboard:` at the very end (uses vars defined inside the
+  workspace block since Python `with` doesn't create scope). New sidebar
+  section "Underwriting Inputs" with `purchase_price_input`. `T5_VERSION`
+  bumped to `0.1.1`.
+
+### Verification
+
+- `python3 -m unittest tests.test_dashboard_model` → **27 / 27 pass**.
+- `ast.parse(app.py)` → clean.
+
+---
+
 ## v0.1.0 — Initial release: in-app Dashboard tab (2026-05-24)
 
 Track 5 seed release. Surfaces the same data as the bundled Analyzer's
