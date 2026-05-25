@@ -41,13 +41,18 @@ DEFAULT_APT_TYPE = [
 ]
 
 # -- Bed status --------------------------------------------------------------
-# Normalized targets: Occupied, Vacant, Hold, Notice, Model, Down
+# Normalized targets: Occupied, Vacant, Preleased, Hold, Notice, Model, Down
 DEFAULT_BED_STATUS = [
     # NTV (Notice To Vacate) must come before "occupied" — Homestead reports
     # "Occ w/ NTV" for residents on notice and we want that flagged as Notice,
     # not silently rolled into Occupied.
     (r"\bntv\b",                    "Notice"),
     (r"\boccupied\b",               "Occupied"),
+    # "Prelease" must come before "vacant" — Homestead reports "Vacant w/ Prelease"
+    # for empty units with a signed lease awaiting move-in. Preleased units offset
+    # exposure (Section N on Rent Roll Recon) since they're already on the way to
+    # being filled; collapsing them into plain Vacant would overstate risk.
+    (r"\bprelease",                 "Preleased"),
     (r"\bvacant\b",                 "Vacant"),
     (r"\bempty\b",                  "Vacant"),
     (r"\bavailable\b",              "Vacant"),

@@ -8,6 +8,57 @@ When making a code change in a chat, add an entry here in the same commit.
 
 ---
 
+## [1.18.0] — 2026-05-25
+
+### Summary
+
+**Closes UW-BACKLOG BL-0025** — move-out & preleased exposure surface. Companion to substrate v0.2.13.
+
+Two related gaps closed: (1) Homestead's "Vacant w/ Prelease" units (3 on the populated fixture) were collapsing to plain `Vacant` because `\bvacant\b` matched the source label before any prelease rule fired — exposure on Rent Roll Recon Section A was overstated. (2) `Move-out Date` had been captured into `Rent Roll Input!W` since v1.16.0 / substrate v0.1.10 but no Analyzer formula read it, so there was no underwriting "exposure" view (gross / net of preleased, forward NTV departure timeline). v1.18.0 fixes the parser side; substrate v0.2.13 adds the Section N exposure surface on Rent Roll Recon that consumes both signals.
+
+End-to-end on Homestead fixture (period 2026-04-24, 176 beds):
+- Status: Occupied 128 / Vacant 40 / Notice 5 / Preleased 3 (was: Vacant 43, Preleased 0).
+- N1 Net exposure: 7 IL / 18 AL / 17 MC = 42 total (23.9%); gross 8/20/17 = 45.
+- N2 ≤30d: 3 NTVs (Julius Mims 4/30, Peggy Salger 4/30, Thomas Winterbury 5/13 — all AL). 2 NTVs (Hedenburg, Stowe) have no scheduled date → "No date / past" bucket. Sanity: N2 Total = N1 On notice = 5.
+
+### What changed (parser)
+
+- **`mappings.py`** — `DEFAULT_BED_STATUS` extended with `(r"\bprelease", "Preleased")`, **ordered immediately before** `(r"\bvacant\b", "Vacant")`. Order matters: "Vacant w/ Prelease" must hit Preleased first. Plain "VACANT" (no prelease modifier) still maps to Vacant. Pattern uses `\bprelease` stem (no closing `\b`) so it matches both `Preleased` and `Prelease`.
+- **`normalizer.py`** — new `prelease_date` entry in `FIELD_PATTERNS` matching `^preleased$` (Homestead's bare "Preleased" column header — semantically the *date* the prelease was signed), plus generic `^pre[\- ]?lease(d)?\s*date$` and `^prelease\s*signed$`. New `"Preleased Date"` key on the per-row record dict. `CONDENSED_COLUMNS` extended by 1 (col 31, AE on Condensed_RR). The condensed-DataFrame construction at line ~1206 also gets the new field.
+- **`analyzer_rr_writer.py`** — new layout constant `COL_AI_INDEX = 35` and list `SOURCE_COLUMNS_AI = ["Preleased Date"]`. Idempotent clear of AI7:AI606 added (AH=34 is the substrate v0.1.13 Total Ancillary $ formula — DO NOT clear). New `has_v118_cols` gate so pre-v1.18.0 translated DFs still work. Write loop adds the AI cell with `mm/dd/yyyy` number format.
+- **`analyzer_rr_translator.py`** — docstring updated. `Preleased` passes through unchanged (no STATUS_MAP entry needed since unknown values are pass-through). Translator behavior unchanged.
+
+### What changed (substrate companion)
+
+See `CHANGELOG-T12.md` [Substrate template v0.2.13]. Summary:
+- `Rent Roll Input!E7:E606` DV list extended from 4 → 5 values (adds `Preleased`).
+- `Rent Roll Input!AI4` = "Preleased\nDate" header.
+- `Rent Roll Recon` Section N appended at rows 178-198 (no `insert_rows` — pure append). N1 = point-in-time (Occupied / Notice / Vacant / Preleased / Total / Gross / Net / Net %). N2 = forward NTV departures (≤30d / 31-60d / 61-90d / 91+d / No date or past / Total Notice sanity).
+
+### Why net = Notice + Vacant − Preleased
+
+Conventional ALF UW exposure framing. Gross = currently empty + leaving units. Preleased units offset gross because the lease is already signed; the unit is on the way to being filled, not a risk-bearing vacancy. The two are reported side-by-side so a reader can see both.
+
+### Files
+
+- `mappings.py` — DEFAULT_BED_STATUS extension + comment block.
+- `normalizer.py` — FIELD_PATTERNS extension + per-row dict entry + CONDENSED_COLUMNS extension + condensed-DataFrame construction.
+- `analyzer_rr_translator.py` — docstring.
+- `analyzer_rr_writer.py` — layout constants + clear range + write path.
+- `app.py` — RR_VERSION 1.17.5 → 1.18.0; ANALYZER_SUBSTRATE_VERSION 0.2.11 → 0.2.13 (the constant was lagging — v0.2.12 had shipped without updating it; v0.2.13 corrects both); RR_LAST_UPDATED + ANALYZER_LAST_UPDATED → 2026-05-25.
+- `tools/migration/migrate_to_v0213.py` (new) — DV extension + AI4 header + Section N append + version stamps. 8-check verify, idempotent.
+- `ALF_Financial_Analyzer_Only.xlsx` — bundled, migrated in place v0.2.12 → v0.2.13.
+- `SPEC-RR.md`, `SPEC-T12.md`, `CHANGELOG-RR.md` (this entry), `CHANGELOG-T12.md`, `CLAUDE.md`, `journal.md`, `UW-BACKLOG.md`.
+
+### Verification
+
+- Parser unit smoke: 176 rows on Homestead fixture, statuses 128/40/5/3 (was 128/43/5/0). `Preleased Date` column present in `condensed` (NaN for all 3 Homestead Preleased rows — source's `Preleased` column is empty for those units, expected).
+- Migration verify block: 8/8 OK (Cover B8 / DV / AI4 / Section N spot-checks / Preleased formula / Net formula / sheet count / 16 AZ4 anchors).
+- End-to-end populate → write → re-load: 128/40/5/3 status counts hold; col W populated for 3 NTVs (the 3 dated ones); col AI empty for the 3 Preleased (source has no date). Section N formulas wired correctly (Python equivalent reproduces 23.9% net exposure; matches expected Excel evaluation).
+- Idempotency: re-running migration on v0.2.13 output → "Workbook is already at v0.2.13. No-op (will re-save)."
+
+---
+
 ## [1.17.5] — 2026-05-15
 
 ### Summary

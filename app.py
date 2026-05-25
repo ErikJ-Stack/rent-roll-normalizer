@@ -66,8 +66,8 @@ from writer import write_output
 APP_VERSION = "1.14.0"            # alias for RR_VERSION; kept for back-compat
 APP_LAST_UPDATED = "2026-05-08"   # alias for RR_LAST_UPDATED
 
-RR_VERSION = "1.17.5"
-RR_LAST_UPDATED = "2026-05-15"
+RR_VERSION = "1.18.0"
+RR_LAST_UPDATED = "2026-05-25"
 
 T12_VERSION = "0.2.1"
 T12_LAST_UPDATED = "2026-05-11"
@@ -82,8 +82,8 @@ T5_LAST_UPDATED = "2026-05-25"
 # RR/T12 constants above — bump when the bundled workbook is updated. The
 # runtime "Using Analyzer ..." line still shows the value detected from the
 # file actually in use (handles uploaded overrides).
-ANALYZER_SUBSTRATE_VERSION = "0.2.11"
-ANALYZER_LAST_UPDATED = "2026-05-23"
+ANALYZER_SUBSTRATE_VERSION = "0.2.13"
+ANALYZER_LAST_UPDATED = "2026-05-25"
 
 
 # ---------------------------------------------------------------------------

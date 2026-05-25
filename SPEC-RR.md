@@ -6,7 +6,7 @@
 **Repo:** <https://github.com/ErikJ-Stack/rent-roll-normalizer> (public)
 **Owner:** Erik J (`Erikjayj@gmail.com`, GitHub: `ErikJ-Stack`)
 **Stack:** Python · Streamlit · pandas · openpyxl · Streamlit Community Cloud (free tier)
-**Current version:** v1.17.4 (2026-05-14) — Companion to substrate v0.2.2 (user-feedback round). Two parts: (1) `_detect_substrate_version()` sentinel addition for v0.2.2+ (Rent Roll Input!AH4 contains "Total" + "Ancillary"). (2) New parser-side `_reroute_recurring_concessions()` post-process pass in `normalizer.py` — concession dollars buried in `Misc.` GL with explanation in `Notes` (Homestead pattern) now route to `Concession $` instead of `Other LOC $` for recurring concessions, with end-date extraction. End-to-end smoke: 16/16 recurring + 1/1 one-time correctly classified across 17 Homestead rows. Prior: v1.17.3 (2026-05-14) version-detection regex widening (BL-0001 companion).
+**Current version:** v1.18.0 (2026-05-25) — Companion to substrate v0.2.13 (UW-BACKLOG **BL-0025**: move-out & preleased exposure surface). Parser additions: (1) `mappings.py` — new bed status **Preleased** via `(r"\bprelease", "Preleased")` ordered before `\bvacant\b`, so Homestead-style "Vacant w/ Prelease" maps to `Preleased` instead of silently collapsing to `Vacant` (3 IL/AL units on the Homestead fixture). (2) `normalizer.py` — new `prelease_date` field pattern catches Homestead's bare `Preleased` column header (semantically: date the prelease was signed); `Preleased Date` added to `CONDENSED_COLUMNS` as col 31 (AE on Condensed_RR). (3) `analyzer_rr_writer.py` — `Preleased Date` routes to `Rent Roll Input!AI` (AH=34 is reserved for the v0.1.13 Total Ancillary $ formula, so the new col sits at AI=35). (4) `analyzer_rr_translator.py` — docstring note (`Preleased` passes through unchanged, no STATUS_MAP entry needed). Companion substrate v0.2.13 ships `Rent Roll Recon` Section N (point-in-time exposure + forward NTV departure buckets) and extends Rent Roll Input!E DV to include `Preleased`. End-to-end on Homestead: net exposure 7/18/17 IL/AL/MC = 42 total (23.9%); 3 NTVs in ≤30d window, 2 NTVs with no scheduled date. Prior: v1.17.5 (2026-05-15) BL-0011 + BL-0013 + BL-0014 — completing the Track 1 misnamed-T12-symbol cleanup.
 
 ---
 
@@ -24,7 +24,7 @@ The Analyzer then drives the underwriting analysis (P&L, scenarios, returns) —
 * **Track 1 — Rent Roll Normalizer** (this document) — RR parsing, RR writer, Streamlit UI shell, Analyzer source resolution, period-date detection.
 * **Track 2 — T12 Normalizer** (`SPEC-T12.md`) — T12 parser (Yardi + MRI format registry), T12 writer (`T12 Input` sheet), `Description_Map` lookup, UNMATCHED matcher form.
 
-Both tracks ship in the same `app.py` and write into the same Analyzer workbook, but they have independent version streams. **Track 1 is at v1.17.4; Track 2 is at v0.2.1; bundled Analyzer substrate is at v0.2.2.**
+Both tracks ship in the same `app.py` and write into the same Analyzer workbook, but they have independent version streams. **Track 1 is at v1.18.0; Track 2 is at v0.2.1; bundled Analyzer substrate is at v0.2.13.**
 
 A persistent forward-looking backlog of UW workbook changes lives at [`UW-BACKLOG.md`](UW-BACKLOG.md). Add items there when a release surfaces a downstream need; close items by moving to the `Shipped` section. Cross-references use `BL-NNNN` IDs that stay stable across releases.
 

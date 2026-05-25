@@ -89,6 +89,9 @@ FIELD_PATTERNS: Dict[str, List[str]] = {
                         r"^move\s*out\s*date$",   # Homestead: "MoveOut Date" -> "moveout date"
                         r"^moveout\s*date$",
                         r"^rent\s*end$"],   # Homestead: "Rent End"
+    "prelease_date":   [r"^preleased$",            # Homestead: bare "Preleased" col is the signed-prelease date
+                        r"^pre[\- ]?lease(d)?\s*date$",
+                        r"^prelease\s*signed$"],
     "bed_status":      [r"^bed\s*status$",
                         r"^status$"],   # Homestead self-contained: one row per unit, "Status" = bed status
     "apt_status":      [r"^apartment\s*status$", r"^unit\s*status$"],
@@ -538,6 +541,12 @@ CONDENSED_COLUMNS = [
     # M2/M4 use these for per-fee capture-rate validation against the
     # operator's published schedule.
     "Meal Plan $", "Scooter Fee $", "Housekeeping $", "Laundry $", "Pet $",
+    # Col 31 (AE on Condensed_RR): new at v1.18.0 (UW-BACKLOG BL-0025).
+    # Date a prelease was signed for the unit (paired with Status="Preleased").
+    # Written to Rent Roll Input col AI by analyzer_rr_writer; Section N on
+    # Rent Roll Recon counts Preleased units against this and offsets gross
+    # exposure (Vacant + Notice) so net exposure isn't overstated.
+    "Preleased Date",
 ]
 
 
@@ -1073,6 +1082,7 @@ def normalize_rent_roll(
                 "Payer Type":         payer_norm,
                 "Move-in Date":       row.get(field_map.get("move_in")) if field_map.get("move_in") else "",
                 "Move-out Date":      row.get(field_map.get("move_out")) if field_map.get("move_out") else "",
+                "Preleased Date":     row.get(field_map.get("prelease_date")) if field_map.get("prelease_date") else "",
 
                 # --- Pricing
                 # Rates and TMR are blanked when zero so Excel COUNT() reflects
@@ -1199,6 +1209,8 @@ def normalize_rent_roll(
             "Housekeeping $":    normalized["Housekeeping $"],
             "Laundry $":         normalized["Laundry $"],
             "Pet $":             normalized["Pet $"],
+            # --- New at v1.18.0 (col 31, AE of Condensed_RR sheet) ---
+            "Preleased Date":    normalized["Preleased Date"],
         })
     else:
         condensed = pd.DataFrame(columns=CONDENSED_COLUMNS)

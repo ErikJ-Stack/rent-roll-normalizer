@@ -11,6 +11,66 @@ Newest at top.
 
 ---
 
+## 2026-05-25 — RR v1.18.0 + Substrate v0.2.13 — Move-out & preleased exposure (BL-0025)
+
+Cross-track session (Track 1 + Track 3), user-authorized at chat start. User: "in the homestead village RR, there are move outs, this isn't captured in the normalizer and not reflected in the analyzer. I need this captured for exposure."
+
+### Diagnosis
+
+Two related gaps surfaced from the Homestead Village v2 RR fixture:
+
+1. **3 "Vacant w/ Prelease" units (A4 / F1 / F2) were silently collapsing to plain `Vacant`** because `\bvacant\b` matched the source label before any prelease rule fired. Rent Roll Recon Section A's Vacant count was overstated by 3, and there was no way to surface that those units were already lined up to fill.
+2. **`Move-out Date` had been captured into `Rent Roll Input!W` since substrate v0.1.10 / RR v1.16.0 but no Analyzer formula read it.** No underwriting "exposure" view existed (gross / net of preleased, forward NTV departure timeline).
+
+User chose "Both — full end-to-end exposure pipeline" + "Both point-in-time AND forward NTV buckets" in the scoping question. That nailed the design: parser additions + new Section N on Rent Roll Recon.
+
+### What shipped
+
+- **`mappings.py`** — `DEFAULT_BED_STATUS` gets `(r"\bprelease", "Preleased")` ordered immediately before `\bvacant\b`. Order matters: "Vacant w/ Prelease" must hit Preleased first.
+- **`normalizer.py`** — `prelease_date` added to `FIELD_PATTERNS` (matches Homestead's bare `^preleased$` column header). `CONDENSED_COLUMNS` extended to 31 cols. Condensed-DataFrame construction at ~line 1206 also extended (almost missed this on first pass — `Preleased Date` not appearing in df until the explicit dict was updated).
+- **`analyzer_rr_writer.py`** — `COL_AI_INDEX = 35` + `SOURCE_COLUMNS_AI = ["Preleased Date"]` + idempotent clear of AI7:AI606. AH=34 reserved for v0.1.13 Total Ancillary $ formula — explicitly NOT cleared.
+- **`analyzer_rr_translator.py`** — docstring update only. `Preleased` passes through unchanged.
+- **`tools/migration/migrate_to_v0213.py` (new)** — 3 surface ops (DV extension, AI4 header, Section N append) + 17 version stamps. 8-check verify. Idempotent (gate: `Cover!B8 == "v0.2.13"` AND `Rent Roll Recon!A178` starts with "N"). Section N is a pure append at row 178 (max_row was 176 + a blank separator at 177) — no `insert_rows`, avoids the BL-0001 qualified-range-endpoint trap.
+- **Section N layout** — N1 (point-in-time, rows 180-189): Occupied / Notice / Vacant / Preleased / Total / Gross (Notice + Vacant) / **Net (Gross − Preleased)** / Net %. N2 (forward NTV, rows 191-198): ≤30d / 31-60d / 61-90d / 91+d / No date or past (residual) / Total Notice sanity. Time windows compute against `Rent Roll Recon!B2` (period dropdown).
+- **Bundled `ALF_Financial_Analyzer_Only.xlsx`** — migrated in place v0.2.12 → v0.2.13. Sheet count unchanged at 16; all 16 AZ4 anchors stamped.
+- **`app.py`** — `RR_VERSION` 1.17.5 → 1.18.0; `ANALYZER_SUBSTRATE_VERSION` 0.2.11 → 0.2.13 (the constant was lagging — v0.2.12 had shipped without updating it; v0.2.13 corrects both). `RR_LAST_UPDATED` + `ANALYZER_LAST_UPDATED` → 2026-05-25.
+- **Docs** — CHANGELOG-RR.md (v1.18.0 entry), CHANGELOG-T12.md (v0.2.13 entry), SPEC-RR.md (current version line + Track 1 version), SPEC-T12.md (substrate pointer), CLAUDE.md (Last updated + Closed-2026-05-25 entry), UW-BACKLOG.md (BL-0025 in Shipped).
+
+### Verification
+
+- **Parser smoke** on Homestead: 176 rows, statuses **128 Occupied / 40 Vacant / 5 Notice / 3 Preleased** (was 128/43/5/0 before — 3 preleased split from Vacant). `Preleased Date` column present in `condensed`; NaN for all 3 Homestead Preleased rows (source's `Preleased` column is empty for those units, as expected).
+- **Migration verify** — 8/8 OK (Cover B8 / DV / AI4 / Section N spot-checks / Preleased formula / Net formula / sheet count / 16 AZ4 anchors).
+- **End-to-end** — normalize → translate → populate → re-load: 128/40/5/3 status counts hold. Col W populated for 3 NTVs (the 3 dated ones); col AI empty for the 3 Preleased (source has no date — wiring is in place for operators that fill it).
+- **Section N evaluation** — openpyxl can't compute formulas, so I wrote a Python-equivalent reproduction of the COUNTIFS logic and verified expected values: **N1 Net exposure 7/18/17 IL/AL/MC = 42 (23.9%)**; **N2 ≤30d 0/3/0 = 3** (Julius Mims, Peggy Salger, Thomas Winterbury — all AL); **No date / past 0/2/0 = 2** (Hedenburg, Stowe). N2 Total Notice = 5 = N1 On notice (sanity).
+- **Idempotency** — re-running migration on v0.2.13 output → "Workbook is already at v0.2.13. No-op (will re-save)."
+
+### What drifted / lessons
+
+- **CONDENSED_COLUMNS list and the condensed-DataFrame dict are two places** that need to stay in sync when adding a column. First parser test showed the field absent from `condensed.columns` because only the per-row record dict at line ~1075 was updated; the explicit `condensed = pd.DataFrame({...})` reconstruction at ~line 1206 also needs the new field. Caught quickly. Worth noting for future column adds.
+- **`ANALYZER_SUBSTRATE_VERSION` in `app.py` was at `"0.2.11"`** when this session started — v0.2.12 had shipped without bumping the runtime constant. Caught during the version-bump pass; corrected to `"0.2.13"`. Future migration sessions should add a step to verify this constant matches the actual bundled file.
+
+### Files changed
+
+- `mappings.py`
+- `normalizer.py`
+- `analyzer_rr_translator.py`
+- `analyzer_rr_writer.py`
+- `app.py`
+- `tools/migration/migrate_to_v0213.py` (new)
+- `ALF_Financial_Analyzer_Only.xlsx`
+- `CLAUDE.md`, `journal.md` (this entry), `SPEC-RR.md`, `SPEC-T12.md`, `CHANGELOG-RR.md`, `CHANGELOG-T12.md`, `UW-BACKLOG.md`
+
+### Carry-forwards
+
+- Live operator RR with populated `Preleased Date` column would let the AI column show non-empty values (Homestead's empty `Preleased` is the only test fixture today).
+- If exposure analytics ever need to consider the `Hold`/`Model`/`Down` statuses, Section N's `Total beds` formula uses `A<>""` (any populated unit) — already inclusive. No change needed.
+
+### Commit(s)
+
+Pending — will be created at user request.
+
+---
+
 ## 2026-05-25 — Substrate v0.2.12 — Dashboard blended-vs-segment formula fixes (BL-0024)
 
 Track 3 follow-up to yesterday's Track 5 build. Yesterday's `dashboard_model.py` regression test discovered that three xlsx Dashboard headline tiles (B6 OCCUPANCY, F20 ADR, K6 REVPOR) reference segment-specific T12 Analytics cells (`F134` = AL-only, `F140` = MC-only, `F143` = MC-only) while their Dashboard labels say "Normalized community occupancy" / "Blended ADR" / "Normalized RevPOR." A worktree task was spawned to fix the xlsx side; that task's deliverable arrived as patch `0001fixDashboardblendedvssegmentformulamisrefssu.patch` at the repo root and was applied this morning.

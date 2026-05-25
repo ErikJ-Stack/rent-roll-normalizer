@@ -8,6 +8,81 @@ When making a code change in a T12-related chat, add an entry here in the same c
 
 ---
 
+## [Substrate template v0.2.13] — 2026-05-25
+
+### Summary
+
+Opens AND closes UW-BACKLOG **BL-0025** — move-out & preleased exposure surface. The Analyzer had no Rent Roll Recon section that exposed underwriting "exposure" (net of preleased, forward NTV departure timeline) even though Move-out Date had been captured into `Rent Roll Input!W` since substrate v0.1.10. Three surface changes ship in one migration:
+
+1. **`Rent Roll Input!E7:E606` data validation extended.** List goes from `"Occupied,Vacant,Notice,Eviction"` → `"Occupied,Vacant,Notice,Eviction,Preleased"`. Accepts the new `Preleased` bed status produced by RR v1.18.0 (Homestead-style "Vacant w/ Prelease" — was silently collapsing to plain Vacant before).
+2. **`Rent Roll Input!AI4` = "Preleased\nDate" header.** AH=34 is reserved for the v0.1.13 Total Ancillary $ formula; the new column sits at the next free col. `analyzer_rr_writer` (v1.18.0) routes the new `Preleased Date` field (from `Condensed_RR`) here. Date format `mm/dd/yyyy`. On Homestead the col is empty for all 3 Preleased units (source's `Preleased` column is unpopulated), but the wiring is in place for operators that fill it.
+3. **`Rent Roll Recon` Section N appended at rows 178-198.** Pure append — no `insert_rows` (avoids the BL-0001 qualified-range-endpoint shift trap on cross-sheet ranges). Two sub-sections:
+
+   **N1 — Point-in-time exposure (rows 180-189):**
+
+   | Row | Metric | Formula sketch |
+   |---|---|---|
+   | 182 | Occupied | `COUNTIFS(...E="Occupied",D=care)` |
+   | 183 | On notice | `COUNTIFS(...E="Notice",D=care)` |
+   | 184 | Vacant | `COUNTIFS(...E="Vacant",D=care)` (plain Vacant only — Preleased excluded) |
+   | 185 | Preleased | `COUNTIFS(...E="Preleased",D=care)` *(NEW status)* |
+   | 186 | Total beds | `COUNTIFS(...A<>"",D=care)` (mirrors A7) |
+   | 187 | Gross exposure (Notice + Vacant) | `=Bnnn+Bnnn` |
+   | 188 | Net exposure (Notice + Vacant − Preleased) | `=Gross − Preleased` |
+   | 189 | Net exposure % | `=IFERROR(Net/Total,"-")`, `0.0%` format |
+
+   **N2 — Forward NTV departures by move-out date (rows 191-198):**
+
+   | Row | Window | Formula sketch |
+   |---|---|---|
+   | 193 | ≤30 days | `COUNTIFS(...E="Notice",W>=B2,W<=B2+30)` |
+   | 194 | 31-60 days | `COUNTIFS(...E="Notice",W>B2+30,W<=B2+60)` |
+   | 195 | 61-90 days | `COUNTIFS(...E="Notice",W>B2+60,W<=B2+90)` |
+   | 196 | 91+ days | `COUNTIFS(...E="Notice",W>B2+90)` (open-ended) |
+   | 197 | No date / past | `=B183 − sum(B193:B196)` (residual; avoids OR-logic) |
+   | 198 | Total Notice (sanity) | `=SUM(B193:B197)` — should equal N1 row 183 |
+
+   `B2` is the Period dropdown on Rent Roll Recon (`MAX('Rent Roll Input'!$S$7:$S$606)` default since substrate v0.1.9). The residual `No date / past` bucket catches NTVs without a populated Move-out Date AND any with a date earlier than the period (data-entry error case).
+
+### Why net = Notice + Vacant − Preleased
+
+Conventional ALF UW exposure framing. Gross = currently empty + leaving units. Preleased offsets because the lease is already signed; the unit is on the way to being filled, not a risk-bearing vacancy. Both are surfaced (rows 187 + 188) so the reader sees the offset rather than just the net.
+
+### End-to-end on Homestead fixture (period 2026-04-24, 176 beds)
+
+- **N1:** Occupied 53/40/35 (128), Notice 0/5/0 (5), Vacant 8/15/17 (40), Preleased 1/2/0 (3), Total beds 62/62/52 (176). Gross 8/20/17 (45); **Net 7/18/17 (42)**; Net % 11.3% / 29.0% / 32.7% / **23.9% total**.
+- **N2:** ≤30d 0/3/0 (3 — Julius Mims 4/30, Peggy Salger 4/30, Thomas Winterbury 5/13). All other dated buckets zero. No date / past 0/2/0 (2 — Hedenburg, Stowe). Total Notice 5 matches N1 sanity.
+
+### Approach choices
+
+- **Append, not insert.** Section N goes at row 178 (max_row was 176 + a blank separator at 177). No `insert_rows` means no formula-shift sweep, no risk of the BL-0001 qualified-range-endpoint trap on the existing cross-sheet formulas.
+- **N1 rows reference Section A logic by **mirroring** the COUNTIFS** rather than `=B7` cross-row pulls. Slightly duplicated formula text, but the Section N rows stay self-contained (a future Section A refactor doesn't quietly break N).
+- **Preleased status: `\bprelease` rule ordered before `\bvacant\b`** in `mappings.py` (parser side, v1.18.0). Catches "Vacant w/ Prelease" / "Preleased" / "Prelease" stems. Plain "VACANT" still maps to Vacant.
+- **Residual formula for "No date / past"** (`=B183 - sum(B193:B196)`) avoids needing `OR(W="", W<B2)` in COUNTIFS. Side-benefit: includes any data-entry errors (move-out dates before the period) in the same bucket, surfacing them as "needs attention."
+
+### Verification
+
+- Migration script's 8-check verify block: Cover B8 / DV E7:E606 contains "Preleased" / AI4 header / 6 Section N spot-checks / Preleased formula references `E="Preleased"` / Net formula references Preleased row / sheet count = 16 / all 16 AZ4 anchors = v0.2.13. All OK.
+- End-to-end Homestead populate → re-load: status counts 128/40/5/3 hold (Preleased properly split from Vacant). Python-equivalent reproduction of Section N formulas confirms expected Excel evaluation: 23.9% net exposure, 3 NTVs in ≤30d bucket, 2 NTVs no-date.
+- Idempotency: re-running migration on v0.2.13 output → "Workbook is already at v0.2.13. No-op (will re-save)."
+- Sheet count unchanged at 16. No row inserts; no merged-range re-computation needed.
+
+### Bundled file
+
+`ALF_Financial_Analyzer_Only.xlsx` updated in place from v0.2.12 → v0.2.13 by running the migration script. Hand-edited sheets (Dashboard layout etc.) untouched.
+
+### Files
+
+- `tools/migration/migrate_to_v0213.py` (new — DV + AI4 header + Section N append + version stamps, idempotent).
+- `ALF_Financial_Analyzer_Only.xlsx` (modified — Rent Roll Input!E DV + AI4 + Rent Roll Recon Section N + Cover!B8 + 16 AZ4 anchors stamped v0.2.13).
+- `mappings.py`, `normalizer.py`, `analyzer_rr_translator.py`, `analyzer_rr_writer.py`, `app.py` (parser/writer side — see `CHANGELOG-RR.md` [1.18.0]).
+- `UW-BACKLOG.md` (BL-0025 added to Shipped section).
+- `SPEC-T12.md` (substrate version pointer updated to v0.2.13).
+- `SPEC-RR.md` (current version line updated to v1.18.0).
+- `CLAUDE.md` (Track 2 substrate version line + last-updated note refreshed).
+
+---
+
 ## [Substrate template v0.2.12] — 2026-05-25
 
 ### Summary

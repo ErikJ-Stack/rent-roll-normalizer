@@ -11,7 +11,11 @@ view clean while satisfying the T12's validation rules.
 
 T12 expected values per column (from Rent Roll Input data validations):
   D Care Type:    AL / MC / IL
-  E Status:       Occupied / Vacant / Notice / Eviction
+  E Status:       Occupied / Vacant / Notice / Eviction / Preleased
+                  (Preleased added in substrate v0.2.13 / RR v1.18.0 — vacant
+                  units with a signed prelease. Passes through unchanged from
+                  the normalizer's bed status output; no STATUS_MAP entry
+                  needed since unknown values pass through.)
   F Apt Type:     Studio / 1 Bedroom / 1 Bedroom Deluxe / 2 Bedroom /
                   2 Bedroom Deluxe / Semi-Private / Other
   K Care Level:   Basic / Level 2 / Level 3 / Level 4 / Level 5 /
