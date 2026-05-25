@@ -1,0 +1,3094 @@
+{
+  "template_sheets": {
+    "Prop Info": [
+      {
+        "row": 1,
+        "label": "PROPERTY INFORMATION & MARKET DATA"
+      },
+      {
+        "row": 2,
+        "label": "Blue = manual input. Use the AI Market Research tool (separate app) to auto-populate market fields."
+      },
+      {
+        "row": 3,
+        "label": "PROPERTY DETAILS"
+      },
+      {
+        "row": 4,
+        "label": "Property Name"
+      },
+      {
+        "row": 5,
+        "label": "Location / Address"
+      },
+      {
+        "row": 6,
+        "label": "# Units"
+      },
+      {
+        "row": 7,
+        "label": "# Buildings"
+      },
+      {
+        "row": 8,
+        "label": "Height (stories)"
+      },
+      {
+        "row": 9,
+        "label": "Year Built"
+      },
+      {
+        "row": 10,
+        "label": "Lot Size (acres)"
+      },
+      {
+        "row": 11,
+        "label": "Gross Sq Ft"
+      },
+      {
+        "row": 12,
+        "label": "Parking Spaces"
+      },
+      {
+        "row": 13,
+        "label": "Asset Class (IL/AL/MC/Mix)"
+      },
+      {
+        "row": 14,
+        "label": "License Type"
+      },
+      {
+        "row": 15,
+        "label": "Licensed Bed Count"
+      },
+      {
+        "row": 16,
+        "label": "IL Units"
+      },
+      {
+        "row": 17,
+        "label": "AL Units"
+      },
+      {
+        "row": 18,
+        "label": "MC Units"
+      },
+      {
+        "row": 19,
+        "label": "MARKET DATA"
+      },
+      {
+        "row": 20,
+        "label": "City / Market"
+      },
+      {
+        "row": 21,
+        "label": "MSA Name"
+      },
+      {
+        "row": 22,
+        "label": "MSA Population"
+      },
+      {
+        "row": 23,
+        "label": "City Population"
+      },
+      {
+        "row": 24,
+        "label": "Population Growth Rate"
+      },
+      {
+        "row": 25,
+        "label": "Senior 65+ Population"
+      },
+      {
+        "row": 26,
+        "label": "Senior 65+ Growth Rate"
+      },
+      {
+        "row": 27,
+        "label": "Avg Household Income"
+      },
+      {
+        "row": 28,
+        "label": "Median Income"
+      },
+      {
+        "row": 29,
+        "label": "School Ratings (1-10)"
+      },
+      {
+        "row": 30,
+        "label": "COMPETITIVE MARKET"
+      },
+      {
+        "row": 31,
+        "label": "Avg Monthly Base Rent — IL"
+      },
+      {
+        "row": 32,
+        "label": "Avg Monthly Base Rent — AL"
+      },
+      {
+        "row": 33,
+        "label": "Avg Monthly Base Rent — MC"
+      },
+      {
+        "row": 34,
+        "label": "Avg Care Services Fee"
+      },
+      {
+        "row": 35,
+        "label": "Competitor Occupancy Rate"
+      },
+      {
+        "row": 36,
+        "label": "New Supply — Beds Under Construction"
+      },
+      {
+        "row": 37,
+        "label": "Market Penetration Rate"
+      },
+      {
+        "row": 38,
+        "label": "UTILITIES"
+      },
+      {
+        "row": 39,
+        "label": "Electric Meter"
+      },
+      {
+        "row": 40,
+        "label": "Water Meter"
+      },
+      {
+        "row": 41,
+        "label": "Gas"
+      },
+      {
+        "row": 42,
+        "label": "Trash"
+      },
+      {
+        "row": 43,
+        "label": "OTHER NOTES"
+      },
+      {
+        "row": 44,
+        "label": "Other Property Information"
+      },
+      {
+        "row": 45,
+        "label": "Other Market Information"
+      },
+      {
+        "row": 46,
+        "label": "Survey / Regulatory Notes"
+      },
+      {
+        "row": 47,
+        "label": "Value-Add Thesis"
+      }
+    ],
+    "T-12 Analysis": [
+      {
+        "row": 1,
+        "label": "T-12 ANALYSIS  —  Trailing 12 Diagnostic Layer (Senior Living)"
+      },
+      {
+        "row": 2,
+        "label": "ANALYSIS on top. Standardized aggregation (Layer 3) and raw paste block (Layer 1) below — scroll down to access data. Per Bed/Month uses occupied beds from Rent Roll Analysis. Benchmarks calibrated to assisted/memory care community norms."
+      },
+      {
+        "row": 4,
+        "label": "B.  RECONCILIATION CHECK  —  Are all raw lines mapped?"
+      },
+      {
+        "row": 5,
+        "label": "EGI:"
+      },
+      {
+        "row": 7,
+        "label": "C.  TREND ANALYSIS  —  T-3 vs. T-6 vs. T-12 (annualized)"
+      },
+      {
+        "row": 8,
+        "label": "Metric"
+      },
+      {
+        "row": 9,
+        "label": "EGI"
+      },
+      {
+        "row": 10,
+        "label": "Total OpEx"
+      },
+      {
+        "row": 11,
+        "label": "EBITDAR"
+      },
+      {
+        "row": 12,
+        "label": "Bad Debt + Write-offs"
+      },
+      {
+        "row": 13,
+        "label": "Total Labor & Burden"
+      },
+      {
+        "row": 14,
+        "label": "Food Cost"
+      },
+      {
+        "row": 15,
+        "label": "Utilities"
+      },
+      {
+        "row": 16,
+        "label": "Overtime Wages"
+      },
+      {
+        "row": 18,
+        "label": "D.  ECONOMIC vs. PHYSICAL OCCUPANCY RECONCILIATION"
+      },
+      {
+        "row": 19,
+        "label": "Licensed Beds (IL + AL + MC)"
+      },
+      {
+        "row": 20,
+        "label": "Physically Occupied Beds"
+      },
+      {
+        "row": 21,
+        "label": "Physical Occupancy %"
+      },
+      {
+        "row": 22,
+        "label": "Gross Potential Rent / GPR (annual)"
+      },
+      {
+        "row": 23,
+        "label": "Net Rent Revenue (billed)"
+      },
+      {
+        "row": 24,
+        "label": "Total Revenue / EGI"
+      },
+      {
+        "row": 25,
+        "label": "Economic Occupancy % (Net Rent / GPR)"
+      },
+      {
+        "row": 26,
+        "label": "Economic vs. Physical Gap"
+      },
+      {
+        "row": 27,
+        "label": "→ Lost Revenue from Gap ($)"
+      },
+      {
+        "row": 29,
+        "label": "E.  BAD DEBT & WRITE-OFF LAYERED ANALYSIS"
+      },
+      {
+        "row": 30,
+        "label": "Component"
+      },
+      {
+        "row": 31,
+        "label": "Vacancy Loss"
+      },
+      {
+        "row": 32,
+        "label": "Bad Debt / Write-offs"
+      },
+      {
+        "row": 33,
+        "label": "Concessions & Specials"
+      },
+      {
+        "row": 34,
+        "label": "Delinquency Change"
+      },
+      {
+        "row": 35,
+        "label": "Total Rent Reductions"
+      },
+      {
+        "row": 37,
+        "label": "F.  TAX & INSURANCE ACCRUAL CHECK"
+      },
+      {
+        "row": 38,
+        "label": "T-12 actuals rarely equal pro forma. Triangulate RE taxes with reassessment estimate; insurance with lender quote."
+      },
+      {
+        "row": 40,
+        "label": "Real Estate Taxes"
+      },
+      {
+        "row": 41,
+        "label": "T-12 Actual"
+      },
+      {
+        "row": 42,
+        "label": "Pro Forma Estimate"
+      },
+      {
+        "row": 43,
+        "label": "Variance (Actual − PF)"
+      },
+      {
+        "row": 44,
+        "label": "Status"
+      },
+      {
+        "row": 46,
+        "label": "P&C Insurance"
+      },
+      {
+        "row": 47,
+        "label": "T-12 Actual"
+      },
+      {
+        "row": 48,
+        "label": "Pro Forma Estimate"
+      },
+      {
+        "row": 49,
+        "label": "Variance (Actual − PF)"
+      },
+      {
+        "row": 50,
+        "label": "Status"
+      },
+      {
+        "row": 54,
+        "label": "↓  ↓  ↓   DATA TIER BELOW — Standardized Aggregation (Layer 3) and Raw T-12 (Layer 1)   ↓  ↓  ↓"
+      },
+      {
+        "row": 55,
+        "label": "H.  LAYER 3: STANDARDIZED AGGREGATION  —  Bucket-level detail (paste from Analyzer UW Export, col E)"
+      },
+      {
+        "row": 56,
+        "label": "Standardized Bucket"
+      },
+      {
+        "row": 57,
+        "label": "INCOME"
+      },
+      {
+        "row": 58,
+        "label": "Gross Potential Rent (GPR)"
+      },
+      {
+        "row": 59,
+        "label": "Loss to Lease"
+      },
+      {
+        "row": 60,
+        "label": "Vacancy Loss"
+      },
+      {
+        "row": 61,
+        "label": "Concessions & Specials"
+      },
+      {
+        "row": 62,
+        "label": "Bad Debt / Write-offs"
+      },
+      {
+        "row": 63,
+        "label": "Net Rent Revenue"
+      },
+      {
+        "row": 64,
+        "label": "LOC / Care Services Revenue"
+      },
+      {
+        "row": 65,
+        "label": "Community / Move-in Fees"
+      },
+      {
+        "row": 66,
+        "label": "Respite Care Revenue"
+      },
+      {
+        "row": 67,
+        "label": "2nd Person Revenue"
+      },
+      {
+        "row": 68,
+        "label": "Other Community Revenue"
+      },
+      {
+        "row": 69,
+        "label": "EFFECTIVE GROSS INCOME (EGI)"
+      },
+      {
+        "row": 70,
+        "label": "LABOR  —  Wages & Burden"
+      },
+      {
+        "row": 71,
+        "label": "Care Staff Labor"
+      },
+      {
+        "row": 72,
+        "label": "Wellness / Care Coordinators"
+      },
+      {
+        "row": 73,
+        "label": "Contract / Agency Labor"
+      },
+      {
+        "row": 74,
+        "label": "Activities Labor"
+      },
+      {
+        "row": 75,
+        "label": "Dining / Food Service Labor"
+      },
+      {
+        "row": 76,
+        "label": "Maintenance & HK Labor"
+      },
+      {
+        "row": 77,
+        "label": "Administrative Labor"
+      },
+      {
+        "row": 78,
+        "label": "Bonus Wages"
+      },
+      {
+        "row": 79,
+        "label": "Overtime Wages"
+      },
+      {
+        "row": 80,
+        "label": "PTO Wages"
+      },
+      {
+        "row": 81,
+        "label": "Payroll Taxes"
+      },
+      {
+        "row": 82,
+        "label": "Employee Benefits"
+      },
+      {
+        "row": 83,
+        "label": "Workers' Comp Insurance"
+      },
+      {
+        "row": 84,
+        "label": "Employee 401(k)"
+      },
+      {
+        "row": 85,
+        "label": "TOTAL LABOR & BURDEN"
+      },
+      {
+        "row": 86,
+        "label": "NON-LABOR OPERATING EXPENSES"
+      },
+      {
+        "row": 87,
+        "label": "Food Cost"
+      },
+      {
+        "row": 88,
+        "label": "Dining & Kitchen Supplies"
+      },
+      {
+        "row": 89,
+        "label": "Nursing & Care Supplies"
+      },
+      {
+        "row": 90,
+        "label": "Recreation Supplies"
+      },
+      {
+        "row": 91,
+        "label": "R&M — Fixed"
+      },
+      {
+        "row": 92,
+        "label": "R&M — Variable"
+      },
+      {
+        "row": 93,
+        "label": "HK & Laundry Supplies"
+      },
+      {
+        "row": 94,
+        "label": "Sales, Adv. & Marketing"
+      },
+      {
+        "row": 95,
+        "label": "Referral Fees"
+      },
+      {
+        "row": 96,
+        "label": "Utilities"
+      },
+      {
+        "row": 97,
+        "label": "Telephone / IT"
+      },
+      {
+        "row": 98,
+        "label": "P&C Insurance"
+      },
+      {
+        "row": 99,
+        "label": "Auto Insurance"
+      },
+      {
+        "row": 100,
+        "label": "Fire / Security Monitoring"
+      },
+      {
+        "row": 101,
+        "label": "Pest Elimination"
+      },
+      {
+        "row": 102,
+        "label": "Real Estate Taxes"
+      },
+      {
+        "row": 103,
+        "label": "Personal Property Taxes"
+      },
+      {
+        "row": 104,
+        "label": "Legal Expenses"
+      },
+      {
+        "row": 105,
+        "label": "Professional Services"
+      },
+      {
+        "row": 106,
+        "label": "Bad Debt Expense"
+      },
+      {
+        "row": 107,
+        "label": "Permits, Licenses & Dues"
+      },
+      {
+        "row": 108,
+        "label": "Office, Admin & G&A"
+      },
+      {
+        "row": 109,
+        "label": "Other / Miscellaneous"
+      },
+      {
+        "row": 110,
+        "label": "Lease / Ground Lease"
+      },
+      {
+        "row": 111,
+        "label": "TOTAL NON-LABOR"
+      },
+      {
+        "row": 112,
+        "label": "MANAGEMENT & NOI"
+      },
+      {
+        "row": 113,
+        "label": "Management Fee"
+      },
+      {
+        "row": 114,
+        "label": "TOTAL OPERATING EXPENSES"
+      },
+      {
+        "row": 115,
+        "label": "EBITDARM"
+      },
+      {
+        "row": 116,
+        "label": "EBITDAR  (= NOI)"
+      },
+      {
+        "row": 119,
+        "label": "I.  LAYER 1: RAW T-12  (paste operator data here, then map column P to Layer 3 bucket)"
+      },
+      {
+        "row": 120,
+        "label": "Acct #"
+      },
+      {
+        "row": 173,
+        "label": "J.  RAW TOTALS  —  Source-of-truth sums (should match Section H subtotals)"
+      },
+      {
+        "row": 174,
+        "label": "Total Revenue (raw, income-mapped)"
+      },
+      {
+        "row": 175,
+        "label": "Total OpEx (raw, expense-mapped)"
+      },
+      {
+        "row": 176,
+        "label": "EBITDAR"
+      },
+      {
+        "row": 177,
+        "label": "Unmapped lines:"
+      }
+    ],
+    "Rent Roll Analysis": [
+      {
+        "row": 1,
+        "label": "RENT ROLL ANALYSIS  —  Diagnostic Layer (Senior Living)"
+      },
+      {
+        "row": 2,
+        "label": "ANALYSIS on top. Raw rent roll below — paste from RentrollApp-Cl output. AR aging columns Q–T blank (paste from Analyzer AR Input or operator AR aging report). Care level: IL = Independent Living · AL = Assisted Living · MC = Memory Care."
+      },
+      {
+        "row": 4,
+        "label": "B.  HEALTH CHECK  —  RR vs. Prop Info reconciliation"
+      },
+      {
+        "row": 5,
+        "label": "Date:"
+      },
+      {
+        "row": 7,
+        "label": "C.  CARE LEVEL CENSUS  —  Licensed beds, occupancy, and rate by level"
+      },
+      {
+        "row": 8,
+        "label": "Care Level"
+      },
+      {
+        "row": 9,
+        "label": "IL — Independent Living"
+      },
+      {
+        "row": 10,
+        "label": "AL — Assisted Living"
+      },
+      {
+        "row": 11,
+        "label": "MC — Memory Care"
+      },
+      {
+        "row": 12,
+        "label": "TOTAL"
+      },
+      {
+        "row": 14,
+        "label": "D.  RESIDENT STATUS TAXONOMY  —  Where everyone stands"
+      },
+      {
+        "row": 15,
+        "label": "Status Bucket"
+      },
+      {
+        "row": 16,
+        "label": "Occupied — Current (paying, no balance)"
+      },
+      {
+        "row": 17,
+        "label": "Occupied — Delinquent (30+ days past due)"
+      },
+      {
+        "row": 18,
+        "label": "Occupied — On Notice (30-day notice given)"
+      },
+      {
+        "row": 19,
+        "label": "Occupied — Respite / Short-term"
+      },
+      {
+        "row": 20,
+        "label": "Occupied — Hospice"
+      },
+      {
+        "row": 21,
+        "label": "Vacant — Turned (ready)"
+      },
+      {
+        "row": 22,
+        "label": "Vacant — Not Turned"
+      },
+      {
+        "row": 23,
+        "label": "Reserved / Pre-Admitted (signed, not in)"
+      },
+      {
+        "row": 24,
+        "label": "TOTAL"
+      },
+      {
+        "row": 25,
+        "label": "Tie-out: Occ + Vacant + Reserved = Licensed Beds  |  Occ Mkt + Vac Loss should tie to Section E GPR"
+      },
+      {
+        "row": 27,
+        "label": "E.  GPR RECONCILIATION  —  Three views of potential revenue"
+      },
+      {
+        "row": 28,
+        "label": "Metric"
+      },
+      {
+        "row": 29,
+        "label": "Market GPR  (all licensed beds × market rate × 12)"
+      },
+      {
+        "row": 30,
+        "label": "Scheduled GPR  (occupied × sched charges × 12)"
+      },
+      {
+        "row": 31,
+        "label": "Loss to Lease  (Market − Scheduled on occupied)"
+      },
+      {
+        "row": 32,
+        "label": "Loss to Lease %"
+      },
+      {
+        "row": 33,
+        "label": "Vacancy Loss  (vacant beds × market rate × 12)"
+      },
+      {
+        "row": 34,
+        "label": "Bad Debt Risk  (delinquent + on-notice × sched × 12)"
+      },
+      {
+        "row": 35,
+        "label": "LOC / Care Services Revenue  (Analyzer UW Output)"
+      },
+      {
+        "row": 36,
+        "label": "Economic GPR  (Market − LTL − Vac − Bad Debt + LOC)"
+      },
+      {
+        "row": 37,
+        "label": "Economic Occupancy %  (Econ GPR / Market GPR)"
+      },
+      {
+        "row": 38,
+        "label": "Current RR GPR — Occupied Scheduled (point-in-time)"
+      },
+      {
+        "row": 40,
+        "label": "F.  LENGTH OF STAY COHORT  —  How long residents have been here"
+      },
+      {
+        "row": 41,
+        "label": "Tenure"
+      },
+      {
+        "row": 42,
+        "label": "0–6 months"
+      },
+      {
+        "row": 43,
+        "label": "6–12 months"
+      },
+      {
+        "row": 44,
+        "label": "1–2 years"
+      },
+      {
+        "row": 45,
+        "label": "2–3 years"
+      },
+      {
+        "row": 46,
+        "label": "3+ years"
+      },
+      {
+        "row": 49,
+        "label": "G.  DAYS VACANT TRACKER  —  How long have the empty beds been empty?"
+      },
+      {
+        "row": 50,
+        "label": "Calculated from last discharge / move-out date. Blank discharge = unknown duration."
+      },
+      {
+        "row": 51,
+        "label": "Vacancy Bucket"
+      },
+      {
+        "row": 52,
+        "label": "0–30 days since discharge"
+      },
+      {
+        "row": 53,
+        "label": "31–90 days"
+      },
+      {
+        "row": 54,
+        "label": "90–180 days"
+      },
+      {
+        "row": 55,
+        "label": "180–365 days"
+      },
+      {
+        "row": 56,
+        "label": "365+ days"
+      },
+      {
+        "row": 57,
+        "label": "Discharge date unknown"
+      },
+      {
+        "row": 58,
+        "label": "Total Lost Annual Revenue"
+      },
+      {
+        "row": 61,
+        "label": "H.  DELINQUENCY  —  AR aging summary  (paste from Analyzer AR Input or operator aging report into cols Q–T)"
+      },
+      {
+        "row": 62,
+        "label": "Aging Bucket"
+      },
+      {
+        "row": 63,
+        "label": "0–30 Days"
+      },
+      {
+        "row": 64,
+        "label": "31–60 Days"
+      },
+      {
+        "row": 65,
+        "label": "61–90 Days"
+      },
+      {
+        "row": 66,
+        "label": "90+ Days"
+      },
+      {
+        "row": 67,
+        "label": "Total AR (from balance col)"
+      },
+      {
+        "row": 70,
+        "label": "I.  TOP-10 DELINQUENT RESIDENTS  —  Highest AR balances"
+      },
+      {
+        "row": 71,
+        "label": "Sorted by Balance descending. ✱✱ prefix = operator flagged for legal/collections action."
+      },
+      {
+        "row": 72,
+        "label": "Rank"
+      },
+      {
+        "row": 73,
+        "label": "1"
+      },
+      {
+        "row": 74,
+        "label": "2"
+      },
+      {
+        "row": 75,
+        "label": "3"
+      },
+      {
+        "row": 76,
+        "label": "4"
+      },
+      {
+        "row": 77,
+        "label": "5"
+      },
+      {
+        "row": 78,
+        "label": "6"
+      },
+      {
+        "row": 79,
+        "label": "7"
+      },
+      {
+        "row": 80,
+        "label": "8"
+      },
+      {
+        "row": 81,
+        "label": "9"
+      },
+      {
+        "row": 82,
+        "label": "10"
+      },
+      {
+        "row": 83,
+        "label": "Top 10 Total"
+      },
+      {
+        "row": 84,
+        "label": "Top 10 as % of total AR"
+      },
+      {
+        "row": 85,
+        "label": "Collections-flagged Residents (count)"
+      },
+      {
+        "row": 87,
+        "label": "J.  ADMISSION VELOCITY  —  Recent move-ins (how fast is this property leasing?)"
+      },
+      {
+        "row": 88,
+        "label": "Move-ins within last N days. Annualized pace helps benchmark against stabilized absorption assumptions."
+      },
+      {
+        "row": 89,
+        "label": "Window"
+      },
+      {
+        "row": 90,
+        "label": "Last 30 days"
+      },
+      {
+        "row": 91,
+        "label": "Last 60 days"
+      },
+      {
+        "row": 92,
+        "label": "Last 90 days"
+      },
+      {
+        "row": 93,
+        "label": "Last 180 days"
+      },
+      {
+        "row": 96,
+        "label": "K.  PAYER MIX  —  Revenue resilience and reimbursement risk"
+      },
+      {
+        "row": 97,
+        "label": "Medicaid/Medicare are government-backed (lower default risk). Private pay is market-sensitive. LTC Insurance is contractual but requires prior auth."
+      },
+      {
+        "row": 98,
+        "label": "Payer Type"
+      },
+      {
+        "row": 99,
+        "label": "Private Pay"
+      },
+      {
+        "row": 100,
+        "label": "Medicaid"
+      },
+      {
+        "row": 101,
+        "label": "Medicare"
+      },
+      {
+        "row": 102,
+        "label": "VA Benefits"
+      },
+      {
+        "row": 103,
+        "label": "LTC Insurance"
+      },
+      {
+        "row": 104,
+        "label": "Other / Unknown"
+      },
+      {
+        "row": 105,
+        "label": "TOTAL"
+      },
+      {
+        "row": 107,
+        "label": "Private Pay Concentration:"
+      },
+      {
+        "row": 109,
+        "label": "L.  RATE PER BED BY CARE LEVEL  —  Pricing posture vs. comp set"
+      },
+      {
+        "row": 110,
+        "label": "Compare avg scheduled rate to market rate from Rental Comps tab. >5% below market = recapture opportunity."
+      },
+      {
+        "row": 111,
+        "label": "Care Level"
+      },
+      {
+        "row": 112,
+        "label": "IL — Independent Living"
+      },
+      {
+        "row": 113,
+        "label": "AL — Assisted Living"
+      },
+      {
+        "row": 114,
+        "label": "MC — Memory Care"
+      },
+      {
+        "row": 115,
+        "label": "TOTAL"
+      },
+      {
+        "row": 118,
+        "label": "M.  CHARGE VARIANCE  —  Actual vs. Scheduled  (catches billing errors / undocumented concessions)"
+      },
+      {
+        "row": 119,
+        "label": "Variance Bucket"
+      },
+      {
+        "row": 120,
+        "label": "Actual > Scheduled (over-billed?)"
+      },
+      {
+        "row": 121,
+        "label": "Actual = Scheduled (clean)"
+      },
+      {
+        "row": 122,
+        "label": "Actual < Scheduled (under-billed / concession)"
+      },
+      {
+        "row": 123,
+        "label": "Net Variance (Actual − Scheduled, all occupied)"
+      },
+      {
+        "row": 126,
+        "label": "N.  DEPOSIT COVERAGE ON DELINQUENT RESIDENTS  —  Recovery expectation at move-out"
+      },
+      {
+        "row": 127,
+        "label": "Coverage Bucket"
+      },
+      {
+        "row": 128,
+        "label": "Fully covered  (deposit ≥ balance)"
+      },
+      {
+        "row": 129,
+        "label": "Partially covered  (0 < deposit < balance)"
+      },
+      {
+        "row": 130,
+        "label": "Zero deposit + balance owed"
+      },
+      {
+        "row": 131,
+        "label": "Total: Occupied with positive balance"
+      },
+      {
+        "row": 134,
+        "label": "O.  MOVE-IN SEASONALITY  —  When did current residents sign on?"
+      },
+      {
+        "row": 135,
+        "label": "Distribution of current occupied residents by month-of-move-in. Predicts expiration clusters and occupancy seasonality."
+      },
+      {
+        "row": 136,
+        "label": "Move-In Month"
+      },
+      {
+        "row": 137,
+        "label": "Jan"
+      },
+      {
+        "row": 138,
+        "label": "Feb"
+      },
+      {
+        "row": 139,
+        "label": "Mar"
+      },
+      {
+        "row": 140,
+        "label": "Apr"
+      },
+      {
+        "row": 141,
+        "label": "May"
+      },
+      {
+        "row": 142,
+        "label": "Jun"
+      },
+      {
+        "row": 143,
+        "label": "Jul"
+      },
+      {
+        "row": 144,
+        "label": "Aug"
+      },
+      {
+        "row": 145,
+        "label": "Sep"
+      },
+      {
+        "row": 146,
+        "label": "Oct"
+      },
+      {
+        "row": 147,
+        "label": "Nov"
+      },
+      {
+        "row": 148,
+        "label": "Dec"
+      },
+      {
+        "row": 150,
+        "label": "Peak move-in month"
+      },
+      {
+        "row": 151,
+        "label": "Q4 (Oct–Dec) % — typical SL peak"
+      },
+      {
+        "row": 153,
+        "label": "P.  PRE-ADMISSION PIPELINE  —  Deposits paid / signed, not yet moved in"
+      },
+      {
+        "row": 154,
+        "label": "Detected as residents with Lease Start / Admission date in the future or with \"Reserved\" status in raw roll."
+      },
+      {
+        "row": 155,
+        "label": "Pipeline Metric"
+      },
+      {
+        "row": 156,
+        "label": "Pre-admitted residents  (deposit paid)"
+      },
+      {
+        "row": 157,
+        "label": "Pre-admitted on currently vacant beds"
+      },
+      {
+        "row": 158,
+        "label": "Total committed monthly revenue (annualized)"
+      },
+      {
+        "row": 159,
+        "label": "Days to soonest admission"
+      },
+      {
+        "row": 160,
+        "label": "Avg days until pre-admission start"
+      },
+      {
+        "row": 163,
+        "label": "Q.  WING / CARE-LEVEL VACANCY CONCENTRATION  —  Catches localized issues"
+      },
+      {
+        "row": 164,
+        "label": "Vacancy clustered in one wing or care level often signals a localized problem (staffing, reputation, systems). Flag if any wing > 50% vacant."
+      },
+      {
+        "row": 165,
+        "label": "Wing / Level"
+      },
+      {
+        "row": 166,
+        "label": "IL Wing"
+      },
+      {
+        "row": 167,
+        "label": "AL Wing"
+      },
+      {
+        "row": 168,
+        "label": "MC Wing"
+      },
+      {
+        "row": 169,
+        "label": "TOTAL"
+      },
+      {
+        "row": 173,
+        "label": "↓  ↓  ↓   DATA TIER BELOW — Raw Rent Roll (paste from RentrollApp-Cl output)   ↓  ↓  ↓"
+      },
+      {
+        "row": 174,
+        "label": "Source: RentrollApp-Cl export  |  Legal/collections flag (col G) = TRUE if resident name starts with ** in source"
+      },
+      {
+        "row": 175,
+        "label": "R.  RAW RENT ROLL  —  250-resident capacity  (cols A–P primary data; Q–T = AR aging paste-in)"
+      },
+      {
+        "row": 176,
+        "label": "Wing"
+      }
+    ],
+    "P&L": [
+      {
+        "row": 1,
+        "label": "P&L — 10-YEAR PRO FORMA PROJECTIONS  (Active Scenario drives all inputs)"
+      },
+      {
+        "row": 2,
+        "label": "Blue = input | Black = formula | Green = cross-sheet. Escalators auto-pulled from annual averages. Override any cell and highlight yellow."
+      },
+      {
+        "row": 4,
+        "label": "ESCALATORS & ASSUMPTIONS"
+      },
+      {
+        "row": 5,
+        "label": "Annual Revenue Escalator"
+      },
+      {
+        "row": 6,
+        "label": "Annual Expense Escalator"
+      },
+      {
+        "row": 8,
+        "label": "Line Item"
+      },
+      {
+        "row": 9,
+        "label": "INCOME"
+      },
+      {
+        "row": 10,
+        "label": "Avg. Rent / Bed"
+      },
+      {
+        "row": 11,
+        "label": "Gross Potential Rent"
+      },
+      {
+        "row": 12,
+        "label": "Vacancy %"
+      },
+      {
+        "row": 13,
+        "label": "Less: Vacancy"
+      },
+      {
+        "row": 14,
+        "label": "Loss to Lease %"
+      },
+      {
+        "row": 15,
+        "label": "Less: Loss to Lease"
+      },
+      {
+        "row": 16,
+        "label": "Bad Debt / Concessions %"
+      },
+      {
+        "row": 17,
+        "label": "Less: Concessions/Bad Debt"
+      },
+      {
+        "row": 18,
+        "label": "Care Services Fees"
+      },
+      {
+        "row": 19,
+        "label": "2nd Person Revenue"
+      },
+      {
+        "row": 20,
+        "label": "Other Income"
+      },
+      {
+        "row": 21,
+        "label": "EFFECTIVE GROSS INCOME"
+      },
+      {
+        "row": 23,
+        "label": "EXPENSES"
+      },
+      {
+        "row": 24,
+        "label": "Advertising / Marketing"
+      },
+      {
+        "row": 25,
+        "label": "Contract Services"
+      },
+      {
+        "row": 26,
+        "label": "Gas & Electric"
+      },
+      {
+        "row": 27,
+        "label": "General / Admin"
+      },
+      {
+        "row": 28,
+        "label": "Insurance"
+      },
+      {
+        "row": 29,
+        "label": "Legal"
+      },
+      {
+        "row": 30,
+        "label": "Real Estate Taxes"
+      },
+      {
+        "row": 31,
+        "label": "Trash Removal"
+      },
+      {
+        "row": 32,
+        "label": "Management Fee (% EGI)"
+      },
+      {
+        "row": 33,
+        "label": "Payroll (from Staffing)"
+      },
+      {
+        "row": 34,
+        "label": "Repairs & Maintenance"
+      },
+      {
+        "row": 35,
+        "label": "Turnover"
+      },
+      {
+        "row": 36,
+        "label": "Water & Sewer"
+      },
+      {
+        "row": 37,
+        "label": "Food & Nutrition"
+      },
+      {
+        "row": 38,
+        "label": "CapEx / Replacement Reserve"
+      },
+      {
+        "row": 39,
+        "label": "TOTAL EXPENSES"
+      },
+      {
+        "row": 41,
+        "label": "NET OPERATING INCOME (NOI)"
+      },
+      {
+        "row": 42,
+        "label": "Operating Margin"
+      },
+      {
+        "row": 43,
+        "label": "DEBT SERVICE"
+      },
+      {
+        "row": 44,
+        "label": "Total Debt Service"
+      },
+      {
+        "row": 46,
+        "label": "CASH FLOW AFTER DEBT SERVICE"
+      },
+      {
+        "row": 48,
+        "label": "DISTRIBUTIONS FROM CASH FLOW"
+      },
+      {
+        "row": 49,
+        "label": "Asset Mgmt Fee (2.0% equity)"
+      },
+      {
+        "row": 50,
+        "label": "Class A LP Preferred Return"
+      },
+      {
+        "row": 51,
+        "label": "LP Excess CF Share (1 - GP Promote %)"
+      },
+      {
+        "row": 52,
+        "label": "GP Excess CF Share (GP Promote %)"
+      },
+      {
+        "row": 53,
+        "label": "Total Distributions"
+      },
+      {
+        "row": 55,
+        "label": "KEY METRICS & BREAKEVEN ANALYSIS"
+      },
+      {
+        "row": 56,
+        "label": "Cash on Cash Return"
+      },
+      {
+        "row": 57,
+        "label": "Average Cash on Cash (Y1–Y10)"
+      },
+      {
+        "row": 58,
+        "label": "Debt Coverage Ratio"
+      },
+      {
+        "row": 59,
+        "label": "Breakeven Occupancy %"
+      },
+      {
+        "row": 60,
+        "label": "NOI Margin"
+      },
+      {
+        "row": 61,
+        "label": "Cap Rate (on Purchase Price)"
+      },
+      {
+        "row": 62,
+        "label": "Property Value (@ 7% cap)"
+      },
+      {
+        "row": 63,
+        "label": "LP-SPECIFIC CASH YIELD  (from Waterfall distributions ÷ LP equity)"
+      },
+      {
+        "row": 64,
+        "label": "Class A LP Cash Yield (annual)"
+      },
+      {
+        "row": 65,
+        "label": "Avg Class A LP Cash Yield (hold period)"
+      },
+      {
+        "row": 66,
+        "label": "Total LP Cash Yield  (Class A + B)"
+      },
+      {
+        "row": 67,
+        "label": "Avg Total LP Cash Yield (hold period)"
+      },
+      {
+        "row": 68,
+        "label": "Note: LP Cash Yield uses actual Waterfall distributions (after pref + promote). Deal-level CoC (R51) uses total pre-distribution CF — different denominator and numerator."
+      }
+    ],
+    "Scenarios": [
+      {
+        "row": 1,
+        "label": "SIDE-BY-SIDE SCENARIO ANALYSIS  —  \"The 10-Minute Offer\""
+      },
+      {
+        "row": 2,
+        "label": "Active Scenario →"
+      },
+      {
+        "row": 3,
+        "label": "Selecting an active scenario drives P&L, Cover Sheet, and Waterfall calculations. All 4 columns always visible for comparison."
+      },
+      {
+        "row": 4,
+        "label": "Line Item"
+      },
+      {
+        "row": 5,
+        "label": "ACQUISITION"
+      },
+      {
+        "row": 6,
+        "label": "Asking Price"
+      },
+      {
+        "row": 7,
+        "label": "Purchase Price / Offer"
+      },
+      {
+        "row": 8,
+        "label": "# Units  (rooms)  /  Licensed Beds"
+      },
+      {
+        "row": 9,
+        "label": "Price Per Unit  (physical room)"
+      },
+      {
+        "row": 10,
+        "label": "Down Payment %"
+      },
+      {
+        "row": 11,
+        "label": "Down Payment $"
+      },
+      {
+        "row": 12,
+        "label": "Repairs / CapEx at Close"
+      },
+      {
+        "row": 13,
+        "label": "Operating Reserves"
+      },
+      {
+        "row": 14,
+        "label": "Est. Closing Costs"
+      },
+      {
+        "row": 15,
+        "label": "Acquisition Fee (%)"
+      },
+      {
+        "row": 16,
+        "label": "Acquisition Fee ($)"
+      },
+      {
+        "row": 17,
+        "label": "TOTAL ACQUISITION COST"
+      },
+      {
+        "row": 19,
+        "label": "DEBT STRUCTURE"
+      },
+      {
+        "row": 20,
+        "label": "Loan Amount (1st)"
+      },
+      {
+        "row": 21,
+        "label": "Loan Amount (2nd)"
+      },
+      {
+        "row": 22,
+        "label": "Supplemental Loan"
+      },
+      {
+        "row": 23,
+        "label": "Total Debt"
+      },
+      {
+        "row": 24,
+        "label": "LTV (Loan/Purchase Price)"
+      },
+      {
+        "row": 25,
+        "label": "LTC (Loan/Total Acq. Cost)"
+      },
+      {
+        "row": 27,
+        "label": "EQUITY STRUCTURE"
+      },
+      {
+        "row": 28,
+        "label": "GP Ownership %"
+      },
+      {
+        "row": 29,
+        "label": "Class A LP %"
+      },
+      {
+        "row": 30,
+        "label": "Class B LP % (auto)"
+      },
+      {
+        "row": 31,
+        "label": "Total Equity (Acq Cost − Debt)"
+      },
+      {
+        "row": 32,
+        "label": "GP Equity ($)"
+      },
+      {
+        "row": 33,
+        "label": "Class A LP Equity ($)"
+      },
+      {
+        "row": 34,
+        "label": "Class B LP Equity ($)"
+      },
+      {
+        "row": 35,
+        "label": "Class A Preferred Return %"
+      },
+      {
+        "row": 36,
+        "label": "GP Promote % (defaults to GP% — edit to override)"
+      },
+      {
+        "row": 37,
+        "label": "INCOME (YEAR 1 SNAPSHOT)  —  4-Scenario Model"
+      },
+      {
+        "row": 38,
+        "label": "── LICENSED BEDS BY CARE LEVEL ──"
+      },
+      {
+        "row": 39,
+        "label": "Licensed Beds — IL"
+      },
+      {
+        "row": 40,
+        "label": "Licensed Beds — AL"
+      },
+      {
+        "row": 41,
+        "label": "Licensed Beds — MC"
+      },
+      {
+        "row": 42,
+        "label": "Total Licensed Beds"
+      },
+      {
+        "row": 43,
+        "label": "── AVERAGE MONTHLY RATE / BED ──"
+      },
+      {
+        "row": 44,
+        "label": "Avg Monthly Rate — IL"
+      },
+      {
+        "row": 45,
+        "label": "Avg Monthly Rate — AL"
+      },
+      {
+        "row": 46,
+        "label": "Avg Monthly Rate — MC"
+      },
+      {
+        "row": 47,
+        "label": "── GROSS POTENTIAL RENT BY CARE LEVEL ──"
+      },
+      {
+        "row": 48,
+        "label": "GPR — IL"
+      },
+      {
+        "row": 49,
+        "label": "GPR — AL"
+      },
+      {
+        "row": 50,
+        "label": "GPR — MC"
+      },
+      {
+        "row": 51,
+        "label": "TOTAL GROSS POTENTIAL RENT"
+      },
+      {
+        "row": 52,
+        "label": "── VACANCY BY CARE LEVEL ──"
+      },
+      {
+        "row": 53,
+        "label": "Vacancy % — IL"
+      },
+      {
+        "row": 54,
+        "label": "Vacancy % — AL"
+      },
+      {
+        "row": 55,
+        "label": "Vacancy % — MC"
+      },
+      {
+        "row": 56,
+        "label": "Blended Vacancy % (GPR-Wtd)"
+      },
+      {
+        "row": 57,
+        "label": "Vacancy ($)"
+      },
+      {
+        "row": 58,
+        "label": "Loss to Lease %"
+      },
+      {
+        "row": 59,
+        "label": "Loss to Lease ($)"
+      },
+      {
+        "row": 60,
+        "label": "Concessions / Bad Debt %"
+      },
+      {
+        "row": 61,
+        "label": "Concessions / Bad Debt ($)"
+      },
+      {
+        "row": 62,
+        "label": "Care Services Fees %"
+      },
+      {
+        "row": 63,
+        "label": "Care Services Fees ($)"
+      },
+      {
+        "row": 64,
+        "label": "2nd Person Revenue"
+      },
+      {
+        "row": 65,
+        "label": "Other Income"
+      },
+      {
+        "row": 66,
+        "label": "EFFECTIVE GROSS INCOME"
+      },
+      {
+        "row": 67,
+        "label": "── OCCUPIED BEDS BY CARE LEVEL ──"
+      },
+      {
+        "row": 68,
+        "label": "Occupied Beds — IL"
+      },
+      {
+        "row": 69,
+        "label": "Occupied Beds — AL"
+      },
+      {
+        "row": 70,
+        "label": "Occupied Beds — MC"
+      },
+      {
+        "row": 71,
+        "label": "Total Occupied Beds"
+      },
+      {
+        "row": 72,
+        "label": "EXPENSES (YEAR 1)"
+      },
+      {
+        "row": 73,
+        "label": "Line Item"
+      },
+      {
+        "row": 74,
+        "label": "Advertising / Marketing"
+      },
+      {
+        "row": 75,
+        "label": "Contract Services"
+      },
+      {
+        "row": 76,
+        "label": "Gas & Electric"
+      },
+      {
+        "row": 77,
+        "label": "General / Admin"
+      },
+      {
+        "row": 78,
+        "label": "Insurance"
+      },
+      {
+        "row": 79,
+        "label": "Legal"
+      },
+      {
+        "row": 80,
+        "label": "Real Estate Taxes"
+      },
+      {
+        "row": 81,
+        "label": "Trash Removal"
+      },
+      {
+        "row": 82,
+        "label": "Management Fee"
+      },
+      {
+        "row": 83,
+        "label": "Payroll"
+      },
+      {
+        "row": 84,
+        "label": "Repairs & Maintenance"
+      },
+      {
+        "row": 85,
+        "label": "Turnover"
+      },
+      {
+        "row": 86,
+        "label": "Water & Sewer"
+      },
+      {
+        "row": 87,
+        "label": "Food & Nutrition"
+      },
+      {
+        "row": 88,
+        "label": "CapEx / Replacement Reserve"
+      },
+      {
+        "row": 89,
+        "label": "TOTAL EXPENSES"
+      },
+      {
+        "row": 91,
+        "label": "NET OPERATING INCOME"
+      },
+      {
+        "row": 93,
+        "label": "DEAL SUMMARY METRICS"
+      },
+      {
+        "row": 94,
+        "label": "Cap Rate (NOI/Purchase Price)"
+      },
+      {
+        "row": 95,
+        "label": "Debt Service (Annual)"
+      },
+      {
+        "row": 96,
+        "label": "Cash Flow After Debt Service"
+      },
+      {
+        "row": 97,
+        "label": "Debt Coverage Ratio"
+      },
+      {
+        "row": 98,
+        "label": "Market Cap Rate"
+      },
+      {
+        "row": 99,
+        "label": "Fair Market Value (NOI/Mkt Cap)"
+      },
+      {
+        "row": 100,
+        "label": "Exit Year"
+      },
+      {
+        "row": 101,
+        "label": "Exit Cap Rate"
+      },
+      {
+        "row": 103,
+        "label": "DEBT STRUCTURE — PER-SCENARIO LOAN INPUTS  (drives Loans, Waterfall & P&L)"
+      },
+      {
+        "row": 104,
+        "label": "Blue = input per scenario. Active scenario col F feeds all downstream sheets. Use $0 for unused tranches."
+      },
+      {
+        "row": 105,
+        "label": "1ST LOAN — SENIOR / PRIMARY"
+      },
+      {
+        "row": 106,
+        "label": "Loan Amount — 1st ($)"
+      },
+      {
+        "row": 107,
+        "label": "Interest Rate — 1st (%)"
+      },
+      {
+        "row": 108,
+        "label": "Amortization (years) — 1st"
+      },
+      {
+        "row": 109,
+        "label": "Loan Term (years) — 1st"
+      },
+      {
+        "row": 110,
+        "label": "Interest-Only Period (months) — 1st"
+      },
+      {
+        "row": 111,
+        "label": "Origination Fee % — 1st"
+      },
+      {
+        "row": 112,
+        "label": "2ND LOAN — MEZZANINE / BRIDGE"
+      },
+      {
+        "row": 113,
+        "label": "Loan Amount — 2nd ($)"
+      },
+      {
+        "row": 114,
+        "label": "Interest Rate — 2nd (%)"
+      },
+      {
+        "row": 115,
+        "label": "Amortization (years) — 2nd"
+      },
+      {
+        "row": 116,
+        "label": "Loan Term (years) — 2nd"
+      },
+      {
+        "row": 117,
+        "label": "Interest-Only Period (months) — 2nd"
+      },
+      {
+        "row": 118,
+        "label": "Origination Fee % — 2nd"
+      },
+      {
+        "row": 119,
+        "label": "SUPPLEMENTAL — SBA / SELLER CARRY"
+      },
+      {
+        "row": 120,
+        "label": "Loan Amount — Supplemental ($)"
+      },
+      {
+        "row": 121,
+        "label": "Interest Rate — Supplemental (%)"
+      },
+      {
+        "row": 122,
+        "label": "Amortization (years) — Supplemental"
+      },
+      {
+        "row": 123,
+        "label": "Loan Term (years) — Supplemental"
+      },
+      {
+        "row": 124,
+        "label": "Interest-Only Period (months) — Supplemental"
+      },
+      {
+        "row": 125,
+        "label": "Origination Fee % — Supplemental"
+      },
+      {
+        "row": 126,
+        "label": "CALCULATED METRICS (auto — do not edit)"
+      },
+      {
+        "row": 127,
+        "label": "Monthly Payment — 1st"
+      },
+      {
+        "row": 128,
+        "label": "Monthly Payment — 2nd"
+      },
+      {
+        "row": 129,
+        "label": "Monthly Payment — Supplemental"
+      },
+      {
+        "row": 130,
+        "label": "Annual DS — 1st"
+      },
+      {
+        "row": 131,
+        "label": "Annual DS — 2nd"
+      },
+      {
+        "row": 132,
+        "label": "Annual DS — Supplemental"
+      },
+      {
+        "row": 133,
+        "label": "TOTAL ANNUAL DEBT SERVICE"
+      },
+      {
+        "row": 134,
+        "label": "Total Loan Balance at Exit (payoff)"
+      },
+      {
+        "row": 135,
+        "label": "Total Debt — All Tranches"
+      },
+      {
+        "row": 136,
+        "label": "LTV — Total Debt / Purchase Price"
+      },
+      {
+        "row": 137,
+        "label": "LTC — Total Debt / Total Acquisition Cost"
+      }
+    ],
+    "Acquisition Costs": [
+      {
+        "row": 1,
+        "label": "ACQUISITION COSTS — USE OF CAPITAL"
+      },
+      {
+        "row": 3,
+        "label": "USE OF CAPITAL SUMMARY"
+      },
+      {
+        "row": 4,
+        "label": "Purchase Price"
+      },
+      {
+        "row": 5,
+        "label": "Less: Total Loan Amount"
+      },
+      {
+        "row": 6,
+        "label": "Down Payment Required"
+      },
+      {
+        "row": 7,
+        "label": "Closing Costs"
+      },
+      {
+        "row": 8,
+        "label": "Acquisition Fee"
+      },
+      {
+        "row": 9,
+        "label": "Repair Escrow / CapEx"
+      },
+      {
+        "row": 10,
+        "label": "Operating Reserves"
+      },
+      {
+        "row": 11,
+        "label": "TOTAL CASH AT CLOSE"
+      },
+      {
+        "row": 13,
+        "label": "CLOSING COSTS DETAIL"
+      },
+      {
+        "row": 14,
+        "label": "Item"
+      },
+      {
+        "row": 15,
+        "label": "LENDER FEES & THIRD-PARTY COSTS"
+      },
+      {
+        "row": 16,
+        "label": "Environmental (EDR)"
+      },
+      {
+        "row": 17,
+        "label": "Appraisal"
+      },
+      {
+        "row": 18,
+        "label": "Structural Inspection"
+      },
+      {
+        "row": 19,
+        "label": "Lender Legal Fees"
+      },
+      {
+        "row": 20,
+        "label": "Bank Doc Prep Fee"
+      },
+      {
+        "row": 21,
+        "label": "Origination Fee"
+      },
+      {
+        "row": 22,
+        "label": "TITLE & CLOSING COSTS"
+      },
+      {
+        "row": 23,
+        "label": "Title Policy"
+      },
+      {
+        "row": 24,
+        "label": "Survey"
+      },
+      {
+        "row": 25,
+        "label": "Recording"
+      },
+      {
+        "row": 26,
+        "label": "Transfer Taxes"
+      },
+      {
+        "row": 27,
+        "label": "Title Processing Fee"
+      },
+      {
+        "row": 28,
+        "label": "Title Search"
+      },
+      {
+        "row": 29,
+        "label": "Attorney Fees"
+      },
+      {
+        "row": 30,
+        "label": "OTHER COSTS"
+      },
+      {
+        "row": 31,
+        "label": "Legal (LLC, PPM, OA)"
+      },
+      {
+        "row": 32,
+        "label": "Property Inspection"
+      },
+      {
+        "row": 33,
+        "label": "Travel"
+      },
+      {
+        "row": 34,
+        "label": "Miscellaneous"
+      },
+      {
+        "row": 35,
+        "label": "RE Taxes"
+      },
+      {
+        "row": 36,
+        "label": "Insurance"
+      },
+      {
+        "row": 37,
+        "label": "TOTAL CLOSING & OTHER COSTS"
+      }
+    ]
+  },
+  "uw_output": [
+    {
+      "row": 1,
+      "label": "UW Output  —  T12 Actuals & Normalized  |  Copy / Paste to ALF UW Template",
+      "has_e": false,
+      "has_f": false,
+      "e_formula": null,
+      "f_formula": null
+    },
+    {
+      "row": 2,
+      "label": "T12 Actual = trailing 12-month actuals from T12 Analytics col E.  Normalized = your stabilized underwriting assumption from T12 Analytics col F.  Copy cols E-F and paste-values into ALF UW Template.",
+      "has_e": false,
+      "has_f": false,
+      "e_formula": null,
+      "f_formula": null
+    },
+    {
+      "row": 4,
+      "label": "Category",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "T12 Actual",
+      "f_formula": "Normalized"
+    },
+    {
+      "row": 5,
+      "label": "REVENUE",
+      "has_e": false,
+      "has_f": false,
+      "e_formula": null,
+      "f_formula": null
+    },
+    {
+      "row": 6,
+      "label": "Base rent (normalized)",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E16",
+      "f_formula": "='T12 Analytics'!E20"
+    },
+    {
+      "row": 7,
+      "label": "LOC revenue (normalized)",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E23",
+      "f_formula": "='T12 Analytics'!E27"
+    },
+    {
+      "row": 8,
+      "label": "Community / move-in fees",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E47",
+      "f_formula": "='T12 Analytics'!F47"
+    },
+    {
+      "row": 9,
+      "label": "Concessions & specials",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E48",
+      "f_formula": "='T12 Analytics'!F48"
+    },
+    {
+      "row": 10,
+      "label": "Respite care",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E49",
+      "f_formula": "='T12 Analytics'!F49"
+    },
+    {
+      "row": 11,
+      "label": "Other community revenue",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E50",
+      "f_formula": "='T12 Analytics'!F50"
+    },
+    {
+      "row": 12,
+      "label": "EGI (normalized)",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E52",
+      "f_formula": "='T12 Analytics'!F52"
+    },
+    {
+      "row": 14,
+      "label": "GPR Revenue Waterfall  —  Rent Roll vs. T12",
+      "has_e": false,
+      "has_f": false,
+      "e_formula": null,
+      "f_formula": null
+    },
+    {
+      "row": 15,
+      "label": "Gross Potential Rent  (GPR)  —  base rent",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E37",
+      "f_formula": "='T12 Analytics'!F37"
+    },
+    {
+      "row": 16,
+      "label": "Physical vacancy loss",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "=IFERROR(IF('T12 Analytics'!E38=\"\",\"\",'T12 Analytics'!E38),\"\")",
+      "f_formula": "='T12 Analytics'!F38"
+    },
+    {
+      "row": 17,
+      "label": "Physical vacancy rate %",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E39",
+      "f_formula": "='T12 Analytics'!F39"
+    },
+    {
+      "row": 18,
+      "label": "Loss to lease",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "=IFERROR(IF('T12 Analytics'!E40=\"\",\"\",'T12 Analytics'!E40),\"\")",
+      "f_formula": "='T12 Analytics'!F40"
+    },
+    {
+      "row": 19,
+      "label": "Loss to lease as % of GPR",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "=IFERROR(IF('T12 Analytics'!E41=\"\",\"\",'T12 Analytics'!E41),\"\")",
+      "f_formula": "='T12 Analytics'!F41"
+    },
+    {
+      "row": 21,
+      "label": "LABOR",
+      "has_e": false,
+      "has_f": false,
+      "e_formula": null,
+      "f_formula": null
+    },
+    {
+      "row": 22,
+      "label": "Care staff labor",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E57",
+      "f_formula": "='T12 Analytics'!F57"
+    },
+    {
+      "row": 23,
+      "label": "Wellness / care coordinators",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E58",
+      "f_formula": "='T12 Analytics'!F58"
+    },
+    {
+      "row": 24,
+      "label": "Contract / agency labor",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E59",
+      "f_formula": "='T12 Analytics'!F59"
+    },
+    {
+      "row": 25,
+      "label": "Activities labor",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E60",
+      "f_formula": "='T12 Analytics'!F60"
+    },
+    {
+      "row": 26,
+      "label": "Dining / food service labor",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E61",
+      "f_formula": "='T12 Analytics'!F61"
+    },
+    {
+      "row": 27,
+      "label": "Maintenance & HK labor",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E62",
+      "f_formula": "='T12 Analytics'!F62"
+    },
+    {
+      "row": 28,
+      "label": "Administrative labor",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E63",
+      "f_formula": "='T12 Analytics'!F63"
+    },
+    {
+      "row": 29,
+      "label": "Bonus wages",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E64",
+      "f_formula": "='T12 Analytics'!F64"
+    },
+    {
+      "row": 30,
+      "label": "Overtime wages",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E68",
+      "f_formula": "='T12 Analytics'!F68"
+    },
+    {
+      "row": 31,
+      "label": "PTO wages",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E69",
+      "f_formula": "='T12 Analytics'!F69"
+    },
+    {
+      "row": 32,
+      "label": "Payroll taxes",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E70",
+      "f_formula": "='T12 Analytics'!F70"
+    },
+    {
+      "row": 33,
+      "label": "Employee benefits",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E71",
+      "f_formula": "='T12 Analytics'!F71"
+    },
+    {
+      "row": 34,
+      "label": "Workers' comp insurance",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E72",
+      "f_formula": "='T12 Analytics'!F72"
+    },
+    {
+      "row": 35,
+      "label": "Employee 401(k)",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E73",
+      "f_formula": "='T12 Analytics'!F73"
+    },
+    {
+      "row": 36,
+      "label": "Total labor & burden",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E76",
+      "f_formula": "='T12 Analytics'!F76"
+    },
+    {
+      "row": 37,
+      "label": "NON-LABOR",
+      "has_e": false,
+      "has_f": false,
+      "e_formula": null,
+      "f_formula": null
+    },
+    {
+      "row": 38,
+      "label": "Food cost",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E79",
+      "f_formula": "='T12 Analytics'!F79"
+    },
+    {
+      "row": 39,
+      "label": "Dining & kitchen supplies",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E80",
+      "f_formula": "='T12 Analytics'!F80"
+    },
+    {
+      "row": 40,
+      "label": "Nursing & care supplies",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E81",
+      "f_formula": "='T12 Analytics'!F81"
+    },
+    {
+      "row": 41,
+      "label": "Recreation supplies",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E82",
+      "f_formula": "='T12 Analytics'!F82"
+    },
+    {
+      "row": 42,
+      "label": "R&M fixed",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E83",
+      "f_formula": "='T12 Analytics'!F83"
+    },
+    {
+      "row": 43,
+      "label": "R&M variable",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E84",
+      "f_formula": "='T12 Analytics'!F84"
+    },
+    {
+      "row": 44,
+      "label": "HK & laundry supplies",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E85",
+      "f_formula": "='T12 Analytics'!F85"
+    },
+    {
+      "row": 45,
+      "label": "Sales, adv. & marketing",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E86",
+      "f_formula": "='T12 Analytics'!F86"
+    },
+    {
+      "row": 46,
+      "label": "Referral fees",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E87",
+      "f_formula": "='T12 Analytics'!F87"
+    },
+    {
+      "row": 47,
+      "label": "Utilities",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E88",
+      "f_formula": "='T12 Analytics'!F88"
+    },
+    {
+      "row": 48,
+      "label": "Telephone / IT",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E89",
+      "f_formula": "='T12 Analytics'!F89"
+    },
+    {
+      "row": 49,
+      "label": "P&C insurance",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E90",
+      "f_formula": "='T12 Analytics'!F90"
+    },
+    {
+      "row": 50,
+      "label": "Auto insurance",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E91",
+      "f_formula": "='T12 Analytics'!F91"
+    },
+    {
+      "row": 51,
+      "label": "Fire / security monitoring",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E92",
+      "f_formula": "='T12 Analytics'!F92"
+    },
+    {
+      "row": 52,
+      "label": "Pest elimination",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E93",
+      "f_formula": "='T12 Analytics'!F93"
+    },
+    {
+      "row": 53,
+      "label": "Real estate taxes",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E94",
+      "f_formula": "='T12 Analytics'!F94"
+    },
+    {
+      "row": 54,
+      "label": "Personal property taxes",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E95",
+      "f_formula": "='T12 Analytics'!F95"
+    },
+    {
+      "row": 55,
+      "label": "Legal expenses",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E96",
+      "f_formula": "='T12 Analytics'!F96"
+    },
+    {
+      "row": 56,
+      "label": "Professional services",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E97",
+      "f_formula": "='T12 Analytics'!F97"
+    },
+    {
+      "row": 57,
+      "label": "Bad debt expense",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E98",
+      "f_formula": "='T12 Analytics'!F98"
+    },
+    {
+      "row": 58,
+      "label": "Permits, licenses & dues",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E99",
+      "f_formula": "='T12 Analytics'!F99"
+    },
+    {
+      "row": 59,
+      "label": "Office, admin & G&A",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E100",
+      "f_formula": "='T12 Analytics'!F100"
+    },
+    {
+      "row": 60,
+      "label": "Other / miscellaneous",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E101",
+      "f_formula": "='T12 Analytics'!F101"
+    },
+    {
+      "row": 61,
+      "label": "Lease / ground lease",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E102",
+      "f_formula": "='T12 Analytics'!F102"
+    },
+    {
+      "row": 62,
+      "label": "Total non-labor",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E103",
+      "f_formula": "='T12 Analytics'!F103"
+    },
+    {
+      "row": 63,
+      "label": "Total opex (excl. mgmt)",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E105",
+      "f_formula": "='T12 Analytics'!F105"
+    },
+    {
+      "row": 64,
+      "label": "Management fee",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E106",
+      "f_formula": "='T12 Analytics'!F106"
+    },
+    {
+      "row": 65,
+      "label": "NOI",
+      "has_e": false,
+      "has_f": false,
+      "e_formula": null,
+      "f_formula": null
+    },
+    {
+      "row": 66,
+      "label": "EBITDARM",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E108",
+      "f_formula": "='T12 Analytics'!F108"
+    },
+    {
+      "row": 67,
+      "label": "EBITDAR",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E110",
+      "f_formula": "='T12 Analytics'!F110"
+    },
+    {
+      "row": 68,
+      "label": "EBITDA",
+      "has_e": true,
+      "has_f": true,
+      "e_formula": "='T12 Analytics'!E113",
+      "f_formula": "='T12 Analytics'!F113"
+    },
+    {
+      "row": 69,
+      "label": "CAPACITY INPUTS",
+      "has_e": false,
+      "has_f": false,
+      "e_formula": null,
+      "f_formula": null
+    },
+    {
+      "row": 70,
+      "label": "Licensed beds (IL / AL / MC / Total)",
+      "has_e": false,
+      "has_f": false,
+      "e_formula": null,
+      "f_formula": null
+    },
+    {
+      "row": 71,
+      "label": "Stabilized occupied beds",
+      "has_e": false,
+      "has_f": false,
+      "e_formula": null,
+      "f_formula": null
+    }
+  ],
+  "uw_export": [
+    {
+      "row": 1,
+      "label": "UW Export  —  Values-only mirror of UW Output",
+      "e_formula": null
+    },
+    {
+      "row": 2,
+      "label": "Copy A9:H79 (or use Excel's Move-or-Copy → Create-a-copy → Paste-Special: Values) into the downstream UW template. Metadata header above (rows 3-7) carries the audit trail.",
+      "e_formula": null
+    },
+    {
+      "row": 3,
+      "label": "Property name",
+      "e_formula": null
+    },
+    {
+      "row": 4,
+      "label": "Rent roll period",
+      "e_formula": null
+    },
+    {
+      "row": 5,
+      "label": "T12 period",
+      "e_formula": null
+    },
+    {
+      "row": 6,
+      "label": "Substrate version",
+      "e_formula": null
+    },
+    {
+      "row": 7,
+      "label": "Generated (open time)",
+      "e_formula": null
+    },
+    {
+      "row": 9,
+      "label": "='UW Output'!A1",
+      "e_formula": "='UW Output'!E1"
+    },
+    {
+      "row": 10,
+      "label": "='UW Output'!A2",
+      "e_formula": "='UW Output'!E2"
+    },
+    {
+      "row": 11,
+      "label": "='UW Output'!A3",
+      "e_formula": "='UW Output'!E3"
+    },
+    {
+      "row": 12,
+      "label": "='UW Output'!A4",
+      "e_formula": "='UW Output'!E4"
+    },
+    {
+      "row": 13,
+      "label": "='UW Output'!A5",
+      "e_formula": "='UW Output'!E5"
+    },
+    {
+      "row": 14,
+      "label": "='UW Output'!A6",
+      "e_formula": "='UW Output'!E6"
+    },
+    {
+      "row": 15,
+      "label": "='UW Output'!A7",
+      "e_formula": "='UW Output'!E7"
+    },
+    {
+      "row": 16,
+      "label": "='UW Output'!A8",
+      "e_formula": "='UW Output'!E8"
+    },
+    {
+      "row": 17,
+      "label": "='UW Output'!A9",
+      "e_formula": "='UW Output'!E9"
+    },
+    {
+      "row": 18,
+      "label": "='UW Output'!A10",
+      "e_formula": "='UW Output'!E10"
+    },
+    {
+      "row": 19,
+      "label": "='UW Output'!A11",
+      "e_formula": "='UW Output'!E11"
+    },
+    {
+      "row": 20,
+      "label": "='UW Output'!A12",
+      "e_formula": "='UW Output'!E12"
+    },
+    {
+      "row": 21,
+      "label": "='UW Output'!A13",
+      "e_formula": "='UW Output'!E13"
+    },
+    {
+      "row": 22,
+      "label": "='UW Output'!A14",
+      "e_formula": "='UW Output'!E14"
+    },
+    {
+      "row": 23,
+      "label": "='UW Output'!A15",
+      "e_formula": "='UW Output'!E15"
+    },
+    {
+      "row": 24,
+      "label": "='UW Output'!A16",
+      "e_formula": "='UW Output'!E16"
+    },
+    {
+      "row": 25,
+      "label": "='UW Output'!A17",
+      "e_formula": "='UW Output'!E17"
+    },
+    {
+      "row": 26,
+      "label": "='UW Output'!A18",
+      "e_formula": "='UW Output'!E18"
+    },
+    {
+      "row": 27,
+      "label": "='UW Output'!A19",
+      "e_formula": "='UW Output'!E19"
+    },
+    {
+      "row": 28,
+      "label": "='UW Output'!A20",
+      "e_formula": "='UW Output'!E20"
+    },
+    {
+      "row": 29,
+      "label": "='UW Output'!A21",
+      "e_formula": "='UW Output'!E21"
+    },
+    {
+      "row": 30,
+      "label": "='UW Output'!A22",
+      "e_formula": "='UW Output'!E22"
+    },
+    {
+      "row": 31,
+      "label": "='UW Output'!A23",
+      "e_formula": "='UW Output'!E23"
+    },
+    {
+      "row": 32,
+      "label": "='UW Output'!A24",
+      "e_formula": "='UW Output'!E24"
+    },
+    {
+      "row": 33,
+      "label": "='UW Output'!A25",
+      "e_formula": "='UW Output'!E25"
+    },
+    {
+      "row": 34,
+      "label": "='UW Output'!A26",
+      "e_formula": "='UW Output'!E26"
+    },
+    {
+      "row": 35,
+      "label": "='UW Output'!A27",
+      "e_formula": "='UW Output'!E27"
+    },
+    {
+      "row": 36,
+      "label": "='UW Output'!A28",
+      "e_formula": "='UW Output'!E28"
+    },
+    {
+      "row": 37,
+      "label": "='UW Output'!A29",
+      "e_formula": "='UW Output'!E29"
+    },
+    {
+      "row": 38,
+      "label": "='UW Output'!A30",
+      "e_formula": "='UW Output'!E30"
+    },
+    {
+      "row": 39,
+      "label": "='UW Output'!A31",
+      "e_formula": "='UW Output'!E31"
+    },
+    {
+      "row": 40,
+      "label": "='UW Output'!A32",
+      "e_formula": "='UW Output'!E32"
+    },
+    {
+      "row": 41,
+      "label": "='UW Output'!A33",
+      "e_formula": "='UW Output'!E33"
+    },
+    {
+      "row": 42,
+      "label": "='UW Output'!A34",
+      "e_formula": "='UW Output'!E34"
+    },
+    {
+      "row": 43,
+      "label": "='UW Output'!A35",
+      "e_formula": "='UW Output'!E35"
+    },
+    {
+      "row": 44,
+      "label": "='UW Output'!A36",
+      "e_formula": "='UW Output'!E36"
+    },
+    {
+      "row": 45,
+      "label": "='UW Output'!A37",
+      "e_formula": "='UW Output'!E37"
+    },
+    {
+      "row": 46,
+      "label": "='UW Output'!A38",
+      "e_formula": "='UW Output'!E38"
+    },
+    {
+      "row": 47,
+      "label": "='UW Output'!A39",
+      "e_formula": "='UW Output'!E39"
+    },
+    {
+      "row": 48,
+      "label": "='UW Output'!A40",
+      "e_formula": "='UW Output'!E40"
+    },
+    {
+      "row": 49,
+      "label": "='UW Output'!A41",
+      "e_formula": "='UW Output'!E41"
+    },
+    {
+      "row": 50,
+      "label": "='UW Output'!A42",
+      "e_formula": "='UW Output'!E42"
+    },
+    {
+      "row": 51,
+      "label": "='UW Output'!A43",
+      "e_formula": "='UW Output'!E43"
+    },
+    {
+      "row": 52,
+      "label": "='UW Output'!A44",
+      "e_formula": "='UW Output'!E44"
+    },
+    {
+      "row": 53,
+      "label": "='UW Output'!A45",
+      "e_formula": "='UW Output'!E45"
+    },
+    {
+      "row": 54,
+      "label": "='UW Output'!A46",
+      "e_formula": "='UW Output'!E46"
+    },
+    {
+      "row": 55,
+      "label": "='UW Output'!A47",
+      "e_formula": "='UW Output'!E47"
+    },
+    {
+      "row": 56,
+      "label": "='UW Output'!A48",
+      "e_formula": "='UW Output'!E48"
+    },
+    {
+      "row": 57,
+      "label": "='UW Output'!A49",
+      "e_formula": "='UW Output'!E49"
+    },
+    {
+      "row": 58,
+      "label": "='UW Output'!A50",
+      "e_formula": "='UW Output'!E50"
+    },
+    {
+      "row": 59,
+      "label": "='UW Output'!A51",
+      "e_formula": "='UW Output'!E51"
+    },
+    {
+      "row": 60,
+      "label": "='UW Output'!A52",
+      "e_formula": "='UW Output'!E52"
+    },
+    {
+      "row": 61,
+      "label": "='UW Output'!A53",
+      "e_formula": "='UW Output'!E53"
+    },
+    {
+      "row": 62,
+      "label": "='UW Output'!A54",
+      "e_formula": "='UW Output'!E54"
+    },
+    {
+      "row": 63,
+      "label": "='UW Output'!A55",
+      "e_formula": "='UW Output'!E55"
+    },
+    {
+      "row": 64,
+      "label": "='UW Output'!A56",
+      "e_formula": "='UW Output'!E56"
+    },
+    {
+      "row": 65,
+      "label": "='UW Output'!A57",
+      "e_formula": "='UW Output'!E57"
+    },
+    {
+      "row": 66,
+      "label": "='UW Output'!A58",
+      "e_formula": "='UW Output'!E58"
+    },
+    {
+      "row": 67,
+      "label": "='UW Output'!A59",
+      "e_formula": "='UW Output'!E59"
+    },
+    {
+      "row": 68,
+      "label": "='UW Output'!A60",
+      "e_formula": "='UW Output'!E60"
+    },
+    {
+      "row": 69,
+      "label": "='UW Output'!A61",
+      "e_formula": "='UW Output'!E61"
+    },
+    {
+      "row": 70,
+      "label": "='UW Output'!A62",
+      "e_formula": "='UW Output'!E62"
+    },
+    {
+      "row": 71,
+      "label": "='UW Output'!A63",
+      "e_formula": "='UW Output'!E63"
+    },
+    {
+      "row": 72,
+      "label": "='UW Output'!A64",
+      "e_formula": "='UW Output'!E64"
+    },
+    {
+      "row": 73,
+      "label": "='UW Output'!A65",
+      "e_formula": "='UW Output'!E65"
+    },
+    {
+      "row": 74,
+      "label": "='UW Output'!A66",
+      "e_formula": "='UW Output'!E66"
+    },
+    {
+      "row": 75,
+      "label": "='UW Output'!A67",
+      "e_formula": "='UW Output'!E67"
+    },
+    {
+      "row": 76,
+      "label": "='UW Output'!A68",
+      "e_formula": "='UW Output'!E68"
+    },
+    {
+      "row": 77,
+      "label": "='UW Output'!A69",
+      "e_formula": "='UW Output'!E69"
+    },
+    {
+      "row": 78,
+      "label": "='UW Output'!A70",
+      "e_formula": "='UW Output'!E70"
+    },
+    {
+      "row": 79,
+      "label": "='UW Output'!A71",
+      "e_formula": "='UW Output'!E71"
+    }
+  ]
+}

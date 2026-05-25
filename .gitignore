@@ -12,3 +12,9 @@ MF Docs/
 # Streamlit local secrets — auth password hashes live here for local dev.
 # Cloud secrets are configured via share.streamlit.io and never enter the repo.
 .streamlit/secrets.toml
+# macOS Finder noise.
+.DS_Store
+# Local backups of the bundled Analyzer (the canonical file lives at
+# ALF_Financial_Analyzer_Only.xlsx — duplicates are working copies).
+ALF_Financial_Analyzer_Only - Copy*.xlsx
+ALF_Financial_Analyzer_Only - Backup*.xlsx
