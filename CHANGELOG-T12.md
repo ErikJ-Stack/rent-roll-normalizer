@@ -8,6 +8,62 @@ When making a code change in a T12-related chat, add an entry here in the same c
 
 ---
 
+## [Substrate template v0.2.12] — 2026-05-25
+
+### Summary
+
+Closes UW-BACKLOG **BL-0024** — Dashboard blended-vs-segment formula mis-references. Twelve cells on the `Dashboard` sheet pulled from segment-specific cells (`'T12 Analytics'!F134` = AL-only occupancy, `F140` = MC-only ADR, `F143` = MC-only RevPOR) while being labeled as **blended** / **community-wide**. On the Homestead populated fixture the OCCUPANCY tile showed **64.5%** instead of the actual blended **72.7%** (128 occupied / 176 licensed), ADR showed MC-only **$6,802** instead of blended **$4,546**, REVPOR showed MC-only **$6,802** instead of blended **$4,562**. All twelve cells rewritten in-place to compute blended directly from T12 Analytics column-E primitives (E6 = total licensed beds, E11 = total stabilized occupied beds, E20 = blended annual base rent, E27 = blended LOC revenue). No T12 Analytics edits — pure Dashboard surface. Migration via `migrate_to_v0212.py` (12 cell rewrites + 17 version stamps, 5-check verify + 12 per-cell verify, idempotent — gate checks both `Cover!B8 == "v0.2.12"` AND that `B6` no longer contains the substring `"F134"`).
+
+### Background — why the bug
+
+T12 Analytics columns B/C/D/E are IL/AL/MC/Total respectively across the entire sheet. Section 5 of T12 Analytics ("KPI DASHBOARD" at rows 130-149) hosts F-column per-segment KPI rows: F133 = "Physical occupancy — IL", F134 = "— AL", F135 = "— MC", F136 = "Blended". Same pattern for ADR (F138/F139/F140 = IL/AL/MC) and RevPOR (F141/F142/F143 = IL/AL/MC). The labels in T12 Analytics col A explicitly say "— AL" / "— MC". The Dashboard sheet's blended tiles + community-occupancy rows were authored to reference these F-cells, but the wiring landed on the segment cells (F134/F140/F143) instead of the blended counterparts. Effect: the entire Dashboard's occupancy story was AL-only, and ADR/RevPOR were MC-only. Discovered 2026-05-24 during Track 5 webapp dashboard build when `dashboard_model.py` (which correctly computes blended) diverged from the xlsx Dashboard tiles.
+
+### Fix — twelve cells patched
+
+All wrapped in `IFERROR(...,"—")` so div-by-zero on an empty workbook renders the same em-dash placeholder the old formulas produced; threshold-comparison shapes (`B8`, `G55`, `H55`) preserve the existing ✓/⚠/✗ branches and "— Source not populated" fallback exactly.
+
+| Cell | Label / role | Old ref | New (inline E primitives) |
+| --- | --- | --- | --- |
+| B6 | OCCUPANCY headline tile (TEXT %) | F134 | `E11/E6` |
+| B8 | Status text under OCCUPANCY tile | F134 | `E11/E6` |
+| C21 | "Community occupancy %" detail row | F134 | `E11/E6` |
+| D35 | "Community occupancy" side card | F134 | `E11/E6` |
+| E55 | "Occupancy gap to market" delta | F134 | `E11/E6 - 0.895` |
+| G55 | Risk-row flag emoji | F134 | `E11/E6` |
+| H55 | Risk-row flag text | F134 | `E11/E6` |
+| P5 | Upper-right "Blended" anchor pin | F134 | `E11/E6` |
+| F20 | "Blended ADR / day" tile | F140 | `E20/(E11*12)` |
+| K6 | REVPOR headline tile (TEXT $) | F143 | `(E20+E27)/(E11*12)` |
+| K8 | Status text under REVPOR tile | F143 | `(E20+E27)/(E11*12)` |
+| F21 | "RevPOR (blended)" detail row | F143 | `(E20+E27)/(E11*12)` |
+
+Inline approach chosen over "add blended ADR/RevPOR rows to T12 Analytics Section 5" because (a) `F136` already exists as the blended-occupancy cell but the choice was to use primitives uniformly across all three KPIs, (b) zero T12 Analytics surface change keeps blast radius to the Dashboard sheet only.
+
+### Verification
+
+- All 12 cells now `data_type='f'` (proper formulas) — none accidentally classified as text. Re-load round-trip confirmed `B6` reads as `'=IFERROR(TEXT(\'T12 Analytics\'!E11/\'T12 Analytics\'!E6,"0.0%"),"—")'`.
+- Whole-Dashboard scan for `F134` / `F140` / `F143` substring: **zero** leftover references.
+- 6 native Excel charts preserved (pre=6, post=6 — openpyxl re-save did not damage them).
+- 75 merged cell ranges preserved (pre=75, post=75).
+- Sheet count stays at 16; all 16 AZ4 anchors stamped `v0.2.12`.
+- Hidden sheet states preserved (`AR & Collections` hidden, `Workbook Health` hidden — both held).
+- AR & Collections variance tile at K10:L13 unaffected (K11 formula `=IF('AR & Collections'!Z1=0, ..., 'AR & Collections'!C56)` still intact, K13 footnote `T12 bad debt − annualized AR write-offs` still present — confirms the v0.2.10/v0.2.11 hotfix wasn't regressed).
+- Idempotency: re-running the migration on the v0.2.12 output produces "Workbook is already at v0.2.12. No-op (will re-save)."
+
+### Bundled file
+
+`ALF_Financial_Analyzer_Only.xlsx` updated in place from v0.2.11 → v0.2.12 by running the migration script. All 12 Dashboard cells now read blended values; the bundled file's Dashboard tile numbers will now match what `dashboard_model.py` computes in the Streamlit webapp Dashboard tab — resolving the cross-pipeline discrepancy that surfaced the bug.
+
+### Files
+
+- `tools/migration/migrate_to_v0212.py` (new — 12-cell Dashboard patcher, idempotent, surgical).
+- `ALF_Financial_Analyzer_Only.xlsx` (modified — Dashboard cells B6/B8/C21/D35/E55/G55/H55/P5/F20/K6/K8/F21 rewritten + Cover!B8 + 16 AZ4 anchors bumped to v0.2.12).
+- `UW-BACKLOG.md` (BL-0024 added to Shipped section).
+- `SPEC-T12.md` (substrate version pointer updated to v0.2.12).
+- `CLAUDE.md` (Track 2 substrate version line + last-updated note refreshed).
+
+---
+
 ## [Hotfix on v0.2.10 + v0.2.11] — 2026-05-24
 
 ### Summary
