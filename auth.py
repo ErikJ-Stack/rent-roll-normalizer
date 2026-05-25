@@ -115,14 +115,17 @@ def require_login() -> str:
 
 
 def _render_sidebar_status(username: str) -> None:
+    # Compact one-row layout: username on the left, small sign-out button on
+    # the right. No divider — the next sidebar section (📁 Uploads) has its
+    # own bold header which provides visual separation.
     with st.sidebar:
-        st.markdown(f"**Signed in:** `{username}`")
-        if st.button("Sign out", key="auth_logout_btn"):
+        c_user, c_btn = st.columns([2, 1], vertical_alignment="center")
+        c_user.caption(f"👤 `{username}`")
+        if c_btn.button("Sign out", key="auth_logout_btn", use_container_width=True):
             _log("logout", username)
             for k in ("auth_user", "auth_username_input", "auth_password_input"):
                 st.session_state.pop(k, None)
             st.rerun()
-        st.divider()
 
 
 # ---------------------------------------------------------------------------

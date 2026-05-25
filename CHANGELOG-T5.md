@@ -6,6 +6,28 @@ See [SPEC-T5.md](SPEC-T5.md) for the canonical spec.
 
 ---
 
+## v0.1.4 — Compact auth strip (2026-05-25)
+
+Sidebar auth section ("Signed in: erik" + chunky Sign out button + divider)
+was eating ~150px above the `📁 Uploads` heading. Compressed to a single
+row: `👤 erik` caption on the left, small `Sign out` button on the right,
+no divider (the `📁 Uploads` bold heading provides the visual break).
+
+### Files
+
+- `auth.py` — `_render_sidebar_status()` rewritten to use
+  `st.columns([2, 1], vertical_alignment="center")` for the inline layout;
+  divider removed.
+- `requirements.txt` — `streamlit>=1.32` → `>=1.36` (vertical_alignment
+  on `st.columns` was added in 1.36).
+- `app.py` — `T5_VERSION` bumped to `0.1.4`.
+
+### Verification
+
+- 27 / 27 dashboard regression tests pass.
+
+---
+
 ## v0.1.3 — Purchase price auto-formats on Enter / tab-out (2026-05-25)
 
 The standalone `💰 $18,000,000` echo caption beneath the purchase-price
