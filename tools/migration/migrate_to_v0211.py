@@ -22,8 +22,16 @@ OPERATIONS:
                           (Calibri 9pt bold white on blue FF5B9BD5)
        K11:L12 (merged) — flag value formula, wrapped, centered
                           (Calibri 12pt bold navy on white)
-       K13:L13 (merged) — footnote "= T12 BD − annualized AR write-offs"
+       K13:L13 (merged) — footnote "T12 BD − annualized AR write-offs"
                           (Calibri 9pt italic gray on light-gray FFF2F2F2)
+                          NOTE: footnote text intentionally does NOT
+                          start with "=" — openpyxl auto-classifies any
+                          string beginning with "=" as a formula and
+                          writes it into the <f> element, which Excel
+                          then tries to parse and strips during repair
+                          ("Removed Records: Formula from sheet2.xml").
+                          The tile-above relationship is structurally
+                          obvious; the "=" prefix is implied.
        Tile is dormant when Z1=0 (shows "— upload AR to populate"),
        live when Z1=1.
 
@@ -84,7 +92,11 @@ TILE_VALUE_FORMULA = (
     "\"— upload AR to populate\","
     "'AR & Collections'!C56)"
 )
-TILE_FOOTNOTE_TEXT = "= T12 bad debt − annualized AR write-offs"
+# Footnote text intentionally does NOT start with "=" — see top-of-file
+# note. openpyxl's value setter classifies leading-"=" strings as formulas
+# and Excel rejects them on open (sheet2.xml repair). The tile-above
+# relationship makes the "= ..." prefix implicit.
+TILE_FOOTNOTE_TEXT = "T12 bad debt − annualized AR write-offs"
 
 # Cover AR module line
 COVER_AR_LABEL_CELL = "A11"

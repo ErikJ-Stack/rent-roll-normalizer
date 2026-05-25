@@ -439,7 +439,11 @@ def build_ar_sheet(wb) -> dict:
         n["cells_populated"] += 3
 
     # Row 47: Implied closing AR = prior + charges - collections - writeoffs + adjustments
-    _set(ws, "B47", "= Implied closing AR", font=header_font, align=left_indent, border=thin_top)
+    # Label text intentionally does NOT start with "=" — openpyxl classifies
+    # any string beginning with "=" as a formula and writes it into <f>, which
+    # Excel then renders as #NAME? (or strips on repair). The relationship is
+    # structurally obvious from C47 sitting immediately to the right.
+    _set(ws, "B47", "Implied closing AR", font=header_font, align=left_indent, border=thin_top)
     _set(ws, "C47", "=IFERROR(C42+C43-C44-C45+C46,0)",
          font=header_font, align=right_align, number_format="#,##0", border=thin_top)
     n["cells_populated"] += 2
