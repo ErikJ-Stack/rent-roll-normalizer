@@ -164,11 +164,13 @@ def inject_brand_css() -> None:
         a, a:visited {{ color: {GOLD} !important; }}
 
         /* ───────────────────────────────────────────────────────────────
-           Full-page loading overlay (Track 5 v0.1.6)
+           Full-page loading overlay (Track 5 v0.1.7)
            Every st.spinner(...) becomes a modal-style overlay: dark
            translucent backdrop covering the entire viewport, prominent
-           centered spinner + label. Existing inline spinners get the
-           overlay treatment automatically — no per-call styling needed.
+           centered ring spinner + label. We DRAW our own spinner via
+           ::before on the overlay (instead of relying on Streamlit's
+           internal icon, whose DOM placement varies across versions and
+           may be tiny/hidden after our position:fixed override).
            ─────────────────────────────────────────────────────────────── */
         [data-testid="stSpinner"], div.stSpinner {{
             position: fixed !important;
@@ -188,40 +190,55 @@ def inject_brand_css() -> None:
             flex-direction: column !important;
             align-items: center !important;
             justify-content: center !important;
-            gap: 1.2rem;
+            gap: 1.6rem;
             animation: t5-overlay-fade 0.18s ease-out;
         }}
         @keyframes t5-overlay-fade {{
             from {{ opacity: 0; }}
             to   {{ opacity: 1; }}
         }}
-        /* The spinner SVG / icon — scale up for prominence. */
+
+        /* Hide Streamlit's tiny built-in spinner icon — we draw our own. */
         [data-testid="stSpinner"] > div:first-child,
         div.stSpinner > div:first-child,
         [data-testid="stSpinner"] svg,
-        div.stSpinner svg {{
-            transform: scale(2.0);
-            transform-origin: center;
-        }}
-        /* Spinner icon color — brand gold. */
+        div.stSpinner svg,
         [data-testid="stSpinner"] i,
-        div.stSpinner i,
-        [data-testid="stSpinner"] svg circle,
-        div.stSpinner svg circle {{
-            color: {GOLD} !important;
-            stroke: {GOLD} !important;
+        div.stSpinner i {{
+            display: none !important;
         }}
-        /* Spinner label text — large, white, centered below the icon. */
+
+        /* Our prominent ring spinner — drawn via ::before on the overlay. */
+        [data-testid="stSpinner"]::before,
+        div.stSpinner::before {{
+            content: "";
+            display: block;
+            width: 90px;
+            height: 90px;
+            border: 8px solid rgba(255, 255, 255, 0.12);
+            border-top-color: {GOLD};
+            border-radius: 50%;
+            animation: t5-spinner-rotate 0.9s linear infinite;
+            box-shadow: 0 0 24px rgba(190, 143, 63, 0.3);
+        }}
+        @keyframes t5-spinner-rotate {{
+            from {{ transform: rotate(0deg); }}
+            to   {{ transform: rotate(360deg); }}
+        }}
+
+        /* Spinner label text — large, white serif, centered below ring. */
         [data-testid="stSpinner"] p,
         div.stSpinner p,
-        [data-testid="stSpinner"] [data-testid="stMarkdownContainer"] {{
+        [data-testid="stSpinner"] [data-testid="stMarkdownContainer"],
+        [data-testid="stSpinner"] [data-testid="stMarkdownContainer"] p {{
             color: {WHITE} !important;
-            font-size: 1.2rem !important;
+            font-size: 1.25rem !important;
             font-weight: 500 !important;
-            letter-spacing: 0.02em;
+            letter-spacing: 0.03em;
             text-align: center;
-            margin-top: 1.5rem !important;
+            margin: 0 !important;
             font-family: Georgia, 'Times New Roman', serif !important;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
         }}
         </style>
         """,

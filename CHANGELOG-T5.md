@@ -6,6 +6,37 @@ See [SPEC-T5.md](SPEC-T5.md) for the canonical spec.
 
 ---
 
+## v0.1.7 — Custom ring spinner (replaces invisible Streamlit icon) (2026-05-25)
+
+v0.1.6 dimmed the page but the spinner icon itself wasn't visible —
+Streamlit's built-in spinner is tiny by default and our v0.1.6 attempt
+to scale it via `transform: scale(2.0)` targeted the wrong child
+element (DOM placement varies by Streamlit version).
+
+Replaced approach: **draw our own prominent ring spinner via a
+`::before` pseudo-element on the overlay**, hiding Streamlit's
+internal icon. The spinner is now:
+
+- 90px × 90px circular ring
+- 8px stroke, brand-gold leading edge on a faint white track
+- Gold glow via `box-shadow`
+- 0.9s smooth rotation
+- Centered in the viewport via the overlay's flex layout
+- Label text below, 1.25rem white serif with a subtle text-shadow
+
+### Files
+
+- `branding.py` — overlay CSS rewritten: hide Streamlit's icon,
+  draw our own via `::before` + `@keyframes t5-spinner-rotate`.
+- `app.py` — `T5_VERSION` bumped to `0.1.7`.
+
+### Verification
+
+- 27 / 27 dashboard regression tests pass.
+- CSS parses clean (no `{` / `}` escape issues in the f-string).
+
+---
+
 ## v0.1.6 — Full-page loading overlay (2026-05-25)
 
 Long-running operations (rent roll parse, T12 parse, Analyzer build) now
