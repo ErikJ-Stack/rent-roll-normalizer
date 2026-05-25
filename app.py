@@ -75,7 +75,7 @@ T12_LAST_UPDATED = "2026-05-11"
 AR_VERSION = "0.1.0"
 AR_LAST_UPDATED = "2026-05-23"
 
-T5_VERSION = "0.1.5"              # Track 5 — Webapp Dashboard Surface
+T5_VERSION = "0.1.6"              # Track 5 — Webapp Dashboard Surface
 T5_LAST_UPDATED = "2026-05-25"
 
 # Bundled Analyzer substrate (stamped at Cover!B8). Hand-maintained like the
@@ -657,13 +657,14 @@ with top_tab_workspace:
     # Process — Rent Roll
     # ---------------------------------------------------------------------------
     try:
-        mappings = load_mapping_workbook(mapping_file) if mapping_file else MappingSet()
-        result = normalize_rent_roll(
-            rr_file,
-            sheet_name=sheet_override.strip() or None,
-            mappings=mappings,
-            property_care_type_default=care_type_default or None,
-        )
+        with st.spinner("Parsing rent roll…"):
+            mappings = load_mapping_workbook(mapping_file) if mapping_file else MappingSet()
+            result = normalize_rent_roll(
+                rr_file,
+                sheet_name=sheet_override.strip() or None,
+                mappings=mappings,
+                property_care_type_default=care_type_default or None,
+            )
     except Exception as e:
         st.error(f"Failed to process rent roll: {e}")
         st.stop()
@@ -701,11 +702,12 @@ with top_tab_workspace:
             )
             descmap = read_descmap_descriptions(analyzer_wb_for_descmap)
             descmap_labels_cached = _read_descmap_labels(analyzer_bytes_cached)
-            t12_parse_result = parse_t12(
-                raw_t12_file.getvalue(),
-                descmap,
-                annualize_partial_year=annualize_partial_year,
-            )
+            with st.spinner("Parsing T12…"):
+                t12_parse_result = parse_t12(
+                    raw_t12_file.getvalue(),
+                    descmap,
+                    annualize_partial_year=annualize_partial_year,
+                )
         except UnknownT12FormatError as e:
             t12_parse_error = (
                 f"T12 format not recognized: {e}\n\n"
@@ -1063,46 +1065,47 @@ with top_tab_workspace:
 
         if can_download:
             try:
-                # Step 1: Write RR data into the resolved Analyzer.
-                translated = translate_for_t12(c)
-                populated_after_rr = populate_rr_input(
-                    analyzer_bytes_cached,
-                    translated,
-                    period_date_input,
-                    source_filename=getattr(rr_file, "name", ""),
-                )
+                with st.spinner("Building populated Analyzer…"):
+                    # Step 1: Write RR data into the resolved Analyzer.
+                    translated = translate_for_t12(c)
+                    populated_after_rr = populate_rr_input(
+                        analyzer_bytes_cached,
+                        translated,
+                        period_date_input,
+                        source_filename=getattr(rr_file, "name", ""),
+                    )
 
-                # Step 2: If T12 was uploaded, append session-state UNMATCHED
-                # resolutions and write GL detail on top of the RR-populated Analyzer.
-                if has_t12 and t12_parse_result is not None:
-                    new_descmap_entries = list(st.session_state.t12_resolutions.values())
-                    final_bytes = populate_t12_input(
-                        populated_after_rr,
-                        t12_parse_result,
-                        new_descmap_entries=new_descmap_entries,
-                        source_filename=getattr(raw_t12_file, "name", "raw_t12.xlsx"),
-                        t12_version=T12_VERSION,
-                        t12_last_updated=T12_LAST_UPDATED,
-                    )
-                else:
-                    final_bytes = populated_after_rr
+                    # Step 2: If T12 was uploaded, append session-state UNMATCHED
+                    # resolutions and write GL detail on top of the RR-populated Analyzer.
+                    if has_t12 and t12_parse_result is not None:
+                        new_descmap_entries = list(st.session_state.t12_resolutions.values())
+                        final_bytes = populate_t12_input(
+                            populated_after_rr,
+                            t12_parse_result,
+                            new_descmap_entries=new_descmap_entries,
+                            source_filename=getattr(raw_t12_file, "name", "raw_t12.xlsx"),
+                            t12_version=T12_VERSION,
+                            t12_last_updated=T12_LAST_UPDATED,
+                        )
+                    else:
+                        final_bytes = populated_after_rr
 
-                # Step 3: If AR was uploaded, parse it and write to the
-                # AR & Collections sheet on top of the RR(+T12) result.
-                if ar_file is not None:
-                    ar_result = parse_ar_file(ar_file)
-                    as_of_str = (
-                        ar_as_of_override.isoformat()
-                        if ar_as_of_override is not None
-                        else None
-                    )
-                    final_bytes = populate_ar_collections(
-                        final_bytes,
-                        ar_result,
-                        as_of_date=as_of_str,
-                        source_filename=getattr(ar_file, "name", "ar_aging.xlsx"),
-                        ar_version=AR_VERSION,
-                    )
+                    # Step 3: If AR was uploaded, parse it and write to the
+                    # AR & Collections sheet on top of the RR(+T12) result.
+                    if ar_file is not None:
+                        ar_result = parse_ar_file(ar_file)
+                        as_of_str = (
+                            ar_as_of_override.isoformat()
+                            if ar_as_of_override is not None
+                            else None
+                        )
+                        final_bytes = populate_ar_collections(
+                            final_bytes,
+                            ar_result,
+                            as_of_date=as_of_str,
+                            source_filename=getattr(ar_file, "name", "ar_aging.xlsx"),
+                            ar_version=AR_VERSION,
+                        )
 
                 rr_stem = Path(getattr(rr_file, "name", "rent_roll.xlsx")).stem
                 name_parts = [rr_stem]

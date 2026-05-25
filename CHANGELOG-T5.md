@@ -6,6 +6,54 @@ See [SPEC-T5.md](SPEC-T5.md) for the canonical spec.
 
 ---
 
+## v0.1.6 — Full-page loading overlay (2026-05-25)
+
+Long-running operations (rent roll parse, T12 parse, Analyzer build) now
+fire a **modal-style full-page overlay**: dark translucent backdrop
+covers the entire viewport, prominent gold spinner + serif label
+centered.
+
+### How it works
+
+1. CSS in `branding.py inject_brand_css()` overrides every
+   `[data-testid="stSpinner"]` (and the legacy `.stSpinner`) to be
+   `position: fixed; inset: 0; z-index: 999999;` with
+   `background: rgba(10, 22, 44, 0.86)` and `backdrop-filter: blur(3px)`.
+2. The spinner SVG is scaled up `2.0×` and tinted brand gold; the label
+   text is set to 1.2rem white serif and sits below the icon.
+3. `app.py` wraps three heavy operations in `with st.spinner(...)`:
+   - **Parsing rent roll…** — `normalize_rent_roll()`
+   - **Parsing T12…** — `parse_t12()`
+   - **Building populated Analyzer…** — the RR + T12 + AR writer
+     pipeline inside the download-trigger try block.
+
+No per-call styling — any future `st.spinner(...)` call automatically
+inherits the overlay look.
+
+### Files
+
+- `branding.py` — adds the overlay CSS block (~50 lines) to
+  `inject_brand_css()`.
+- `app.py` — three `with st.spinner(...)` wrappers around the heavy
+  operations; `T5_VERSION` bumped to `0.1.6`.
+
+### Verification
+
+- 27 / 27 dashboard regression tests pass.
+- `ast.parse` clean on both files.
+
+### Caveats
+
+- The very first page-load (before Streamlit's bundle hits the
+  browser) shows Streamlit's own white splash, not this overlay —
+  CSS can't be injected before Streamlit serves it. Subsequent
+  reruns (which are what users feel as "loading") show the overlay.
+- The Streamlit DOM may change between versions and break the
+  selectors. Targets both `[data-testid="stSpinner"]` (current) and
+  `div.stSpinner` (legacy) for resilience.
+
+---
+
 ## v0.1.5 — Responsive 1-row headline (CSS grid, auto-fit) (2026-05-25)
 
 Headline panel rebuilt with native HTML/CSS grid instead of nested

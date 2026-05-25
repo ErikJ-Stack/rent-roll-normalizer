@@ -162,6 +162,67 @@ def inject_brand_css() -> None:
 
         /* Links in brand gold. */
         a, a:visited {{ color: {GOLD} !important; }}
+
+        /* ───────────────────────────────────────────────────────────────
+           Full-page loading overlay (Track 5 v0.1.6)
+           Every st.spinner(...) becomes a modal-style overlay: dark
+           translucent backdrop covering the entire viewport, prominent
+           centered spinner + label. Existing inline spinners get the
+           overlay treatment automatically — no per-call styling needed.
+           ─────────────────────────────────────────────────────────────── */
+        [data-testid="stSpinner"], div.stSpinner {{
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: rgba(10, 22, 44, 0.86) !important;
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
+            z-index: 999999 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 1.2rem;
+            animation: t5-overlay-fade 0.18s ease-out;
+        }}
+        @keyframes t5-overlay-fade {{
+            from {{ opacity: 0; }}
+            to   {{ opacity: 1; }}
+        }}
+        /* The spinner SVG / icon — scale up for prominence. */
+        [data-testid="stSpinner"] > div:first-child,
+        div.stSpinner > div:first-child,
+        [data-testid="stSpinner"] svg,
+        div.stSpinner svg {{
+            transform: scale(2.0);
+            transform-origin: center;
+        }}
+        /* Spinner icon color — brand gold. */
+        [data-testid="stSpinner"] i,
+        div.stSpinner i,
+        [data-testid="stSpinner"] svg circle,
+        div.stSpinner svg circle {{
+            color: {GOLD} !important;
+            stroke: {GOLD} !important;
+        }}
+        /* Spinner label text — large, white, centered below the icon. */
+        [data-testid="stSpinner"] p,
+        div.stSpinner p,
+        [data-testid="stSpinner"] [data-testid="stMarkdownContainer"] {{
+            color: {WHITE} !important;
+            font-size: 1.2rem !important;
+            font-weight: 500 !important;
+            letter-spacing: 0.02em;
+            text-align: center;
+            margin-top: 1.5rem !important;
+            font-family: Georgia, 'Times New Roman', serif !important;
+        }}
         </style>
         """,
         unsafe_allow_html=True,
