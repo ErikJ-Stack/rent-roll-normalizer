@@ -8,6 +8,111 @@ opened (none yet — Phase 0 is the seed release).
 
 ---
 
+## v0.4.2 — Phase 2.5 follow-up: bundled template + override pattern (2026-05-26)
+
+User feedback after v0.4.1 ship: "I don't see a download for ALF UW
+Template" — the v0.4.1 pattern required uploading a template every
+session to get a populated copy, which is friction the Analyzer doesn't
+have. v0.4.2 mirrors the Analyzer's load pattern exactly: bundled by
+default, override under Advanced.
+
+### Shipped (app.py changes only — no API change to writer)
+
+- **New constants**:
+  - `BUNDLED_UW_TEMPLATE_PATH = Path(__file__).parent / "assets" / "ALF_UW_Template_v5.xlsx"`
+  - `BUNDLED_UW_TEMPLATE_VERSION = "v5"`
+- **New helper `_load_uw_template(uploaded_file)`** — mirrors
+  `_load_analyzer()`. Returns `(template_bytes, source_label,
+  template_version)`. Upload wins; falls back to the committed asset.
+  Raises `FileNotFoundError` with a clear message if neither exists.
+- **New helper `_detect_uw_template_version(template_bytes)`** —
+  best-effort version detection. Probes `Rent Roll Analysis!AP210`
+  (v5's "Care Level Tier" header that doesn't exist in v4). Falls back
+  to `"v5"` on any error (file not openable, missing sheet, etc.).
+  Uses `read_only=True` for fast load — no full workbook parse.
+- **Sidebar restructure**:
+  - **Removed** the standalone "UW Template (.xlsx) — optional"
+    file_uploader between the AR section and the Underwriting section.
+  - **Promoted** the scenario radio to always-visible (was conditional
+    on `uw_template_file is not None` in v0.4.1). Now reads "UW Template
+    scenario" with the same help text. Lives at the same sidebar
+    position the uploader used to occupy.
+  - **Added** a "UW Template override (.xlsx)" file_uploader in the
+    Advanced expander, immediately after the existing "Analyzer template
+    override" — parallel placement, parallel help text ("Upload to
+    override for this session only").
+  - **Sidebar version footer** extended:
+    `RR v{RR_VERSION} · T12 v{T12_VERSION} · AR v{AR_VERSION} · T5
+    v{T5_VERSION} · UWT v{UWT_VERSION}` (UWT was missing in v0.4.1).
+- **Workspace populate flow restructure**:
+  - Removed the `if uw_template_file is not None:` outer guard.
+    Populate now fires unconditionally on every successful Analyzer
+    build (i.e. when `can_download` is True).
+  - Calls `_load_uw_template(uw_template_override_file)` up front to
+    resolve the source.
+  - New "Using UW Template: **<source>** (`<version>`)" caption appears
+    immediately under the section header — mirrors the existing "Using
+    Analyzer: ..." caption pattern.
+  - `populate_uw_template()` call now passes the resolved
+    `template_version` explicitly instead of relying on the default
+    (the helper returns `v5` for bundled, `v4` or `v5` for override per
+    auto-detection).
+
+### UX impact
+
+Operator's flow changes from:
+
+  - **v0.4.1**: "I uploaded an RR + T12 but I don't see a UW Template
+    download" (because the upload was never done).
+
+To:
+
+  - **v0.4.2**: RR upload → Analyzer download + populated UW Template
+    download both appear automatically. To use a non-default template
+    (legacy v4 / v5.1 candidate / per-deal customization), expand
+    Advanced and upload an override.
+
+### Version auto-detection notes
+
+`_detect_uw_template_version()` is intentionally lightweight — single
+cell probe at `Rent Roll Analysis!AP210`. v5 has "Care Level Tier"
+there; v4 doesn't (cols AP-AR didn't exist before v5). The fallback
+to v5 on any error is deliberate — v5 is the binding default and the
+registry's primary supported version. A user uploading a corrupted or
+non-ALF .xlsx will get a writer error downstream rather than crash here.
+
+### Verification
+
+- `python -c "import ast; ast.parse(open('app.py').read())"` — parses
+  clean at 1,523 lines (was 1,456 in v0.4.1; +67 LOC for the helpers +
+  caption + sidebar restructure).
+- `tests/test_uw_template_writer.py` — both smoke + Homestead e2e
+  still pass on the writer module (writer didn't change; only the
+  caller pattern changed).
+- The `_detect_uw_template_version()` probe was sanity-checked against
+  the committed `assets/ALF_UW_Template_v5.xlsx` (returns `"v5"`) and
+  conceptually against a v4 (`Sample Files/ALF_UW_Template_v4.xlsx`
+  has no AP210 header → returns `"v4"`).
+
+### Out of scope (unchanged from v0.4.1)
+
+- **In-Python formula evaluator** for the cache caveat — still pending.
+- **v5.1 template completions** (Cover substrate stamp + RR Analysis
+  tab-header Period Date).
+- **BL-0026 — T-12 Raw path** — still deferred.
+- **AR row-level routing**.
+
+### Versioning
+
+- UWT code version: **v0.4.2** (Phase 2.5 follow-up).
+- Mapping registry version: **0.3.0** (unchanged).
+- Template versions supported: **v4** + **v5** (v5 default; auto-detected
+  from `Rent Roll Analysis!AP210`).
+- Bundled template path: `assets/ALF_UW_Template_v5.xlsx`.
+- Analyzer substrate mapped against: **v0.2.14** (unchanged).
+
+---
+
 ## v0.4.1 — Phase 2.5: Streamlit UI integration (2026-05-26)
 
 Closes the user-experience gap that's been open since Phase 2. The writer

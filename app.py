@@ -73,7 +73,7 @@ APP_LAST_UPDATED = "2026-05-08"   # alias for RR_LAST_UPDATED
 RR_VERSION = "1.18.1"
 RR_LAST_UPDATED = "2026-05-25"
 
-UWT_VERSION = "0.4.1"             # Track 4 — UW Template integration (Phase 2.5)
+UWT_VERSION = "0.4.2"             # Track 4 — UW Template integration (Phase 2.5)
 UWT_LAST_UPDATED = "2026-05-26"
 
 T12_VERSION = "0.2.1"
@@ -97,6 +97,14 @@ ANALYZER_LAST_UPDATED = "2026-05-25"
 # Bundled Analyzer — loaded silently from repo root by default
 # ---------------------------------------------------------------------------
 BUNDLED_ANALYZER_PATH = Path(__file__).parent / "ALF_Financial_Analyzer_Only.xlsx"
+
+# Bundled UW Template — loaded silently from assets/ by default. Mirrors the
+# Analyzer pattern: operator can override via the Advanced expander for a
+# session-specific template (e.g. v4 if they're working a legacy deal,
+# or a future v5.1 / v6 they're piloting). The bundled file is the binding
+# v5 default per the 2026-05-26 release handoff.
+BUNDLED_UW_TEMPLATE_PATH = Path(__file__).parent / "assets" / "ALF_UW_Template_v5.xlsx"
+BUNDLED_UW_TEMPLATE_VERSION = "v5"
 
 
 # ---------------------------------------------------------------------------
@@ -286,6 +294,58 @@ def _load_analyzer(uploaded_file) -> tuple[bytes, str, str]:
         f"Bundled Analyzer not found at {BUNDLED_ANALYZER_PATH}. "
         "Either restore the file in the repo root or upload a custom Analyzer "
         "via the Advanced expander in the sidebar."
+    )
+
+
+def _detect_uw_template_version(template_bytes: bytes) -> str:
+    """Best-effort UW Template version detection.
+
+    v5 introduced new columns AP/AQ/AR on Rent Roll Analysis row 210 (Care
+    Level Tier / Total Ancillary $ / Preleased Date) — none exist in v4.
+    We probe AP210 as the distinguishing marker. Falls back to "v5" if the
+    file doesn't have the expected Rent Roll Analysis sheet (rare —
+    indicates a non-ALF template).
+    """
+    try:
+        import io as _io
+        import openpyxl as _openpyxl
+        wb = _openpyxl.load_workbook(_io.BytesIO(template_bytes), data_only=False, read_only=True)
+        if "Rent Roll Analysis" not in wb.sheetnames:
+            return "v5"
+        ws = wb["Rent Roll Analysis"]
+        ap210 = ws["AP210"].value
+        if isinstance(ap210, str) and "Care Level" in ap210 and "Tier" in ap210:
+            return "v5"
+        return "v4"
+    except Exception:
+        return "v5"  # default to v5 — the registry's binding template
+
+
+def _load_uw_template(uploaded_file) -> tuple[bytes, str, str]:
+    """Resolve the UW Template source — uploaded file wins over bundled default.
+
+    Mirrors `_load_analyzer` so the operator gets the same load behavior:
+    bundled `assets/ALF_UW_Template_v5.xlsx` is used by default; an
+    upload via Advanced → "UW Template override" replaces it for the session.
+
+    Returns: (template_bytes, source_label, template_version)
+      - template_bytes: raw .xlsx bytes
+      - source_label: "uploaded: <filename>" or "bundled (assets/v5)"
+      - template_version: "v4" or "v5" (drives writer's targets.{v} block)
+
+    Raises FileNotFoundError if neither uploaded file nor bundled file exists.
+    """
+    if uploaded_file is not None:
+        b = uploaded_file.getvalue()
+        name = getattr(uploaded_file, "name", "uw_template.xlsx")
+        return b, f"uploaded: {name}", _detect_uw_template_version(b)
+    if BUNDLED_UW_TEMPLATE_PATH.exists():
+        b = BUNDLED_UW_TEMPLATE_PATH.read_bytes()
+        return b, f"bundled (assets/{BUNDLED_UW_TEMPLATE_PATH.name})", BUNDLED_UW_TEMPLATE_VERSION
+    raise FileNotFoundError(
+        f"Bundled UW Template not found at {BUNDLED_UW_TEMPLATE_PATH}. "
+        "Either restore the file in the repo's assets/ folder or upload a "
+        "custom template via the Advanced expander in the sidebar."
     )
 
 
@@ -521,41 +581,26 @@ with st.sidebar:
             ),
         )
 
-    # Track 4 / Phase 2.5 — UW Template populate path.
-    # The UW Template lives outside this repo (operator-authored in Excel,
-    # stored in the Deals folder). Analyst uploads it here when they want
-    # the webapp to populate it from the just-built Analyzer.
-    uw_template_file = st.file_uploader(
-        "UW Template (.xlsx) — optional",
-        type=["xlsx"],
-        key="uw_template_uploader",
+    # Track 4 / Phase 2.5 — UW Template scenario selector.
+    # The template file itself is bundled by default at
+    # `assets/ALF_UW_Template_v5.xlsx` (see _load_uw_template) and can be
+    # overridden via the Advanced expander below. The scenario radio stays
+    # in the main sidebar because it's a per-deal underwriting choice, not
+    # an operational config.
+    uw_template_scenario = st.radio(
+        "UW Template scenario",
+        options=["normalized", "t12_actual"],
+        index=0,
+        horizontal=True,
+        key="uw_template_scenario",
         help=(
-            "Optional. Upload an ALF UW Template (v4 or v5) to have the app "
-            "auto-populate it from the Analyzer in one click. The writer "
-            "reads cached values from the Analyzer (so the Analyzer must be "
-            "opened in Excel once before upload here — or just rely on the "
-            "auto-built version generated alongside) and writes per the "
-            "mapping registry. Skip this if you prefer the contract's "
-            "paste-values workflow."
+            "Which UW Output column to write into the populated UW Template. "
+            "**normalized** (col F) = analyst's stabilized underwriting "
+            "assumption — the contract's underwriting figure. "
+            "**t12_actual** (col E) = trailing-12 actuals, useful for a "
+            "variance / sanity-check view. Defaults to normalized."
         ),
     )
-
-    uw_template_scenario = "normalized"
-    if uw_template_file is not None:
-        uw_template_scenario = st.radio(
-            "UW Template scenario column",
-            options=["normalized", "t12_actual"],
-            index=0,
-            horizontal=True,
-            key="uw_template_scenario",
-            help=(
-                "Which UW Output column to write into the template. "
-                "**normalized** (col F) = analyst's stabilized underwriting "
-                "assumption — the contract's underwriting figure. "
-                "**t12_actual** (col E) = trailing-12 actuals, useful for a "
-                "variance / sanity-check view. Defaults to normalized."
-            ),
-        )
 
     st.markdown("##### 💵 Underwriting")
 
@@ -631,8 +676,24 @@ with st.sidebar:
                 "file."
             ),
         )
+        uw_template_override_file = st.file_uploader(
+            "UW Template override (.xlsx)",
+            type=["xlsx"],
+            key="uw_template_override_uploader",
+            help=(
+                "By default the app uses the bundled UW Template "
+                "(`assets/ALF_UW_Template_v5.xlsx`). Upload to override "
+                "for this session only — e.g. to populate against a "
+                "legacy v4 template, or to test a v5.1 / v6 candidate. "
+                "Uploads do not modify the bundled file. The writer "
+                "auto-detects v4 vs v5 from the file's column structure."
+            ),
+        )
 
-    st.caption(f"RR v{RR_VERSION} · T12 v{T12_VERSION} · AR v{AR_VERSION} · T5 v{T5_VERSION}")
+    st.caption(
+        f"RR v{RR_VERSION} · T12 v{T12_VERSION} · AR v{AR_VERSION} "
+        f"· T5 v{T5_VERSION} · UWT v{UWT_VERSION}"
+    )
 
 # ---------------------------------------------------------------------------
 # Module-level loading overlay slot (Track 5 v0.1.8)
@@ -1270,9 +1331,11 @@ with top_tab_workspace:
                 )
 
                 # ─── Track 4 / Phase 2.5 — populated UW Template download ───
-                # When the analyst has uploaded a UW Template, run the writer
-                # over the just-built Analyzer bytes and emit a second
-                # download button for the populated template.
+                # Mirrors the Analyzer pattern: bundled template loads by
+                # default from `assets/ALF_UW_Template_v5.xlsx`; operator
+                # can override via Advanced → "UW Template override". The
+                # populate flow fires unconditionally on every successful
+                # Analyzer build — no upload required.
                 #
                 # The writer reads cached formula values from the Analyzer,
                 # so the bytes we just generated (via openpyxl, which DOES
@@ -1282,19 +1345,23 @@ with top_tab_workspace:
                 # Excel first. Future enhancement: invoke a formula engine
                 # (pycel / formulas) to compute Analyzer values in-Python
                 # before the writer reads them.
-                if uw_template_file is not None:
-                    st.markdown("---")
-                    st.markdown("##### 📋 Populate UW Template")
-                    try:
-                        uw_template_bytes = uw_template_file.getvalue()
-                        with _show_loading("Populating UW Template…"):
-                            populated_uw, uw_report = populate_uw_template(
-                                final_bytes,
-                                uw_template_bytes,
-                                scenario=uw_template_scenario,
-                                # template_version defaults to 'v5' — works
-                                # for v4 too via registry's targets.v4.
-                            )
+                st.markdown("---")
+                st.markdown("##### 📋 Populate UW Template")
+                try:
+                    uw_template_bytes, uw_template_source, uw_template_version = (
+                        _load_uw_template(uw_template_override_file)
+                    )
+                    st.caption(
+                        f"Using UW Template: **{uw_template_source}** "
+                        f"(`{uw_template_version}`)."
+                    )
+                    with _show_loading("Populating UW Template…"):
+                        populated_uw, uw_report = populate_uw_template(
+                            final_bytes,
+                            uw_template_bytes,
+                            scenario=uw_template_scenario,
+                            template_version=uw_template_version,
+                        )
 
                         # Per-deal filename: <Property>_UW_Template_<period>_<scenario>.xlsx
                         property_name = (
@@ -1389,10 +1456,10 @@ with top_tab_workspace:
                                 "populated UW Template values."
                             )
 
-                    except UWTemplateWriterError as e:
-                        st.error(f"UW Template populate failed: {e}")
-                    except Exception as e:
-                        st.error(f"Could not populate UW Template: {e}")
+                except UWTemplateWriterError as e:
+                    st.error(f"UW Template populate failed: {e}")
+                except Exception as e:
+                    st.error(f"Could not populate UW Template: {e}")
             except AnalyzerRRCapacityError as e:
                 st.error(f"Rent Roll exceeds Analyzer capacity: {e}")
             except T12NormalizerCapacityError as e:
