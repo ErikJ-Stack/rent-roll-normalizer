@@ -22,6 +22,23 @@ truth.
 
 ## Pending
 
+### [BL-0027] README.md modernization — current versions + Track 4 + Track 5 + AR module
+- **Track:** Documentation (cross-cutting)
+- **Target:** TBD — low-priority doc refresh; pick up whenever doc-debt becomes annoying
+- **Originally surfaced in:** chat 2026-05-26, post-Phase-2.5 commit. README versions table reads RR v1.17.5 / T12 v0.2.1 / substrate v0.2.6 (Q1-2026 state). Current shipped state: RR v1.18.1 / T12 v0.2.1 (unchanged) / substrate v0.2.14 / UWT v0.4.1 / T5 v0.1.10 / AR v0.1.0.
+- **Summary:** Targeted updates to GitHub-facing `README.md` (NOT a full rewrite — README was substantially modernized in BL-0013 / RR v1.17.5; this is the second-round refresh for everything that's shipped since):
+    - **Versions table** — bump RR, substrate, add UWT row, T5 row, AR module row.
+    - **Data-capture coverage section** — extend to substrate v0.2.14 (AI = Deposit slot reserved, AJ = Preleased Date relocated, `RR_Input_Data` widened to A7:AJ606). Note Section N exposure surface on Rent Roll Recon (v0.2.13).
+    - **Add new section: "Track 4 — ALF UW Template integration"** — describes the registry pattern, 3 paste paths (T-12 / Rent Roll / AR), v5 default template, writer module, Phase 2.5 webapp integration. Cross-ref `SPEC-UWT.md`.
+    - **Add new section: "Track 5 — Webapp Dashboard surface"** — describes the in-browser Dashboard tab, the pure-Python compute approach, the regression test. Cross-ref `SPEC-T5.md`.
+    - **Add new section: "AR & Collections module"** under Track 2 — describes optional AR upload, bucket totals + payer mix, hidden sheet, P5 pre-export gate.
+    - **Refresh "Analyzer at a glance"** — currently capped at substrate v0.2.0; bring forward through v0.2.14, including Dashboard sheet (v0.2.4 / v0.2.7), v0.2.12 blended-formula fixes, v0.2.13 Section N exposure.
+    - **Update bundled-vs-user-managed framing** — bundled `ALF_Financial_Analyzer_Only.xlsx` is now user-managed per BL-0021 (wholesale-replace 2026-05-19); future Track 3 substrate work runs migrations against the user's copy.
+- **Why deferred:** README is GitHub-facing (relevant for cold-eyes on the repo — new contributors, reviewers, the curious-public). Not operator-facing (the live Streamlit app's "What the app does" expander, refreshed 2026-05-26, is the canonical operator-facing doc). Operator UX is unaffected by README staleness. Same precedent as BL-0013 sat for weeks before close.
+- **Dependencies:** None — purely additive doc work.
+
+---
+
 ### [BL-0026] Wire T-12 Raw path: Analyzer `T12 Input` → UW Template `T-12 Analysis!A123+` (Layer 1)
 - **Track:** UWT (Track 4)
 - **Target:** UWT v0.5.0 — after Phase 2.5 is fully integrated and sample-run-verified
