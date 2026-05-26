@@ -85,10 +85,11 @@
       "rr_input_data_range": "'Rent Roll Input'!$A$7:$AJ$606  (widened from $A$7:$S$606 at substrate v0.2.14)",
       "data_end_row": 386,
       "rent_roll_data_end_row": 386,
-      "status": "supported (superseded by v5 as binding default)"
+      "status": "supported (superseded by v5 as binding default)",
+      "file_note": "Sample Files/ is gitignored — v4 is retained as a working-copy reference, not committed. v5 is the binding committed asset."
     },
     "v5": {
-      "file": "Sample Files/ALF_UW_Template_v5.xlsx",
+      "file": "assets/ALF_UW_Template_v5.xlsx",
       "released": "2026-05-26",
       "supersedes": "v4",
       "intake_sheets": [

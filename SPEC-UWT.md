@@ -5,10 +5,10 @@
 > **ALF UW Template** workbook as the last step of the ALF underwriting
 > pipeline.
 >
-> **Status:** Phase 3 (UW Template v5 absorbed — writer supports v4 + v5,
-> v5 is now the binding default per the 2026-05-26 release).
-> **Current code version:** UWT v0.4.0 (registry v0.3.0 — 111 concepts, with
-> per-version `targets.v4` + `targets.v5` blocks).
+> **Status:** Phase 2.5 (Streamlit UI integration shipped — operator can
+> populate the UW Template in one click from the webapp).
+> **Current code version:** UWT v0.4.1 (registry v0.3.0 unchanged from
+> v0.4.0 — schema stable; v0.4.1 is app-integration only).
 > **Target template version:** `v5` (`Sample Files/ALF_UW_Template_v5.xlsx`
 > — repo canonical copy mirrored from `Deals/Acquisition/_Template/ALF Templates/`).
 > v4 still supported via `template_version='v4'` for backward compat.
@@ -248,7 +248,8 @@ All 15 are tracked as `open_questions` in `registry.json`.
 | **1.5 — AI conflict resolved** | Substrate v0.2.14 — Deposit slot reserved at AI; Preleased Date relocated to AJ; `RR_Input_Data` named range widened. RR v1.18.1 — writer constants updated. UWT registry v0.2.1 — Deposit status `substrate_ready_parser_pending`, Preleased source AJ. | ✅ shipped 2026-05-25 (v0.2.1) |
 | **2 — Writer module** | `uw_template_writer.py` — pure function `populate_uw_template(analyzer_bytes, template_bytes, *, scenario='normalized') → (bytes, PopulateReport)`. Registry-driven dispatch on `source.system` (`uw_output`, `rr_input`, `named_range`, `cell`, `derived`). Skips concepts at default skip statuses (gap_*, header_only, derived, manual, *_pending) and hard-coded `_SPECIAL_SKIP_KEYS` (opex_bad_debt_expense duplicate). Structured `PopulateReport` for transparency. `tests/test_uw_template_writer.py` exercises empty + populated fixtures. | ✅ shipped 2026-05-25 (v0.3.0) |
 | **3 — UW Template v5 absorbed** | `templates.v5` block added to registry; per-concept `targets.v5` for every concept (inherit v4 unchanged unless v5 shifted/added the target). Writer reads `rent_roll_data_end_row` per template version (v4: 386, v5: 610) and caps the rent_roll stride accordingly. Default `template_version` flipped to `v5`. 7 concepts moved gap_target → mapped (ebitda, opex_total_excl_mgmt, occupied_beds_il/al/mc, rr_care_level_tier_label, rr_preleased_date); 1 moved gap_target → derived (rr_total_ancillary — template owns the `=SUM(AK:AO)` formula at AQ); 2 v4-vs-v5 col shifts (rr_ach AP→AS, rr_market_psf AQ→AT) per contract §16. | ✅ shipped 2026-05-26 (v0.4.0) |
-| **2.5 — App integration** | New download button in `app.py` ("Download populated UW Template"). Per-deal output naming convention. | not started |
+| **6 — T-12 Raw path (BL-0026)** | New `t12_raw` path: Analyzer `T12 Input!A12:N511` → UW Template `T-12 Analysis!A123:N622` (Layer 1). Closes the duplicate-paste step where the analyst manually copies raw operator T-12 into the template after the same data already lives in Analyzer T12 Input. Includes month-header propagation (`T12 Input!C11:N11` → `T-12 Analysis!C122:N122`) which auto-updates the standardized layer's monthly headers via the existing `=C122..=N122` chain at B56:M56. ~35 new concepts; clean additive extension to the modular registry. Open question: should writer populate the template's col P (`→ MAPPING` standardized-bucket label) via Description_Map join, or leave as analyst dropdown? | deferred until Phase 2.5 is fully integrated + sample-run-verified |
+| **2.5 — App integration** | Sidebar UW Template file_uploader + scenario radio (`normalized` default / `t12_actual`). After the existing combined-Analyzer download, the workspace tab calls `populate_uw_template()` over the just-built Analyzer bytes, surfaces a 1-line summary + drill-in `PopulateReport` expander (auto-expands on warnings), then emits a per-deal-named download button (`<Property>_UW_Template_<period>_<scenario>.xlsx`). Includes a "cache caveat" info banner that walks the analyst through the round-trip-through-Excel workaround when t12-path values come through blank because the in-Python openpyxl write doesn't compute formulas. | ✅ shipped 2026-05-26 (v0.4.1) |
 | **3 — Monthly contract widening** | Extend UW Export to expose monthly bucket data from `Monthly Trending`. Writer fills `T-12 Analysis!B56:M68` (income block × 12 months) + later expands to labor/opex monthly. Cross-cutting Track 3 ↔ Track 4. | not started |
 | **4 — AR row-level routing** | Upstream substrate change: resident-key join in `AR & Collections` per-resident aging. Once that lands, AR path concepts move off `gap_source`. | not started |
 | **5 — Future template versions** | Adding `v5` is an additive change to `registry.json`; the writer reads the version-keyed target. No code change required if labels are stable. | future |
@@ -265,7 +266,8 @@ All 15 are tracked as `open_questions` in `registry.json`.
 - Phase 1 shipped UWT v0.2.0 + registry v0.2.0 + template v4 (substrate v0.2.11).
 - Phase 1.5 shipped UWT v0.2.1 + registry v0.2.1 + template v4 (substrate v0.2.14) — AI-column conflict resolved (Deposit at AI, Preleased at AJ).
 - Phase 2 shipped UWT v0.3.0 + registry v0.2.1 (unchanged) + template v4 (substrate v0.2.14) — writer module + smoke tests.
-- Phase 3 ships UWT v0.4.0 + registry v0.3.0 + template **v5** (substrate v0.2.14) — v5 template absorbed; writer supports v4 + v5 via `templates.{v}` blocks.
+- Phase 3 shipped UWT v0.4.0 + registry v0.3.0 + template **v5** (substrate v0.2.14) — v5 template absorbed; writer supports v4 + v5 via `templates.{v}` blocks.
+- Phase 2.5 ships UWT v0.4.1 + registry v0.3.0 (unchanged) — Streamlit UI integration; populate-UW-Template button reachable from the webapp.
 
 ## 9. Where things live
 

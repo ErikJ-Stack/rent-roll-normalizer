@@ -8,6 +8,123 @@ opened (none yet — Phase 0 is the seed release).
 
 ---
 
+## v0.4.1 — Phase 2.5: Streamlit UI integration (2026-05-26)
+
+Closes the user-experience gap that's been open since Phase 2. The writer
+module exists and works end-to-end, but until this release the operator
+had to either (a) paste-values manually per the contract's intended motion
+or (b) run `python uw_template_writer.py` via CLI. Now: upload the UW
+Template in the sidebar, get a populated copy as a second download
+alongside the Analyzer.
+
+### Shipped (app.py changes only — no API change)
+
+- **Sidebar** — new file_uploader `"UW Template (.xlsx) — optional"`
+  positioned after the AR uploader + as-of-date block. When the analyst
+  uploads, a horizontal radio appears below for scenario selection
+  (`normalized` default / `t12_actual`). The radio renders only when a
+  template is uploaded.
+- **Workspace tab** — after the existing combined-Analyzer download
+  button, a new `📋 Populate UW Template` section appears (gated on
+  `uw_template_file is not None`). It:
+  1. Reads the uploaded template bytes.
+  2. Calls `populate_uw_template(final_bytes, uw_template_bytes,
+     scenario=...)` — the just-built Analyzer bytes are the source.
+  3. Builds a per-deal filename via `derive_property_name(rr_file.name)`:
+     `<Property>_UW_Template_<RR period>_<scenario>.xlsx`. Property name
+     sanitized (alphanumerics + space/dash/underscore only; spaces → `_`).
+  4. Surfaces a one-line summary caption: "Writer populated **{N} of
+     {total}** concepts ({cells:,} cells). Scenario: `{scenario}`."
+  5. Drill-in expander `🔍 Populate report (details)` — auto-expanded on
+     warnings; shows warnings + outcome counts + per-error notes.
+  6. Emits the populated-template download button.
+  7. **Cache caveat info banner**: when any t12-path concept comes through
+     as `no_source`, surfaces an `st.info` walking the analyst through
+     the round-trip-through-Excel workaround (download Analyzer → open
+     in Excel → save → re-upload via Advanced expander's "Analyzer
+     template override" → re-download). Surfaces the openpyxl-doesn't-
+     compute-formulas reality clearly instead of leaving them confused.
+- **Constants**: `UWT_VERSION = "0.4.1"` + `UWT_LAST_UPDATED =
+  "2026-05-26"` added alongside the existing track version constants.
+  `RR_VERSION` bumped `"1.18.0"` → `"1.18.1"` (was lagging behind the
+  RR v1.18.1 writer shipped earlier the same day — `ANALYZER_SUBSTRATE_VERSION`
+  was already at `"0.2.14"` so the constants now agree across the board).
+- **Error surfacing**: catches `UWTemplateWriterError` for clean
+  reporting; falls back to generic `Exception` with `st.error` for
+  unanticipated failures (matches the pattern used by the existing
+  RR/T12/AR error handlers above it).
+
+### Design choices
+
+- **Operator uploads the template each session** rather than bundling
+  v5 in the repo. Trade-off: one extra file upload per session, but
+  zero infra and the operator can swap template versions easily when
+  v5.1 ships.
+- **Radio for scenario** (not multi-write). Writing both columns would
+  double the cell churn for marginal value; analysts can re-run with
+  the alternate scenario when needed.
+- **Inline summary + drill-in expander** rather than a results page.
+  The summary tells you what happened in one line; the expander surfaces
+  details when needed without cluttering the success path.
+- **Cache caveat banner** is conditional (only fires when t12-path
+  `no_source` outcomes exist) — silent on the happy path where the
+  analyst already round-tripped through Excel.
+
+### Verification
+
+- `python -c "import ast; ast.parse(open('app.py').read())"` — parses
+  clean at 1,394 lines.
+- Writer regression test (`tests/test_uw_template_writer.py`) still
+  passes on v5 (90 concepts written / 3,232 cells on Homestead).
+- No new tests for the Streamlit wiring — Streamlit's session-state
+  testing is awkward and the existing writer-module tests cover the
+  underlying call path.
+
+### Known limitation surfaced this release
+
+- **Cache state on freshly-built Analyzer bytes**: openpyxl doesn't
+  compute formulas, so the Analyzer bytes the app builds via
+  `populate_rr_input` / `populate_t12_input` / `populate_ar_collections`
+  have *no cached UW Output values*. The writer reads `data_only=True`,
+  which returns `None` for uncomputed formulas. Net effect: when the
+  analyst uses the inline populate-UW-Template flow on a fresh
+  Analyzer (no Excel round-trip), most t12-path concepts come through
+  as `no_source`. The cache caveat banner surfaces this clearly. A
+  future enhancement could embed a formula evaluator (pycel / formulas
+  / xlcalculator) in the pipeline to compute Analyzer values in-Python
+  before the writer reads them — non-trivial but would remove the
+  Excel-round-trip step entirely.
+
+### Out of scope (still pending)
+
+- **v5.1 template completions** (operator side): Cover substrate version
+  stamp + RR Analysis tab-header Period Date metadata cell.
+- **Deposit parser support** — substrate slot ready, fixture pending.
+- **AR row-level routing** — substantial Track 2/3 upstream work.
+- **In-Python formula evaluator** to close the cache caveat (see above).
+
+### Committed-asset addendum (2026-05-26, same release)
+
+Operator dropped a clean blank v5 template at `assets/ALF_UW_Template_v5.xlsx`
+(repo root `assets/` — same convention as `fortis_logo.svg` and the Pingkas
+logos). Registry's `templates.v5.file` repointed from
+`Sample Files/ALF_UW_Template_v5.xlsx` → `assets/ALF_UW_Template_v5.xlsx`;
+test fixture `TEMPLATE_V5` constant repointed to match. This makes
+writer smoke tests runnable from a cold checkout without needing the
+gitignored Sample Files copy. v4 working copy stays in Sample Files —
+not committed, not the binding default. Structural verification on the
+committed file: 16 sheets, no data rows in Rent Roll Analysis A211+,
+Prop Info B4/B20-B22 all empty, AQ211 holds `=SUM(AK211:AO211)` formula.
+
+### Versioning
+
+- UWT code version: **v0.4.1** (Phase 2.5).
+- Mapping registry version: **0.3.0** (unchanged from v0.4.0).
+- Template versions supported: **v4** + **v5** (v5 default).
+- Analyzer substrate mapped against: **v0.2.14** (unchanged).
+
+---
+
 ## v0.4.0 — Phase 3: UW Template v5 absorbed (2026-05-26)
 
 Operator authored `ALF_UW_Template_v5.xlsx` externally in Excel (per the

@@ -36,9 +36,13 @@ from uw_template_writer import (
 
 ROOT = Path(__file__).resolve().parent.parent
 BUNDLED_ANALYZER = ROOT / "ALF_Financial_Analyzer_Only.xlsx"
+# v4 lives in Sample Files (gitignored — working-copy reference only).
 TEMPLATE_V4 = ROOT / "Sample Files" / "ALF_UW_Template_v4.xlsx"
-TEMPLATE_V5 = ROOT / "Sample Files" / "ALF_UW_Template_v5.xlsx"
-TEMPLATE = TEMPLATE_V5  # default — v5 is the binding template as of 2026-05-26
+# v5 is the binding template as of 2026-05-26 and lives at the committed
+# asset path so CI / cold checkouts can run the smoke test without needing
+# the gitignored Sample Files copy.
+TEMPLATE_V5 = ROOT / "assets" / "ALF_UW_Template_v5.xlsx"
+TEMPLATE = TEMPLATE_V5  # default — v5
 POPULATED_ANALYZER = (
     ROOT / "Sample Files"
     / "Analyzer with 2026-04-24 Homestead Village Rent Roll v2 + March 2026 T12 2026-04-24.xlsx"

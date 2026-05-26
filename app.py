@@ -56,6 +56,10 @@ from ar_normalizer import parse_ar_file
 from ar_writer import AROutputError, populate_ar_collections
 from dashboard_model import compute_dashboard
 from dashboard_ui import render_dashboard
+from uw_template_writer import (
+    UWTemplateWriterError,
+    populate_uw_template,
+)
 from writer import write_output
 
 
@@ -66,8 +70,11 @@ from writer import write_output
 APP_VERSION = "1.14.0"            # alias for RR_VERSION; kept for back-compat
 APP_LAST_UPDATED = "2026-05-08"   # alias for RR_LAST_UPDATED
 
-RR_VERSION = "1.18.0"
+RR_VERSION = "1.18.1"
 RR_LAST_UPDATED = "2026-05-25"
+
+UWT_VERSION = "0.4.1"             # Track 4 — UW Template integration (Phase 2.5)
+UWT_LAST_UPDATED = "2026-05-26"
 
 T12_VERSION = "0.2.1"
 T12_LAST_UPDATED = "2026-05-11"
@@ -511,6 +518,42 @@ with st.sidebar:
                 "Defaults to the RR period date. Override if the operator's "
                 "AR report carries a different as-of date — the P5 pre-export "
                 "gate will flag if the AR date doesn't match RR."
+            ),
+        )
+
+    # Track 4 / Phase 2.5 — UW Template populate path.
+    # The UW Template lives outside this repo (operator-authored in Excel,
+    # stored in the Deals folder). Analyst uploads it here when they want
+    # the webapp to populate it from the just-built Analyzer.
+    uw_template_file = st.file_uploader(
+        "UW Template (.xlsx) — optional",
+        type=["xlsx"],
+        key="uw_template_uploader",
+        help=(
+            "Optional. Upload an ALF UW Template (v4 or v5) to have the app "
+            "auto-populate it from the Analyzer in one click. The writer "
+            "reads cached values from the Analyzer (so the Analyzer must be "
+            "opened in Excel once before upload here — or just rely on the "
+            "auto-built version generated alongside) and writes per the "
+            "mapping registry. Skip this if you prefer the contract's "
+            "paste-values workflow."
+        ),
+    )
+
+    uw_template_scenario = "normalized"
+    if uw_template_file is not None:
+        uw_template_scenario = st.radio(
+            "UW Template scenario column",
+            options=["normalized", "t12_actual"],
+            index=0,
+            horizontal=True,
+            key="uw_template_scenario",
+            help=(
+                "Which UW Output column to write into the template. "
+                "**normalized** (col F) = analyst's stabilized underwriting "
+                "assumption — the contract's underwriting figure. "
+                "**t12_actual** (col E) = trailing-12 actuals, useful for a "
+                "variance / sanity-check view. Defaults to normalized."
             ),
         )
 
@@ -1163,6 +1206,131 @@ with top_tab_workspace:
                     use_container_width=True,
                     key="dl_combined",
                 )
+
+                # ─── Track 4 / Phase 2.5 — populated UW Template download ───
+                # When the analyst has uploaded a UW Template, run the writer
+                # over the just-built Analyzer bytes and emit a second
+                # download button for the populated template.
+                #
+                # The writer reads cached formula values from the Analyzer,
+                # so the bytes we just generated (via openpyxl, which DOES
+                # NOT compute formulas) won't have UW Output values cached.
+                # Workaround: warn the user — the populated UW Template will
+                # be sparse unless the Analyzer is round-tripped through
+                # Excel first. Future enhancement: invoke a formula engine
+                # (pycel / formulas) to compute Analyzer values in-Python
+                # before the writer reads them.
+                if uw_template_file is not None:
+                    st.markdown("---")
+                    st.markdown("##### 📋 Populate UW Template")
+                    try:
+                        uw_template_bytes = uw_template_file.getvalue()
+                        with _show_loading("Populating UW Template…"):
+                            populated_uw, uw_report = populate_uw_template(
+                                final_bytes,
+                                uw_template_bytes,
+                                scenario=uw_template_scenario,
+                                # template_version defaults to 'v5' — works
+                                # for v4 too via registry's targets.v4.
+                            )
+
+                        # Per-deal filename: <Property>_UW_Template_<period>_<scenario>.xlsx
+                        property_name = (
+                            derive_property_name(getattr(rr_file, "name", ""))
+                            or "Property"
+                        )
+                        # Sanitize for filename
+                        safe_property = "".join(
+                            c if c.isalnum() or c in " -_" else "_"
+                            for c in property_name
+                        ).strip().replace(" ", "_")
+                        uw_out_name = (
+                            f"{safe_property}_UW_Template_"
+                            f"{period_date_input.isoformat()}_"
+                            f"{uw_template_scenario}.xlsx"
+                        )
+
+                        # Inline summary
+                        n_written = uw_report.summary.get("written", 0)
+                        n_cells = uw_report.summary.get("cells_written", 0)
+                        n_total = uw_report.summary.get("total_concepts", 0)
+                        n_warn = len(uw_report.warnings)
+                        st.caption(
+                            f"Writer populated **{n_written} of {n_total}** "
+                            f"concepts ({n_cells:,} cells). "
+                            f"Scenario: `{uw_template_scenario}`. "
+                            + (f"⚠️ {n_warn} warning(s)." if n_warn else "")
+                        )
+
+                        # Drill-in expander with the full PopulateReport
+                        with st.expander(
+                            "🔍 Populate report (details)",
+                            expanded=(n_warn > 0),
+                        ):
+                            if uw_report.warnings:
+                                st.markdown("**Warnings:**")
+                                for w in uw_report.warnings:
+                                    st.markdown(f"- {w}")
+
+                            by_outcome = uw_report.by_outcome()
+                            outcome_lines = []
+                            for outcome in (
+                                "written", "no_source", "skipped",
+                                "no_target", "error",
+                            ):
+                                items = by_outcome.get(outcome, [])
+                                if items:
+                                    outcome_lines.append(
+                                        f"- **{outcome}** — {len(items)} concept(s)"
+                                    )
+                            if outcome_lines:
+                                st.markdown(
+                                    "**Outcomes by category:**\n"
+                                    + "\n".join(outcome_lines)
+                                )
+
+                            errors = by_outcome.get("error", [])
+                            if errors:
+                                st.markdown("**Errors:**")
+                                for r in errors:
+                                    st.markdown(
+                                        f"- `{r.key}` → `{r.target_address}` — {r.notes}"
+                                    )
+
+                        st.download_button(
+                            label=(
+                                f"⬇️ Download {uw_out_name[:60]}"
+                                f"{'…' if len(uw_out_name) > 60 else ''}"
+                            ),
+                            data=populated_uw,
+                            file_name=uw_out_name,
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            use_container_width=True,
+                            key="dl_uw_template",
+                        )
+
+                        # Cache-state caveat — surface so the analyst knows
+                        # why some t12-path cells may be blank even though
+                        # the Analyzer "has" the data.
+                        if any(
+                            r.outcome == "no_source"
+                            and r.path == "t12"
+                            for r in uw_report.results
+                        ):
+                            st.info(
+                                "ℹ️ Some UW Output values came through as "
+                                "blank — Analyzer formulas haven't been "
+                                "computed yet. Open the downloaded Analyzer "
+                                "in Excel once (let it recalc), save, then "
+                                "re-upload as 'Analyzer template override' "
+                                "in the Advanced expander to get fully "
+                                "populated UW Template values."
+                            )
+
+                    except UWTemplateWriterError as e:
+                        st.error(f"UW Template populate failed: {e}")
+                    except Exception as e:
+                        st.error(f"Could not populate UW Template: {e}")
             except AnalyzerRRCapacityError as e:
                 st.error(f"Rent Roll exceeds Analyzer capacity: {e}")
             except T12NormalizerCapacityError as e:

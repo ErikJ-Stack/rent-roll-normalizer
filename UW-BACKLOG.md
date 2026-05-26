@@ -22,6 +22,23 @@ truth.
 
 ## Pending
 
+### [BL-0026] Wire T-12 Raw path: Analyzer `T12 Input` → UW Template `T-12 Analysis!A123+` (Layer 1)
+- **Track:** UWT (Track 4)
+- **Target:** UWT v0.5.0 — after Phase 2.5 is fully integrated and sample-run-verified
+- **Originally surfaced in:** chat 2026-05-26, post-Phase-2.5 ship. User noticed the analyst still has to manually paste raw operator T-12 into the UW Template's Layer 1 (`T-12 Analysis!A123+`) even though the same data was already parsed and lives at Analyzer `T12 Input!A12:N511`. Duplicate paste step.
+- **Summary:** Add a third paste path to the registry — `t12_raw` — modeling Analyzer `T12 Input` → UW Template `T-12 Analysis!A123+` Layer 1. Shapes are functionally identical (Account # / Description / 12 monthly cols / T-12 Total) on both sides, just with the template adding cols P/Q for mapping label and variance.
+    - **Concepts to add (~5)** as column-stride mappings:
+        - `t12_raw_account_num` — `T12 Input!A12:A511` → `T-12 Analysis!A123:A622+`
+        - `t12_raw_description` — `T12 Input!B12:B511` → `T-12 Analysis!B123:B622+`
+        - `t12_raw_monthly` (single concept that writes 12 cols × N rows) — `T12 Input!C12:N511` → `T-12 Analysis!C123:N622`. May need a small writer extension to handle 2-D stride paste; otherwise model as 12 separate column concepts.
+        - `t12_raw_total` — `T12 Input!O` — template formula, writer skips.
+        - **`t12_raw_month_headers`** — `T12 Input!C11:N11` → `T-12 Analysis!C122:N122`. Cherry on top: the template's `B56:M56` monthly headers already pull from `=C122..=N122` via the v5 formula chain, so populating row 122 from the Analyzer's dynamic month headers auto-updates the standardized layer's headers to real per-deal dates instead of the hardcoded `Apr-25..Mar-26`.
+    - **Open question to resolve before shipping:** template col P (`→ MAPPING`) holds standardized-bucket labels. Should writer populate from Analyzer `Description_Map` join, or leave as analyst dropdown on the template side? User leaned toward "populate but allow override" but final call deferred.
+- **Why deferred:** Phase 2.5 just shipped (2026-05-26). The current write loop must be fully integrated and validated against a real deal end-to-end before adding a new path. Adding the t12_raw path is a clean additive extension to the existing modular registry, so no foundational work is wasted by deferring.
+- **Dependencies / unblocks:** None — Phase 2.5 doesn't block this conceptually, but operationally we want to validate Phase 2.5 first. After this lands, the only remaining T-12 friction in the analyst workflow is the cache caveat (Excel-round-trip for cached UW Output values), which is its own separate item.
+
+---
+
 ### [BL-0019] Persistent audit log for password gate (external store + manual sync)
 - **Track:** RR (Track 1)
 - **Target:** TBD (likely RR v1.18.0 + new `tools/sync_audit_log.py`)
