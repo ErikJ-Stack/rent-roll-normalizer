@@ -699,35 +699,97 @@ with top_tab_workspace:
         with st.expander("What the app does"):
             st.markdown(
                 """
-                **Track 1 — Rent Roll Normalizer**
+                The webapp runs **four** parallel data tracks that all
+                converge on the bundled Analyzer workbook, then feeds the
+                Analyzer to a downstream UW Template in one click.
+
+                **Track 1 — Rent Roll Normalizer** *(RR v1.18.1)*
 
                 - Detects the header row in the first ~20 rows.
                 - Parses parent-apartment / child-bed layouts: apartment rows
                   establish context, child rows become normalized beds.
-                - Auto-groups care charges by header prefix. Recognized buckets
-                  (AL, Med Mgmt, Pharmacy) get their own columns; others roll
-                  into **Other LOC $**.
-                - Normalizes apt type, bed status, payer type, and care level.
+                - Auto-groups care charges by header prefix. Recognized
+                  buckets (AL care, Med Mgmt, Pharmacy, per-fee ancillary
+                  cols Meal/Scooter/HK/Laundry/Pet) get their own columns;
+                  unrecognized care rolls into **Other LOC $** so revenue
+                  never disappears.
+                - Normalizes apt type, bed status (incl. Preleased), payer
+                  type, and care level.
                 - Preserves vacant beds.
-                - Exports a 6-tab Excel.
+                - Exports a 7-tab standalone normalized Excel for analyst
+                  review, AND writes bed-level data to the Analyzer's
+                  `Rent Roll Input` sheet (cols A–AJ).
 
-                **Track 2 — T12 Normalizer** *(new in T12 v0.1.0)*
+                **Track 2 — T12 Normalizer** *(T12 v0.2.1)*
 
-                - Detects T12 format (Yardi `Income to Budget`, MRI `R12MINCS`).
-                - Reads month labels from the source and normalizes to `MMM YYYY`.
+                - Detects T12 format (Yardi `Income to Budget`, MRI
+                  `R12MINCS`, broker-financial-summary).
+                - Reads month labels from the source and normalizes to
+                  `MMM YYYY`.
                 - Drops grand-total rows and explicit non-operating lines.
                 - Writes GL detail to the Analyzer's `T12 Input` sheet.
                 - Surfaces UNMATCHED descriptions for in-app mapping; new
                   mappings persist in your downloaded Analyzer.
+                - Optional `Annualize partial-year T12` toggle for < 12-
+                  month inputs.
 
-                **Combined output:** When you upload a rent roll plus a raw T12,
-                you get a single populated Analyzer with both data sets, plus
-                any new mappings you supplied through the matcher form.
+                **Track 2 — AR & Collections module** *(AR v0.1.0,
+                substrate v0.2.10+)*
+
+                - Optional AR aging upload (.xlsx / .csv).
+                - Parses bucket totals (Current / 31-60 / 61-90 / 91-120 /
+                  120+), payer mix, and roll-forward fields.
+                - Writes to the Analyzer's `AR & Collections` sheet
+                  (hidden by default; revealed when AR is uploaded).
+                - Adds a Workbook Health P5 pre-export gate that flags
+                  AR-vs-RR period mismatches.
+
+                **Track 4 — ALF UW Template integration** *(UWT v0.4.1,
+                Phase 2.5)*
+
+                - Optional UW Template upload (`ALF_UW_Template_v5.xlsx`
+                  or v4).
+                - Populates ~95 of 111 mapped concepts from the Analyzer
+                  into the template in one click: T-12 Analysis Layer 3
+                  (EGI, EBITDARM, EBITDA, full opex line-item map), Prop
+                  Info (property name, licensed + occupied beds), Rent
+                  Roll Analysis row 211+ (all 176-bed paste path with
+                  position-shift handling for v5).
+                - Scenario radio: **normalized** (col F, the underwriting
+                  figure) vs **t12_actual** (col E, for variance views).
+                - Surfaces a per-deal populated UW Template as a second
+                  download alongside the populated Analyzer.
+                - Drill-in `PopulateReport` expander surfaces warnings,
+                  outcome counts, and per-error notes.
+                - **Cache caveat:** openpyxl doesn't compute formulas, so
+                  the in-line populate flow leaves t12-path values blank
+                  on first pass. Workaround: download the Analyzer →
+                  open in Excel once (let it recalc + save) → re-upload
+                  via the "Analyzer template override" Advanced expander
+                  → re-trigger populate. The app surfaces this banner
+                  only when it actually applies.
+
+                **Combined output:** When you upload RR + T12 (+ optional
+                AR + optional UW Template), you get a single populated
+                Analyzer with everything reconciled, plus any new T12
+                mappings you supplied through the matcher form, plus a
+                per-deal populated UW Template if you uploaded one.
+
+                **Dashboard tab** *(Track 5, T5 v0.1.10)*
+
+                Switch to the **📊 Dashboard** tab above for a mobile-
+                friendly view of the same headline KPIs the downloaded
+                Analyzer surfaces in its `Dashboard` sheet — occupancy,
+                EBITDARM margin, going-in cap, RevPOR, payer mix, care-
+                type breakdown, 12-month EGI trend.
 
                 **Analyzer source:** The app uses the bundled Analyzer
-                (`ALF_Financial_Analyzer_Only.xlsx`) by default. To use a
-                different Analyzer for one session, expand
-                "Advanced — override Analyzer template" in the sidebar.
+                (`ALF_Financial_Analyzer_Only.xlsx`, substrate v0.2.14)
+                by default. To use a different Analyzer for one session
+                — or to feed a pre-Excel-cached Analyzer back through the
+                UW Template populate flow — expand
+                **"Advanced — override Analyzer template"** in the
+                sidebar.
                 """
             )
         st.stop()
