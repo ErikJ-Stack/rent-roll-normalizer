@@ -67,8 +67,15 @@ from property_name import derive_property_name
 #   AF  = Laundry $                  (new at v1.17.0)
 #   AG  = Pet $                      (new at v1.17.0)
 #   AH  = Total Ancillary $ formula  (substrate v0.1.13)
-# Substrate v0.2.13 layout (this writer + RR v1.18.0):
-#   AI  = Preleased Date             (new at v1.18.0 — BL-0025, exposure)
+# Substrate v0.2.13 layout (initial Preleased placement, since superseded):
+#   AI  = Preleased Date             (added at RR v1.18.0 — BL-0025, exposure)
+# Substrate v0.2.14 layout (this writer + RR v1.18.1):
+#   AI  = Deposit                    (new — 2026-05-25 UW Template handoff
+#                                    contract reservation; parser support
+#                                    deferred until a source fixture with
+#                                    Deposit data exists)
+#   AJ  = Preleased Date             (relocated from AI to make room for
+#                                    Deposit per the 2026-05-25 user decision)
 SHEET_NAME = "Rent Roll Input"
 DATA_START_ROW = 7
 DATA_END_ROW = 606  # also the formula extent in cols T, U
@@ -78,7 +85,10 @@ COL_V_INDEX = 22       # 2nd Person Rent $ column (start of v1.16.0 extension)
 COL_AB_INDEX = 28      # ACH column (end of v1.16.0 extension)
 COL_AC_INDEX = 29      # Meal Plan $ (start of v1.17.0 per-fee ancillary block)
 COL_AG_INDEX = 33      # Pet $ (end of v1.17.0 per-fee ancillary block)
-COL_AI_INDEX = 35      # Preleased Date (v1.18.0; AH=34 holds the Total Ancillary $ formula)
+COL_AI_INDEX = 35      # Deposit (substrate v0.2.14; clear-only — no parser
+                       # support yet, slot reserved per UW Template contract)
+COL_AJ_INDEX = 36      # Preleased Date (substrate v0.2.14 — relocated from
+                       # AI when Deposit took that slot)
 
 # The 18 source columns in the order the Analyzer's Rent Roll Input expects them
 # at cols A-R. These names must match the Condensed_RR column names exactly.
@@ -131,14 +141,17 @@ SOURCE_COLUMNS_AC_TO_AG = [
     "Pet $",              # AG
 ]
 
-# 1 new source column at v1.18.0 (UW-BACKLOG BL-0025), mapped to Rent Roll
-# Input col AI. AH=34 is reserved for the Total Ancillary $ formula
-# (substrate v0.1.13) so we skip it. Preleased Date pairs with
-# Status="Preleased" (also new at v1.18.0) — Section N on Rent Roll Recon
-# uses both for the exposure rollup (point-in-time net exposure + forward
-# NTV departure buckets).
-SOURCE_COLUMNS_AI = [
-    "Preleased Date",     # AI
+# 1 source column for v1.18.0 Preleased Date — relocated from AI to AJ at
+# RR v1.18.1 / substrate v0.2.14 to free AI for the new Deposit slot
+# (per the 2026-05-25 ALF UW Template handoff contract). AH=34 still holds
+# Total Ancillary $ (substrate v0.1.13); AI=35 is now reserved for Deposit
+# (no parser support yet — slot is clear-only).
+#
+# Preleased Date still pairs with Status="Preleased" — Section N on Rent
+# Roll Recon (v0.2.13) matches on Status, NOT on the date column, so the
+# AI → AJ relocation has zero formula impact on the substrate.
+SOURCE_COLUMNS_AJ = [
+    "Preleased Date",     # AJ
 ]
 
 
@@ -235,7 +248,10 @@ def populate_rr_input(
     #   - Cols V-AB: v1.16.0 extension fields (always clear)
     #   - Cols AC-AG: v1.17.0 per-fee ancillary fields (always clear)
     #   - Col AH: Total Ancillary $ formula — DO NOT clear (substrate v0.1.13)
-    #   - Col AI: v1.18.0 Preleased Date (always clear)
+    #   - Col AI: Deposit (substrate v0.2.14 — clear defensively even though
+    #     parser doesn't populate yet; catches stale Preleased data from a
+    #     pre-v0.2.14 populated workbook that's been forward-rolled)
+    #   - Col AJ: Preleased Date (substrate v0.2.14 — relocated from AI)
     for r in range(DATA_START_ROW, DATA_END_ROW + 1):
         for c in range(1, COL_S_INDEX + 1):  # cols 1-19 = A-S
             ws.cell(row=r, column=c).value = None
@@ -243,7 +259,8 @@ def populate_rr_input(
             ws.cell(row=r, column=c).value = None
         for c in range(COL_AC_INDEX, COL_AG_INDEX + 1):  # cols 29-33 = AC-AG
             ws.cell(row=r, column=c).value = None
-        ws.cell(row=r, column=COL_AI_INDEX).value = None  # col 35 = AI
+        ws.cell(row=r, column=COL_AI_INDEX).value = None  # col 35 = AI (Deposit)
+        ws.cell(row=r, column=COL_AJ_INDEX).value = None  # col 36 = AJ (Preleased)
 
     # --- Step 2: Write the translated rent roll ---------------------------
     # Match by column NAME (not position) — defensive against future
@@ -258,8 +275,8 @@ def populate_rr_input(
     has_v116_cols = all(c in translated_df.columns for c in SOURCE_COLUMNS_V_TO_AB)
     # v1.17.0 per-fee ancillary cols are optional too.
     has_v117_cols = all(c in translated_df.columns for c in SOURCE_COLUMNS_AC_TO_AG)
-    # v1.18.0 Preleased Date is optional too.
-    has_v118_cols = all(c in translated_df.columns for c in SOURCE_COLUMNS_AI)
+    # v1.18.0 Preleased Date is optional too (relocated AI → AJ in v1.18.1).
+    has_v118_cols = all(c in translated_df.columns for c in SOURCE_COLUMNS_AJ)
 
     for i, (_, row) in enumerate(translated_df.iterrows()):
         excel_row = DATA_START_ROW + i
@@ -285,12 +302,14 @@ def populate_rr_input(
                 col_idx = COL_AC_INDEX + offset
                 value = _coerce_value(row[src_col])
                 ws.cell(row=excel_row, column=col_idx).value = value
-        # Col AI (35) ← v1.18.0 Preleased Date, when available. Skips AH=34
-        # which holds the Total Ancillary $ formula from substrate v0.1.13.
+        # Col AJ (36) ← v1.18.0 Preleased Date, when available. Skips
+        # AH=34 (Total Ancillary $ formula, substrate v0.1.13) and AI=35
+        # (Deposit slot, substrate v0.2.14 — clear-only, no parser support
+        # yet per the 2026-05-25 UW Template handoff contract).
         if has_v118_cols:
-            ai_cell = ws.cell(row=excel_row, column=COL_AI_INDEX)
-            ai_cell.value = _coerce_value(row["Preleased Date"])
-            ai_cell.number_format = "mm/dd/yyyy"
+            aj_cell = ws.cell(row=excel_row, column=COL_AJ_INDEX)
+            aj_cell.value = _coerce_value(row["Preleased Date"])
+            aj_cell.number_format = "mm/dd/yyyy"
 
     # --- Step 3: Stamp property name into A3 (substrate v0.1.8 source cell)
     # Only writes when derivation produces something non-empty, so a bad

@@ -8,6 +8,59 @@ When making a code change in a chat, add an entry here in the same commit.
 
 ---
 
+## [1.18.1] — 2026-05-25 — Preleased AI→AJ relocation (writer-side)
+
+### Summary
+
+Companion writer change to substrate v0.2.14 (Deposit slot reservation at
+`Rent Roll Input!AI`, Preleased Date relocated to AJ). Cross-track
+follow-up filed by Track 4 / UWT v0.2.0 — the 2026-05-25 ALF UW Template
+handoff contract reserves AI for Deposit, but v1.18.0 / v0.2.13 (also
+2026-05-25, earlier) had just put Preleased there. Per user decision:
+Deposit gets AI; Preleased moves.
+
+### Files changed
+
+- **`analyzer_rr_writer.py`** — three surgical changes:
+  - `COL_AI_INDEX = 35` now documents the Deposit slot (clear-only — no
+    parser support yet; slot reserved per the UW Template contract).
+  - New `COL_AJ_INDEX = 36` for Preleased Date routing.
+  - Constant `SOURCE_COLUMNS_AI` renamed `SOURCE_COLUMNS_AJ`. Sole
+    member unchanged: `["Preleased Date"]`.
+  - Step-1 clear loop extended to defensively clear **both** AI (col 35,
+    Deposit slot — empty but cleared in case a stale Preleased date was
+    sitting there from a forward-rolled pre-v0.2.14 workbook) and AJ
+    (col 36, Preleased Date — actual destination now).
+  - Step-2 per-row write block: `aj_cell` writes Preleased Date to col
+    36 instead of `ai_cell` writing to col 35. Number format
+    `mm/dd/yyyy` preserved.
+  - Layout comment block updated to document v0.2.14 layout
+    (AI=Deposit, AJ=Preleased Date).
+
+### Out of scope
+
+- **Deposit parser support deferred.** `mappings.py` / `normalizer.py` /
+  `CONDENSED_COLUMNS` unchanged — Deposit field capture from source rent
+  rolls needs a fixture with a Deposit column to design the patterns
+  against. Until then the substrate slot is reserved + the writer clears
+  defensively, but no Deposit data flows.
+
+### Verification
+
+- `analyzer_rr_writer.py` parses cleanly (`ast.parse`).
+- No stale `SOURCE_COLUMNS_AI` references remain (0 matches).
+- `COL_AI_INDEX` retained for the Deposit slot (used in clear loop);
+  `COL_AJ_INDEX` is the new Preleased target.
+- `app.py` `ANALYZER_SUBSTRATE_VERSION` bumped `"0.2.13"` → `"0.2.14"`.
+
+### Cross-track companions
+
+- Substrate v0.2.14 (`migrate_to_v0214.py`) — see `CHANGELOG-T12.md`.
+- UWT registry v0.2.1 — `rr_preleased_date` source address AI → AJ;
+  `rr_deposit` status `decided_pending_upstream` → `substrate_ready_parser_pending`.
+
+---
+
 ## [1.18.0] — 2026-05-25
 
 ### Summary

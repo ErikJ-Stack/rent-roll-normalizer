@@ -8,6 +8,82 @@ When making a code change in a T12-related chat, add an entry here in the same c
 
 ---
 
+## Substrate v0.2.14 — Deposit slot reservation + Preleased AI→AJ relocation (2026-05-25)
+
+Cross-track follow-up filed by Track 4 / UWT v0.2.0 (2026-05-25 earlier in
+the day). The 2026-05-25 ALF UW Template handoff contract reserves
+`Rent Roll Input!AI` for **Deposit** (UW Template Rent Roll Analysis col M),
+but RR v1.18.0 + substrate v0.2.13 (also 2026-05-25) had just put
+**Preleased Date** at AI. Per user decision: Deposit gets AI; Preleased
+Date relocates to AJ.
+
+### Substrate changes (4 surface patches)
+
+1. **`Rent Roll Input!AI4` → `AJ4`** — Preleased Date header (`"Preleased\nDate"`)
+   relocated from AI4 to AJ4, with style + column width copied along.
+   Per-cell data relocation handler in the migration: if AI7:AI606 had
+   populated Preleased Date values (from a forward-rolled v0.2.13
+   workbook), they're moved to AJ7:AJ606 with number_format preserved.
+   Bundled-file case is a no-op (empty data block).
+2. **`Rent Roll Input!AI4` ← `"Deposit"`** — new header, styled to match
+   `X4` (Balance — existing $-typed input column). Column width copied
+   from X (11.0). AI7:AI606 number_format applied as `$#,##0.00`
+   (matches X7).
+3. **`RR_Input_Data` named range widened** — `'Rent Roll Input'!$A$7:$S$606`
+   → `'Rent Roll Input'!$A$7:$AJ$606`. Legacy A:S scope predated the
+   v1.16.0+ ancillary cols and the UW Template rent-roll path needs the
+   full row. Closes the second of the two Track 4 open questions resolved
+   by this release.
+4. **Version stamps** — `Cover!B8` and all 16 `AZ4` anchors stamped to
+   `v0.2.14`.
+
+### Section N impact: none
+
+Section N on Rent Roll Recon (v0.2.13, BL-0025 exposure surface) uses
+`COUNTIFS` on Status="Preleased" in col E — **not** on the Preleased Date
+column directly — so the AI → AJ relocation has zero formula impact on
+the rest of the substrate. Verified via pre-flight grep on Rent Roll Recon
+section N rows 178-198: no AI cell-references.
+
+### Migration
+
+`tools/migration/migrate_to_v0214.py` — idempotent. Gate:
+`Cover!B8 == "v0.2.14"` AND `Rent Roll Input!AI4 == "Deposit"`. All 8
+verification checks pass on the bundled file. Re-run = no-op.
+
+### Companion RR change (cross-track)
+
+`analyzer_rr_writer.py` v1.18.1: `COL_AI_INDEX = 35` is now the Deposit
+slot (clear-only — no parser support yet, slot reserved per the UW Template
+contract); new `COL_AJ_INDEX = 36` for Preleased Date routing. Constant
+`SOURCE_COLUMNS_AI` renamed to `SOURCE_COLUMNS_AJ`. Step-1 clear loop
+extended to defensively clear both AI and AJ for each row — catches stale
+Preleased data from a pre-v0.2.14 populated workbook that's been
+forward-rolled. See `CHANGELOG-RR.md` v1.18.1 entry.
+
+### Companion Track 4 change
+
+UWT registry v0.2.0 → v0.2.1 (`tools/uw_template/registry.json`):
+- `rr_preleased_date` source address: `AI7:AI606` → `AJ7:AJ606`.
+- `rr_deposit` status: `decided_pending_upstream` → `substrate_ready_parser_pending`.
+  Substrate slot is ready; parser work pending a source-RR fixture with
+  a Deposit field.
+- New status `substrate_ready_parser_pending` added to `status_legend`.
+- Two `open_questions` resolved (Preleased relocation; `RR_Input_Data`
+  scope). One added (Preleased Date still has no UW Template v5 column).
+
+### Code constants
+
+`app.py` `ANALYZER_SUBSTRATE_VERSION` bumped `"0.2.13"` → `"0.2.14"`.
+
+### Bundled file
+
+`ALF_Financial_Analyzer_Only.xlsx` updated in place v0.2.13 → v0.2.14.
+Sheet count unchanged at 16; all 16 AZ4 anchors stamped v0.2.14.
+Idempotency confirmed.
+
+---
+
 ## [Substrate template v0.2.13] — 2026-05-25
 
 ### Summary

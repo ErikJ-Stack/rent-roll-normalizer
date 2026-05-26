@@ -82,7 +82,7 @@ T5_LAST_UPDATED = "2026-05-25"
 # RR/T12 constants above — bump when the bundled workbook is updated. The
 # runtime "Using Analyzer ..." line still shows the value detected from the
 # file actually in use (handles uploaded overrides).
-ANALYZER_SUBSTRATE_VERSION = "0.2.13"
+ANALYZER_SUBSTRATE_VERSION = "0.2.14"
 ANALYZER_LAST_UPDATED = "2026-05-25"
 
 
