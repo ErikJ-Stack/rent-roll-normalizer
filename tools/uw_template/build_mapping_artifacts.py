@@ -33,12 +33,27 @@ STATUS_COLOR = {
     "header_only": "#888888",
     "manual": "#5a4a8a",
     "derived": "#2a5f8a",
+    "decided_pending_upstream": "#d05a3c",
+    "substrate_ready_parser_pending": "#a37418",
 }
 
 CATEGORY_ORDER = [
+    # t12 path
     "metadata", "capacity", "revenue", "waterfall",
     "labor", "nonlabor", "mgmt_noi",
+    # rent_roll path
+    "rr_identity", "rr_dates", "rr_rates",
+    "rr_ancillary", "rr_subtotals", "rr_other",
+    # ar path
+    "ar_aging",
 ]
+
+PATH_ORDER = ["t12", "rent_roll", "ar"]
+PATH_LABEL = {
+    "t12": "T-12 Path · UW Output → T-12 Analysis",
+    "rent_roll": "Rent Roll Path · Rent Roll Input → Rent Roll Analysis row 211+",
+    "ar": "AR Path · AR & Collections → Rent Roll Analysis cols N–Q",
+}
 
 
 def load_registry() -> dict:
@@ -52,12 +67,18 @@ def fmt_source(src: dict) -> str:
         col = src.get("column", "")
         row = src.get("row", "")
         return f"UW Output!{col}{row}" if row else "UW Output"
+    if sys == "rr_input":
+        col = src.get("column", "")
+        addr = src.get("address", "")
+        return f"Rent Roll Input!{addr}" if addr else f"Rent Roll Input col {col}"
     if sys == "named_range":
         return f"@{src.get('name')} → {src.get('resolves_to', '?')}"
     if sys == "cell":
         return f"{src.get('sheet')}!{src.get('address')}"
     if sys == "derived":
         return "derived"
+    if sys == "gap":
+        return "—  (not in Analyzer)"
     return sys
 
 
@@ -70,7 +91,7 @@ def fmt_target(tgt: dict | None) -> str:
 def write_csv(reg: dict, path: Path) -> None:
     template_versions = sorted(reg["templates"].keys())
     headers = [
-        "key", "label", "category", "status",
+        "path", "key", "label", "category", "status",
         "source_system", "source_sheet", "source_address", "source_label",
     ]
     for tv in template_versions:
@@ -83,6 +104,7 @@ def write_csv(reg: dict, path: Path) -> None:
         for c in reg["concepts"]:
             src = c.get("source", {})
             row = [
+                c.get("path", "t12"),
                 c["key"], c.get("label", ""), c.get("category", ""), c.get("status", ""),
                 src.get("system", ""),
                 src.get("sheet", "") or src.get("name", ""),
@@ -139,29 +161,61 @@ def write_markdown(reg: dict, path: Path) -> None:
     lines.append(f"| **Total concepts** | **{sum(counts.values())}** |")
     lines.append("")
 
-    # By category
-    by_cat: dict[str, list[dict]] = {}
+    # By path × category
+    by_path: dict[str, dict[str, list[dict]]] = {}
     for c in reg["concepts"]:
-        by_cat.setdefault(c.get("category", "other"), []).append(c)
+        p = c.get("path", "t12")
+        cat = c.get("category", "other")
+        by_path.setdefault(p, {}).setdefault(cat, []).append(c)
 
-    lines.append("## Mappings by category")
+    # path-level status rollup
+    lines.append("## Status rollup by path")
     lines.append("")
-    ordered = CATEGORY_ORDER + sorted(set(by_cat.keys()) - set(CATEGORY_ORDER))
-    for cat in ordered:
-        if cat not in by_cat:
+    lines.append("| Path | Total | mapped | gap_target | gap_source | proposed | other |")
+    lines.append("|---|---|---|---|---|---|---|")
+    for p in PATH_ORDER:
+        if p not in by_path:
             continue
-        items = by_cat[cat]
-        lines.append(f"### {cat.upper()} ({len(items)})")
-        lines.append("")
-        lines.append("| Concept | Source | Target (`" + tv_primary + "`) | Status | Notes |")
-        lines.append("|---|---|---|---|---|")
+        items = [c for cs in by_path[p].values() for c in cs]
+        cnt: dict[str, int] = {}
         for c in items:
-            src = fmt_source(c.get("source", {}))
-            tgt = fmt_target((c.get("targets") or {}).get(tv_primary))
-            notes = (c.get("notes") or "").replace("|", "\\|").replace("\n", " ")
-            lines.append(f"| **{c['label']}** <br/> `{c['key']}` | `{src}` | "
-                         f"`{tgt}` | `{c['status']}` | {notes} |")
+            cnt[c["status"]] = cnt.get(c["status"], 0) + 1
+        other = sum(v for k, v in cnt.items()
+                    if k not in {"mapped", "gap_target", "gap_source", "proposed"})
+        lines.append(
+            f"| **{p}** | {len(items)} | {cnt.get('mapped',0)} | "
+            f"{cnt.get('gap_target',0)} | {cnt.get('gap_source',0)} | "
+            f"{cnt.get('proposed',0)} | {other} |"
+        )
+    lines.append("")
+
+    lines.append("## Mappings by path & category")
+    lines.append("")
+    ordered_cats = CATEGORY_ORDER
+    for p in PATH_ORDER:
+        if p not in by_path:
+            continue
+        lines.append(f"### {PATH_LABEL.get(p, p).upper()}")
         lines.append("")
+        path_cats = by_path[p]
+        cats = [c for c in ordered_cats if c in path_cats] + sorted(
+            set(path_cats.keys()) - set(ordered_cats)
+        )
+        for cat in cats:
+            items = path_cats[cat]
+            lines.append(f"#### {cat} ({len(items)})")
+            lines.append("")
+            lines.append("| Concept | Source | Target (`" + tv_primary + "`) | Status | Notes |")
+            lines.append("|---|---|---|---|---|")
+            for c in items:
+                src = fmt_source(c.get("source", {}))
+                tgt = fmt_target((c.get("targets") or {}).get(tv_primary))
+                notes = (c.get("notes") or "").replace("|", "\\|").replace("\n", " ")
+                lines.append(
+                    f"| **{c['label']}** <br/> `{c['key']}` | `{src}` | "
+                    f"`{tgt}` | `{c['status']}` | {notes} |"
+                )
+            lines.append("")
 
     lines.append("## Unmapped template intake (rows the writer does NOT populate)")
     lines.append("")
@@ -270,11 +324,43 @@ def write_html(reg: dict, path: Path) -> None:
   .pill-header_only {{ background: var(--header_only); }}
   .pill-manual {{ background: var(--manual); }}
   .pill-derived {{ background: var(--derived); }}
+  .pill-decided_pending_upstream {{ background: #d05a3c; }}
+  .pill-substrate_ready_parser_pending {{ background: #a37418; }}
+
+  .path-tag {{
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    margin-right: 6px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }}
+  .path-t12        {{ background: #d6e4f0; color: #1f4e79; }}
+  .path-rent_roll  {{ background: #d8eedb; color: #1f6b52; }}
+  .path-ar         {{ background: #f4dcd4; color: #8a3a18; }}
 
   main {{ padding: 16px 28px 60px; }}
 
+  .path-block {{
+    margin-bottom: 36px;
+  }}
+  .path-header {{
+    margin: 0 0 10px 0;
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #222;
+    background: #ecebe6;
+    border-left: 4px solid var(--accent);
+  }}
+  .path-block[data-path="t12"] .path-header        {{ border-left-color: #1f4e79; background: #eaf1f8; }}
+  .path-block[data-path="rent_roll"] .path-header  {{ border-left-color: #1f6b52; background: #ebf3ee; }}
+  .path-block[data-path="ar"] .path-header         {{ border-left-color: #8a3a18; background: #f6ebe5; }}
+
   section.category {{
-    margin-bottom: 20px;
+    margin-bottom: 12px;
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: 8px;
@@ -407,6 +493,14 @@ def write_html(reg: dict, path: Path) -> None:
 
 <div class="toolbar">
   <label>Search <input id="q" type="text" placeholder="label, key, sheet, address..."/></label>
+  <label>Path
+    <select id="path">
+      <option value="">all paths</option>
+      <option value="t12">T-12</option>
+      <option value="rent_roll">Rent Roll</option>
+      <option value="ar">AR</option>
+    </select>
+  </label>
   <label>Status
     <select id="status">
       <option value="">all</option>
@@ -417,6 +511,8 @@ def write_html(reg: dict, path: Path) -> None:
       <option value="header_only">header_only</option>
       <option value="manual">manual</option>
       <option value="derived">derived</option>
+      <option value="decided_pending_upstream">decided_pending_upstream</option>
+      <option value="substrate_ready_parser_pending">substrate_ready_parser_pending</option>
     </select>
   </label>
   <label>Template version
@@ -470,6 +566,8 @@ def write_html(reg: dict, path: Path) -> None:
 const REGISTRY = {registry_inline};
 
 const CATEGORY_ORDER = {json.dumps(CATEGORY_ORDER)};
+const PATH_ORDER = {json.dumps(PATH_ORDER)};
+const PATH_LABEL = {json.dumps(PATH_LABEL)};
 
 function fmtSource(src) {{
   if (!src) return '—';
@@ -478,9 +576,13 @@ function fmtSource(src) {{
     const row = src.row || '';
     return row ? `UW Output!${{col}}${{row}}` : 'UW Output';
   }}
+  if (src.system === 'rr_input') {{
+    return src.address ? `Rent Roll Input!${{src.address}}` : `Rent Roll Input col ${{src.column || '?'}}`;
+  }}
   if (src.system === 'named_range') return `@${{src.name}} → ${{src.resolves_to || '?'}}`;
   if (src.system === 'cell') return `${{src.sheet}}!${{src.address}}`;
   if (src.system === 'derived') return 'derived';
+  if (src.system === 'gap') return '—  (not in Analyzer)';
   return src.system || '—';
 }}
 
@@ -498,84 +600,110 @@ function render() {{
   const tv = document.getElementById('tv').value;
   document.getElementById('tplFile').textContent = REGISTRY.templates[tv].file;
 
-  const byCat = {{}};
+  // bucket by path → category
+  const byPath = {{}};
   for (const c of REGISTRY.concepts) {{
-    (byCat[c.category || 'other'] ||= []).push(c);
+    const p = c.path || 't12';
+    (byPath[p] ||= {{}});
+    (byPath[p][c.category || 'other'] ||= []).push(c);
   }}
 
-  const order = [...CATEGORY_ORDER, ...Object.keys(byCat).filter(k => !CATEGORY_ORDER.includes(k))];
   const root = document.getElementById('map');
   root.innerHTML = '';
 
-  for (const cat of order) {{
-    const items = byCat[cat];
-    if (!items) continue;
-    const sec = document.createElement('section');
-    sec.className = 'category';
-    sec.dataset.cat = cat;
+  const pathOrder = [...PATH_ORDER, ...Object.keys(byPath).filter(p => !PATH_ORDER.includes(p))];
+  for (const p of pathOrder) {{
+    if (!byPath[p]) continue;
+    const pathBlock = document.createElement('div');
+    pathBlock.className = 'path-block';
+    pathBlock.dataset.path = p;
 
-    const h2 = document.createElement('h2');
-    h2.innerHTML = `${{cat.toUpperCase()}}<span class="count">${{items.length}} concept${{items.length===1?'':'s'}}</span>`;
-    h2.onclick = () => sec.classList.toggle('collapsed');
-    sec.appendChild(h2);
+    const pathH = document.createElement('h2');
+    pathH.className = `path-header path-${{p}}-bg`;
+    const total = Object.values(byPath[p]).reduce((s, a) => s + a.length, 0);
+    pathH.innerHTML = `
+      <span class="path-tag path-${{p}}">${{p.replace('_',' ')}}</span>
+      ${{PATH_LABEL[p] || p}}
+      <span class="count" style="color:#888; font-weight:normal; font-size:13px; margin-left:10px;">
+        ${{total}} concepts
+      </span>
+    `;
+    pathBlock.appendChild(pathH);
 
-    const grid = document.createElement('div');
-    grid.className = 'grid';
+    const cats = byPath[p];
+    const order = [...CATEGORY_ORDER, ...Object.keys(cats).filter(k => !CATEGORY_ORDER.includes(k))];
+    for (const cat of order) {{
+      const items = cats[cat];
+      if (!items) continue;
+      const sec = document.createElement('section');
+      sec.className = 'category';
+      sec.dataset.cat = cat;
+      sec.dataset.path = p;
 
-    for (const c of items) {{
-      const tgt = (c.targets || {{}})[tv];
-      const row = document.createElement('div');
-      row.className = `row ${{c.status}}`;
-      row.dataset.key = c.key;
-      row.dataset.search = [
-        c.key, c.label, c.category, c.status,
-        c.notes || '',
-        fmtSource(c.source), fmtTarget(tgt),
-        (tgt && (tgt.label_at || tgt.target_label)) || '',
-      ].join(' ').toLowerCase();
+      const h3 = document.createElement('h2');
+      h3.innerHTML = `${{cat.toUpperCase()}}<span class="count">${{items.length}} concept${{items.length===1?'':'s'}}</span>`;
+      h3.onclick = () => sec.classList.toggle('collapsed');
+      sec.appendChild(h3);
 
-      // SOURCE cell
-      const src = document.createElement('div');
-      src.className = 'source';
-      src.innerHTML = `
-        <div class="label">${{c.label}}</div>
-        <div class="addr">${{fmtSource(c.source)}}</div>
-        <div class="key">${{c.key}}</div>
-      `;
+      const grid = document.createElement('div');
+      grid.className = 'grid';
 
-      // LINK cell (arrow + status pill)
-      const link = document.createElement('div');
-      link.className = 'link';
-      link.innerHTML = `
-        <span class="arrow">→</span>
-        <span class="pill pill-${{c.status}}">${{c.status}}</span>
-      `;
+      for (const c of items) {{
+        const tgt = (c.targets || {{}})[tv];
+        const row = document.createElement('div');
+        row.className = `row ${{c.status}}`;
+        row.dataset.key = c.key;
+        row.dataset.path = p;
+        row.dataset.search = [
+          c.key, c.label, c.category, c.status, p,
+          c.notes || '',
+          fmtSource(c.source), fmtTarget(tgt),
+          (tgt && (tgt.label_at || tgt.target_label)) || '',
+        ].join(' ').toLowerCase();
 
-      // TARGET cell
-      const tlabel = targetLabel(tgt);
-      const tgt_div = document.createElement('div');
-      tgt_div.className = 'target';
-      if (tgt) {{
-        tgt_div.innerHTML = `
-          <div class="label">${{tlabel || c.label}}</div>
-          <div class="addr">${{fmtTarget(tgt)}}</div>
-          ${{c.notes ? `<div class="notes">${{c.notes}}</div>` : ''}}
+        const src = document.createElement('div');
+        src.className = 'source';
+        src.innerHTML = `
+          <span class="path-tag path-${{p}}">${{p.replace('_',' ')}}</span>
+          <div class="label">${{c.label}}</div>
+          <div class="addr">${{fmtSource(c.source)}}</div>
+          <div class="key">${{c.key}}</div>
         `;
-      }} else {{
-        tgt_div.innerHTML = `
-          <div class="label" style="color:#a0322a">— no target —</div>
-          ${{c.notes ? `<div class="notes">${{c.notes}}</div>` : ''}}
+
+        const link = document.createElement('div');
+        link.className = 'link';
+        link.innerHTML = `
+          <span class="arrow">→</span>
+          <span class="pill pill-${{c.status}}">${{c.status}}</span>
         `;
+
+        const tlabel = targetLabel(tgt);
+        const tgt_div = document.createElement('div');
+        tgt_div.className = 'target';
+        if (tgt) {{
+          tgt_div.innerHTML = `
+            <div class="label">${{tlabel || c.label}}</div>
+            <div class="addr">${{fmtTarget(tgt)}}</div>
+            ${{c.notes ? `<div class="notes">${{c.notes}}</div>` : ''}}
+          `;
+        }} else {{
+          tgt_div.innerHTML = `
+            <div class="label" style="color:#a0322a">— no target —</div>
+            ${{c.notes ? `<div class="notes">${{c.notes}}</div>` : ''}}
+          `;
+        }}
+
+        row.appendChild(src);
+        row.appendChild(link);
+        row.appendChild(tgt_div);
+        grid.appendChild(row);
       }}
 
-      row.appendChild(src);
-      row.appendChild(link);
-      row.appendChild(tgt_div);
-      grid.appendChild(row);
+      sec.appendChild(grid);
+      pathBlock.appendChild(sec);
     }}
 
-    sec.appendChild(grid);
-    root.appendChild(sec);
+    root.appendChild(pathBlock);
   }}
 
   applyFilters();
@@ -584,19 +712,26 @@ function render() {{
 function applyFilters() {{
   const q = document.getElementById('q').value.trim().toLowerCase();
   const status = document.getElementById('status').value;
+  const path = document.getElementById('path').value;
   document.querySelectorAll('.row').forEach(r => {{
     const matchesQ = !q || r.dataset.search.includes(q);
     const matchesS = !status || r.classList.contains(status);
-    r.classList.toggle('hidden', !(matchesQ && matchesS));
+    const matchesP = !path || r.dataset.path === path;
+    r.classList.toggle('hidden', !(matchesQ && matchesS && matchesP));
   }});
   document.querySelectorAll('section.category').forEach(sec => {{
     const anyVisible = !!sec.querySelector('.row:not(.hidden)');
     sec.style.display = anyVisible ? '' : 'none';
   }});
+  document.querySelectorAll('.path-block').forEach(pb => {{
+    const anyVisible = !!pb.querySelector('.row:not(.hidden)');
+    pb.style.display = anyVisible ? '' : 'none';
+  }});
 }}
 
 document.getElementById('q').addEventListener('input', applyFilters);
 document.getElementById('status').addEventListener('change', applyFilters);
+document.getElementById('path').addEventListener('change', applyFilters);
 document.getElementById('tv').addEventListener('change', render);
 render();
 </script>

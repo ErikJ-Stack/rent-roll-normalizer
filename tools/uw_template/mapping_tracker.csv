@@ -1,73 +1,112 @@
-key,label,category,status,source_system,source_sheet,source_address,source_label,target_v4_sheet,target_v4_address,target_v4_label,notes
-property_name,Property Name,metadata,mapped,named_range,Property_Name,,,Prop Info,B4,,Named range. Same value drives UW Export!B3 metadata header.
-rr_period_date,Rent Roll Period (as-of date),metadata,proposed,named_range,RR_Period_Date,,,Rent Roll Analysis,B5,A5,Template's `Date:` cell at A5/B5 likely takes RR period. Confirm format expectations.
-t12_period_date,T12 Period End,metadata,gap_target,named_range,T12_Period_Date,,,,,,"Template Layer 3 monthly header (B56:M56) is hardcoded Apr-25..Mar-26. To respect the actual T12 period the writer would need to overwrite those headers, or template needs a single period cell."
-substrate_version,Substrate version stamp,metadata,gap_target,cell,Cover,B8,,,,,Template has no version-stamp cell. Recommend adding one (e.g. Cover!F1 in template) so each populated copy carries provenance.
-licensed_beds_il,Licensed beds — IL,capacity,mapped,uw_output,UW Output,B70,Licensed beds (IL / AL / MC / Total),Prop Info,B16,A16,UW Output row 70 IL split.
-licensed_beds_al,Licensed beds — AL,capacity,mapped,uw_output,UW Output,C70,,Prop Info,B17,A17,
-licensed_beds_mc,Licensed beds — MC,capacity,mapped,uw_output,UW Output,D70,,Prop Info,B18,A18,
-licensed_beds_total,Licensed bed count (total),capacity,mapped,derived,,,,Prop Info,B15,A15,Writer sums the three care-type counts.
-occupied_beds_il,Stabilized occupied beds — IL,capacity,gap_target,uw_output,UW Output,B71,,,,,Template has no occupied-bed split rows. Total occupancy is computed inside Rent Roll Analysis from the pasted rent roll; consider deferring or surfacing as a metadata cell.
-occupied_beds_al,Stabilized occupied beds — AL,capacity,gap_target,uw_output,UW Output,C71,,,,,
-occupied_beds_mc,Stabilized occupied beds — MC,capacity,gap_target,uw_output,UW Output,D71,,,,,
-base_rent_normalized,Base rent (net of waterfall),revenue,mapped,uw_output,UW Output,E_or_F6,Base rent (normalized),T-12 Analysis,N63,A63,Analyzer's 'Base rent (normalized)' is conceptually the net-of-vacancy/LTL/concessions rent that flows into EGI — matches template 'Net Rent Revenue'. Annual total only (col N).
-loc_revenue,LOC / Care Services Revenue,revenue,mapped,uw_output,UW Output,E_or_F7,,T-12 Analysis,N64,A64,
-community_movein_fees,Community / Move-in Fees,revenue,mapped,uw_output,UW Output,E_or_F8,,T-12 Analysis,N65,A65,
-concessions_specials,Concessions & Specials,revenue,mapped,uw_output,UW Output,E_or_F9,,T-12 Analysis,N61,A61,Template puts Concessions in the GPR waterfall block (row 61) — Analyzer lists it as a revenue contra-line at row 9. Sign convention: should arrive negative-signed (Analyzer convention).
-respite_care,Respite Care Revenue,revenue,mapped,uw_output,UW Output,E_or_F10,,T-12 Analysis,N66,A66,
-other_community_revenue,Other Community Revenue,revenue,mapped,uw_output,UW Output,E_or_F11,,T-12 Analysis,N68,A68,
-egi,Effective Gross Income (EGI),revenue,mapped,uw_output,UW Output,E_or_F12,,T-12 Analysis,N69,A69,
-second_person_revenue,2nd Person Revenue,revenue,gap_source,derived,,,,T-12 Analysis,N67,A67,Template has a dedicated 2P Revenue row but UW Output does not. Options: (a) extend UW Output with a new row; (b) writer derives from RR_Input_Data!V column directly; (c) leave blank for analyst entry.
-bad_debt_writeoffs_revenue,Bad Debt / Write-offs (revenue offset),revenue,proposed,uw_output,UW Output,E_or_F57,Bad debt expense,T-12 Analysis,N62,A62,"Conceptual divergence: template places Bad Debt as a revenue contra-line (row 62, above Net Rent Revenue at 63); Analyzer places it as an opex line (UW Output row 57). For the template to balance, the value should likely be pasted into row 62 AND row 106 reset to zero — or vice versa. Decide which placement is canonical for the model before writer ships."
-gpr_base,Gross Potential Rent (GPR),waterfall,mapped,uw_output,UW Output,E_or_F15,,T-12 Analysis,N58,A58,
-physical_vacancy_loss,Physical vacancy loss,waterfall,mapped,uw_output,UW Output,E_or_F16,,T-12 Analysis,N60,A60,
-physical_vacancy_rate_pct,Physical vacancy rate %,waterfall,derived,uw_output,UW Output,E_or_F17,,,,,Template likely computes vacancy% in Rent Roll Analysis section C/E or T-12 Analysis section D; not a paste target. Writer must NOT write percentages into the dollar grid.
-loss_to_lease,Loss to Lease,waterfall,mapped,uw_output,UW Output,E_or_F18,,T-12 Analysis,N59,A59,
-loss_to_lease_pct_gpr,Loss to Lease as % of GPR,waterfall,derived,uw_output,UW Output,E_or_F19,,,,,
-labor_care_staff,Care Staff Labor,labor,mapped,uw_output,UW Output,E_or_F22,,T-12 Analysis,N71,A71,
-labor_wellness,Wellness / Care Coordinators,labor,mapped,uw_output,UW Output,E_or_F23,,T-12 Analysis,N72,A72,
-labor_agency,Contract / Agency Labor,labor,mapped,uw_output,UW Output,E_or_F24,,T-12 Analysis,N73,A73,
-labor_activities,Activities Labor,labor,mapped,uw_output,UW Output,E_or_F25,,T-12 Analysis,N74,A74,
-labor_dining,Dining / Food Service Labor,labor,mapped,uw_output,UW Output,E_or_F26,,T-12 Analysis,N75,A75,
-labor_maint_hk,Maintenance & HK Labor,labor,mapped,uw_output,UW Output,E_or_F27,,T-12 Analysis,N76,A76,
-labor_admin,Administrative Labor,labor,mapped,uw_output,UW Output,E_or_F28,,T-12 Analysis,N77,A77,
-labor_bonus,Bonus Wages,labor,mapped,uw_output,UW Output,E_or_F29,,T-12 Analysis,N78,A78,
-labor_overtime,Overtime Wages,labor,mapped,uw_output,UW Output,E_or_F30,,T-12 Analysis,N79,A79,
-labor_pto,PTO Wages,labor,mapped,uw_output,UW Output,E_or_F31,,T-12 Analysis,N80,A80,
-labor_payroll_taxes,Payroll Taxes,labor,mapped,uw_output,UW Output,E_or_F32,,T-12 Analysis,N81,A81,
-labor_benefits,Employee Benefits,labor,mapped,uw_output,UW Output,E_or_F33,,T-12 Analysis,N82,A82,
-labor_workers_comp,Workers' Comp Insurance,labor,mapped,uw_output,UW Output,E_or_F34,,T-12 Analysis,N83,A83,
-labor_401k,Employee 401(k),labor,mapped,uw_output,UW Output,E_or_F35,,T-12 Analysis,N84,A84,
-labor_total,Total Labor & Burden,labor,mapped,uw_output,UW Output,E_or_F36,,T-12 Analysis,N85,A85,Subtotal — writer should write this even though template likely re-derives it; supports the reconciliation block at rows 4-5.
-opex_food_cost,Food Cost,nonlabor,mapped,uw_output,UW Output,E_or_F38,,T-12 Analysis,N87,A87,
-opex_dining_supplies,Dining & Kitchen Supplies,nonlabor,mapped,uw_output,UW Output,E_or_F39,,T-12 Analysis,N88,A88,
-opex_nursing_supplies,Nursing & Care Supplies,nonlabor,mapped,uw_output,UW Output,E_or_F40,,T-12 Analysis,N89,A89,
-opex_recreation_supplies,Recreation Supplies,nonlabor,mapped,uw_output,UW Output,E_or_F41,,T-12 Analysis,N90,A90,
-opex_rm_fixed,R&M Fixed,nonlabor,mapped,uw_output,UW Output,E_or_F42,,T-12 Analysis,N91,A91,
-opex_rm_variable,R&M Variable,nonlabor,mapped,uw_output,UW Output,E_or_F43,,T-12 Analysis,N92,A92,
-opex_hk_laundry,HK & Laundry Supplies,nonlabor,mapped,uw_output,UW Output,E_or_F44,,T-12 Analysis,N93,A93,
-opex_marketing,"Sales, Adv. & Marketing",nonlabor,mapped,uw_output,UW Output,E_or_F45,,T-12 Analysis,N94,A94,
-opex_referral_fees,Referral Fees,nonlabor,mapped,uw_output,UW Output,E_or_F46,,T-12 Analysis,N95,A95,
-opex_utilities,Utilities,nonlabor,mapped,uw_output,UW Output,E_or_F47,,T-12 Analysis,N96,A96,
-opex_telephone_it,Telephone / IT,nonlabor,mapped,uw_output,UW Output,E_or_F48,,T-12 Analysis,N97,A97,
-opex_pc_insurance,P&C Insurance,nonlabor,mapped,uw_output,UW Output,E_or_F49,,T-12 Analysis,N98,A98,
-opex_auto_insurance,Auto Insurance,nonlabor,mapped,uw_output,UW Output,E_or_F50,,T-12 Analysis,N99,A99,
-opex_fire_security,Fire / Security Monitoring,nonlabor,mapped,uw_output,UW Output,E_or_F51,,T-12 Analysis,N100,A100,
-opex_pest,Pest Elimination,nonlabor,mapped,uw_output,UW Output,E_or_F52,,T-12 Analysis,N101,A101,
-opex_re_taxes,Real Estate Taxes,nonlabor,mapped,uw_output,UW Output,E_or_F53,,T-12 Analysis,N102,A102,Template Section F (rows 40-44) provides a separate RE Tax accrual check — pro forma override expected. The Layer 3 paste at N102 carries the T-12 actual.
-opex_personal_prop_taxes,Personal Property Taxes,nonlabor,mapped,uw_output,UW Output,E_or_F54,,T-12 Analysis,N103,A103,
-opex_legal,Legal Expenses,nonlabor,mapped,uw_output,UW Output,E_or_F55,,T-12 Analysis,N104,A104,
-opex_professional_services,Professional Services,nonlabor,mapped,uw_output,UW Output,E_or_F56,,T-12 Analysis,N105,A105,
-opex_bad_debt_expense,Bad Debt Expense (opex placement),nonlabor,proposed,uw_output,UW Output,E_or_F57,,T-12 Analysis,N106,A106,See `bad_debt_writeoffs_revenue` — single Analyzer source maps to two template rows. Choose one placement (likely 62 OR 106) and zero the other.
-opex_permits_licenses,"Permits, Licenses & Dues",nonlabor,mapped,uw_output,UW Output,E_or_F58,,T-12 Analysis,N107,A107,
-opex_office_ga,"Office, Admin & G&A",nonlabor,mapped,uw_output,UW Output,E_or_F59,,T-12 Analysis,N108,A108,
-opex_misc,Other / Miscellaneous,nonlabor,mapped,uw_output,UW Output,E_or_F60,,T-12 Analysis,N109,A109,
-opex_lease_ground,Lease / Ground Lease,nonlabor,mapped,uw_output,UW Output,E_or_F61,,T-12 Analysis,N110,A110,UW Output row 61 currently resolves to 0 (known upstream deferral — see UW-OUTPUT-HANDOFF-CONTRACT.md §4 item 4). Template will show $0 until upstream lease formula is fixed.
-opex_nonlabor_total,Total Non-Labor,nonlabor,mapped,uw_output,UW Output,E_or_F62,,T-12 Analysis,N111,A111,
-opex_total_excl_mgmt,Total OpEx (excl. mgmt),nonlabor,gap_target,uw_output,UW Output,E_or_F63,,,,,Template's TOTAL OPERATING EXPENSES (row 114) is inclusive of management fee — no direct row for opex-excl-mgmt. Could derive as N111 + N85.
-mgmt_fee,Management Fee,mgmt_noi,mapped,uw_output,UW Output,E_or_F64,,T-12 Analysis,N113,A113,
-opex_total_incl_mgmt,Total Operating Expenses (incl. mgmt),mgmt_noi,proposed,derived,,,,T-12 Analysis,N114,A114,Writer sums Analyzer rows 63 + 64 to fill N114.
-ebitdarm,EBITDARM,mgmt_noi,mapped,uw_output,UW Output,E_or_F66,,T-12 Analysis,N115,A115,
-ebitdar,EBITDAR,mgmt_noi,mapped,uw_output,UW Output,E_or_F67,,T-12 Analysis,N116,A116,Template equates EBITDAR with NOI (label A116: 'EBITDAR (= NOI)'). Analyzer treats NOI as a header-only row (UW Output 65) and EBITDAR as a distinct line at row 67. Map E67/F67 directly to N116.
-ebitda,EBITDA,mgmt_noi,gap_target,uw_output,UW Output,E_or_F68,,,,,Template has no EBITDA row in Layer 3 (only EBITDARM and EBITDAR/NOI). Either add an EBITDA row to template or drop from writer scope.
-noi_separator,NOI (separator),mgmt_noi,header_only,uw_output,UW Output,65,,,,,UW Output row 65 is a visual band — see UW-OUTPUT-HANDOFF-CONTRACT.md §4 gotcha #1. Writer must skip.
+path,key,label,category,status,source_system,source_sheet,source_address,source_label,target_v4_sheet,target_v4_address,target_v4_label,target_v5_sheet,target_v5_address,target_v5_label,notes
+t12,property_name,Property Name,metadata,mapped,named_range,Property_Name,,,Prop Info,B4,,Prop Info,B4,,Named range. Same value drives UW Export!B3 metadata header.
+t12,rr_period_date,Rent Roll Period (as-of date),metadata,proposed,named_range,RR_Period_Date,,,Rent Roll Analysis,B5,A5,Rent Roll Analysis,B5,A5,Template's `Date:` cell at A5/B5 likely takes RR period. Confirm format expectations.
+t12,t12_period_date,T12 Period End,metadata,gap_target,named_range,T12_Period_Date,,,,,,,,,"Template Layer 3 monthly header (B56:M56) is hardcoded Apr-25..Mar-26. To respect the actual T12 period the writer would need to overwrite those headers, or template needs a single period cell."
+t12,substrate_version,Substrate version stamp,metadata,gap_target,cell,Cover,B8,,,,,,,,Template has no version-stamp cell. Recommend adding one (e.g. Cover!F1 in template) so each populated copy carries provenance.
+t12,licensed_beds_il,Licensed beds — IL,capacity,mapped,uw_output,UW Output,B70,Licensed beds (IL / AL / MC / Total),Prop Info,B16,A16,Prop Info,B16,A16,UW Output row 70 IL split.
+t12,licensed_beds_al,Licensed beds — AL,capacity,mapped,uw_output,UW Output,C70,,Prop Info,B17,A17,Prop Info,B17,A17,
+t12,licensed_beds_mc,Licensed beds — MC,capacity,mapped,uw_output,UW Output,D70,,Prop Info,B18,A18,Prop Info,B18,A18,
+t12,licensed_beds_total,Licensed bed count (total),capacity,mapped,derived,,,,Prop Info,B15,A15,Prop Info,B15,A15,Writer sums the three care-type counts.
+t12,occupied_beds_il,Stabilized occupied beds — IL,capacity,mapped,uw_output,UW Output,B71,,,,,Prop Info,B20,A20,Template has no occupied-bed split rows. Total occupancy is computed inside Rent Roll Analysis from the pasted rent roll; consider deferring or surfacing as a metadata cell. · v5: Closed in v5 — Prop Info rows 19-22 added. Writer populates B20 from UW Output!B71.
+t12,occupied_beds_al,Stabilized occupied beds — AL,capacity,mapped,uw_output,UW Output,C71,,,,,Prop Info,B21,A21,v5: Closed in v5 — writer populates B21 from UW Output!C71.
+t12,occupied_beds_mc,Stabilized occupied beds — MC,capacity,mapped,uw_output,UW Output,D71,,,,,Prop Info,B22,A22,v5: Closed in v5 — writer populates B22 from UW Output!D71.
+t12,base_rent_normalized,Base rent (net of waterfall),revenue,mapped,uw_output,UW Output,E_or_F6,Base rent (normalized),T-12 Analysis,N63,A63,T-12 Analysis,N63,A63,Analyzer's 'Base rent (normalized)' is conceptually the net-of-vacancy/LTL/concessions rent that flows into EGI — matches template 'Net Rent Revenue'. Annual total only (col N).
+t12,loc_revenue,LOC / Care Services Revenue,revenue,mapped,uw_output,UW Output,E_or_F7,,T-12 Analysis,N64,A64,T-12 Analysis,N64,A64,
+t12,community_movein_fees,Community / Move-in Fees,revenue,mapped,uw_output,UW Output,E_or_F8,,T-12 Analysis,N65,A65,T-12 Analysis,N65,A65,
+t12,concessions_specials,Concessions & Specials,revenue,mapped,uw_output,UW Output,E_or_F9,,T-12 Analysis,N61,A61,T-12 Analysis,N61,A61,Template puts Concessions in the GPR waterfall block (row 61) — Analyzer lists it as a revenue contra-line at row 9. Sign convention: should arrive negative-signed (Analyzer convention).
+t12,respite_care,Respite Care Revenue,revenue,mapped,uw_output,UW Output,E_or_F10,,T-12 Analysis,N66,A66,T-12 Analysis,N66,A66,
+t12,other_community_revenue,Other Community Revenue,revenue,mapped,uw_output,UW Output,E_or_F11,,T-12 Analysis,N68,A68,T-12 Analysis,N68,A68,
+t12,egi,Effective Gross Income (EGI),revenue,mapped,uw_output,UW Output,E_or_F12,,T-12 Analysis,N69,A69,T-12 Analysis,N69,A69,
+t12,second_person_revenue,2nd Person Revenue,revenue,gap_source,derived,,,,T-12 Analysis,N67,A67,T-12 Analysis,N67,A67,Template has a dedicated 2P Revenue row but UW Output does not. Options: (a) extend UW Output with a new row; (b) writer derives from RR_Input_Data!V column directly; (c) leave blank for analyst entry.
+t12,bad_debt_writeoffs_revenue,Bad Debt / Write-offs (revenue offset),revenue,proposed,uw_output,UW Output,E_or_F57,Bad debt expense,T-12 Analysis,N62,A62,T-12 Analysis,N62,A62,"Conceptual divergence: template places Bad Debt as a revenue contra-line (row 62, above Net Rent Revenue at 63); Analyzer places it as an opex line (UW Output row 57). For the template to balance, the value should likely be pasted into row 62 AND row 106 reset to zero — or vice versa. Decide which placement is canonical for the model before writer ships."
+t12,gpr_base,Gross Potential Rent (GPR),waterfall,mapped,uw_output,UW Output,E_or_F15,,T-12 Analysis,N58,A58,T-12 Analysis,N58,A58,
+t12,physical_vacancy_loss,Physical vacancy loss,waterfall,mapped,uw_output,UW Output,E_or_F16,,T-12 Analysis,N60,A60,T-12 Analysis,N60,A60,
+t12,physical_vacancy_rate_pct,Physical vacancy rate %,waterfall,derived,uw_output,UW Output,E_or_F17,,,,,,,,Template likely computes vacancy% in Rent Roll Analysis section C/E or T-12 Analysis section D; not a paste target. Writer must NOT write percentages into the dollar grid.
+t12,loss_to_lease,Loss to Lease,waterfall,mapped,uw_output,UW Output,E_or_F18,,T-12 Analysis,N59,A59,T-12 Analysis,N59,A59,
+t12,loss_to_lease_pct_gpr,Loss to Lease as % of GPR,waterfall,derived,uw_output,UW Output,E_or_F19,,,,,,,,
+t12,labor_care_staff,Care Staff Labor,labor,mapped,uw_output,UW Output,E_or_F22,,T-12 Analysis,N71,A71,T-12 Analysis,N71,A71,
+t12,labor_wellness,Wellness / Care Coordinators,labor,mapped,uw_output,UW Output,E_or_F23,,T-12 Analysis,N72,A72,T-12 Analysis,N72,A72,
+t12,labor_agency,Contract / Agency Labor,labor,mapped,uw_output,UW Output,E_or_F24,,T-12 Analysis,N73,A73,T-12 Analysis,N73,A73,
+t12,labor_activities,Activities Labor,labor,mapped,uw_output,UW Output,E_or_F25,,T-12 Analysis,N74,A74,T-12 Analysis,N74,A74,
+t12,labor_dining,Dining / Food Service Labor,labor,mapped,uw_output,UW Output,E_or_F26,,T-12 Analysis,N75,A75,T-12 Analysis,N75,A75,
+t12,labor_maint_hk,Maintenance & HK Labor,labor,mapped,uw_output,UW Output,E_or_F27,,T-12 Analysis,N76,A76,T-12 Analysis,N76,A76,
+t12,labor_admin,Administrative Labor,labor,mapped,uw_output,UW Output,E_or_F28,,T-12 Analysis,N77,A77,T-12 Analysis,N77,A77,
+t12,labor_bonus,Bonus Wages,labor,mapped,uw_output,UW Output,E_or_F29,,T-12 Analysis,N78,A78,T-12 Analysis,N78,A78,
+t12,labor_overtime,Overtime Wages,labor,mapped,uw_output,UW Output,E_or_F30,,T-12 Analysis,N79,A79,T-12 Analysis,N79,A79,
+t12,labor_pto,PTO Wages,labor,mapped,uw_output,UW Output,E_or_F31,,T-12 Analysis,N80,A80,T-12 Analysis,N80,A80,
+t12,labor_payroll_taxes,Payroll Taxes,labor,mapped,uw_output,UW Output,E_or_F32,,T-12 Analysis,N81,A81,T-12 Analysis,N81,A81,
+t12,labor_benefits,Employee Benefits,labor,mapped,uw_output,UW Output,E_or_F33,,T-12 Analysis,N82,A82,T-12 Analysis,N82,A82,
+t12,labor_workers_comp,Workers' Comp Insurance,labor,mapped,uw_output,UW Output,E_or_F34,,T-12 Analysis,N83,A83,T-12 Analysis,N83,A83,
+t12,labor_401k,Employee 401(k),labor,mapped,uw_output,UW Output,E_or_F35,,T-12 Analysis,N84,A84,T-12 Analysis,N84,A84,
+t12,labor_total,Total Labor & Burden,labor,mapped,uw_output,UW Output,E_or_F36,,T-12 Analysis,N85,A85,T-12 Analysis,N85,A85,Subtotal — writer should write this even though template likely re-derives it; supports the reconciliation block at rows 4-5.
+t12,opex_food_cost,Food Cost,nonlabor,mapped,uw_output,UW Output,E_or_F38,,T-12 Analysis,N87,A87,T-12 Analysis,N87,A87,
+t12,opex_dining_supplies,Dining & Kitchen Supplies,nonlabor,mapped,uw_output,UW Output,E_or_F39,,T-12 Analysis,N88,A88,T-12 Analysis,N88,A88,
+t12,opex_nursing_supplies,Nursing & Care Supplies,nonlabor,mapped,uw_output,UW Output,E_or_F40,,T-12 Analysis,N89,A89,T-12 Analysis,N89,A89,
+t12,opex_recreation_supplies,Recreation Supplies,nonlabor,mapped,uw_output,UW Output,E_or_F41,,T-12 Analysis,N90,A90,T-12 Analysis,N90,A90,
+t12,opex_rm_fixed,R&M Fixed,nonlabor,mapped,uw_output,UW Output,E_or_F42,,T-12 Analysis,N91,A91,T-12 Analysis,N91,A91,
+t12,opex_rm_variable,R&M Variable,nonlabor,mapped,uw_output,UW Output,E_or_F43,,T-12 Analysis,N92,A92,T-12 Analysis,N92,A92,
+t12,opex_hk_laundry,HK & Laundry Supplies,nonlabor,mapped,uw_output,UW Output,E_or_F44,,T-12 Analysis,N93,A93,T-12 Analysis,N93,A93,
+t12,opex_marketing,"Sales, Adv. & Marketing",nonlabor,mapped,uw_output,UW Output,E_or_F45,,T-12 Analysis,N94,A94,T-12 Analysis,N94,A94,
+t12,opex_referral_fees,Referral Fees,nonlabor,mapped,uw_output,UW Output,E_or_F46,,T-12 Analysis,N95,A95,T-12 Analysis,N95,A95,
+t12,opex_utilities,Utilities,nonlabor,mapped,uw_output,UW Output,E_or_F47,,T-12 Analysis,N96,A96,T-12 Analysis,N96,A96,
+t12,opex_telephone_it,Telephone / IT,nonlabor,mapped,uw_output,UW Output,E_or_F48,,T-12 Analysis,N97,A97,T-12 Analysis,N97,A97,
+t12,opex_pc_insurance,P&C Insurance,nonlabor,mapped,uw_output,UW Output,E_or_F49,,T-12 Analysis,N98,A98,T-12 Analysis,N98,A98,
+t12,opex_auto_insurance,Auto Insurance,nonlabor,mapped,uw_output,UW Output,E_or_F50,,T-12 Analysis,N99,A99,T-12 Analysis,N99,A99,
+t12,opex_fire_security,Fire / Security Monitoring,nonlabor,mapped,uw_output,UW Output,E_or_F51,,T-12 Analysis,N100,A100,T-12 Analysis,N100,A100,
+t12,opex_pest,Pest Elimination,nonlabor,mapped,uw_output,UW Output,E_or_F52,,T-12 Analysis,N101,A101,T-12 Analysis,N101,A101,
+t12,opex_re_taxes,Real Estate Taxes,nonlabor,mapped,uw_output,UW Output,E_or_F53,,T-12 Analysis,N102,A102,T-12 Analysis,N102,A102,Template Section F (rows 40-44) provides a separate RE Tax accrual check — pro forma override expected. The Layer 3 paste at N102 carries the T-12 actual.
+t12,opex_personal_prop_taxes,Personal Property Taxes,nonlabor,mapped,uw_output,UW Output,E_or_F54,,T-12 Analysis,N103,A103,T-12 Analysis,N103,A103,
+t12,opex_legal,Legal Expenses,nonlabor,mapped,uw_output,UW Output,E_or_F55,,T-12 Analysis,N104,A104,T-12 Analysis,N104,A104,
+t12,opex_professional_services,Professional Services,nonlabor,mapped,uw_output,UW Output,E_or_F56,,T-12 Analysis,N105,A105,T-12 Analysis,N105,A105,
+t12,opex_bad_debt_expense,Bad Debt Expense (opex placement),nonlabor,proposed,uw_output,UW Output,E_or_F57,,T-12 Analysis,N106,A106,T-12 Analysis,N106,A106,See `bad_debt_writeoffs_revenue` — single Analyzer source maps to two template rows. Choose one placement (likely 62 OR 106) and zero the other.
+t12,opex_permits_licenses,"Permits, Licenses & Dues",nonlabor,mapped,uw_output,UW Output,E_or_F58,,T-12 Analysis,N107,A107,T-12 Analysis,N107,A107,
+t12,opex_office_ga,"Office, Admin & G&A",nonlabor,mapped,uw_output,UW Output,E_or_F59,,T-12 Analysis,N108,A108,T-12 Analysis,N108,A108,
+t12,opex_misc,Other / Miscellaneous,nonlabor,mapped,uw_output,UW Output,E_or_F60,,T-12 Analysis,N109,A109,T-12 Analysis,N109,A109,
+t12,opex_lease_ground,Lease / Ground Lease,nonlabor,mapped,uw_output,UW Output,E_or_F61,,T-12 Analysis,N110,A110,T-12 Analysis,N110,A110,UW Output row 61 currently resolves to 0 (known upstream deferral — see UW-OUTPUT-HANDOFF-CONTRACT.md §4 item 4). Template will show $0 until upstream lease formula is fixed.
+t12,opex_nonlabor_total,Total Non-Labor,nonlabor,mapped,uw_output,UW Output,E_or_F62,,T-12 Analysis,N111,A111,T-12 Analysis,N111,A111,
+t12,opex_total_excl_mgmt,Total OpEx (excl. mgmt),nonlabor,mapped,uw_output,UW Output,E_or_F63,,,,,T-12 Analysis,N115,A115,Template's TOTAL OPERATING EXPENSES (row 114) is inclusive of management fee — no direct row for opex-excl-mgmt. Could derive as N111 + N85. · v5: Closed in v5 — N115 has template formula `=N114-N113`. Writer overwrites with UW Output row 63 value (Total opex excl. mgmt) when present; falls back to template formula on empty Analyzer.
+t12,mgmt_fee,Management Fee,mgmt_noi,mapped,uw_output,UW Output,E_or_F64,,T-12 Analysis,N113,A113,T-12 Analysis,N113,A113,
+t12,opex_total_incl_mgmt,Total Operating Expenses (incl. mgmt),mgmt_noi,proposed,derived,,,,T-12 Analysis,N114,A114,T-12 Analysis,N114,A114,Writer sums Analyzer rows 63 + 64 to fill N114.
+t12,ebitdarm,EBITDARM,mgmt_noi,mapped,uw_output,UW Output,E_or_F66,,T-12 Analysis,N115,A115,T-12 Analysis,N116,A116,v5: v5: row shifted from N115 (v4) → N116 due to new 'Total Operating Expenses (excl. mgmt)' row at N115. Template has fallback formula `=N69-N85-N111`; writer overwrites with UW Output row 66 value.
+t12,ebitdar,EBITDAR,mgmt_noi,mapped,uw_output,UW Output,E_or_F67,,T-12 Analysis,N116,A116,T-12 Analysis,N117,A117,Template equates EBITDAR with NOI (label A116: 'EBITDAR (= NOI)'). Analyzer treats NOI as a header-only row (UW Output 65) and EBITDAR as a distinct line at row 67. Map E67/F67 directly to N116. · v5: v5: row shifted from N116 (v4) → N117 due to new row 115 insert. Writer populates from UW Output row 67.
+t12,ebitda,EBITDA,mgmt_noi,mapped,uw_output,UW Output,E_or_F68,,,,,T-12 Analysis,N118,A118,"Template has no EBITDA row in Layer 3 (only EBITDARM and EBITDAR/NOI). Either add an EBITDA row to template or drop from writer scope. · v5: Closed in v5 — N118 row added (label only, no formula). Writer populates from UW Output row 68."
+t12,noi_separator,NOI (separator),mgmt_noi,header_only,uw_output,UW Output,65,,,,,,,,UW Output row 65 is a visual band — see UW-OUTPUT-HANDOFF-CONTRACT.md §4 gotcha #1. Writer must skip.
+rent_roll,rr_unit_#,Unit #,rr_identity,mapped,rr_input,Rent Roll Input,A7:A606,Unit #,Rent Roll Analysis,A211+,A210,Rent Roll Analysis,A211+,A210,
+rent_roll,rr_room_#,Room #,rr_identity,mapped,rr_input,Rent Roll Input,B7:B606,Room #,Rent Roll Analysis,B211+,B210,Rent Roll Analysis,B211+,B210,Renamed but 1:1.
+rent_roll,rr_sq_ft,Sq Ft,rr_identity,mapped,rr_input,Rent Roll Input,C7:C606,Sq Ft,Rent Roll Analysis,T211+,T210,Rent Roll Analysis,T211+,T210,Position shift A→T.
+rent_roll,rr_care_type,Care Type,rr_identity,mapped,rr_input,Rent Roll Input,D7:D606,Care Type,Rent Roll Analysis,C211+,C210,Rent Roll Analysis,C211+,C210,Renamed. Values IL/AL/MC unchanged.
+rent_roll,rr_status,Status,rr_identity,mapped,rr_input,Rent Roll Input,E7:E606,Status,Rent Roll Analysis,D211+,D210,Rent Roll Analysis,D211+,D210,Position shift E→D.
+rent_roll,rr_apt_type,Apt Type,rr_identity,mapped,rr_input,Rent Roll Input,F7:F606,Apt Type,Rent Roll Analysis,AC211+,AC210,Rent Roll Analysis,AC211+,AC210,Position shift F→AC. Possible label-form difference (e.g. '1BR' vs '1 Bedroom') — normalize upstream or handle in template.
+rent_roll,rr_resident_name,Resident Name,rr_identity,mapped,rr_input,Rent Roll Input,R7:R606,Resident Name,Rent Roll Analysis,E211+,E210,Rent Roll Analysis,E211+,E210,Position shift R→E.
+rent_roll,rr_move_in_date,Move-in Date,rr_dates,mapped,rr_input,Rent Roll Input,Q7:Q606,Move-in Date,Rent Roll Analysis,F211+,F210,Rent Roll Analysis,F211+,F210,Position shift Q→F.
+rent_roll,rr_move_out_date,Move-out Date,rr_dates,mapped,rr_input,Rent Roll Input,W7:W606,Move-out Date,Rent Roll Analysis,G211+,G210,Rent Roll Analysis,G211+,G210,Position shift W→G. Renamed.
+rent_roll,rr_concession_end_date,Concession End Date,rr_dates,mapped,rr_input,Rent Roll Input,J7:J606,Concession End Date,Rent Roll Analysis,AE211+,AE210,Rent Roll Analysis,AE211+,AE210,Position shift J→AE.
+rent_roll,rr_market_rate,Market Rate,rr_rates,mapped,rr_input,Rent Roll Input,G7:G606,Market Rate,Rent Roll Analysis,H211+,H210,Rent Roll Analysis,H211+,H210,Position shift G→H.
+rent_roll,rr_actual_rate,Actual Rate,rr_rates,mapped,rr_input,Rent Roll Input,H7:H606,Actual Rate,Rent Roll Analysis,I211+,I210,Rent Roll Analysis,I211+,I210,Position shift H→I. Renamed.
+rent_roll,rr_market_psf,Market PSF,rr_rates,mapped,rr_input,Rent Roll Input,Z7:Z606,Market PSF,Rent Roll Analysis,AQ211+,AQ210,Rent Roll Analysis,AT211+,AT210,Position shift Z→AQ. · v5: shifted from AQ211+ to AT211+ per 2026-05-26 contract §16 (new AP/AQ/AR inserts pushed analyst-input cols right)
+rent_roll,rr_actual_psf,Actual PSF,rr_rates,mapped,rr_input,Rent Roll Input,AA7:AA606,Actual PSF,Rent Roll Analysis,U211+,U210,Rent Roll Analysis,U211+,U210,Position shift AA→U. Renamed.
+rent_roll,rr_concession,Concession $,rr_rates,mapped,rr_input,Rent Roll Input,I7:I606,Concession $,Rent Roll Analysis,AD211+,AD210,Rent Roll Analysis,AD211+,AD210,Position shift I→AD.
+rent_roll,rr_2nd_person_rent,2nd Person Rent $,rr_rates,mapped,rr_input,Rent Roll Input,V7:V606,2nd Person Rent $,Rent Roll Analysis,AJ211+,AJ210,Rent Roll Analysis,AJ211+,AJ210,Position shift V→AJ.
+rent_roll,rr_care_level,Care Level $,rr_ancillary,mapped,rr_input,Rent Roll Input,L7:L606,Care Level $,Rent Roll Analysis,AF211+,AF210,Rent Roll Analysis,AF211+,AF210,Position shift L→AF.
+rent_roll,rr_care_level_tier_label,Care Level (tier label),rr_ancillary,mapped,rr_input,Rent Roll Input,K7:K606,Care Level (tier label),,,,Rent Roll Analysis,AP211+,AP210,"Tier label (Basic / Level 2-7) has no template column. v5 wishlist: add a label col adjacent to AF Care Level $. · v5: Closed in v5 — UW Template col AP. Writer pastes from Rent Roll Input col K (Care Level tier label, e.g. Basic / Level 2-7)."
+rent_roll,rr_med_mgmt,Med Mgmt $,rr_ancillary,mapped,rr_input,Rent Roll Input,M7:M606,Med Mgmt $,Rent Roll Analysis,AG211+,AG210,Rent Roll Analysis,AG211+,AG210,
+rent_roll,rr_pharmacy,Pharmacy $,rr_ancillary,mapped,rr_input,Rent Roll Input,N7:N606,Pharmacy $,Rent Roll Analysis,AH211+,AH210,Rent Roll Analysis,AH211+,AH210,
+rent_roll,rr_other_loc,Other LOC $,rr_ancillary,mapped,rr_input,Rent Roll Input,O7:O606,Other LOC $,Rent Roll Analysis,AI211+,AI210,Rent Roll Analysis,AI211+,AI210,
+rent_roll,rr_meal_plan,Meal Plan $,rr_ancillary,mapped,rr_input,Rent Roll Input,AC7:AC606,Meal Plan $,Rent Roll Analysis,AK211+,AK210,Rent Roll Analysis,AK211+,AK210,Position shift AC→AK.
+rent_roll,rr_scooter_fee,Scooter Fee $,rr_ancillary,mapped,rr_input,Rent Roll Input,AD7:AD606,Scooter Fee $,Rent Roll Analysis,AL211+,AL210,Rent Roll Analysis,AL211+,AL210,Renamed.
+rent_roll,rr_housekeeping,Housekeeping $,rr_ancillary,mapped,rr_input,Rent Roll Input,AE7:AE606,Housekeeping $,Rent Roll Analysis,AM211+,AM210,Rent Roll Analysis,AM211+,AM210,
+rent_roll,rr_laundry,Laundry $,rr_ancillary,mapped,rr_input,Rent Roll Input,AF7:AF606,Laundry $,Rent Roll Analysis,AN211+,AN210,Rent Roll Analysis,AN211+,AN210,
+rent_roll,rr_pet,Pet $,rr_ancillary,mapped,rr_input,Rent Roll Input,AG7:AG606,Pet $,Rent Roll Analysis,AO211+,AO210,Rent Roll Analysis,AO211+,AO210,
+rent_roll,rr_total_loc,Total LOC $,rr_subtotals,mapped,rr_input,Rent Roll Input,T7:T606,Total LOC $,Rent Roll Analysis,J211+,J210,Rent Roll Analysis,J211+,J210,Formula-derived in both. Writer should still paste-value the Analyzer's computed value; template formula re-derives but tie-out check needs the source figure.
+rent_roll,rr_total_monthly_rev,Total Monthly Rev,rr_subtotals,mapped,rr_input,Rent Roll Input,U7:U606,Total Monthly Rev,Rent Roll Analysis,K211+,K210,Rent Roll Analysis,K211+,K210,Formula-derived in both. Both = Actual + LOC only (no ancillary).
+rent_roll,rr_total_ancillary,Total Ancillary $,rr_subtotals,derived,rr_input,Rent Roll Input,AH7:AH606,Total Ancillary $,,,,Rent Roll Analysis,AQ211+,AQ210,Total Ancillary $ has no template column. v5 wishlist: add formula col `=AK+AL+AM+AN+AO` per row — no upstream change needed. · v5: v5 added col AQ as a TEMPLATE-OWNED formula `=SUM(AK:AO)`. Writer MUST NOT paste Analyzer col AH values here — template re-derives from cols AK-AO which are writer-populated.
+rent_roll,rr_payer_type,Payer Type,rr_other,mapped,rr_input,Rent Roll Input,P7:P606,Payer Type,Rent Roll Analysis,R211+,R210,Rent Roll Analysis,R211+,R210,Position shift P→R.
+rent_roll,rr_balance_ar,Balance (AR),rr_other,mapped,rr_input,Rent Roll Input,X7:X606,Balance (AR),Rent Roll Analysis,L211+,L210,Rent Roll Analysis,L211+,L210,Position shift X→L. Renamed.
+rent_roll,rr_notes,Notes,rr_other,mapped,rr_input,Rent Roll Input,Y7:Y606,Notes,Rent Roll Analysis,S211+,S210,Rent Roll Analysis,S211+,S210,Position shift Y→S.
+rent_roll,rr_ach,ACH,rr_other,mapped,rr_input,Rent Roll Input,AB7:AB606,ACH,Rent Roll Analysis,AP211+,AP210,Rent Roll Analysis,AS211+,AS210,Position shift AB→AP. · v5: shifted from AP211+ to AS211+ per 2026-05-26 contract §16 (new AP/AQ/AR inserts pushed analyst-input cols right)
+ar,ar_aging_0_30,AR Aging — 0–30 Days,ar_aging,gap_source,gap,,,,Rent Roll Analysis,N211+,N210,Rent Roll Analysis,N211+,N210,"UW Template expects per-resident aging buckets. Analyzer's AR & Collections (substrate v0.2.10+) aggregates by payer, not by resident — row-level join needed upstream before this can move off gap_source."
+ar,ar_aging_31_60,AR Aging — 31–60 Days,ar_aging,gap_source,gap,,,,Rent Roll Analysis,O211+,O210,Rent Roll Analysis,O211+,O210,"UW Template expects per-resident aging buckets. Analyzer's AR & Collections (substrate v0.2.10+) aggregates by payer, not by resident — row-level join needed upstream before this can move off gap_source."
+ar,ar_aging_61_90,AR Aging — 61–90 Days,ar_aging,gap_source,gap,,,,Rent Roll Analysis,P211+,P210,Rent Roll Analysis,P211+,P210,"UW Template expects per-resident aging buckets. Analyzer's AR & Collections (substrate v0.2.10+) aggregates by payer, not by resident — row-level join needed upstream before this can move off gap_source."
+ar,ar_aging_90_plus,AR Aging — 90+ Days,ar_aging,gap_source,gap,,,,Rent Roll Analysis,Q211+,Q210,Rent Roll Analysis,Q211+,Q210,"UW Template expects per-resident aging buckets. Analyzer's AR & Collections (substrate v0.2.10+) aggregates by payer, not by resident — row-level join needed upstream before this can move off gap_source."
+rent_roll,rr_deposit,Deposit,rr_other,substrate_ready_parser_pending,rr_input,Rent Roll Input,AI7:AI606,Deposit (pending upstream),Rent Roll Analysis,M211+,M210,Rent Roll Analysis,M211+,M210,"Substrate slot ready at Rent Roll Input!AI (v0.2.14). Parser support deferred until a source rent roll with a Deposit column lands as a fixture. Once parsed, RR writer at COL_AI_INDEX=35 will populate."
+rent_roll,rr_preleased_date,Preleased Date,rr_dates,mapped,rr_input,Rent Roll Input,AJ7:AJ606,Preleased Date,,,,Rent Roll Analysis,AR211+,AR210,"Lives at Rent Roll Input!AJ as of substrate v0.2.14 (relocated from AI). Section N on Rent Roll Recon matches on Status='Preleased', not on the date column directly — the AI → AJ relocation had zero formula impact upstream. UW Template v4 still has no per-row Preleased Date column; status remains gap_target until template v5. · v5: Closed in v5 — UW Template col AR. Writer pastes from Rent Roll Input col AJ (substrate v0.2.14 relocation). Date format mm/dd/yyyy."

@@ -1,39 +1,72 @@
 # SPEC-UWT.md — ALF UW Template Integration (Track 4)
 
-> Track 4 specification — wiring the Analyzer's `UW Output` / `UW Export` surface
-> into the downstream **ALF UW Template** workbook as the last step of the
-> ALF underwriting pipeline.
+> Track 4 specification — wiring the Analyzer's `UW Output` / `UW Export` /
+> `Rent Roll Input` / `AR & Collections` surfaces into the downstream
+> **ALF UW Template** workbook as the last step of the ALF underwriting
+> pipeline.
 >
-> **Status:** Phase 0 (inspection + mapping registry only — no writer yet).
-> **Current code version:** UWT v0.1.0 (this doc + mapping registry only).
-> **Target template version:** `v4` (`Sample Files/ALF_UW_Template_v4.xlsx`).
-> **Analyzer substrate this is mapped against:** v0.2.9.
+> **Status:** Phase 3 (UW Template v5 absorbed — writer supports v4 + v5,
+> v5 is now the binding default per the 2026-05-26 release).
+> **Current code version:** UWT v0.4.0 (registry v0.3.0 — 111 concepts, with
+> per-version `targets.v4` + `targets.v5` blocks).
+> **Target template version:** `v5` (`Sample Files/ALF_UW_Template_v5.xlsx`
+> — repo canonical copy mirrored from `Deals/Acquisition/_Template/ALF Templates/`).
+> v4 still supported via `template_version='v4'` for backward compat.
+> **Analyzer substrate mapped against:** v0.2.14 (unchanged — v5 didn't move
+> the substrate; only template-side structure shifted).
 
 ---
 
 ## 1. Where this fits
 
-Track 4 is the **last downstream consumer** of the Analyzer. The full pipeline:
+Track 4 is the **last downstream consumer** of the Analyzer. The full pipeline
+has **three paste paths** into the UW Template:
 
 ```
 RR (Track 1)  →  ┐
                  ├──→  ALF_Financial_Analyzer_Only.xlsx  (Track 2/3 substrate)
-T12 (Track 2) →  ┘                │
-                                  │  UW Output  →  UW Export (values mirror)
-                                  ▼
+T12 (Track 2) →  ┘     │
+AR  (Track 2) →  ──────┤
+                       │  ┌── UW Output / UW Export ──── ▶  T-12 Analysis
+                       │  ├── Rent Roll Input rows 7+ ── ▶  Rent Roll Analysis 211+
+                       │  └── AR & Collections ──────── ▶  Rent Roll Analysis N–Q
+                       ▼
                           ALF UW Template  (Track 4 — this spec)
                           (per-deal populated copy)
 ```
 
 The ALF UW Template is an investor-facing full underwriting workbook (17 sheets,
 ~5,500 value cells, Scenarios + P&L pro forma + Waterfall + Sensitivity +
-Capital Stack + 10-yr returns). The Analyzer's UW Output surface populates a
-small subset of its **intake sheets**; the rest of the template runs on its own
-formulas / analyst input / Scenarios driver.
+Capital Stack + 10-yr returns). The Analyzer surfaces populate three of its
+**intake sheets** (`Prop Info`, `T-12 Analysis`, `Rent Roll Analysis`); the
+rest of the template runs on its own formulas / analyst input / Scenarios
+driver.
 
-## 2. Scope (Phase 0)
+**Authoritative handoff doc:** the 2026-05-25 contract
+`Deals/Acquisition/_Template/ALF Templates/Documentation & Maps/2026-05-25-UW-OUTPUT-HANDOFF-CONTRACT.md`.
+Maintained outside this repo; the registry mirrors its row map and column
+crosswalk.
 
-Phase 0 ships:
+## 2. Scope
+
+### Phase 1 (current — v0.2.0)
+
+Phase 1 extends the Phase-0 registry with the **Rent Roll** and **AR** paste
+paths from the 2026-05-25 handoff contract:
+
+- All 34 `Rent Roll Input` columns crosswalked to their `Rent Roll Analysis`
+  row 211+ targets (35 concepts incl. `Preleased Date`). Position-shifts,
+  renames, and three source-side `gap_target` items (`K` Care Level tier
+  label, `S` Period Date, `AH` Total Ancillary).
+- 4 AR-aging concepts as `gap_source` stubs (UW Template cols N–Q, gated on
+  future row-level routing from `AR & Collections`).
+- Deposit concept at `decided_pending_upstream` — DECIDED 2026-05-25 to land
+  in `Rent Roll Input!AI`. Preleased Date (currently at AI per v0.2.13)
+  flagged in `open_questions` for relocation.
+- Generator (`build_mapping_artifacts.py`) extended with a Path filter and
+  per-path coloured sections. Markdown / HTML / CSV all group by path × category.
+
+### Phase 0 (v0.1.0, 2026-05-23) — shipped:
 
 - The mapping registry (`tools/uw_template/registry.json`) — semantic-key
   registry of source-to-target concepts, decoupled from any single template
@@ -47,13 +80,14 @@ Phase 0 ships:
     version).
 - This spec doc + `CHANGELOG-UWT.md` + a CLAUDE.md entry for Track 4.
 
-Phase 0 explicitly **does not** ship:
+Phases 0 and 1 explicitly **do not** ship:
 
 - A writer module (no code that mutates the template).
 - A Streamlit UI button to produce a populated template.
-- Any change to the Analyzer (`UW Output`, `UW Export`, named ranges).
+- Any change to the Analyzer (`UW Output`, `UW Export`, `Rent Roll Input`
+  cols, `AR & Collections`, named ranges).
 
-Phase 1+ scope is sketched in §7 below.
+Phase 2+ scope is sketched in §7 below.
 
 ## 3. Template at a glance — `ALF_UW_Template_v4.xlsx`
 
@@ -131,69 +165,93 @@ adding template `v5` requires *only* extending `templates` + each concept's
 | `cell` | Direct sheet+address (used for substrate-version cells like `Cover!B8`). |
 | `derived` | Writer computes from other mapped values (e.g. `licensed_beds_total = IL + AL + MC`). |
 
-## 5. Rollup at Phase 0 (template v4, substrate v0.2.9)
+## 5. Rollup at Phase 3 (template v5 default, substrate v0.2.14)
 
-72 concepts, six categories:
+111 concepts across three paths:
 
-| Category | Concepts | Mapped | Other |
-|---|---|---|---|
-| metadata | 4 | 1 | 1 proposed, 2 gap_target |
-| capacity | 7 | 4 | 3 gap_target |
-| revenue | 9 | 7 | 1 proposed, 1 gap_source |
-| waterfall | 5 | 3 | 2 derived |
-| labor | 15 | 15 | — |
-| nonlabor | 26 | 25 | 1 proposed |
-| mgmt_noi | 6 | 3 | 1 proposed, 1 gap_target, 1 header_only |
-| **Total** | **72** | **57 (79%)** | **15** |
+| Path | Concepts | mapped | gap_target | gap_source | proposed | other |
+|---|---|---|---|---|---|---|
+| **t12** (UW Output → T-12 Analysis) | 72 | 62 | 2 | 1 | 4 | 3 |
+| **rent_roll** (Rent Roll Input → Rent Roll Analysis 211+) | 35 | 33 | 0 | 0 | 0 | 2 *(1 derived + 1 substrate_ready_parser_pending)* |
+| **ar** (AR & Collections → Rent Roll Analysis N–Q) | 4 | 0 | 0 | 4 | 0 | 0 |
+| **Total** | **111** | **95 (86%)** | **2** | **5** | **4** | **5** |
 
-Labor + non-labor + EGI/EBITDARM are clean 1:1 by label. Friction concentrates
-in metadata (no template version stamp), capacity (template has no
-occupied-beds rows), revenue (Bad Debt placement divergence; 2nd Person
-breakout missing upstream), and mgmt_noi (no EBITDA row in template).
+Phase 3 closed 8 of the 10 v4 `gap_target`s by absorbing the v5 template
+changes — only `substrate_version` (Cover stamp, deferred to v5.1) and
+`t12_period_date` (no monthly-header concept target) remain.
+
+Labor + non-labor + EGI/EBITDARM are clean 1:1 by label. Rent Roll columns
+map cleanly by field name but **column positions do not match 1:1** — the
+crosswalk in `registry.json` is the source of truth. Friction concentrates
+in:
+
+- **T-12 path:** Bad Debt placement divergence; 2nd-Person breakout missing
+  upstream; no EBITDA row in template; capacity (no occupied-beds rows).
+- **Rent Roll path:** three template-side gaps (`K` Care Level tier label,
+  `S` Period Date, `AH` Total Ancillary) — all v5 template wishlist items;
+  Deposit + Preleased AI-column conflict pending resolution.
+- **AR path:** all four aging concepts are `gap_source` — requires upstream
+  resident-key join in `AR & Collections` before it can move forward.
 
 ## 6. Structural mismatches the writer must handle
 
+### T-12 path
 1. **Monthly grid vs. annual total.** Template `T-12 Analysis!B56:M56` headers
    `Apr-25..Mar-26` invite a 12-month bucket paste. UW Export only exposes
-   annual totals — Phase 1 writer fills only col N (T-12 Total). Widening
-   the Analyzer to expose `Monthly Trending` data via UW Export is a Phase 2
+   annual totals — Phase 2 writer would fill only col N (T-12 Total). Widening
+   the Analyzer to expose `Monthly Trending` data via UW Export is a Phase 3
    candidate.
-
 2. **Bad Debt placement.** Template has Bad Debt as a revenue contra-line
    (`T-12 Analysis!N62`, above Net Rent Revenue at `N63`). Analyzer treats
    Bad Debt as an OpEx line (`UW Output` row 57 → template `N106`). Pasting
-   the same value to both rows double-counts. Open question — pick one
-   placement before writer ships.
-
+   to both rows double-counts. Pick one placement before writer ships.
 3. **2nd Person Revenue.** Template has dedicated `T-12 Analysis!N67`.
    Analyzer rolls 2P into Rent Roll Input col V and includes it in `Total
    Monthly Rev` but does not surface a 2P annual on UW Output.
-
 4. **EBITDA row.** UW Output row 68 has no template row to land in.
-
 5. **Occupied beds.** UW Output rows 71 (IL/AL/MC occupied) have no template
-   target — template computes occupancy from the raw RR paste.
+   target.
+6. **Monthly column headers.** Hardcoded `Apr-25..Mar-26` won't match every
+   deal's actual T-12 period.
+7. **NOI separator.** UW Output row 65 is header-only — writer must skip.
 
-6. **Monthly column headers.** Hardcoded `Apr-25..Mar-26` in the template
-   probably won't match the actual T-12 period for an arbitrary deal. Writer
-   either rewrites the header row or leaves a known disclaimer.
+### Rent Roll path
+8. **Column position re-mapping.** 34 source cols don't align 1:1 to UW Template
+   cols — see registry. Writer **must** map field-by-field, not column-letter.
+9. ~~**AI column conflict.**~~ **Resolved 2026-05-25** by substrate v0.2.14 +
+   RR v1.18.1: Deposit slot reserved at `Rent Roll Input!AI` (clear-only —
+   no parser support yet); Preleased Date relocated to AJ.
+10. ~~**`RR_Input_Data` named range is too narrow.**~~ **Resolved 2026-05-25**
+    by substrate v0.2.14: range widened from `A7:S606` to `A7:AJ606`.
+11. **Formula columns on the UW Template side.** Cols V, X, Y, Z, AA, AB, AS in
+    Rent Roll Analysis are derived — writer must NOT overwrite.
+12. **AR / AS preserved on re-paste.** Conc Source (AR) and Effective Conc $
+    (AS) are analyst-entered; writer must preserve.
+13. **Period Date (Analyzer col S).** Per-row in source; the template wants it
+    as a single metadata cell in the tab header, not per-row.
+14. **Header rows 1–209.** Diagnostic sections formula-derived from the
+    paste block — writer must not touch.
 
-7. **NOI separator.** UW Output row 65 is header-only (no value); writer
-   must skip — same gotcha as `UW-OUTPUT-HANDOFF-CONTRACT.md §4(1)`.
+### AR path
+15. **Per-resident vs. per-payer aggregation.** AR & Collections aggregates by
+    payer; UW Template aging cols are per-resident. Resident-key join needs to
+    happen upstream before the AR path can move off `gap_source`.
 
-These are tracked as `open_questions` in `registry.json` so they don't get
-lost between phases.
+All 15 are tracked as `open_questions` in `registry.json`.
 
 ## 7. Phase plan
 
-| Phase | Deliverables |
-|---|---|
-| **0 — Inspection & mapping** (this PR) | Registry, generator, mind-map HTML, tracker MD/CSV, this spec, changelog. |
-| **1 — Writer module** | `uw_template_writer.py` with `populate_template(analyzer_bytes, template_bytes) → populated_bytes`. Uses the registry to resolve concept → target address for the active template version. Open questions in §6 must be answered first. |
-| **1.5 — App integration** | New download button in `app.py` ("Download populated UW Template"). Per-deal output naming convention. Phase 0 carry-forwards translated into Phase 1 acceptance criteria. |
-| **2 — Monthly contract widening** | Extend UW Export to expose monthly bucket data from Monthly Trending. Writer fills `T-12 Analysis!B56:M68` (income block × 12 months) + later expands to labor/opex monthly. Requires a substrate version bump on the Analyzer side (Track 3 ↔ Track 4 cross-cutting). |
-| **3 — Rent Roll Analysis automation** | Writer populates the raw RR block on `Rent Roll Analysis` from `RR_Input_Data` (named range) instead of analyst paste. |
-| **4 — Future template versions** | Adding `v5` is an additive change to `registry.json`; the writer reads the version-keyed target. No code change required if labels are stable. |
+| Phase | Deliverables | Status |
+|---|---|---|
+| **0 — Inspection & T-12 mapping** | Registry, generator, mind-map HTML, tracker MD/CSV, spec, changelog. | ✅ shipped 2026-05-23 (v0.1.0) |
+| **1 — Rent Roll + AR mapping** | 35 RR + 4 AR concepts; path-aware generator; Deposit + Preleased AI-conflict logged. | ✅ shipped 2026-05-25 (v0.2.0) |
+| **1.5 — AI conflict resolved** | Substrate v0.2.14 — Deposit slot reserved at AI; Preleased Date relocated to AJ; `RR_Input_Data` named range widened. RR v1.18.1 — writer constants updated. UWT registry v0.2.1 — Deposit status `substrate_ready_parser_pending`, Preleased source AJ. | ✅ shipped 2026-05-25 (v0.2.1) |
+| **2 — Writer module** | `uw_template_writer.py` — pure function `populate_uw_template(analyzer_bytes, template_bytes, *, scenario='normalized') → (bytes, PopulateReport)`. Registry-driven dispatch on `source.system` (`uw_output`, `rr_input`, `named_range`, `cell`, `derived`). Skips concepts at default skip statuses (gap_*, header_only, derived, manual, *_pending) and hard-coded `_SPECIAL_SKIP_KEYS` (opex_bad_debt_expense duplicate). Structured `PopulateReport` for transparency. `tests/test_uw_template_writer.py` exercises empty + populated fixtures. | ✅ shipped 2026-05-25 (v0.3.0) |
+| **3 — UW Template v5 absorbed** | `templates.v5` block added to registry; per-concept `targets.v5` for every concept (inherit v4 unchanged unless v5 shifted/added the target). Writer reads `rent_roll_data_end_row` per template version (v4: 386, v5: 610) and caps the rent_roll stride accordingly. Default `template_version` flipped to `v5`. 7 concepts moved gap_target → mapped (ebitda, opex_total_excl_mgmt, occupied_beds_il/al/mc, rr_care_level_tier_label, rr_preleased_date); 1 moved gap_target → derived (rr_total_ancillary — template owns the `=SUM(AK:AO)` formula at AQ); 2 v4-vs-v5 col shifts (rr_ach AP→AS, rr_market_psf AQ→AT) per contract §16. | ✅ shipped 2026-05-26 (v0.4.0) |
+| **2.5 — App integration** | New download button in `app.py` ("Download populated UW Template"). Per-deal output naming convention. | not started |
+| **3 — Monthly contract widening** | Extend UW Export to expose monthly bucket data from `Monthly Trending`. Writer fills `T-12 Analysis!B56:M68` (income block × 12 months) + later expands to labor/opex monthly. Cross-cutting Track 3 ↔ Track 4. | not started |
+| **4 — AR row-level routing** | Upstream substrate change: resident-key join in `AR & Collections` per-resident aging. Once that lands, AR path concepts move off `gap_source`. | not started |
+| **5 — Future template versions** | Adding `v5` is an additive change to `registry.json`; the writer reads the version-keyed target. No code change required if labels are stable. | future |
 
 ## 8. Versioning
 
@@ -203,7 +261,11 @@ lost between phases.
 | Mapping registry version | `registry.json` → `registry_version` | `0.X.Y` — bump on content changes (added/removed/restatused concepts). |
 | Template version | `registry.json` → `templates.<v>` keys | Free-form (`v4`, `v5`, ...) keyed on the source template's own name. |
 
-Phase 0 ships UWT v0.1.0 + registry v0.1.0 + template v4.
+- Phase 0 shipped UWT v0.1.0 + registry v0.1.0 + template v4 (substrate v0.2.9).
+- Phase 1 shipped UWT v0.2.0 + registry v0.2.0 + template v4 (substrate v0.2.11).
+- Phase 1.5 shipped UWT v0.2.1 + registry v0.2.1 + template v4 (substrate v0.2.14) — AI-column conflict resolved (Deposit at AI, Preleased at AJ).
+- Phase 2 shipped UWT v0.3.0 + registry v0.2.1 (unchanged) + template v4 (substrate v0.2.14) — writer module + smoke tests.
+- Phase 3 ships UWT v0.4.0 + registry v0.3.0 + template **v5** (substrate v0.2.14) — v5 template absorbed; writer supports v4 + v5 via `templates.{v}` blocks.
 
 ## 9. Where things live
 
