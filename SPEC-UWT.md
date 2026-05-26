@@ -7,10 +7,11 @@
 >
 > **Status:** Phase 2.5 (Streamlit UI integration shipped — operator can
 > populate the UW Template in one click from the webapp).
-> **Current code version:** UWT v0.4.2 (registry v0.3.0 unchanged —
-> schema stable; v0.4.2 mirrors the Analyzer load pattern: bundled
-> template by default + override under Advanced. Populate flow runs
-> unconditionally on every Analyzer build, no user upload required).
+> **Current code version:** UWT v0.4.3 (registry v0.3.0 unchanged —
+> schema stable; v0.4.3 patches the v5 template asset to fill W/X/Y
+> formula columns through row 610, unblocking Section R's Unit-Type
+> Pricing diagnostic which was returning #CALC! everywhere because
+> the dynamic-array driver at Z173 was FILTERing over an empty X column).
 > **Target template version:** `v5` (`Sample Files/ALF_UW_Template_v5.xlsx`
 > — repo canonical copy mirrored from `Deals/Acquisition/_Template/ALF Templates/`).
 > v4 still supported via `template_version='v4'` for backward compat.
@@ -271,6 +272,7 @@ All 15 are tracked as `open_questions` in `registry.json`.
 - Phase 3 shipped UWT v0.4.0 + registry v0.3.0 + template **v5** (substrate v0.2.14) — v5 template absorbed; writer supports v4 + v5 via `templates.{v}` blocks.
 - Phase 2.5 ships UWT v0.4.1 + registry v0.3.0 (unchanged) — Streamlit UI integration; populate-UW-Template button reachable from the webapp.
 - Phase 2.5 follow-up ships UWT v0.4.2 — bundled-template + override pattern (mirrors Analyzer load); populate runs unconditionally.
+- Phase 2.5 patch ships UWT v0.4.3 — fills v5 template's W/X/Y formula columns through row 610, unblocking Section R / Section S diagnostics that depended on those columns.
 
 ## 9. Where things live
 

@@ -8,6 +8,106 @@ opened (none yet — Phase 0 is the seed release).
 
 ---
 
+## v0.4.3 — v5 template patch: Section R / Section S formula fill-downs (2026-05-26)
+
+Operator-reported bug after v0.4.2 ship: Section R (rows 170-181, "Unit
+Type Pricing by Care Level") on the populated UW Template returns
+**#CALC! everywhere**. Diagnosis traced to the dynamic-array driver at
+`Rent Roll Analysis!Z173`:
+
+  ```
+  =SORT(UNIQUE(FILTER($X$211:$X$610,$X$211:$X$610<>"")))
+  ```
+
+`FILTER` on an all-empty range with no `if_empty` argument throws #CALC!,
+which then poisons every spillover cell in C173:Q179. Same shape on
+Section S (rows 182-188 reading `$AU$211:$AU$610`) — counts to 0
+everywhere instead of #CALC!, but same root cause.
+
+### Root cause
+
+The Section R/S ArrayFormulas at row 173 are intact (verified — Z173,
+C173, Q173 are all `<openpyxl.worksheet.formula.ArrayFormula>` objects).
+But the **formula-derived columns W / X / Y at rows 211-610 have NO
+formulas** in the v5 template. The operator who authored the v5 template
+externally in Excel cleaned the data rows but didn't re-fill the formula
+columns. Headers exist at W210/X210/Y210 ("Unit Type (base)" /
+"Care|UnitType" / "Care|Unit (all)") but the data rows are empty.
+
+### Shipped
+
+`tools/uw_template/_patch_v5_section_r_formulas.py` — CLI-runnable
+patcher, idempotent. Fills 1,200 cells (400 rows × 3 cols):
+
+  | Col | Formula at row r | Purpose |
+  |-----|------------------|---------|
+  | **W** | `=AC{r}` | Mirror AC (Apt Type) — already writer-populated from Analyzer col F's normalized closed vocab (Studio / 1 Bedroom / 2 Bedroom / 3 Bedroom / Suite / Cottage). Required by Section R's SqFt lookup at row 171. |
+  | **X** | `=IF(AND(D{r}="Occupied",C{r}<>"",W{r}<>""),C{r}&"|"&W{r},"")` | Care\|UnitType, **occupied-only**. Drives Section R's unique-key SORT/UNIQUE/FILTER at Z173. |
+  | **Y** | `=IF(AND(C{r}<>"",W{r}<>""),C{r}&"|"&W{r},"")` | Care\|Unit, all care+type rows incl vacants. Drives Section R denominators. |
+
+Idempotency gate: bails as a no-op if `W211` already holds a formula or
+value. Re-runs are safe.
+
+CLI:
+  ```
+  python tools/uw_template/_patch_v5_section_r_formulas.py
+      [path/to/ALF_UW_Template_v5.xlsx]
+  ```
+  Default target: committed `assets/ALF_UW_Template_v5.xlsx`. Operator can
+  also run on their Deals-folder canonical copy.
+
+### What this patch does NOT do
+
+- **Column AU (Conc Source)** left empty. The 2026-05-25 handoff contract
+  §11 calls AU "Manual analyst entry," and the operator's diagnostic note
+  flagged the auto-classifier sketch as "rough — confirm column meanings
+  before using." Section S will continue to show 0 counts until analyst
+  data is entered there. Auto-classification can ship as a v5.1 template
+  addition if needed.
+- **Columns Z (_key), AA (Mkt-Actual $), AB (Mkt-Actual %)** also empty
+  per contract §13's formula-derived list, but the operator hasn't
+  reported them as blocking any section. Left alone for now.
+
+### Verification
+
+  - Patch ran cleanly on `assets/ALF_UW_Template_v5.xlsx`: 1,200 cells
+    written (400 W + 400 X + 400 Y), 6/6 verification checks passed
+    (headers preserved, W/X/Y at start/mid/end-of-range are formulas,
+    W611 is empty so no overwrite past data range).
+  - Idempotency confirmed (re-run = no-op).
+  - **Writer round-trip on Homestead populated fixture**: formulas
+    survive the writer's openpyxl load+save cycle intact:
+    - W211 → `=AC211`
+    - X211 → `=IF(AND(D211="Occupied",C211<>"",W211<>""),C211&"|"&W211,"")`
+    - Y211 → `=IF(AND(C211<>"",W211<>""),C211&"|"&W211,"")`
+    - AC211 → `'1 Bedroom'` (writer-paste)
+    - Z173 still `<ArrayFormula>` object — Section R's driver intact
+  - **Cell counts post-populate** (Homestead): 176 AC-data cells +
+    400 W-formula cells — every populated row will have W resolve via
+    AC, then X/Y derive from C+W.
+  - Writer regression tests (`tests/test_uw_template_writer.py`) still
+    pass — 90 concepts written / 3,232 cells.
+
+### Operator-side note
+
+The patch operates on the committed `assets/` asset. The operator should
+re-run it on their `Deals/Acquisition/_Template/ALF Templates/ALF_UW_Template_v5.xlsx`
+canonical copy too (or simply replace that file with the patched repo
+copy). Future v5.1 template work (Cover substrate stamp + tab-header
+Period Date) should preserve the W/X/Y fill-downs — note added to the
+BL-0027 / v5.1 handoff queue.
+
+### Versioning
+
+  UWT code version: v0.4.3 (Phase 2.5 patch).
+  Mapping registry version: 0.3.0 (unchanged).
+  Template versions supported: v4 + v5 (v5 default).
+  Bundled v5 patched at: `assets/ALF_UW_Template_v5.xlsx` (1,200 new
+    formula cells in W/X/Y at rows 211-610).
+  Analyzer substrate mapped against: v0.2.14 (unchanged).
+
+---
+
 ## v0.4.2 — Phase 2.5 follow-up: bundled template + override pattern (2026-05-26)
 
 User feedback after v0.4.1 ship: "I don't see a download for ALF UW
