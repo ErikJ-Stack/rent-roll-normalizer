@@ -319,3 +319,25 @@ Documented from real bugs hit during migration script work:
 3. Identify which Track the user's request belongs to. If ambiguous, ask before proceeding.
 4. If the work is on Track 2 (substrate), assume migration script + spec update + changelog entry are all required deliverables — not just the code.
 5. If context starts thinning, recommend spinning up a working MD (e.g. `OPTIMIZATION-DECISIONS.md` style) before the chat hits the wall.
+
+### Verify canonical state before claiming repo state
+
+**The repo lives inside an actively-syncing OneDrive folder.** `ls`, file mtimes, and even Python `json.load()` results from earlier in the same session can serve **stale views** while OneDrive is mid-sync (this bit the 2026-05-26 afternoon Track 4 session — see journal). Before making claims about "what's there" / "what exists" / "what version is on disk," **re-read the canonical source at the decision point**, not at session start:
+
+- **For tracked files** — `git ls-files <path>` is authoritative for "is this tracked." `git log --oneline -5 -- <path>` shows when it last changed. Trust git, not `ls -la`.
+- **For working-tree state** — re-run `git status -s` at decision points. Don't trust mental models of state built up from earlier turn outputs.
+- **For data files (registry, config, etc.)** — re-`cat` / re-`Read` the file just before drafting work that depends on its contents. OneDrive can serve a stale read on the first try and the canonical value on a later try, within the same session.
+- **For xlsx round-trips** — the cell-level Worksheet-object view is **necessary but not sufficient** for fidelity. Always diff the zip-part inventory pre/post too — see openpyxl quirk #6.
+
+### Track 4 preflight
+
+Before drafting any handoff brief, registry edit, or claim about Track 4 state, run:
+
+```bash
+git log --oneline -5 && git status -s && \
+python3 -c "import json; r = json.load(open('tools/uw_template/registry.json')); print(f'registry_version: {r[\"registry_version\"]} | concepts: {len(r[\"concepts\"])} | open_questions: {len(r[\"open_questions\"])}')" && \
+ls tools/uw_template/handoffs/ && \
+grep '^UWT_VERSION' app.py
+```
+
+Catches the four-mistake class from 2026-05-26 afternoon: stale registry read, missing-from-`ls` handoff files, version-constant drift, forgotten in-flight handoffs.

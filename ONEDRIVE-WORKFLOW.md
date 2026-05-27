@@ -81,6 +81,52 @@ the **remote** OneDrive copy has changes you haven't pulled yet. For that, run
 `git fetch && git status` after the sync check — git is the source of truth for
 "is there work I don't have yet?"
 
+It also doesn't catch the next thing:
+
+---
+
+## Stale file listings during sync (matters for AI assistants too)
+
+During an active sync, **file listings (`ls`, `dir`, `Get-ChildItem`) and `Read`
+operations on a single file can serve stale views** that disagree with what
+git tracks. This bit the 2026-05-26 afternoon Track 4 session — an early
+`ls -la tools/uw_template/` didn't show `HANDOFF_TRACKER.md` or
+`HANDOFF_TEMPLATE.md` even though they had been committed earlier that morning
+and were on disk; the AI assistant then "created" them via Write, which
+overwrote canonical content with near-identical-but-not-quite-identical content
+(then triggered a long correction sequence). Same session: an early
+`json.load()` of `tools/uw_template/registry.json` returned `registry_version
+"0.2.1"`; a later read of the same file returned `"0.3.0"` (the actual current
+state). OneDrive sync had served stale content on the first read.
+
+### How to spot it
+
+- **A file you expect to exist isn't in `ls` output** → check `git ls-files <path>`
+  first. If git tracks it, the file IS in the repo even if `ls` doesn't show it.
+- **A file's content differs between two reads in the same session** → OneDrive
+  resolved sync between the reads. The second read is the canonical one.
+- **`mtime` looks "too old"** → may reflect last sync time rather than last edit
+  time. Cross-check with `git log -1 -- <path>`.
+
+### How to defend against it
+
+For interactive work: re-run `ls` / re-`Read` the file at decision points. Don't
+rely on outputs from earlier in the session.
+
+For AI-assistant work specifically (Claude Code, Cursor, etc.): treat **git as
+the canonical source** for "what files exist in this repo," not the local
+filesystem. Concrete preflight before drafting or making claims:
+
+```bash
+git ls-files <path-prefix>             # canonical "what's tracked here"
+git log --oneline -5 -- <path>         # what's the recent history of this file
+git status -s                          # what's modified right now
+# then re-Read the file you're about to claim something about
+```
+
+This is documented as a project-level feedback memory (`verify-canonical-source`)
+in `~/.claude/projects/.../memory/` so AI assistants pick it up automatically.
+
 ---
 
 ## "I can't pause OneDrive" workarounds
