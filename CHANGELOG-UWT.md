@@ -8,6 +8,92 @@ opened (none yet — Phase 0 is the seed release).
 
 ---
 
+## v0.4.4 — Section R re-fix: W mirrors AC, A173/B173 IFERROR, D173 uses per-unit sq ft (2026-05-27)
+
+Operator-reported Section R bug on Rent Roll Analysis: returns #N/A and
+zeros despite v0.4.3's W/X/Y fill-down patch. Root cause traced to
+operator's 2026-05-26 `deacc41` "refresh assets" edit, which **replaced**
+v0.4.3's `W = =AC{r}` formulas with a substring-Notes-parser formula
+(a what-if option I'd sketched in an earlier chat but never recommended).
+Since real rent rolls don't carry "studio" / "1 bed" / "1br" / etc. in
+col S (Notes), W resolved to "" everywhere → X to "" everywhere → Z173
+spill empty → all of A173-I173 broken.
+
+### Shipped (`tools/uw_template/_patch_v5_section_r_use_ac.py`)
+
+CLI-runnable, idempotent. 4 surface changes to
+`assets/ALF_UW_Template_v5.xlsx`:
+
+  | Cell range | Old | New |
+  |---|---|---|
+  | **W211:W610** (400 cells) | `=IFERROR(IFS(ISNUMBER(SEARCH("studio",S{r})),...),"")` (substring Notes parser) | `=IF(AND($D{r}="Occupied", $AC{r}<>""), $AC{r}, "")` (gated AC reference) |
+  | **A173** | `=TEXTBEFORE(ANCHORARRAY(Z173),"|")` (raw — shows #N/A on empty spill) | `=IFERROR(TEXTBEFORE(ANCHORARRAY(Z173),"|"),"")` |
+  | **B173** | `=TEXTAFTER(ANCHORARRAY(Z173),"|")` | `=IFERROR(TEXTAFTER(ANCHORARRAY(Z173),"|"),"")` |
+  | **D173** | `=IFERROR(XLOOKUP(ANCHORARRAY(B173),{"Studio";"1 Bedroom";...},{450;700;1000;1300;350;900},""),"")` (hardcoded estimates) | `=IFERROR(AVERAGEIFS($T$211:$T$610,$C$211:$C$610,ANCHORARRAY(A173),$AC$211:$AC$610,ANCHORARRAY(B173)),"")` (real per-unit sq ft from col T) |
+
+The W change is the substantive fix; A173/B173 wrap raw TEXTBEFORE/
+TEXTAFTER calls so blank Z173 spills don't show #N/A; D173 swap uses
+actual per-unit sq ft from col T instead of the placeholder lookup table.
+
+### Why W = gated AC reference (not substring-Notes-parser)
+
+  - **Col AC ("Apt Type") already holds the canonical unit type.** The
+    writer pastes Analyzer col F (normalized closed vocab: Studio /
+    1 Bedroom / 2 Bedroom / 3 Bedroom / Suite / Cottage) into AC at
+    populate-time. Always present, always normalized.
+  - **Col S (Notes) is free-form** — lease/concession context, not
+    structured. Parsing it for unit type is fragile and fails on real
+    rent rolls.
+  - **Occupancy gate** ensures vacants and unmapped rows contribute
+    nothing to Section R's SORT/UNIQUE/FILTER unique-key spill.
+
+### Verification
+
+  - 9/9 patch verification checks pass (W formulas at start/mid/end of
+    range, A173/B173/D173 wrappers, Z173 SORT/FILTER unchanged, sheet
+    count 16, RR Analysis max_row 610).
+  - Writer regression on Homestead populated fixture passes — 90
+    concepts written / 3,232 cells; W211 in output = the new gated AC
+    formula; X211 still concats correctly; Z173 still ArrayFormula.
+  - Idempotency confirmed (re-run = no-op via `_is_already_patched()`
+    detection on the `$AC211<>""` marker in W211).
+
+### Openpyxl quirk #6 implication
+
+This patch round-trips the file through openpyxl, which silently drops
+`xl/metadata.xml` (the XLDAPR block) per quirk #6 documented in
+CLAUDE.md (and the v0.5.0 rollback). After this patch ships, the
+operator must open the file in Excel ONCE and save it — Excel detects
+the missing part on open, offers to repair, and rebuilds the
+metadata.xml with correct dynamic-array properties. This round-trip
+has been the working pattern since v0.4.3 — Excel's repair is
+forgiving for surface-only formula changes like this one.
+
+### Out of scope (unchanged)
+
+  - In-Python formula evaluator (closes cache caveat) — still pending.
+  - BL-0026 T-12 Raw path — blocked on operator picking a direction
+    (Layer 1 capacity mismatch: 50 rows template vs 100+ rows real GL).
+  - BL-0027 README modernization — low priority.
+  - v5.1 template metadata cells — operator authoring queued; absorption
+    script pre-wired at `tools/uw_template/_absorb_v51_metadata_cells.py`.
+
+### Versioning
+
+  - UWT code version: **v0.4.4** (Section R re-fix).
+  - Mapping registry version: 0.3.0 (unchanged).
+  - Template versions supported: v4 + v5 (v5 default).
+  - Bundled v5 re-patched at `assets/ALF_UW_Template_v5.xlsx`.
+  - Analyzer substrate mapped against: v0.2.14 (unchanged).
+
+### Note on v0.5.0 number
+
+v0.5.0 was used by the rolled-back v5 → v5.1 metadata-cells attempt
+(see entry below). Future successful v5.1 absorption will be v0.5.1
+to avoid version reuse.
+
+---
+
 ## v0.5.0 — Attempted then rolled back (2026-05-26)
 
 **This release did NOT ship.** Rolled back the same session due to openpyxl
