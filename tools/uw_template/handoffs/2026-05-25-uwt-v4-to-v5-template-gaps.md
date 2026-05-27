@@ -1,8 +1,24 @@
 # UW Template Handoff — `2026-05-25-uwt-v4-to-v5-template-gaps`
 
+> ⚠️ **SUPERSEDED — DO NOT ACTION.** This brief was drafted on 2026-05-25 against
+> registry v0.2.1 and reflects template gaps as they existed at the start of
+> that day. **UWT v0.4.0 (2026-05-26) absorbed template v5** and closed 7 of
+> the gap_targets listed here (`rr_care_level_tier_label` → AP, `rr_total_ancillary`
+> → AQ derived, `rr_preleased_date` → AR, `opex_total_excl_mgmt` → N115 derived,
+> `ebitda` → N118, `occupied_beds_il/al/mc` → Prop Info B20-B22). Operator
+> authored v5 externally before this handoff was published.
+>
+> The 2 residual gap_targets that remained after v5 absorption
+> (`substrate_version`, `t12_period_date` / tab-header Period Date) plus the
+> still-open writer-scope decisions (Bad Debt, 2P Revenue, A5/B5 format) carry
+> forward into [`2026-05-26-uwt-v5-to-v51-residual-gaps.md`](2026-05-26-uwt-v5-to-v51-residual-gaps.md).
+>
+> File retained as audit trail of what was originally requested vs what landed.
+
 ---
 
-**Status:** Pending operator
+**Status:** Superseded (registry v0.2.1 baseline; absorbed by UWT v0.4.0 / 2026-05-26)
+**Originally:** Pending operator
 **Template version:** v4 → v5 (proposed)
 **Registry version:** 0.2.1 → 0.3.0 (will bump on receipt of v5 file)
 **Triggered by:** Track 4 Phase 0 → Phase 2 (UWT v0.1.0 → v0.3.0, 2026-05-23 → 2026-05-25). Backlog of `gap_target` concepts + writer-scope decisions accumulated through three phases; consolidated here.

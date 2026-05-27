@@ -46,17 +46,19 @@ implying any template-side action, no handoff is needed — the change lands in
 
 | Date | Handoff | Template version | Registry version | Status | Summary |
 | --- | --- | --- | --- | --- | --- |
-| 2026-05-25 | [v4 → v5 template gaps](handoffs/2026-05-25-uwt-v4-to-v5-template-gaps.md) | v4 → v5 (proposed) | 0.2.1 → 0.3.0 (proposed) | Pending operator | Four template-side additions + four writer-scope decisions that have accumulated through Phase 0–2: Preleased Date column, Care Level tier label, Period Date column, Total Ancillary column, EBITDA row, Occupied beds target, Bad Debt placement decision, monthly header overwrite policy. |
+| 2026-05-26 | [v5 → v5.1 residual gaps](handoffs/2026-05-26-uwt-v5-to-v51-residual-gaps.md) | v5 → v5.1 (proposed, minor) | 0.3.0 → 0.3.1 (proposed) | **Pending operator** | Two single-cell additions: substrate version stamp on Cover (operator's pick of cell — A1:F1 is the merged title band, so G1/H1 or further right) + `Rent Roll Analysis!B5` RR Period date cell. ⚠ **v0.5.0 attempted then rolled back same session** — Claude Code tried to land both via direct openpyxl edits to `assets/ALF_UW_Template_v5.xlsx`, but the round-trip silently dropped `xl/metadata.xml` (dynamic-array `XLDAPR`/`fDynamic` props — the v0.4.3 Section R/S spills depend on this) and `xl/webextensions/` (Claude-for-Excel taskpane add-in). Template restored from git; registry / UWT version / artifacts reverted. The two cells **must be authored externally in Excel via Cowork**. Patch scripts `tools/uw_template/_patch_v5_to_v51_metadata_cells.py` + `_revert_registry_to_v030.py` retained as audit trail — do not re-run the patch script. Lesson recorded as openpyxl quirk #6 in CLAUDE.md. |
+| 2026-05-25 | [v4 → v5 template gaps](handoffs/2026-05-25-uwt-v4-to-v5-template-gaps.md) | v4 → v5 | 0.2.1 → 0.3.0 | **Superseded** (absorbed by UWT v0.4.0 / 2026-05-26 — operator authored v5 externally before this handoff was published) | 10 gap_targets requested as v5 author work. 7 closed by v5 absorption (rr_care_level_tier_label → AP, rr_total_ancillary → AQ derived, rr_preleased_date → AR, opex_total_excl_mgmt → N115 derived, ebitda → N118, occupied_beds_il/al/mc → Prop Info B20-B22). 2 residual gap_targets + writer-scope decisions roll forward into the 2026-05-26 handoff above. |
 
 ## Status legend
 
 - **Pending operator** — handoff produced; waiting for the template to be updated in Excel.
 - **In progress** — operator has started authoring; not yet dropped back in.
 - **Applied** — new template file present at `Sample Files/ALF_UW_Template_v5.xlsx` (or whichever version); registry not yet updated to point at it.
-- **Verified** — registry updated; `populate_uw_template(..., template_version='v5')` smoke-tested; handoff is closed.
+- **Verified** — registry updated; `populate_uw_template(..., template_version='vN')` smoke-tested; handoff is closed.
+- **Superseded** — handoff is no longer the action plan, either because the work shipped through a different path (e.g. operator authored the change before the handoff published) or because a newer handoff supersedes its scope. Keep the row for audit trail; cross-link to the replacement handoff.
 
-When a handoff hits **Verified**, leave the row in place (audit trail) and
-update its Status. Newer handoffs continue to slot in at the top.
+When a handoff hits **Verified** or **Superseded**, leave the row in place
+(audit trail) and update its Status. Newer handoffs continue to slot in at the top.
 
 ## Mapping updates
 

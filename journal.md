@@ -11,6 +11,82 @@ Newest at top.
 
 ---
 
+## 2026-05-26 (afternoon) — Track 4 handoff infrastructure + UWT v0.5.0 attempted & rolled back
+
+User-directed Track 4 session. Two threads:
+
+1. **Augment the ClaudeCode → Cowork handoff system** for template changes. The infrastructure itself (`HANDOFF_TRACKER.md`, `HANDOFF_TEMPLATE.md`, `handoffs/` directory with the original 2026-05-25 brief, CLAUDE.md Track 4 "Handoff protocol" paragraph) was already shipped in commit `031e24f` earlier on 2026-05-26 — this session's chat was framed as "set up a tracker" but the system already existed (my early `ls -la tools/uw_template/` not seeing the files was a OneDrive sync mirage). The actual work this session: new 2026-05-26 handoff brief, Superseded banner on 2026-05-25 brief, `Superseded` status added to tracker legend, tracker index row updates. User: *"create a tracker and md documentation for handoff everytime the ALF UW template is changed through claudecode. I will then use this to update through co-work locally."*
+2. **Attempted to ship the v5 → v5.1 residual cells** (`substrate_version` + RR Analysis tab-header Period Date) via direct openpyxl edits after a user-approved fast-path override of the handoff protocol. Failed and rolled back same-session.
+
+### Sequence of mistakes worth recording
+
+1. **Wrote the seed handoff against stale registry state.** First draft of `2026-05-25-uwt-v4-to-v5-template-gaps.md` asked for 10 `gap_target` concepts to be closed in v5 — but UWT v0.4.0 had absorbed v5 hours earlier and 7 of those gap_targets were already closed. The registry on disk was at v0.3.0, but my earlier python read returned v0.2.1 (likely OneDrive sync timing or fs cache). User caught it with *"review again. i've already uploaded template v5."* Marked the brief **Superseded**, kept for audit trail, wrote a fresh `2026-05-26-uwt-v5-to-v51-residual-gaps.md` against actual current state (2 residual gap_targets + writer-scope decisions).
+
+2. **Took the fast-path openpyxl edit despite a just-written protocol saying don't.** User asked *"let's complete the handoff."* Offered three completion paths via `AskUserQuestion`; user chose direct openpyxl edits to `assets/ALF_UW_Template_v5.xlsx`. Logic at the time: two cells above the data band, no charts/formulas/merged ranges nearby, fidelity risk looked near-zero. Wrote `tools/uw_template/_patch_v5_to_v51_metadata_cells.py` (idempotent, with pre/post fidelity diff). Cell-level diff appeared clean — 16 sheets / 240 merged ranges / 5 defined names / 3,417 RRA cells / Section R/S ArrayFormulas preserved verbatim. Bumped registry → v0.3.1, regenerated artifacts, smoke-tested writer (passed: `Cover!H1 ← 'v0.2.4'`, `Rent Roll Analysis!B5 ← 2026-04-24`). Marked the handoff Verified.
+
+3. **The cell-level fidelity diff was necessary but not sufficient.** After cleanup, noticed `assets/ALF_UW_Template_v5.xlsx` shrunk **262,589 → 211,969 bytes (~20%)**. A zip-part inventory diff caught what openpyxl silently dropped on save:
+    - **`xl/metadata.xml`** (810 bytes) — `XLDAPR` / `fDynamic="1"` block. This is the dynamic-array properties metadata that tells Excel the v0.4.3 Section R/S formulas (`Z173 SORT(UNIQUE(FILTER(...)))` / `C173 COUNTIFS(...,ANCHORARRAY(Z173))`) are dynamic spills. Without it, Excel demotes the spill to a single cell or renders `#SPILL!` even though every `_xlfn._xlws.SORT` prefix is preserved verbatim in the formula text.
+    - **`xl/webextensions/*`** — Claude-for-Excel taskpane add-in registration (`wa200009404` from the Office Add-in store).
+    - `xl/sharedStrings.xml` (74 KB) — inlined instead, functionally equivalent.
+    - `xl/calcChain.xml` (167 KB) — Excel rebuilds on open.
+    - Minor comment/VML drawing path renames.
+
+   **openpyxl has no API to preserve `metadata.xml` or `webextensions/`.** Both are zip parts the library doesn't model in its Worksheet / Workbook object graph. A `wb.load() → wb.save()` round-trip always drops them.
+
+### Rollback
+
+- `assets/ALF_UW_Template_v5.xlsx` restored from git `deacc41` (byte-identical to v0.4.3 ship state).
+- Registry reverted v0.3.1 → v0.3.0 via `tools/uw_template/_revert_registry_to_v030.py` (`substrate_version` mapped→gap_target; `rr_period_date` mapped→proposed; `t12_period_date` derived_in_template→gap_target).
+- 3 `open_questions` re-opened (#4 A5/B5 format, #7 Cover stamp, #8 RR Analysis tab-header Period Date).
+- `UWT_VERSION` restored to `0.4.3`.
+- `MAPPING_TRACKER.md` / `mapping_tracker.csv` / `mapping_mindmap.html` regenerated against the reverted registry.
+- `CHANGELOG-UWT.md` gained a `v0.5.0 — Attempted then rolled back` entry with full forensics.
+- `CLAUDE.md` head paragraph rewritten to narrate the attempt → rollback; openpyxl-quirks section gained a new **quirk #6** documenting `metadata.xml` / `webextensions/` silent drop, with a `zipfile`-based detection snippet.
+- `tools/uw_template/handoffs/2026-05-26-uwt-v5-to-v51-residual-gaps.md` reverted from Verified back to **Pending operator** with a banner explaining the failed openpyxl attempt.
+- Both patch scripts (`_patch_v5_to_v51_metadata_cells.py` + `_revert_registry_to_v030.py`) retained as audit trail. **Do not re-run the patch script** without first solving the XLDAPR-loss problem.
+
+### What stands (handoff infrastructure)
+
+Already in place under `tools/uw_template/` as of commit `031e24f` (earlier 2026-05-26 morning), augmented this session:
+
+- `HANDOFF_TRACKER.md` — *pre-existing*. Augmented this session: added `Superseded` to the status legend; added the new 2026-05-26 row at top; updated the older 2026-05-25 row's Status to Superseded.
+- `HANDOFF_TEMPLATE.md` — *pre-existing*, untouched (byte-identical to HEAD).
+- `handoffs/2026-05-25-uwt-v4-to-v5-template-gaps.md` — *pre-existing*. Augmented this session: added a Superseded banner at the top explaining work shipped via v0.4.0 hours before the handoff was published.
+- `handoffs/2026-05-26-uwt-v5-to-v51-residual-gaps.md` — **new this session**. Pending operator (with v0.5.0-rollback banner).
+
+CLAUDE.md Track 4 section's "Handoff protocol" paragraph and table rows for the handoff files are *pre-existing in `031e24f`*. My session work on CLAUDE.md was limited to: (a) rewriting the head paragraph (UWT v0.4.3 ships → UWT v0.5.0 attempted/rolled-back narrative), and (b) adding openpyxl quirk #6.
+
+User-level feedback memory `uw-template-handoff-protocol` written this session and indexed in MEMORY.md (this is local to `~/.claude/projects/...`, not in the repo).
+
+### Net state delta vs start-of-session
+
+| | Before | After |
+|---|---|---|
+| `assets/ALF_UW_Template_v5.xlsx` | v0.4.3 ship state | **unchanged** (restored from git) |
+| `tools/uw_template/registry.json` | v0.3.0 | **unchanged** |
+| `app.py` `UWT_VERSION` | 0.4.3 | **unchanged** |
+| `gap_target` concepts | 2 | 2 (deferred to operator-authored v5.1 per the active handoff brief) |
+| `open_questions` | 8 | 8 |
+| Handoff infrastructure | shipped in `031e24f` (earlier 2026-05-26) | augmented — new 2026-05-26 brief, Superseded banner on 2026-05-25 brief, Superseded status in tracker legend, tracker index row updates; two patch scripts retained as audit trail |
+| `CLAUDE.md` openpyxl quirks | 5 | **6** (added `metadata.xml` / `webextensions/` silent-drop quirk) |
+
+### Lessons
+
+- **Pre-cache registry state before drafting any registry-modifying handoff.** Re-grep `registry_version` from disk; don't trust prior python reads in the same session — OneDrive sync timing can serve stale views.
+- **Cell-level openpyxl fidelity diffs are necessary but not sufficient.** Diff the xlsx zip part inventory pre/post before declaring a round-trip safe. `xl/metadata.xml` and `xl/webextensions/` are invisible to Worksheet-object inspection but materially affect Excel behavior.
+- **The handoff protocol exists for a reason.** v0.5.0 broke the protocol the same session it was established and proved the protocol's value by failing. Future Track 4 chats should default to the protocol path unless a user-approved exception applies AND a zip-part inventory diff is added to the fidelity check.
+
+### Carry-forwards (next chat)
+
+- **Operator-side:** author the two cells in Excel via Cowork per `tools/uw_template/handoffs/2026-05-26-uwt-v5-to-v51-residual-gaps.md`. Substrate version stamp on Cover (operator's pick of cell — `A1:F1` is the merged title band, so `G1`/`H1` or further right). `Rent Roll Analysis!B5` styled `mm/dd/yyyy`. Re-drop at `assets/ALF_UW_Template_v5.xlsx` (overwriting in place; v5.1 isn't a new file).
+- **Next Track 4 chat (after re-drop):** bump registry to v0.3.1, mark the two concepts `mapped` (+ `t12_period_date` → `derived_in_template`), close `open_questions` #4/#7/#8, regenerate artifacts, smoke-test writer, mark handoff **Verified**, bump `UWT_VERSION` 0.4.3 → 0.5.0, replace the rolled-back `v0.5.0` CHANGELOG entry with a proper ship entry.
+
+### Commits
+
+This session did not commit. All changes are in the working tree pending user review.
+
+---
+
 ## 2026-05-25 — RR v1.18.0 + Substrate v0.2.13 — Move-out & preleased exposure (BL-0025)
 
 Cross-track session (Track 1 + Track 3), user-authorized at chat start. User: "in the homestead village RR, there are move outs, this isn't captured in the normalizer and not reflected in the analyzer. I need this captured for exposure."

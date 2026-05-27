@@ -5,8 +5,14 @@
 > **ALF UW Template** workbook as the last step of the ALF underwriting
 > pipeline.
 >
-> **Status:** Phase 2.5 (Streamlit UI integration shipped — operator can
-> populate the UW Template in one click from the webapp).
+> **Status:** Phase 3.5 (handoff infrastructure shipped — see §11). Phase 3.6
+> (v5 → v5.1 metadata cells) attempted as UWT v0.5.0 on 2026-05-26 and
+> **rolled back same-session** due to openpyxl `wb.save()` silently dropping
+> `xl/metadata.xml` (dynamic-array `XLDAPR` props the v0.4.3 Section R/S
+> spilled-range formulas depend on) and `xl/webextensions/` (Claude-for-Excel
+> add-in taskpane). Path forward: operator authors the two cells in Excel via
+> Cowork per `tools/uw_template/handoffs/2026-05-26-uwt-v5-to-v51-residual-gaps.md`.
+> See openpyxl quirk #6 in CLAUDE.md for technical detail.
 > **Current code version:** UWT v0.4.3 (registry v0.3.0 unchanged —
 > schema stable; v0.4.3 patches the v5 template asset to fill W/X/Y
 > formula columns through row 610, unblocking Section R's Unit-Type
@@ -253,6 +259,8 @@ All 15 are tracked as `open_questions` in `registry.json`.
 | **3 — UW Template v5 absorbed** | `templates.v5` block added to registry; per-concept `targets.v5` for every concept (inherit v4 unchanged unless v5 shifted/added the target). Writer reads `rent_roll_data_end_row` per template version (v4: 386, v5: 610) and caps the rent_roll stride accordingly. Default `template_version` flipped to `v5`. 7 concepts moved gap_target → mapped (ebitda, opex_total_excl_mgmt, occupied_beds_il/al/mc, rr_care_level_tier_label, rr_preleased_date); 1 moved gap_target → derived (rr_total_ancillary — template owns the `=SUM(AK:AO)` formula at AQ); 2 v4-vs-v5 col shifts (rr_ach AP→AS, rr_market_psf AQ→AT) per contract §16. | ✅ shipped 2026-05-26 (v0.4.0) |
 | **6 — T-12 Raw path (BL-0026)** | New `t12_raw` path: Analyzer `T12 Input!A12:N511` → UW Template `T-12 Analysis!A123:N622` (Layer 1). Closes the duplicate-paste step where the analyst manually copies raw operator T-12 into the template after the same data already lives in Analyzer T12 Input. Includes month-header propagation (`T12 Input!C11:N11` → `T-12 Analysis!C122:N122`) which auto-updates the standardized layer's monthly headers via the existing `=C122..=N122` chain at B56:M56. ~35 new concepts; clean additive extension to the modular registry. Open question: should writer populate the template's col P (`→ MAPPING` standardized-bucket label) via Description_Map join, or leave as analyst dropdown? | deferred until Phase 2.5 is fully integrated + sample-run-verified |
 | **2.5 — App integration** | Sidebar scenario radio (`normalized` default / `t12_actual`, always visible). UW Template file load mirrors the Analyzer pattern: bundled `assets/ALF_UW_Template_v5.xlsx` is the default (loaded via `_load_uw_template()` helper); override via Advanced expander's "UW Template override" uploader (parallels "Analyzer template override"). Version auto-detection via `_detect_uw_template_version()` probes `Rent Roll Analysis!AP210` ("Care Level Tier") to distinguish v5 from v4. Populate flow runs unconditionally on every Analyzer build (no user upload required). After the existing combined-Analyzer download, the workspace shows: "Using UW Template: <source> (<version>)" caption + 1-line summary + drill-in `PopulateReport` expander (auto-expands on warnings) + per-deal download (`<Property>_UW_Template_<period>_<scenario>.xlsx`). "Cache caveat" info banner conditional on t12-path no_source outcomes — walks analyst through the round-trip-through-Excel workaround. | ✅ shipped 2026-05-26 (v0.4.2, was v0.4.1 with upload-only pattern) |
+| **3.5 — Handoff infrastructure** | Establishes the ClaudeCode → Cowork handoff system for template-side changes (inverse of the existing Cowork → ClaudeCode pattern used for AR Collections). `tools/uw_template/HANDOFF_TRACKER.md` (running index), `HANDOFF_TEMPLATE.md` (copy-and-fill blank), `handoffs/` directory with dated briefs, plus the CLAUDE.md Track 4 "Handoff protocol" paragraph. Protocol: Track 4 chats that surface a template-side change produce a brief; operator authors externally in Excel via Cowork; next chat absorbs registry-side and marks Verified. See §11. | ✅ shipped 2026-05-26 in commit `031e24f` (`feat: UWT v0.2.0 → v0.4.0 — Phase 1-3`) — bundled with the Phase 3 v5 absorption; registry/writer/template all carry that commit's state. Augmented later 2026-05-26 with the `Superseded` status legend and 2026-05-26 handoff brief while v0.5.0 was being attempted-then-rolled-back. |
+| **3.6 — v5 → v5.1 metadata cells** | Two single-cell additions: substrate version stamp on Cover (closes `gap_target` `substrate_version`) + `Rent Roll Analysis!B5` RR Period date cell (closes `proposed` `rr_period_date`); plus registry-only reclassification of `t12_period_date` `gap_target` → `derived_in_template` (v5 derives `B56:M56` from on-sheet Layer 1 row 122 via `=C122..=N122`). **Attempted same-session via direct openpyxl edits as UWT v0.5.0 and rolled back** — see openpyxl quirk #6 in CLAUDE.md: `wb.save()` silently drops `xl/metadata.xml` (`XLDAPR`/`fDynamic` props the v0.4.3 Section R/S spilled-range formulas depend on) and `xl/webextensions/` (Claude-for-Excel taskpane). Template restored from git `deacc41`; registry / `UWT_VERSION` / artifacts reverted. Path forward: operator authors externally in Excel via Cowork per the active handoff brief, then a future Track 4 chat absorbs registry-side. | ⏳ Pending operator — see `tools/uw_template/handoffs/2026-05-26-uwt-v5-to-v51-residual-gaps.md` |
 | **3 — Monthly contract widening** | Extend UW Export to expose monthly bucket data from `Monthly Trending`. Writer fills `T-12 Analysis!B56:M68` (income block × 12 months) + later expands to labor/opex monthly. Cross-cutting Track 3 ↔ Track 4. | not started |
 | **4 — AR row-level routing** | Upstream substrate change: resident-key join in `AR & Collections` per-resident aging. Once that lands, AR path concepts move off `gap_source`. | not started |
 | **5 — Future template versions** | Adding `v5` is an additive change to `registry.json`; the writer reads the version-keyed target. No code change required if labels are stable. | future |
@@ -273,6 +281,8 @@ All 15 are tracked as `open_questions` in `registry.json`.
 - Phase 2.5 ships UWT v0.4.1 + registry v0.3.0 (unchanged) — Streamlit UI integration; populate-UW-Template button reachable from the webapp.
 - Phase 2.5 follow-up ships UWT v0.4.2 — bundled-template + override pattern (mirrors Analyzer load); populate runs unconditionally.
 - Phase 2.5 patch ships UWT v0.4.3 — fills v5 template's W/X/Y formula columns through row 610, unblocking Section R / Section S diagnostics that depended on those columns.
+- Phase 3.5 ships **handoff infrastructure** (`tools/uw_template/HANDOFF_TRACKER.md` + `HANDOFF_TEMPLATE.md` + `handoffs/`) bundled into commit `031e24f` (UWT v0.2.0 → v0.4.0 ship, earlier 2026-05-26) — no separate UWT version bump for the infrastructure itself. Later-2026-05-26 augmentations during the v0.5.0 attempt: added `Superseded` to the status legend, added the 2026-05-26 handoff brief, marked the older 2026-05-25 brief Superseded.
+- Phase 3.6 / UWT v0.5.0 **attempted then rolled back** on 2026-05-26 — direct openpyxl patch of v5 template's two residual `gap_target` cells (substrate version stamp on Cover, RR Analysis Period Date at B5) appeared clean at the Worksheet-object fidelity layer but silently dropped `xl/metadata.xml` (`XLDAPR`/`fDynamic` dynamic-array properties) and `xl/webextensions/` (Claude-for-Excel add-in) at the xlsx-zip-archive layer. Template restored from git `deacc41`, registry reverted v0.3.1 → v0.3.0, UWT_VERSION restored 0.5.0 → 0.4.3. Two patch scripts retained as audit trail (`tools/uw_template/_patch_v5_to_v51_metadata_cells.py` + `_revert_registry_to_v030.py`) — **do not re-run the patch script.** Operator-authored v5.1 (via Cowork → Excel) is the only safe path forward. See CHANGELOG-UWT.md and CLAUDE.md openpyxl quirk #6 for forensics.
 
 ## 9. Where things live
 
@@ -287,13 +297,29 @@ tools/uw_template/
   registry.json                          The mapping registry (data).
   build_mapping_artifacts.py             Generator — run after editing registry.
   mapping_mindmap.html                   Interactive visualizer (open in browser).
-  MAPPING_TRACKER.md                     Human-readable tracker.
-  mapping_tracker.csv                    Diffable CSV.
+  MAPPING_TRACKER.md                     Human-readable tracker (auto-generated).
+  mapping_tracker.csv                    Diffable CSV (auto-generated).
+  HANDOFF_TRACKER.md                     Running index of ClaudeCode → Cowork
+                                         template-change handoffs (newest at top,
+                                         with status: Pending / In progress /
+                                         Applied / Verified / Superseded). See §11.
+  HANDOFF_TEMPLATE.md                    Copy-and-fill blank for new handoffs.
+  handoffs/                              Per-handoff briefs, dated
+                                         (YYYY-MM-DD-<slug>.md).
   _raw_extraction.json                   Build artifact — raw label dump used
                                          to author the initial registry. Not
                                          consumed by the writer.
   _template_v4_dump.txt                  Build artifact — full template dump
                                          used during inspection. Reference only.
+  _patch_v5_section_r_formulas.py        Audit-trail patch script (v0.4.3 ship).
+                                         Idempotent; safe to re-run.
+  _patch_v5_to_v51_metadata_cells.py     Audit-trail patch script (v0.5.0
+                                         attempted-then-rolled-back). **Do NOT
+                                         re-run** without first solving the
+                                         XLDAPR-loss problem — see openpyxl quirk
+                                         #6 in CLAUDE.md.
+  _revert_registry_to_v030.py            Audit-trail revert script (v0.5.0
+                                         rollback). Idempotent.
 
 Sample Files/ALF_UW_Template_v4.xlsx     The template itself (gitignored, dropped
                                          by user). Future Phase 1 may add a
@@ -313,3 +339,91 @@ This track is downstream of the Analyzer. Track 4 chats:
 
 Per the CLAUDE.md scope-discipline convention, if a Track 4 chat pivots toward
 upstream substrate work, the assistant should stop and confirm before crossing.
+
+## 11. Handoff protocol (template author lives outside this repo)
+
+**The ALF UW Template is authored externally in Excel** (operator → Cowork →
+Excel); Claude Code owns the **registry** ([`registry.json`](tools/uw_template/registry.json))
+and the **writer** ([`uw_template_writer.py`](uw_template_writer.py)) — not
+the template file. This split exists for two structural reasons:
+
+1. **Fidelity.** openpyxl's `wb.save()` silently drops xlsx zip parts that
+   it doesn't model in its Worksheet / Workbook object graph — notably
+   `xl/metadata.xml` (`XLDAPR` / `fDynamic` dynamic-array properties that
+   `SORT` / `UNIQUE` / `FILTER` / `ANCHORARRAY` spilled-range formulas
+   depend on; the v0.4.3 Section R/S patch is built on these) and
+   `xl/webextensions/` (Office Add-in taskpane registrations). Author-side
+   round-trips through Excel preserve all parts; openpyxl round-trips do
+   not. The UWT v0.5.0 attempt on 2026-05-26 demonstrated this; see openpyxl
+   quirk #6 in CLAUDE.md.
+2. **Ownership.** The template is downstream-consumer surface area
+   maintained outside this repo (the canonical operator-managed copy lives
+   under `Deals/Acquisition/_Template/ALF Templates/`). The repo holds a
+   copy at `assets/` for writer-side testing and at `Sample Files/` (gitignored)
+   as an operator working-copy reference, but neither is the system of record.
+
+### When to create a new handoff
+
+Trigger criteria (any one is enough):
+
+- A registry entry gains `gap_target` status (UW Output produces a value
+  with no template row/cell to receive it).
+- A registry entry's target cell changes (row shifts, column shifts,
+  cross-sheet relocation).
+- A new substrate column or row needs a corresponding template-side
+  surface (e.g. substrate v0.2.13's Preleased exposure surfacing a need
+  for a per-row Preleased Date column on the template).
+- A writer scope decision needs operator input that depends on template
+  structure or layout (e.g. monthly-header overwrite policy).
+- A new template version is being prepared (e.g. v5 → v5.1).
+
+If a Track 4 change touches only the writer or registry and implies no
+template-side action, no handoff is needed — land the changes, regenerate
+`MAPPING_TRACKER.md` / `mapping_tracker.csv` / `mapping_mindmap.html` via
+`python tools/uw_template/build_mapping_artifacts.py`, and bump the
+appropriate version counter.
+
+### Handoff lifecycle
+
+1. **Author** the brief: copy `tools/uw_template/HANDOFF_TEMPLATE.md` to
+   `tools/uw_template/handoffs/YYYY-MM-DD-<slug>.md` and fill it in. Add a
+   row to the **top** of the index table in
+   `tools/uw_template/HANDOFF_TRACKER.md`. Status starts as **Pending operator**.
+2. **Operator picks up** the brief from the tracker. Authors changes in
+   Excel directly (or via Cowork). Re-drops the file at
+   `assets/ALF_UW_Template_v5.xlsx` (overwriting in place — minor revisions
+   reuse the version filename; major revisions get a new `v6.xlsx`).
+3. **Next Track 4 chat absorbs**: extends `registry.json` with new
+   `templates.v5 = {...}` entries (or per-concept `targets.v5` updates),
+   re-runs `build_mapping_artifacts.py`, smoke-tests the writer, and
+   updates the handoff's tracker row to **Verified**. Both the brief file
+   and the tracker row stay in place as audit trail.
+
+### Status legend (in HANDOFF_TRACKER.md)
+
+- **Pending operator** — handoff produced; waiting for operator Excel work.
+- **In progress** — operator has started authoring; not yet dropped back.
+- **Applied** — new template file present; registry not yet updated.
+- **Verified** — registry updated; writer smoke-tested; handoff closed.
+- **Superseded** — handoff no longer the action plan (work shipped via a
+  different path, or a newer handoff supersedes its scope). Keep the row
+  for audit trail; cross-link to the replacement.
+
+### Mapping updates ride inline
+
+Mapping updates (registry edits) are coupled to template changes and live
+**inline in each handoff brief** under a "Mapping updates" section. The
+existing artifacts (`MAPPING_TRACKER.md` / `mapping_tracker.csv` /
+`mapping_mindmap.html`) remain the source of truth for the full mapping
+state and are regenerated after each handoff's registry edits land.
+
+### Inverse direction
+
+This protocol is the **ClaudeCode → Cowork** direction. The inverse pattern
+(**Cowork → ClaudeCode**) is the existing one used for design specs
+authored upstream — e.g. the AR Collections design handoff at
+`2026-05-23-AR-Collections-Spec-Update-to-Cowork.md` (which was actually
+the *back-handoff* leg of that exchange). The two patterns coexist:
+Cowork-authored specs land here, get decided/reviewed, produce a
+back-handoff to Cowork; ClaudeCode-surfaced template needs produce a
+handoff brief that operator picks up via Cowork or directly in Excel.

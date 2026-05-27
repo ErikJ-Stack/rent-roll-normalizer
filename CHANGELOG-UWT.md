@@ -8,6 +8,196 @@ opened (none yet — Phase 0 is the seed release).
 
 ---
 
+## v0.5.0 — Attempted then rolled back (2026-05-26)
+
+**This release did NOT ship.** Rolled back the same session due to openpyxl
+round-trip data loss discovered post-patch. See "v0.5.0 (rolled back)"
+detail below; the **handoff infrastructure** described later did ship and
+stands.
+
+### What was attempted
+
+Two surface-only cell additions via `tools/uw_template/_patch_v5_to_v51_metadata_cells.py`:
+`Cover!G1 "Substrate:"` label + `Cover!H1` placeholder for writer-populated
+substrate stamp; `Rent Roll Analysis!B5` styled `mm/dd/yyyy` for writer-populated
+RR period. Cell-level fidelity check appeared clean (sheets / merged ranges /
+defined names / RRA cell count / Section R/S ArrayFormula objects all
+preserved verbatim). Registry bumped to v0.3.1; smoke tests passed at the
+openpyxl read/write layer.
+
+### Why rolled back
+
+A deeper zip-part inventory diff (post-cleanup) found openpyxl's `wb.save()`
+silently dropped **6 xlsx parts**:
+
+  - **`xl/metadata.xml`** (810 bytes lost) — `XLDAPR` / `fDynamic="1"`
+    metadata. This is Excel's dynamic-array properties block, which tells
+    Excel that the v0.4.3 Section R/S spilled-range formulas (`Z173`'s
+    `SORT(UNIQUE(FILTER(...)))`, `C173`'s `COUNTIFS(...,ANCHORARRAY(Z173))`,
+    spilling across 7×13 cells via `_xlfn._xlws.SORT` / `_xlfn.UNIQUE` /
+    `_xlfn._xlws.FILTER` / `_xlfn.ANCHORARRAY`) are **dynamic arrays**.
+    Without it, Excel may demote these to single-cell results or render
+    `#SPILL!`. **The v0.4.3 patch's whole reason-for-existing depends on
+    this metadata.** openpyxl has no API to preserve it on save.
+  - **`xl/webextensions/*`** (3 files, ~1.3 KB) — Claude-for-Excel add-in
+    taskpane registration (`wa200009404` from the Office Add-in store).
+    Re-installable but real loss.
+  - **`xl/sharedStrings.xml`** (74 KB) — string deduplication table. openpyxl
+    inlines strings into each sheet on save (sheet sizes grow correspondingly).
+    Functionally equivalent; no content lost.
+  - **`xl/calcChain.xml`** (167 KB) — Excel's formula dependency graph.
+    Excel rebuilds on open; no real loss but contributes to file-size delta.
+  - **`xl/comments[1-5].xml`** and **`xl/drawings/vmlDrawing*.vml`** renamed
+    to `xl/comments/commentN.xml` and `xl/drawings/commentsDrawingN.vml` with
+    smaller sizes — comment shape metadata may have been minimally trimmed.
+
+The cell-level fidelity check missed all of this because it only inspected
+Worksheet objects' visible attributes (cell values, formulas, merged ranges,
+defined names). The xlsx-as-zip-archive view exposes the parts openpyxl
+doesn't model.
+
+### Rollback actions taken
+
+`assets/ALF_UW_Template_v5.xlsx` restored from git commit `deacc41` (the
+v0.4.3 ship state). Registry reverted to v0.3.0 via
+`tools/uw_template/_revert_registry_to_v030.py`. UWT_VERSION restored to
+`0.4.3`. Three `open_questions` re-opened. `MAPPING_TRACKER.md` /
+`mapping_tracker.csv` / `mapping_mindmap.html` regenerated. The two
+patch scripts (`_patch_v5_to_v51_metadata_cells.py` and
+`_revert_registry_to_v030.py`) retained as audit trail — do NOT re-run
+the patch script without first solving the openpyxl-XLDAPR-loss problem.
+
+### Lesson recorded
+
+Added a 6th item to the "openpyxl quirks that bite migrations" section in
+CLAUDE.md: **openpyxl's `wb.save()` does not preserve `xl/metadata.xml`
+or `xl/webextensions/`**. For any workbook that uses Excel 365 dynamic
+arrays (`SORT` / `UNIQUE` / `FILTER` / `ANCHORARRAY` spilling), a Python
+round-trip through openpyxl will silently break the dynamic-array
+semantics even though every Cell object inspects clean. The cell-level
+fidelity diff is necessary but not sufficient — also diff the zip part
+inventory.
+
+### Path forward for v5.1
+
+Switch to the protocol path. The 2026-05-26 handoff brief
+(`tools/uw_template/handoffs/2026-05-26-uwt-v5-to-v51-residual-gaps.md`)
+remains the active spec. The operator authors the two cells directly in
+Excel via Cowork, re-drops the file, and a future Track 4 chat absorbs
+registry-side without touching the template file.
+
+---
+
+## v0.4.3 — v5 template patch: Section R / Section S formula fill-downs (2026-05-26)
+
+### What landed on the template
+
+Two surface-only cell additions to `assets/ALF_UW_Template_v5.xlsx`,
+above the data band — zero risk to charts, formulas, paste anchors, or
+styling bands:
+
+  | Cell | Content | Purpose |
+  |------|---------|---------|
+  | `Cover!G1` | `"Substrate:"` (label, italic gray 9pt, right-aligned) | Static label |
+  | `Cover!H1` | empty, styled placeholder | Writer populates from Analyzer `Cover!B8` (e.g. `v0.2.14`) — provenance for each populated copy |
+  | `Rent Roll Analysis!B5` | empty, `mm/dd/yyyy` formatted | Writer populates from Analyzer `RR_Period_Date` named range (resolves to `Rent Roll Recon!B2`). Sibling `D5 (=TODAY())` left alone as the diagnostic-refresh date. |
+
+**Placement note:** the original plan put the substrate stamp at `E1/F1`
+but `A1:F1` is a merged title band — those cells are read-only
+`MergedCell` objects in openpyxl. Relocated one column right to `G1/H1`
+which sit cleanly outside the merge.
+
+### Patch tool
+
+`tools/uw_template/_patch_v5_to_v51_metadata_cells.py` — CLI-runnable,
+idempotent. Pre/post fidelity diff confirms 16 sheets / 240 merged ranges
+/ 5 defined names / 3,417 RRA non-empty cells all preserved; v0.4.3
+Section R/S ArrayFormulas (`Z173`, `C173`, `W211..W610`) preserved
+verbatim; T-12 Analysis monthly headers (`B56..M56 = C122..N122`)
+preserved verbatim. Cover gains exactly 1 non-empty cell (the G1 label)
+as expected.
+
+### Registry updates (`tools/uw_template/registry.json`)
+
+`registry_version` 0.3.0 → **0.3.1**. Three concept-level changes:
+
+  | Concept | Before | After | Why |
+  |---------|--------|-------|-----|
+  | `substrate_version` | `gap_target`, `targets.v5 = null` | `mapped`, `targets.v5 = {sheet: "Cover", address: "H1", label_at: "G1"}` | Template cell now exists |
+  | `rr_period_date` | `proposed`, `targets.v5.B5` already set | `mapped` | Format confirmed (`mm/dd/yyyy`); writer populates from `RR_Period_Date` named range |
+  | `t12_period_date` | `gap_target`, `targets.v5 = null` | `derived_in_template` (new status), no target needed | v5 derives `B56:M56` from on-sheet Layer 1 row 122 via `=C122..=N122` — writer has nothing to write. (The v4 note describing hardcoded `Apr-25..Mar-26` was stale; v5 fixed this structurally without anyone noticing in the registry.) |
+
+`open_questions` shrinks 8 → 5. Closed: #4 (Date header A5/B5 format),
+#7 (Cover substrate stamp — deferred to v5.1), #8 (Rent Roll Analysis
+tab-header Period Date metadata cell — deferred to v5.1). Surviving:
+Bad Debt placement, 2nd Person Revenue source, monthly grid B-M policy,
+RRA header rows 1-209 derived framing (informational), AR aging
+row-level routing (upstream-blocked).
+
+### Status rollup
+
+  Before v0.5.0 (registry v0.3.0):  95 mapped · 4 proposed · 2 gap_target · 5 gap_source · 3 derived · 1 header_only · 1 substrate_ready_parser_pending
+  After v0.5.0 (registry v0.3.1):   97 mapped · 3 proposed · 0 gap_target · 5 gap_source · 3 derived · 1 derived_in_template · 1 header_only · 1 substrate_ready_parser_pending
+
+**Zero `gap_target` concepts remain.** Every Analyzer-exposed concept
+the writer cares about has a template-side target. Remaining `gap_source`
+items are all upstream-blocked (AR row-level routing pending the AR↔RR
+resident-key join; `second_person_revenue` pending the UW Output
+extension vs. RR-direct decision).
+
+### Smoke-test results
+
+`python tests/test_uw_template_writer.py`:
+
+  - Empty-Analyzer smoke (bundled `ALF_Financial_Analyzer_Only.xlsx`
+    v0.2.14, no deal data): **3 cells written** (was 2 — gained
+    `substrate_version` since `Cover!B8` always has a value, even on
+    the empty fixture).
+  - Populated Homestead e2e: **91 concepts / 3,233 cells written**
+    (was 90 / 3,232). New writes verified:
+      - `Cover!H1` ← `'v0.2.4'` (the Homestead fixture's substrate stamp)
+      - `Rent Roll Analysis!B5` ← `datetime(2026, 4, 24)` (the RR period)
+    Existing writes regression-clean: EGI $7,001,957 at `N69`, EBITDA
+    $1,417,385 at `N118`, EBITDARM $1,767,483 at `N116`, GPR $9,524,893
+    at `N58`, Occupied Beds 53/40/35 at Prop Info `B20-B22`, AQ211
+    formula `=SUM(AK211:AO211)` preserved (template-owned formula not
+    overwritten by writer).
+
+### Handoff infrastructure (already in place from commit `031e24f`, augmented this session)
+
+**Correction recorded post-fact:** an earlier draft of this entry claimed
+the handoff infrastructure shipped with v0.5.0. It did not. The
+infrastructure (`HANDOFF_TRACKER.md`, `HANDOFF_TEMPLATE.md`, the
+`handoffs/` directory, the original `2026-05-25-uwt-v4-to-v5-template-gaps.md`
+brief, and the CLAUDE.md Track 4 "Handoff protocol" paragraph + table
+rows) had already shipped earlier on 2026-05-26 in commit **`031e24f`**
+(`feat: UWT v0.2.0 → v0.4.0 — Phase 1-3`).
+
+This session's contribution to the handoff infrastructure was
+**augmentative, not creative**:
+
+  - Added `tools/uw_template/handoffs/2026-05-26-uwt-v5-to-v51-residual-gaps.md` as the new active brief (closes the two `gap_target` concepts deferred to v5.1 per the 2026-05-26 release `open_questions` list).
+  - Marked `tools/uw_template/handoffs/2026-05-25-uwt-v4-to-v5-template-gaps.md` Superseded with a banner noting v5 absorption via UWT v0.4.0 hours earlier already closed 7 of the 10 gap_targets it requested.
+  - Added `Superseded` as a new status in `HANDOFF_TRACKER.md`'s status legend (alongside the pre-existing Pending / In progress / Applied / Verified).
+  - Updated `HANDOFF_TRACKER.md`'s index table with the new 2026-05-26 row at the top and the older 2026-05-25 row's Status moved to Superseded.
+
+Also written this session (outside the repo): a user-level feedback
+memory (`uw-template-handoff-protocol`) so future chats follow the
+protocol without re-discovering it.
+
+**Important precedent (chat-specific):** v0.5.0 broke the
+"don't-edit-the-template-directly" protocol that `031e24f` had
+established, because the v5.1 changes looked trivial (two cells above
+the data band, no merged ranges, no formulas, no styling band) and the
+fast-path-via-openpyxl appeared lower risk than operator-authored Excel
+round trip. The path was explicitly user-approved. The
+zip-part-inventory diff (added to openpyxl quirk #6) proved otherwise.
+Future Track 4 chats should default to the handoff protocol unless the
+user makes a similar exception call **and** a zip-part inventory diff
+is added to the fidelity check.
+
+---
+
 ## v0.4.3 — v5 template patch: Section R / Section S formula fill-downs (2026-05-26)
 
 Operator-reported bug after v0.4.2 ship: Section R (rows 170-181, "Unit
