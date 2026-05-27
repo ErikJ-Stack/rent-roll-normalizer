@@ -1,6 +1,6 @@
 # ALF UW Template — Mapping Tracker
 
-> Generated from `tools/uw_template/registry.json` on 2026-05-26 18:12 UTC.  **Do not edit by hand** — edit `registry.json` and re-run `python tools/uw_template/build_mapping_artifacts.py`.
+> Generated from `tools/uw_template/registry.json` on 2026-05-27 17:23 UTC.  **Do not edit by hand** — edit `registry.json` and re-run `python tools/uw_template/build_mapping_artifacts.py`.
 
 - Analyzer source: `ALF_Financial_Analyzer_Only.xlsx` (substrate `v0.2.14`)
 - Primary template: `v4` → `Sample Files/ALF_UW_Template_v4.xlsx`

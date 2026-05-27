@@ -8,6 +8,119 @@ opened (none yet — Phase 0 is the seed release).
 
 ---
 
+## v0.5.1 — v5.1 column restructure absorbed (2026-05-27)
+
+Operator authored v5.1 in Excel per the
+`2026-05-27-uwt-v51-unit-type-restructure` handoff brief: Unit Type
+moved to a new col D (immediately before Status), old W "Unit Type
+(base)" and old AC "Apt Type" both dropped, everything between old
+D-V right-shifted by 1, everything from old AD-AV left-shifted by 1
+(closing the AC hole). Net Rent Roll Analysis column count: 48 → 47.
+
+This release skips v0.5.0 (which was used by the rolled-back metadata-
+cells attempt) to avoid version reuse.
+
+### Shipped
+
+  - **Template asset** — `assets/ALF_UW_Template_v5.xlsx` replaced
+    in place with the operator's v5.1 restructured version. v5.1 IS
+    v5 going forward — single canonical filename. Old v5 content
+    preserved in git history at commit `5462df1` (v0.4.4) for
+    rollback.
+  - **A173/B173 IFERROR wrappers re-applied** — operator's v5.1 was
+    authored from a v5 snapshot that pre-dated v0.4.4's fix, so the
+    raw `TEXTBEFORE`/`TEXTAFTER` were back. Re-applied IFERROR
+    wrappers via openpyxl so they don't return #N/A on empty Z173
+    spill.
+  - **Registry** — `tools/uw_template/_absorb_v51_column_restructure.py`
+    applied. **CRITICAL SCOPE FIX caught during run**: initial
+    absorber version shifted ALL concepts (including T-12 Analysis
+    ones like `egi: N69 → O69`); fixed to filter on
+    `target.sheet == "Rent Roll Analysis"` so only the restructured
+    sheet's targets shift. T-12 Analysis, Prop Info, Cover all
+    untouched. Final result: 36 concepts shifted (all rent_roll
+    path), 75 concepts unchanged.
+
+### Registry shifts applied
+
+  | Direction | Count | Examples |
+  |---|---|---|
+  | Right-shift by 1 (old D-V → E-W) | 18 | `rr_status` D→E, `rr_sq_ft` T→U, `rr_actual_psf` U→V |
+  | Special retarget AC → D | 1 | `rr_apt_type` (now writes new Unit Type col directly) |
+  | Left-shift by 1 (old AD-AV → AC-AU) | 17 | `rr_concession` AD→AC, `rr_market_psf` AT→AS, `rr_ach` AS→AR |
+  | **Total** | **36 concepts** | (all rent_roll path) |
+
+  `registry_version` 0.3.0 → **0.4.0**.
+
+### Verification
+
+  - Pre-flight checks pass: D210="Unit Type", E210="Status", max_col=47,
+    AC no longer "Apt Type" (now "Concession $" — left-shifted from AD).
+  - Writer regression on Homestead populated fixture passes — 90
+    concepts written / 3,232 cells (identical totals to v5).
+  - Spot-checks:
+    - D211 = `'1 Bedroom'` (new Unit Type col, writer paste from
+      Analyzer col F)
+    - E211 = `'Occupied'` (Status, right-shifted from D)
+    - U211+ = Sq Ft writer paste (was T)
+    - AP211 = `'=SUM(AJ211:AN211)'` (Total Ancillary $ template
+      formula, left-shifted from AQ)
+    - AQ211 = `None` (Preleased Date, left-shifted from AR; Janet
+      Pierson is occupied not preleased — correct)
+    - AR211 = `'X'` (ACH, left-shifted from AS)
+    - T-12 Analysis cells UNCHANGED at original positions
+      (`N69`/`N115`/`N116`/`N118` etc) — only Rent Roll Analysis
+      shifted
+  - `tests/test_uw_template_writer.py` updated for v5.1 layout — the
+    `AQ211 should still hold =SUM(...)` assertion from v5 era was
+    stale (formula moved to AP); replaced with broader v5.1 layout
+    checks.
+
+### What v5.1 did NOT include (still pending separate handoff)
+
+The 2026-05-26 metadata-cells handoff (`Cover!G1/H1` substrate stamp
++ `Rent Roll Analysis!B5` RR period date cell) is **NOT** in this
+v5.1 release. Operator may include in a subsequent Excel pass; the
+`_absorb_v51_metadata_cells.py` absorber is still pre-wired.
+
+### Bug found + fixed mid-release
+
+First absorber run wrongly shifted ALL concepts, including T-12
+Analysis ones (which the column restructure doesn't touch). Caught
+via post-run spot-check (`egi: N63 → O63` — clearly wrong since
+T-12 Analysis sheet wasn't restructured). Reverted via
+`git checkout HEAD --` on the registry + artifacts, fixed absorber
+to filter on `target.sheet == "Rent Roll Analysis"`, re-ran cleanly.
+Lesson recorded in absorber's docstring + inline comment.
+
+### Openpyxl quirk #6 implication
+
+The operator authored v5.1 in Excel directly (per quirk #6 — column
+inserts via openpyxl would strip `xl/metadata.xml`). My A173/B173
+IFERROR re-application via openpyxl DOES drop metadata.xml — operator
+needs to open the file in Excel once, accept the repair prompt, and
+save to rebuild it. Same working pattern as v0.4.3/v0.4.4.
+
+### Out of scope (unchanged)
+
+  - In-Python formula evaluator (closes cache caveat) — still pending.
+  - v5.1 metadata cells — Cover stamp + RR Period Date (separate
+    operator pass, absorber pre-wired).
+  - BL-0026 T-12 Raw path — still blocked on operator picking a
+    direction.
+  - BL-0027 README modernization — low priority.
+
+### Versioning
+
+  - UWT code version: **v0.5.1** (skipping v0.5.0 used by rolled-back
+    attempt).
+  - Mapping registry version: 0.4.0 (substantial structural shift).
+  - Template versions supported: v4 + v5 (v5.1 is the new v5 — same
+    `template_version="v5"` key, file overwritten in place).
+  - Analyzer substrate mapped against: v0.2.14 (unchanged).
+
+---
+
 ## v0.4.4 — Section R re-fix: W mirrors AC, A173/B173 IFERROR, D173 uses per-unit sq ft (2026-05-27)
 
 Operator-reported Section R bug on Rent Roll Analysis: returns #N/A and

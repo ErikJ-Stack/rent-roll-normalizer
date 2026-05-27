@@ -73,7 +73,7 @@ APP_LAST_UPDATED = "2026-05-08"   # alias for RR_LAST_UPDATED
 RR_VERSION = "1.18.1"
 RR_LAST_UPDATED = "2026-05-25"
 
-UWT_VERSION = "0.4.4"             # Track 4 — UW Template integration (Phase 2.5)
+UWT_VERSION = "0.5.1"             # Track 4 — UW Template integration (Phase 2.5)
 UWT_LAST_UPDATED = "2026-05-27"
 
 T12_VERSION = "0.2.1"

@@ -231,18 +231,40 @@ def test_populated_analyzer_e2e() -> None:
     print(f"  Prop Info!B21 (Occupied Beds — AL, NEW in v5) = {ws_pi['B21'].value!r}")
     print(f"  Prop Info!B22 (Occupied Beds — MC, NEW in v5) = {ws_pi['B22'].value!r}")
 
-    # v5: Rent Roll Analysis new cols AP (Care Level Tier) and AR (Preleased Date)
-    # AQ (Total Ancillary $) should NOT be written — derived in template
-    print(f"  Rent Roll Analysis row 211 NEW v5 cols:")
-    for col in ("AP", "AQ", "AR"):
+    # v5.1: column restructure shifted these cols left by 1 (closing AC hole):
+    #   Care Level Tier:    AP → AO
+    #   Total Ancillary $:  AQ → AP (template formula =SUM(AJ:AN))
+    #   Preleased Date:     AR → AQ
+    #   ACH:                AS → AR
+    # AP (Total Ancillary) should NOT be written — derived in template.
+    print(f"  Rent Roll Analysis row 211 v5.1 column positions:")
+    expected = {
+        "D":  ("Unit Type",         "1 Bedroom (writer paste from Analyzer col F)"),
+        "E":  ("Status",            "Occupied (right-shifted from D)"),
+        "AO": ("Care Level Tier",   "left-shifted from AP"),
+        "AP": ("Total Ancillary $", "left-shifted from AQ — template formula"),
+        "AQ": ("Preleased Date",    "left-shifted from AR — None for non-preleased"),
+        "AR": ("ACH",               "left-shifted from AS"),
+        "AU": ("Effective Conc $",  "last col, left-shifted from AV"),
+    }
+    for col, (label, why) in expected.items():
         v = ws_rr[f"{col}211"].value
-        label = {"AP": "Care Level Tier", "AQ": "Total Ancillary $ (template formula!)", "AR": "Preleased Date"}[col]
-        print(f"    {col}211 ({label}) = {v!r}")
-    # AQ should still be the template formula
-    aq211 = ws_rr["AQ211"].value
+        print(f"    {col}211 ({label}): {v!r}  — {why}")
+
+    # Spot assertions
     _check(
-        isinstance(aq211, str) and aq211.startswith("=SUM"),
-        f"AQ211 should still hold template formula =SUM(...); got {aq211!r}",
+        ws_rr["D211"].value == "1 Bedroom",
+        f"D211 should = '1 Bedroom' (writer paste from Analyzer col F); got {ws_rr['D211'].value!r}",
+    )
+    _check(
+        ws_rr["E211"].value == "Occupied",
+        f"E211 should = 'Occupied' (right-shifted from D); got {ws_rr['E211'].value!r}",
+    )
+    # AP should still hold the Total Ancillary template formula (left-shifted from AQ)
+    ap211 = ws_rr["AP211"].value
+    _check(
+        isinstance(ap211, str) and ap211.startswith("=SUM"),
+        f"AP211 should hold Total Ancillary template formula =SUM(...) (left-shifted from v5's AQ); got {ap211!r}",
     )
 
     # Print outcome rollup

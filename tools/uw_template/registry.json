@@ -1,7 +1,7 @@
 {
   "schema": "uw-mapping/v1",
-  "registry_version": "0.3.0",
-  "generated_phase": "Track 4 Phase 3 — UW Template v5 absorbed. Writer supports v4 + v5 via templates.{version} blocks; v5 is now the binding default.",
+  "registry_version": "0.4.0",
+  "generated_phase": "Track 4 / Phase 4 — v5.1 column restructure absorbed. Rent Roll Analysis: Unit Type inserted at new col D (before Status); old W (Unit Type base helper) + old AC (Apt Type) dropped; D-V shifted right to E-W; AD-AV shifted left to AC-AU. Net col count 48 → 47. rr_apt_type re-targets AC → D. Writer no code change; registry-only.",
   "analyzer": {
     "file": "ALF_Financial_Analyzer_Only.xlsx",
     "substrate_version": "v0.2.14",
@@ -213,7 +213,9 @@
       "deferred_to_v5_1": [
         "Cover substrate version stamp — concept `substrate_version` stays gap_target",
         "Per-row Period Date / metadata cell on Rent Roll Analysis tab header"
-      ]
+      ],
+      "last_structural_update": "2026-05-27 (v5.1 column restructure: Unit Type inserted at new D; W + AC dropped)",
+      "rent_roll_last_col": "AU"
     }
   },
   "status_legend": {
@@ -2092,8 +2094,8 @@
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "T211+",
-          "label_at": "T210",
+          "address": "U211+",
+          "label_at": "U210",
           "target_label": "Sq Ft (est)",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -2154,8 +2156,8 @@
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "D211+",
-          "label_at": "D210",
+          "address": "E211+",
+          "label_at": "E210",
           "target_label": "Status",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -2185,8 +2187,8 @@
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "AC211+",
-          "label_at": "AC210",
+          "address": "D211+",
+          "label_at": "D210",
           "target_label": "Apt Type",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -2216,8 +2218,8 @@
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "E211+",
-          "label_at": "E210",
+          "address": "F211+",
+          "label_at": "F210",
           "target_label": "Resident",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -2247,8 +2249,8 @@
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "F211+",
-          "label_at": "F210",
+          "address": "G211+",
+          "label_at": "G210",
           "target_label": "Move-In Date",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -2278,8 +2280,8 @@
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "G211+",
-          "label_at": "G210",
+          "address": "H211+",
+          "label_at": "H210",
           "target_label": "Discharge Date",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -2309,8 +2311,8 @@
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "AE211+",
-          "label_at": "AE210",
+          "address": "AD211+",
+          "label_at": "AD210",
           "target_label": "Concession End",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -2340,8 +2342,8 @@
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "H211+",
-          "label_at": "H210",
+          "address": "I211+",
+          "label_at": "I210",
           "target_label": "Market Rate",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -2371,8 +2373,8 @@
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "I211+",
-          "label_at": "I210",
+          "address": "J211+",
+          "label_at": "J210",
           "target_label": "Actual Charges",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -2402,8 +2404,8 @@
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "AT211+",
-          "label_at": "AT210",
+          "address": "AS211+",
+          "label_at": "AS210",
           "target_label": "Market PSF",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -2433,8 +2435,8 @@
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "U211+",
-          "label_at": "U210",
+          "address": "V211+",
+          "label_at": "V210",
           "target_label": "$/SqFt/Mo",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -2464,8 +2466,8 @@
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "AD211+",
-          "label_at": "AD210",
+          "address": "AC211+",
+          "label_at": "AC210",
           "target_label": "Concession $",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -2495,8 +2497,8 @@
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "AJ211+",
-          "label_at": "AJ210",
+          "address": "AI211+",
+          "label_at": "AI210",
           "target_label": "2nd Person $",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -2526,8 +2528,8 @@
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "AF211+",
-          "label_at": "AF210",
+          "address": "AE211+",
+          "label_at": "AE210",
           "target_label": "Care Level $",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -2551,8 +2553,8 @@
         "v4": null,
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "AP211+",
-          "label_at": "AP210",
+          "address": "AO211+",
+          "label_at": "AO210",
           "target_label": "Care Level Tier",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -2582,8 +2584,8 @@
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "AG211+",
-          "label_at": "AG210",
+          "address": "AF211+",
+          "label_at": "AF210",
           "target_label": "Med Mgmt $",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -2613,8 +2615,8 @@
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "AH211+",
-          "label_at": "AH210",
+          "address": "AG211+",
+          "label_at": "AG210",
           "target_label": "Pharmacy $",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -2644,8 +2646,8 @@
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "AI211+",
-          "label_at": "AI210",
+          "address": "AH211+",
+          "label_at": "AH210",
           "target_label": "Other LOC $",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -2675,8 +2677,8 @@
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "AK211+",
-          "label_at": "AK210",
+          "address": "AJ211+",
+          "label_at": "AJ210",
           "target_label": "Meal Plan $",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -2706,8 +2708,8 @@
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "AL211+",
-          "label_at": "AL210",
+          "address": "AK211+",
+          "label_at": "AK210",
           "target_label": "Scooter $",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -2737,8 +2739,8 @@
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "AM211+",
-          "label_at": "AM210",
+          "address": "AL211+",
+          "label_at": "AL210",
           "target_label": "Housekeeping $",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -2768,8 +2770,8 @@
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "AN211+",
-          "label_at": "AN210",
+          "address": "AM211+",
+          "label_at": "AM210",
           "target_label": "Laundry $",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -2799,8 +2801,8 @@
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "AO211+",
-          "label_at": "AO210",
+          "address": "AN211+",
+          "label_at": "AN210",
           "target_label": "Pet $",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -2830,8 +2832,8 @@
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "J211+",
-          "label_at": "J210",
+          "address": "K211+",
+          "label_at": "K210",
           "target_label": "LOC Revenue",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -2861,8 +2863,8 @@
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "K211+",
-          "label_at": "K210",
+          "address": "L211+",
+          "label_at": "L210",
           "target_label": "Total Sched (Base+LOC)",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -2886,8 +2888,8 @@
         "v4": null,
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "AQ211+",
-          "label_at": "AQ210",
+          "address": "AP211+",
+          "label_at": "AP210",
           "target_label": "Total Ancillary $",
           "paste_anchor": "Rent Roll Analysis!A211",
           "template_owned_formula": "=SUM(AK211:AO211)"
@@ -2918,8 +2920,8 @@
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "R211+",
-          "label_at": "R210",
+          "address": "S211+",
+          "label_at": "S210",
           "target_label": "Payer Type",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -2949,8 +2951,8 @@
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "L211+",
-          "label_at": "L210",
+          "address": "M211+",
+          "label_at": "M210",
           "target_label": "AR Balance",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -2980,8 +2982,8 @@
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "S211+",
-          "label_at": "S210",
+          "address": "T211+",
+          "label_at": "T210",
           "target_label": "Notes",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -3011,8 +3013,8 @@
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "AS211+",
-          "label_at": "AS210",
+          "address": "AR211+",
+          "label_at": "AR210",
           "target_label": "ACH",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -3039,8 +3041,8 @@
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "N211+",
-          "label_at": "N210",
+          "address": "O211+",
+          "label_at": "O210",
           "target_label": "0–30 Days",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -3067,8 +3069,8 @@
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "O211+",
-          "label_at": "O210",
+          "address": "P211+",
+          "label_at": "P210",
           "target_label": "31–60",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -3095,8 +3097,8 @@
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "P211+",
-          "label_at": "P210",
+          "address": "Q211+",
+          "label_at": "Q210",
           "target_label": "61–90",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -3123,8 +3125,8 @@
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "Q211+",
-          "label_at": "Q210",
+          "address": "R211+",
+          "label_at": "R210",
           "target_label": "90+",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -3155,8 +3157,8 @@
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "M211+",
-          "label_at": "M210",
+          "address": "N211+",
+          "label_at": "N210",
           "target_label": "Deposit",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
@@ -3181,8 +3183,8 @@
         "v4": null,
         "v5": {
           "sheet": "Rent Roll Analysis",
-          "address": "AR211+",
-          "label_at": "AR210",
+          "address": "AQ211+",
+          "label_at": "AQ210",
           "target_label": "Preleased Date",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
