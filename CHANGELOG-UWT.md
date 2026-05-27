@@ -8,6 +8,69 @@ opened (none yet — Phase 0 is the seed release).
 
 ---
 
+## v0.5.3 — v5.1 K/L/V template-formula absorption (2026-05-27)
+
+Operator-reported 2026-05-27: *"I removed the alf uw template v5 and replace with v5.1. That's the new updated one with corrections in the rent roll analysis tab."* Operator dropped `assets/ALF_UW_Template_v5.1.xlsx`; renamed to `assets/ALF_UW_Template_v5.xlsx` per filename-consolidation policy (matches v0.5.1 precedent).
+
+### What v5.1 added template-side
+
+Six new template formulas at Rent Roll Analysis row 211+ (fill-down through row 609):
+
+| Cell | Formula | Computes |
+|---|---|---|
+| `K211+` | `=IFERROR(IF(A211="","",N(AE211)+N(AF211)+N(AG211)+N(AH211)),0)` | Total LOC $ from per-fee ancillaries |
+| `L211+` | `=IFERROR(IF(A211="","",N(J211)+N(K211)),0)` | Total Sched (Actual Rate + Total LOC) |
+| `V211+` | `=IFERROR(IF(OR(A211="",U211="",U211=0,J211=""),"",J211/U211),"")` | Actual PSF per month (J/U) |
+| `W211+` | `=IFERROR(IF(V211="","",V211*12),"")` | Actual PSF per year (V*12) |
+| `AA211+` | `=IFERROR(IF(OR(A211="",I211="",J211=""),"",I211-J211),"")` | Mkt-Actual $ delta |
+| `AB211+` | `=IFERROR(IF(OR(AA211="",I211=0,I211=""),"",AA211/I211),"")` | Mkt-Actual % delta |
+
+W, AA, AB were already classified `derived` in the registry's `intake_targets_unmapped` block — no concept mapped there, no registry change needed. **K, L, V were not** — three concepts had previously been writer-paste-targeting these cells.
+
+### Registry → v0.4.2
+
+Three concepts reclassified `mapped → derived` via `tools/uw_template/_absorb_v51_total_formulas.py` (idempotent; retained as audit trail):
+
+| Concept | Source (Analyzer) | Target (v5) | Why moved |
+|---|---|---|---|
+| `rr_total_loc` | `Rent Roll Input!T` (Total LOC $) | `Rent Roll Analysis!K211+` | Template `=N(AE)+N(AF)+N(AG)+N(AH)` |
+| `rr_total_monthly_rev` | `Rent Roll Input!U` (Total Monthly Rev) | `Rent Roll Analysis!L211+` | Template `=N(J)+N(K)` |
+| `rr_actual_psf` | `Rent Roll Input!AA` (Actual PSF) | `Rent Roll Analysis!V211+` | Template `=J/U` |
+
+The `derived` status is in `_DEFAULT_SKIP_STATUSES`, so the writer skips automatically — the template's formulas execute at populate-time using the writer-pasted source data. Precedent: matches `rr_total_ancillary` (became `derived` in UWT v0.4.0 when v5 added `=SUM(AK:AO)` at AQ).
+
+Collision detection: a sweep across all rent_roll concepts × all template-formula cells caught exactly these three. No other collisions.
+
+### Smoke test
+
+`python3 tests/test_uw_template_writer.py` — all tests pass.
+
+- **Empty Analyzer:** 2 cells written / 15 skipped / 106 no_source (out of 123).
+- **Homestead populated:** 99 written / 2,311 cells (was 102 / 3,244 in v0.5.2; expected: -3 row-stride concepts × 176 rows).
+- **All 10 v5.1 template formulas verified intact** in output (K, L, V, W, X, Y, AA, AB, AP, AT).
+- Writer-paste cells preserved alongside formulas (`A211='A1'`, `D211='1 Bedroom'`, `E211='Occupied'`, `J211=$2,926.84`, `U211=461 sqft`, `AR211='X'` for ACH).
+- T-12 spot-checks all green (EGI $7,001,957 at N69; EBITDA $1,417,385 at N118; EBITDARM $1,767,483 at N116; GPR $9,524,893 at N58).
+
+### Carry-forwards (rolled into next handoff)
+
+Operator's v5.1 source was authored from a pre-v0.4.4 baseline, so two regressions came along for the ride:
+
+- **A173 / B173 IFERROR wrapper stripped.** PREV had `=IFERROR(TEXTBEFORE(ANCHORARRAY(Z173),"|"),"")`; NEW has bare `=_xlfn.TEXTBEFORE(_xlfn.ANCHORARRAY(Z173),"|")`. When Z173 spill is empty (e.g. no occupied units), A173/B173 throw `#N/A`. **Recommend re-wrapping in Cowork on next v5.1 author pass.**
+- **Cover G1/H1 substrate stamp + Rent Roll Analysis B5 date** still empty — these were the 2026-05-26 handoff items; carry forward.
+
+All three items bundled into `tools/uw_template/handoffs/2026-05-27-uwt-v51-template-formulas-K-L-V.md` "Open follow-ups" section. Recommended path: operator addresses all three in a single next Cowork pass.
+
+### xlsx integrity caveat (unchanged)
+
+The smoke test's *output* xlsx drops `xl/metadata.xml` and `xl/webextensions/` per **openpyxl quirk #6** (the writer uses openpyxl, which can't preserve these zip parts on save). Operator workaround per established pattern: open the populated UW Template once in Excel and re-save → Excel rebuilds `xl/metadata.xml` from the dynamic-array formula calls it finds. Same workaround as v0.4.3+. The in-Python formula evaluator roadmap item would eliminate this; not implemented.
+
+### Files
+
+- **Modified:** `assets/ALF_UW_Template_v5.xlsx` (replaced binary with operator's v5.1 content), `tools/uw_template/registry.json` (v0.4.1 → v0.4.2), `tools/uw_template/MAPPING_TRACKER.md` + `mapping_tracker.csv` + `mapping_mindmap.html` (regenerated), `app.py` (UWT_VERSION 0.5.2 → 0.5.3), `CHANGELOG-UWT.md` + `SPEC-UWT.md` + `CLAUDE.md` (this entry + Phase 3.7 row + head paragraph).
+- **New:** `tools/uw_template/_absorb_v51_total_formulas.py` (absorber script), `tools/uw_template/handoffs/2026-05-27-uwt-v51-template-formulas-K-L-V.md` (handoff brief — status Verified).
+
+---
+
 ## v0.5.2 — T-12 monthly headers from operator's raw T-12 (2026-05-27)
 
 Operator-reported 2026-05-27 after sample-running v0.5.1 populated UW

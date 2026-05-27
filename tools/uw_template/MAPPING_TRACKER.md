@@ -1,6 +1,6 @@
 # ALF UW Template — Mapping Tracker
 
-> Generated from `tools/uw_template/registry.json` on 2026-05-27 18:24 UTC.  **Do not edit by hand** — edit `registry.json` and re-run `python tools/uw_template/build_mapping_artifacts.py`.
+> Generated from `tools/uw_template/registry.json` on 2026-05-27 21:31 UTC.  **Do not edit by hand** — edit `registry.json` and re-run `python tools/uw_template/build_mapping_artifacts.py`.
 
 - Analyzer source: `ALF_Financial_Analyzer_Only.xlsx` (substrate `v0.2.14`)
 - Primary template: `v4` → `Sample Files/ALF_UW_Template_v4.xlsx`
@@ -22,10 +22,10 @@
 
 | Status | Count |
 |---|---|
-| `mapped` | 107 |
+| `mapped` | 104 |
+| `derived` | 6 |
 | `gap_source` | 5 |
 | `proposed` | 4 |
-| `derived` | 3 |
 | `gap_target` | 2 |
 | `header_only` | 1 |
 | `substrate_ready_parser_pending` | 1 |
@@ -36,7 +36,7 @@
 | Path | Total | mapped | gap_target | gap_source | proposed | other |
 |---|---|---|---|---|---|---|
 | **t12** | 72 | 62 | 2 | 1 | 4 | 3 |
-| **rent_roll** | 35 | 33 | 0 | 0 | 0 | 2 |
+| **rent_roll** | 35 | 30 | 0 | 0 | 0 | 5 |
 | **ar** | 4 | 0 | 0 | 4 | 0 | 0 |
 
 ## Mappings by path & category
@@ -180,7 +180,7 @@
 | **Market Rate** <br/> `rr_market_rate` | `Rent Roll Input!G7:G606` | `Rent Roll Analysis!H211+` | `mapped` | Position shift G→H. |
 | **Actual Rate** <br/> `rr_actual_rate` | `Rent Roll Input!H7:H606` | `Rent Roll Analysis!I211+` | `mapped` | Position shift H→I. Renamed. |
 | **Market PSF** <br/> `rr_market_psf` | `Rent Roll Input!Z7:Z606` | `Rent Roll Analysis!AQ211+` | `mapped` | Position shift Z→AQ. · v5: shifted from AQ211+ to AT211+ per 2026-05-26 contract §16 (new AP/AQ/AR inserts pushed analyst-input cols right) |
-| **Actual PSF** <br/> `rr_actual_psf` | `Rent Roll Input!AA7:AA606` | `Rent Roll Analysis!U211+` | `mapped` | Position shift AA→U. Renamed. |
+| **Actual PSF** <br/> `rr_actual_psf` | `Rent Roll Input!AA7:AA606` | `Rent Roll Analysis!U211+` | `derived` | v5.1 template added formula `=IFERROR(IF(OR(A{r}="",U{r}="",U{r}=0,J{r}=""),"",J{r}/U{r}),"")` at V211+, computing Actual PSF = Actual Rate / SqFt per row. Writer must skip — template self-derives at populate-time. Status: mapped → derived. (Analyzer's own AA column remains unused on this target; downstream consumers read the template's computed value.) · Prior note: Position shift AA→U. Renamed. |
 | **Concession $** <br/> `rr_concession` | `Rent Roll Input!I7:I606` | `Rent Roll Analysis!AD211+` | `mapped` | Position shift I→AD. |
 | **2nd Person Rent $** <br/> `rr_2nd_person_rent` | `Rent Roll Input!V7:V606` | `Rent Roll Analysis!AJ211+` | `mapped` | Position shift V→AJ. |
 
@@ -203,8 +203,8 @@
 
 | Concept | Source | Target (`v4`) | Status | Notes |
 |---|---|---|---|---|
-| **Total LOC $** <br/> `rr_total_loc` | `Rent Roll Input!T7:T606` | `Rent Roll Analysis!J211+` | `mapped` | Formula-derived in both. Writer should still paste-value the Analyzer's computed value; template formula re-derives but tie-out check needs the source figure. |
-| **Total Monthly Rev** <br/> `rr_total_monthly_rev` | `Rent Roll Input!U7:U606` | `Rent Roll Analysis!K211+` | `mapped` | Formula-derived in both. Both = Actual + LOC only (no ancillary). |
+| **Total LOC $** <br/> `rr_total_loc` | `Rent Roll Input!T7:T606` | `Rent Roll Analysis!J211+` | `derived` | v5.1 template added formula `=IFERROR(IF(A{r}="","",N(AE{r})+N(AF{r})+N(AG{r})+N(AH{r})),0)` at K211+, computing Total LOC from per-fee ancillary cols. Writer must skip — template self-derives at populate-time from writer-pasted per-fee values. Status: mapped → derived. · Prior note: Formula-derived in both. Writer should still paste-value the Analyzer's computed value; template formula re-derives but tie-out check needs the source figure. |
+| **Total Monthly Rev** <br/> `rr_total_monthly_rev` | `Rent Roll Input!U7:U606` | `Rent Roll Analysis!K211+` | `derived` | v5.1 template added formula `=IFERROR(IF(A{r}="","",N(J{r})+N(K{r})),0)` at L211+, computing Total Sched (Actual Rate + Total LOC). Writer must skip — template self-derives at populate-time. Status: mapped → derived. · Prior note: Formula-derived in both. Both = Actual + LOC only (no ancillary). |
 | **Total Ancillary $** <br/> `rr_total_ancillary` | `Rent Roll Input!AH7:AH606` | `—` | `derived` | Total Ancillary $ has no template column. v5 wishlist: add formula col `=AK+AL+AM+AN+AO` per row — no upstream change needed. · v5: v5 added col AQ as a TEMPLATE-OWNED formula `=SUM(AK:AO)`. Writer MUST NOT paste Analyzer col AH values here — template re-derives from cols AK-AO which are writer-populated. |
 
 #### rr_other (5)

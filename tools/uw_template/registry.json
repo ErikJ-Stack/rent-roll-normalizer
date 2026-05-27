@@ -1,7 +1,7 @@
 {
   "schema": "uw-mapping/v1",
-  "registry_version": "0.4.1",
-  "generated_phase": "Track 4 / Phase 4 — T-12 monthly headers added to registry. 12 new scalar concepts under path `t12_raw` propagate Analyzer T12 Input!C11:N11 (operator's actual T-12 period months) to UW Template T-12 Analysis!C122:N122. Row 56 (Layer 3 monthly headers) auto-updates via existing `={col}122` formula chain.",
+  "registry_version": "0.4.2",
+  "generated_phase": "Track 4 v0.4.2 \u2014 v5.1 K211/L211 template-formula absorption. rr_total_loc + rr_total_monthly_rev moved mapped \u2192 derived (template owns the formula now, writer skips).",
   "analyzer": {
     "file": "ALF_Financial_Analyzer_Only.xlsx",
     "substrate_version": "v0.2.14",
@@ -17,7 +17,7 @@
       "T12_Period_Date",
       "RR_Input_Data"
     ],
-    "handoff_contract": "Deals/Acquisition/_Template/ALF Templates/Documentation & Maps/2026-05-25-UW-OUTPUT-HANDOFF-CONTRACT.md (external — authoritative)"
+    "handoff_contract": "Deals/Acquisition/_Template/ALF Templates/Documentation & Maps/2026-05-25-UW-OUTPUT-HANDOFF-CONTRACT.md (external \u2014 authoritative)"
   },
   "templates": {
     "v4": {
@@ -86,7 +86,7 @@
       "data_end_row": 386,
       "rent_roll_data_end_row": 386,
       "status": "supported (superseded by v5 as binding default)",
-      "file_note": "Sample Files/ is gitignored — v4 is retained as a working-copy reference, not committed. v5 is the binding committed asset."
+      "file_note": "Sample Files/ is gitignored \u2014 v4 is retained as a working-copy reference, not committed. v5 is the binding committed asset."
     },
     "v5": {
       "file": "assets/ALF_UW_Template_v5.xlsx",
@@ -141,24 +141,24 @@
         {
           "sheet": "Prop Info",
           "row": 19,
-          "label": "Occupied Beds — Total",
+          "label": "Occupied Beds \u2014 Total",
           "formula": "=SUM(B20:B22)",
           "note": "Template formula; writer must not overwrite"
         },
         {
           "sheet": "Prop Info",
           "row": 20,
-          "label": "Occupied Beds — IL"
+          "label": "Occupied Beds \u2014 IL"
         },
         {
           "sheet": "Prop Info",
           "row": 21,
-          "label": "Occupied Beds — AL"
+          "label": "Occupied Beds \u2014 AL"
         },
         {
           "sheet": "Prop Info",
           "row": 22,
-          "label": "Occupied Beds — MC"
+          "label": "Occupied Beds \u2014 MC"
         }
       ],
       "new_cols_vs_v4": [
@@ -211,7 +211,7 @@
         }
       ],
       "deferred_to_v5_1": [
-        "Cover substrate version stamp — concept `substrate_version` stays gap_target",
+        "Cover substrate version stamp \u2014 concept `substrate_version` stays gap_target",
         "Per-row Period Date / metadata cell on Rent Roll Analysis tab header"
       ],
       "last_structural_update": "2026-05-27 (v5.1 column restructure: Unit Type inserted at new D; W + AC dropped)",
@@ -230,7 +230,7 @@
     "substrate_ready_parser_pending": "Upstream substrate change has shipped (column reserved + headers + named-range scope), but the parser does not yet populate the column. Writer clears the slot defensively. Waiting on a source fixture."
   },
   "category_legend": {
-    "metadata": "Property identifiers, capacity, periods — fills Prop Info / header rows.",
+    "metadata": "Property identifiers, capacity, periods \u2014 fills Prop Info / header rows.",
     "revenue": "Revenue line items + EGI subtotal.",
     "waterfall": "GPR / vacancy / loss-to-lease waterfall components.",
     "labor": "Labor & burden lines.",
@@ -242,9 +242,9 @@
     "rr_rates": "Rent Roll: per-bed rates and rate-derived $ (market, actual, PSF, concessions, 2P rent).",
     "rr_ancillary": "Rent Roll: Level-of-Care component columns (Care Level $, tier label, Med Mgmt, Pharmacy, Other LOC, Meal, Scooter, HK, Laundry, Pet).",
     "rr_subtotals": "Rent Roll: formula-derived subtotal columns (Total LOC, Total Monthly Rev, Total Ancillary).",
-    "rr_other": "Rent Roll: ACH, AR Balance, Notes, Deposit — non-rate, non-ancillary per-row data.",
-    "ar_aging": "AR aging buckets per resident (0-30, 31-60, 61-90, 90+) — currently gap_source.",
-    "t12_raw_headers": "T-12 raw header row — month labels propagated from Analyzer T12 Input row 11 to UW Template T-12 Analysis row 122. Auto-cascades to row 56's standardized-layer monthly headers via existing `={col}122` formulas."
+    "rr_other": "Rent Roll: ACH, AR Balance, Notes, Deposit \u2014 non-rate, non-ancillary per-row data.",
+    "ar_aging": "AR aging buckets per resident (0-30, 31-60, 61-90, 90+) \u2014 currently gap_source.",
+    "t12_raw_headers": "T-12 raw header row \u2014 month labels propagated from Analyzer T12 Input row 11 to UW Template T-12 Analysis row 122. Auto-cascades to row 56's standardized-layer monthly headers via existing `={col}122` formulas."
   },
   "concepts": [
     {
@@ -331,7 +331,7 @@
     },
     {
       "key": "licensed_beds_il",
-      "label": "Licensed beds — IL",
+      "label": "Licensed beds \u2014 IL",
       "category": "capacity",
       "source": {
         "system": "uw_output",
@@ -358,7 +358,7 @@
     },
     {
       "key": "licensed_beds_al",
-      "label": "Licensed beds — AL",
+      "label": "Licensed beds \u2014 AL",
       "category": "capacity",
       "source": {
         "system": "uw_output",
@@ -383,7 +383,7 @@
     },
     {
       "key": "licensed_beds_mc",
-      "label": "Licensed beds — MC",
+      "label": "Licensed beds \u2014 MC",
       "category": "capacity",
       "source": {
         "system": "uw_output",
@@ -432,7 +432,7 @@
     },
     {
       "key": "occupied_beds_il",
-      "label": "Stabilized occupied beds — IL",
+      "label": "Stabilized occupied beds \u2014 IL",
       "category": "capacity",
       "source": {
         "system": "uw_output",
@@ -446,16 +446,16 @@
           "sheet": "Prop Info",
           "address": "B20",
           "label_at": "A20",
-          "target_label": "Occupied Beds — IL"
+          "target_label": "Occupied Beds \u2014 IL"
         }
       },
       "status": "mapped",
-      "notes": "Template has no occupied-bed split rows. Total occupancy is computed inside Rent Roll Analysis from the pasted rent roll; consider deferring or surfacing as a metadata cell. · v5: Closed in v5 — Prop Info rows 19-22 added. Writer populates B20 from UW Output!B71.",
+      "notes": "Template has no occupied-bed split rows. Total occupancy is computed inside Rent Roll Analysis from the pasted rent roll; consider deferring or surfacing as a metadata cell. \u00b7 v5: Closed in v5 \u2014 Prop Info rows 19-22 added. Writer populates B20 from UW Output!B71.",
       "path": "t12"
     },
     {
       "key": "occupied_beds_al",
-      "label": "Stabilized occupied beds — AL",
+      "label": "Stabilized occupied beds \u2014 AL",
       "category": "capacity",
       "source": {
         "system": "uw_output",
@@ -469,16 +469,16 @@
           "sheet": "Prop Info",
           "address": "B21",
           "label_at": "A21",
-          "target_label": "Occupied Beds — AL"
+          "target_label": "Occupied Beds \u2014 AL"
         }
       },
       "status": "mapped",
       "path": "t12",
-      "notes": "v5: Closed in v5 — writer populates B21 from UW Output!C71."
+      "notes": "v5: Closed in v5 \u2014 writer populates B21 from UW Output!C71."
     },
     {
       "key": "occupied_beds_mc",
-      "label": "Stabilized occupied beds — MC",
+      "label": "Stabilized occupied beds \u2014 MC",
       "category": "capacity",
       "source": {
         "system": "uw_output",
@@ -492,12 +492,12 @@
           "sheet": "Prop Info",
           "address": "B22",
           "label_at": "A22",
-          "target_label": "Occupied Beds — MC"
+          "target_label": "Occupied Beds \u2014 MC"
         }
       },
       "status": "mapped",
       "path": "t12",
-      "notes": "v5: Closed in v5 — writer populates B22 from UW Output!D71."
+      "notes": "v5: Closed in v5 \u2014 writer populates B22 from UW Output!D71."
     },
     {
       "key": "base_rent_normalized",
@@ -525,7 +525,7 @@
         }
       },
       "status": "mapped",
-      "notes": "Analyzer's 'Base rent (normalized)' is conceptually the net-of-vacancy/LTL/concessions rent that flows into EGI — matches template 'Net Rent Revenue'. Annual total only (col N).",
+      "notes": "Analyzer's 'Base rent (normalized)' is conceptually the net-of-vacancy/LTL/concessions rent that flows into EGI \u2014 matches template 'Net Rent Revenue'. Annual total only (col N).",
       "path": "t12"
     },
     {
@@ -601,7 +601,7 @@
         }
       },
       "status": "mapped",
-      "notes": "Template puts Concessions in the GPR waterfall block (row 61) — Analyzer lists it as a revenue contra-line at row 9. Sign convention: should arrive negative-signed (Analyzer convention).",
+      "notes": "Template puts Concessions in the GPR waterfall block (row 61) \u2014 Analyzer lists it as a revenue contra-line at row 9. Sign convention: should arrive negative-signed (Analyzer convention).",
       "path": "t12"
     },
     {
@@ -685,7 +685,7 @@
       "category": "revenue",
       "source": {
         "system": "derived",
-        "formula": "Computed elsewhere — Analyzer rolls 2P into Rent Roll Input!V; UW Output does not break it out separately."
+        "formula": "Computed elsewhere \u2014 Analyzer rolls 2P into Rent Roll Input!V; UW Output does not break it out separately."
       },
       "targets": {
         "v4": {
@@ -727,7 +727,7 @@
         }
       },
       "status": "proposed",
-      "notes": "Conceptual divergence: template places Bad Debt as a revenue contra-line (row 62, above Net Rent Revenue at 63); Analyzer places it as an opex line (UW Output row 57). For the template to balance, the value should likely be pasted into row 62 AND row 106 reset to zero — or vice versa. Decide which placement is canonical for the model before writer ships.",
+      "notes": "Conceptual divergence: template places Bad Debt as a revenue contra-line (row 62, above Net Rent Revenue at 63); Analyzer places it as an opex line (UW Output row 57). For the template to balance, the value should likely be pasted into row 62 AND row 106 reset to zero \u2014 or vice versa. Decide which placement is canonical for the model before writer ships.",
       "path": "t12"
     },
     {
@@ -1213,7 +1213,7 @@
         }
       },
       "status": "mapped",
-      "notes": "Subtotal — writer should write this even though template likely re-derives it; supports the reconciliation block at rows 4-5.",
+      "notes": "Subtotal \u2014 writer should write this even though template likely re-derives it; supports the reconciliation block at rows 4-5.",
       "path": "t12"
     },
     {
@@ -1614,7 +1614,7 @@
         }
       },
       "status": "mapped",
-      "notes": "Template Section F (rows 40-44) provides a separate RE Tax accrual check — pro forma override expected. The Layer 3 paste at N102 carries the T-12 actual.",
+      "notes": "Template Section F (rows 40-44) provides a separate RE Tax accrual check \u2014 pro forma override expected. The Layer 3 paste at N102 carries the T-12 actual.",
       "path": "t12"
     },
     {
@@ -1715,7 +1715,7 @@
         }
       },
       "status": "proposed",
-      "notes": "See `bad_debt_writeoffs_revenue` — single Analyzer source maps to two template rows. Choose one placement (likely 62 OR 106) and zero the other.",
+      "notes": "See `bad_debt_writeoffs_revenue` \u2014 single Analyzer source maps to two template rows. Choose one placement (likely 62 OR 106) and zero the other.",
       "path": "t12"
     },
     {
@@ -1816,7 +1816,7 @@
         }
       },
       "status": "mapped",
-      "notes": "UW Output row 61 currently resolves to 0 (known upstream deferral — see UW-OUTPUT-HANDOFF-CONTRACT.md §4 item 4). Template will show $0 until upstream lease formula is fixed.",
+      "notes": "UW Output row 61 currently resolves to 0 (known upstream deferral \u2014 see UW-OUTPUT-HANDOFF-CONTRACT.md \u00a74 item 4). Template will show $0 until upstream lease formula is fixed.",
       "path": "t12"
     },
     {
@@ -1864,7 +1864,7 @@
         }
       },
       "status": "mapped",
-      "notes": "Template's TOTAL OPERATING EXPENSES (row 114) is inclusive of management fee — no direct row for opex-excl-mgmt. Could derive as N111 + N85. · v5: Closed in v5 — N115 has template formula `=N114-N113`. Writer overwrites with UW Output row 63 value (Total opex excl. mgmt) when present; falls back to template formula on empty Analyzer.",
+      "notes": "Template's TOTAL OPERATING EXPENSES (row 114) is inclusive of management fee \u2014 no direct row for opex-excl-mgmt. Could derive as N111 + N85. \u00b7 v5: Closed in v5 \u2014 N115 has template formula `=N114-N113`. Writer overwrites with UW Output row 63 value (Total opex excl. mgmt) when present; falls back to template formula on empty Analyzer.",
       "path": "t12"
     },
     {
@@ -1941,7 +1941,7 @@
       },
       "status": "mapped",
       "path": "t12",
-      "notes": "v5: v5: row shifted from N115 (v4) → N116 due to new 'Total Operating Expenses (excl. mgmt)' row at N115. Template has fallback formula `=N69-N85-N111`; writer overwrites with UW Output row 66 value."
+      "notes": "v5: v5: row shifted from N115 (v4) \u2192 N116 due to new 'Total Operating Expenses (excl. mgmt)' row at N115. Template has fallback formula `=N69-N85-N111`; writer overwrites with UW Output row 66 value."
     },
     {
       "key": "ebitdar",
@@ -1968,7 +1968,7 @@
         }
       },
       "status": "mapped",
-      "notes": "Template equates EBITDAR with NOI (label A116: 'EBITDAR (= NOI)'). Analyzer treats NOI as a header-only row (UW Output 65) and EBITDAR as a distinct line at row 67. Map E67/F67 directly to N116. · v5: v5: row shifted from N116 (v4) → N117 due to new row 115 insert. Writer populates from UW Output row 67.",
+      "notes": "Template equates EBITDAR with NOI (label A116: 'EBITDAR (= NOI)'). Analyzer treats NOI as a header-only row (UW Output 65) and EBITDAR as a distinct line at row 67. Map E67/F67 directly to N116. \u00b7 v5: v5: row shifted from N116 (v4) \u2192 N117 due to new row 115 insert. Writer populates from UW Output row 67.",
       "path": "t12"
     },
     {
@@ -1991,7 +1991,7 @@
         }
       },
       "status": "mapped",
-      "notes": "Template has no EBITDA row in Layer 3 (only EBITDARM and EBITDAR/NOI). Either add an EBITDA row to template or drop from writer scope. · v5: Closed in v5 — N118 row added (label only, no formula). Writer populates from UW Output row 68.",
+      "notes": "Template has no EBITDA row in Layer 3 (only EBITDARM and EBITDAR/NOI). Either add an EBITDA row to template or drop from writer scope. \u00b7 v5: Closed in v5 \u2014 N118 row added (label only, no formula). Writer populates from UW Output row 68.",
       "path": "t12"
     },
     {
@@ -2008,7 +2008,7 @@
         "v5": null
       },
       "status": "header_only",
-      "notes": "UW Output row 65 is a visual band — see UW-OUTPUT-HANDOFF-CONTRACT.md §4 gotcha #1. Writer must skip.",
+      "notes": "UW Output row 65 is a visual band \u2014 see UW-OUTPUT-HANDOFF-CONTRACT.md \u00a74 gotcha #1. Writer must skip.",
       "path": "t12"
     },
     {
@@ -2102,7 +2102,7 @@
         }
       },
       "status": "mapped",
-      "notes": "Position shift A→T."
+      "notes": "Position shift A\u2192T."
     },
     {
       "key": "rr_care_type",
@@ -2164,7 +2164,7 @@
         }
       },
       "status": "mapped",
-      "notes": "Position shift E→D."
+      "notes": "Position shift E\u2192D."
     },
     {
       "key": "rr_apt_type",
@@ -2195,7 +2195,7 @@
         }
       },
       "status": "mapped",
-      "notes": "Position shift F→AC. Possible label-form difference (e.g. '1BR' vs '1 Bedroom') — normalize upstream or handle in template."
+      "notes": "Position shift F\u2192AC. Possible label-form difference (e.g. '1BR' vs '1 Bedroom') \u2014 normalize upstream or handle in template."
     },
     {
       "key": "rr_resident_name",
@@ -2226,7 +2226,7 @@
         }
       },
       "status": "mapped",
-      "notes": "Position shift R→E."
+      "notes": "Position shift R\u2192E."
     },
     {
       "key": "rr_move_in_date",
@@ -2257,7 +2257,7 @@
         }
       },
       "status": "mapped",
-      "notes": "Position shift Q→F."
+      "notes": "Position shift Q\u2192F."
     },
     {
       "key": "rr_move_out_date",
@@ -2288,7 +2288,7 @@
         }
       },
       "status": "mapped",
-      "notes": "Position shift W→G. Renamed."
+      "notes": "Position shift W\u2192G. Renamed."
     },
     {
       "key": "rr_concession_end_date",
@@ -2319,7 +2319,7 @@
         }
       },
       "status": "mapped",
-      "notes": "Position shift J→AE."
+      "notes": "Position shift J\u2192AE."
     },
     {
       "key": "rr_market_rate",
@@ -2350,7 +2350,7 @@
         }
       },
       "status": "mapped",
-      "notes": "Position shift G→H."
+      "notes": "Position shift G\u2192H."
     },
     {
       "key": "rr_actual_rate",
@@ -2381,7 +2381,7 @@
         }
       },
       "status": "mapped",
-      "notes": "Position shift H→I. Renamed."
+      "notes": "Position shift H\u2192I. Renamed."
     },
     {
       "key": "rr_market_psf",
@@ -2412,7 +2412,7 @@
         }
       },
       "status": "mapped",
-      "notes": "Position shift Z→AQ. · v5: shifted from AQ211+ to AT211+ per 2026-05-26 contract §16 (new AP/AQ/AR inserts pushed analyst-input cols right)"
+      "notes": "Position shift Z\u2192AQ. \u00b7 v5: shifted from AQ211+ to AT211+ per 2026-05-26 contract \u00a716 (new AP/AQ/AR inserts pushed analyst-input cols right)"
     },
     {
       "key": "rr_actual_psf",
@@ -2442,8 +2442,8 @@
           "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
-      "status": "mapped",
-      "notes": "Position shift AA→U. Renamed."
+      "status": "derived",
+      "notes": "v5.1 template added formula `=IFERROR(IF(OR(A{r}=\"\",U{r}=\"\",U{r}=0,J{r}=\"\"),\"\",J{r}/U{r}),\"\")` at V211+, computing Actual PSF = Actual Rate / SqFt per row. Writer must skip \u2014 template self-derives at populate-time. Status: mapped \u2192 derived. (Analyzer's own AA column remains unused on this target; downstream consumers read the template's computed value.) \u00b7 Prior note: Position shift AA\u2192U. Renamed."
     },
     {
       "key": "rr_concession",
@@ -2474,7 +2474,7 @@
         }
       },
       "status": "mapped",
-      "notes": "Position shift I→AD."
+      "notes": "Position shift I\u2192AD."
     },
     {
       "key": "rr_2nd_person_rent",
@@ -2505,7 +2505,7 @@
         }
       },
       "status": "mapped",
-      "notes": "Position shift V→AJ."
+      "notes": "Position shift V\u2192AJ."
     },
     {
       "key": "rr_care_level",
@@ -2536,7 +2536,7 @@
         }
       },
       "status": "mapped",
-      "notes": "Position shift L→AF."
+      "notes": "Position shift L\u2192AF."
     },
     {
       "key": "rr_care_level_tier_label",
@@ -2561,7 +2561,7 @@
         }
       },
       "status": "mapped",
-      "notes": "Tier label (Basic / Level 2-7) has no template column. v5 wishlist: add a label col adjacent to AF Care Level $. · v5: Closed in v5 — UW Template col AP. Writer pastes from Rent Roll Input col K (Care Level tier label, e.g. Basic / Level 2-7)."
+      "notes": "Tier label (Basic / Level 2-7) has no template column. v5 wishlist: add a label col adjacent to AF Care Level $. \u00b7 v5: Closed in v5 \u2014 UW Template col AP. Writer pastes from Rent Roll Input col K (Care Level tier label, e.g. Basic / Level 2-7)."
     },
     {
       "key": "rr_med_mgmt",
@@ -2685,7 +2685,7 @@
         }
       },
       "status": "mapped",
-      "notes": "Position shift AC→AK."
+      "notes": "Position shift AC\u2192AK."
     },
     {
       "key": "rr_scooter_fee",
@@ -2839,8 +2839,8 @@
           "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
-      "status": "mapped",
-      "notes": "Formula-derived in both. Writer should still paste-value the Analyzer's computed value; template formula re-derives but tie-out check needs the source figure."
+      "status": "derived",
+      "notes": "v5.1 template added formula `=IFERROR(IF(A{r}=\"\",\"\",N(AE{r})+N(AF{r})+N(AG{r})+N(AH{r})),0)` at K211+, computing Total LOC from per-fee ancillary cols. Writer must skip \u2014 template self-derives at populate-time from writer-pasted per-fee values. Status: mapped \u2192 derived. \u00b7 Prior note: Formula-derived in both. Writer should still paste-value the Analyzer's computed value; template formula re-derives but tie-out check needs the source figure."
     },
     {
       "key": "rr_total_monthly_rev",
@@ -2870,8 +2870,8 @@
           "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
-      "status": "mapped",
-      "notes": "Formula-derived in both. Both = Actual + LOC only (no ancillary)."
+      "status": "derived",
+      "notes": "v5.1 template added formula `=IFERROR(IF(A{r}=\"\",\"\",N(J{r})+N(K{r})),0)` at L211+, computing Total Sched (Actual Rate + Total LOC). Writer must skip \u2014 template self-derives at populate-time. Status: mapped \u2192 derived. \u00b7 Prior note: Formula-derived in both. Both = Actual + LOC only (no ancillary)."
     },
     {
       "key": "rr_total_ancillary",
@@ -2897,7 +2897,7 @@
         }
       },
       "status": "derived",
-      "notes": "Total Ancillary $ has no template column. v5 wishlist: add formula col `=AK+AL+AM+AN+AO` per row — no upstream change needed. · v5: v5 added col AQ as a TEMPLATE-OWNED formula `=SUM(AK:AO)`. Writer MUST NOT paste Analyzer col AH values here — template re-derives from cols AK-AO which are writer-populated."
+      "notes": "Total Ancillary $ has no template column. v5 wishlist: add formula col `=AK+AL+AM+AN+AO` per row \u2014 no upstream change needed. \u00b7 v5: v5 added col AQ as a TEMPLATE-OWNED formula `=SUM(AK:AO)`. Writer MUST NOT paste Analyzer col AH values here \u2014 template re-derives from cols AK-AO which are writer-populated."
     },
     {
       "key": "rr_payer_type",
@@ -2928,7 +2928,7 @@
         }
       },
       "status": "mapped",
-      "notes": "Position shift P→R."
+      "notes": "Position shift P\u2192R."
     },
     {
       "key": "rr_balance_ar",
@@ -2959,7 +2959,7 @@
         }
       },
       "status": "mapped",
-      "notes": "Position shift X→L. Renamed."
+      "notes": "Position shift X\u2192L. Renamed."
     },
     {
       "key": "rr_notes",
@@ -2990,7 +2990,7 @@
         }
       },
       "status": "mapped",
-      "notes": "Position shift Y→S."
+      "notes": "Position shift Y\u2192S."
     },
     {
       "key": "rr_ach",
@@ -3021,11 +3021,11 @@
         }
       },
       "status": "mapped",
-      "notes": "Position shift AB→AP. · v5: shifted from AP211+ to AS211+ per 2026-05-26 contract §16 (new AP/AQ/AR inserts pushed analyst-input cols right)"
+      "notes": "Position shift AB\u2192AP. \u00b7 v5: shifted from AP211+ to AS211+ per 2026-05-26 contract \u00a716 (new AP/AQ/AR inserts pushed analyst-input cols right)"
     },
     {
       "key": "ar_aging_0_30",
-      "label": "AR Aging — 0–30 Days",
+      "label": "AR Aging \u2014 0\u201330 Days",
       "category": "ar_aging",
       "path": "ar",
       "source": {
@@ -3037,23 +3037,23 @@
           "sheet": "Rent Roll Analysis",
           "address": "N211+",
           "label_at": "N210",
-          "target_label": "0–30 Days",
+          "target_label": "0\u201330 Days",
           "paste_anchor": "Rent Roll Analysis!A211"
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
           "address": "O211+",
           "label_at": "O210",
-          "target_label": "0–30 Days",
+          "target_label": "0\u201330 Days",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "gap_source",
-      "notes": "UW Template expects per-resident aging buckets. Analyzer's AR & Collections (substrate v0.2.10+) aggregates by payer, not by resident — row-level join needed upstream before this can move off gap_source."
+      "notes": "UW Template expects per-resident aging buckets. Analyzer's AR & Collections (substrate v0.2.10+) aggregates by payer, not by resident \u2014 row-level join needed upstream before this can move off gap_source."
     },
     {
       "key": "ar_aging_31_60",
-      "label": "AR Aging — 31–60 Days",
+      "label": "AR Aging \u2014 31\u201360 Days",
       "category": "ar_aging",
       "path": "ar",
       "source": {
@@ -3065,23 +3065,23 @@
           "sheet": "Rent Roll Analysis",
           "address": "O211+",
           "label_at": "O210",
-          "target_label": "31–60",
+          "target_label": "31\u201360",
           "paste_anchor": "Rent Roll Analysis!A211"
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
           "address": "P211+",
           "label_at": "P210",
-          "target_label": "31–60",
+          "target_label": "31\u201360",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "gap_source",
-      "notes": "UW Template expects per-resident aging buckets. Analyzer's AR & Collections (substrate v0.2.10+) aggregates by payer, not by resident — row-level join needed upstream before this can move off gap_source."
+      "notes": "UW Template expects per-resident aging buckets. Analyzer's AR & Collections (substrate v0.2.10+) aggregates by payer, not by resident \u2014 row-level join needed upstream before this can move off gap_source."
     },
     {
       "key": "ar_aging_61_90",
-      "label": "AR Aging — 61–90 Days",
+      "label": "AR Aging \u2014 61\u201390 Days",
       "category": "ar_aging",
       "path": "ar",
       "source": {
@@ -3093,23 +3093,23 @@
           "sheet": "Rent Roll Analysis",
           "address": "P211+",
           "label_at": "P210",
-          "target_label": "61–90",
+          "target_label": "61\u201390",
           "paste_anchor": "Rent Roll Analysis!A211"
         },
         "v5": {
           "sheet": "Rent Roll Analysis",
           "address": "Q211+",
           "label_at": "Q210",
-          "target_label": "61–90",
+          "target_label": "61\u201390",
           "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "gap_source",
-      "notes": "UW Template expects per-resident aging buckets. Analyzer's AR & Collections (substrate v0.2.10+) aggregates by payer, not by resident — row-level join needed upstream before this can move off gap_source."
+      "notes": "UW Template expects per-resident aging buckets. Analyzer's AR & Collections (substrate v0.2.10+) aggregates by payer, not by resident \u2014 row-level join needed upstream before this can move off gap_source."
     },
     {
       "key": "ar_aging_90_plus",
-      "label": "AR Aging — 90+ Days",
+      "label": "AR Aging \u2014 90+ Days",
       "category": "ar_aging",
       "path": "ar",
       "source": {
@@ -3133,7 +3133,7 @@
         }
       },
       "status": "gap_source",
-      "notes": "UW Template expects per-resident aging buckets. Analyzer's AR & Collections (substrate v0.2.10+) aggregates by payer, not by resident — row-level join needed upstream before this can move off gap_source."
+      "notes": "UW Template expects per-resident aging buckets. Analyzer's AR & Collections (substrate v0.2.10+) aggregates by payer, not by resident \u2014 row-level join needed upstream before this can move off gap_source."
     },
     {
       "key": "rr_deposit",
@@ -3146,7 +3146,7 @@
         "address": "AI7:AI606",
         "column": "AI",
         "label": "Deposit (pending upstream)",
-        "status_note": "Slot reserved in substrate v0.2.14 (migrate_to_v0214.py). Writer clear-loop covers AI defensively. Parser support pending — needs a source RR fixture that exposes a Deposit field before mappings.py / normalizer.py / CONDENSED_COLUMNS can be extended."
+        "status_note": "Slot reserved in substrate v0.2.14 (migrate_to_v0214.py). Writer clear-loop covers AI defensively. Parser support pending \u2014 needs a source RR fixture that exposes a Deposit field before mappings.py / normalizer.py / CONDENSED_COLUMNS can be extended."
       },
       "targets": {
         "v4": {
@@ -3191,18 +3191,18 @@
         }
       },
       "status": "mapped",
-      "notes": "Lives at Rent Roll Input!AJ as of substrate v0.2.14 (relocated from AI). Section N on Rent Roll Recon matches on Status='Preleased', not on the date column directly — the AI → AJ relocation had zero formula impact upstream. UW Template v4 still has no per-row Preleased Date column; status remains gap_target until template v5. · v5: Closed in v5 — UW Template col AR. Writer pastes from Rent Roll Input col AJ (substrate v0.2.14 relocation). Date format mm/dd/yyyy."
+      "notes": "Lives at Rent Roll Input!AJ as of substrate v0.2.14 (relocated from AI). Section N on Rent Roll Recon matches on Status='Preleased', not on the date column directly \u2014 the AI \u2192 AJ relocation had zero formula impact upstream. UW Template v4 still has no per-row Preleased Date column; status remains gap_target until template v5. \u00b7 v5: Closed in v5 \u2014 UW Template col AR. Writer pastes from Rent Roll Input col AJ (substrate v0.2.14 relocation). Date format mm/dd/yyyy."
     },
     {
       "key": "t12_raw_month_1",
-      "label": "T-12 monthly header — month 1 (T-12 start)",
+      "label": "T-12 monthly header \u2014 month 1 (T-12 start)",
       "category": "t12_raw_headers",
       "path": "t12_raw",
       "source": {
         "system": "cell",
         "sheet": "T12 Input",
         "address": "C11",
-        "label": "Analyzer T12 Input!C11 — operator's T-12 month header (e.g. 'Apr 2025')"
+        "label": "Analyzer T12 Input!C11 \u2014 operator's T-12 month header (e.g. 'Apr 2025')"
       },
       "targets": {
         "v4": null,
@@ -3215,18 +3215,18 @@
         }
       },
       "status": "mapped",
-      "notes": "Operator-requested 2026-05-27 — header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!C11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!C122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
+      "notes": "Operator-requested 2026-05-27 \u2014 header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!C11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!C122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
     },
     {
       "key": "t12_raw_month_2",
-      "label": "T-12 monthly header — month 2",
+      "label": "T-12 monthly header \u2014 month 2",
       "category": "t12_raw_headers",
       "path": "t12_raw",
       "source": {
         "system": "cell",
         "sheet": "T12 Input",
         "address": "D11",
-        "label": "Analyzer T12 Input!D11 — operator's T-12 month header (e.g. 'Apr 2025')"
+        "label": "Analyzer T12 Input!D11 \u2014 operator's T-12 month header (e.g. 'Apr 2025')"
       },
       "targets": {
         "v4": null,
@@ -3239,18 +3239,18 @@
         }
       },
       "status": "mapped",
-      "notes": "Operator-requested 2026-05-27 — header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!D11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!D122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
+      "notes": "Operator-requested 2026-05-27 \u2014 header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!D11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!D122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
     },
     {
       "key": "t12_raw_month_3",
-      "label": "T-12 monthly header — month 3",
+      "label": "T-12 monthly header \u2014 month 3",
       "category": "t12_raw_headers",
       "path": "t12_raw",
       "source": {
         "system": "cell",
         "sheet": "T12 Input",
         "address": "E11",
-        "label": "Analyzer T12 Input!E11 — operator's T-12 month header (e.g. 'Apr 2025')"
+        "label": "Analyzer T12 Input!E11 \u2014 operator's T-12 month header (e.g. 'Apr 2025')"
       },
       "targets": {
         "v4": null,
@@ -3263,18 +3263,18 @@
         }
       },
       "status": "mapped",
-      "notes": "Operator-requested 2026-05-27 — header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!E11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!E122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
+      "notes": "Operator-requested 2026-05-27 \u2014 header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!E11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!E122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
     },
     {
       "key": "t12_raw_month_4",
-      "label": "T-12 monthly header — month 4",
+      "label": "T-12 monthly header \u2014 month 4",
       "category": "t12_raw_headers",
       "path": "t12_raw",
       "source": {
         "system": "cell",
         "sheet": "T12 Input",
         "address": "F11",
-        "label": "Analyzer T12 Input!F11 — operator's T-12 month header (e.g. 'Apr 2025')"
+        "label": "Analyzer T12 Input!F11 \u2014 operator's T-12 month header (e.g. 'Apr 2025')"
       },
       "targets": {
         "v4": null,
@@ -3287,18 +3287,18 @@
         }
       },
       "status": "mapped",
-      "notes": "Operator-requested 2026-05-27 — header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!F11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!F122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
+      "notes": "Operator-requested 2026-05-27 \u2014 header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!F11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!F122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
     },
     {
       "key": "t12_raw_month_5",
-      "label": "T-12 monthly header — month 5",
+      "label": "T-12 monthly header \u2014 month 5",
       "category": "t12_raw_headers",
       "path": "t12_raw",
       "source": {
         "system": "cell",
         "sheet": "T12 Input",
         "address": "G11",
-        "label": "Analyzer T12 Input!G11 — operator's T-12 month header (e.g. 'Apr 2025')"
+        "label": "Analyzer T12 Input!G11 \u2014 operator's T-12 month header (e.g. 'Apr 2025')"
       },
       "targets": {
         "v4": null,
@@ -3311,18 +3311,18 @@
         }
       },
       "status": "mapped",
-      "notes": "Operator-requested 2026-05-27 — header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!G11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!G122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
+      "notes": "Operator-requested 2026-05-27 \u2014 header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!G11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!G122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
     },
     {
       "key": "t12_raw_month_6",
-      "label": "T-12 monthly header — month 6",
+      "label": "T-12 monthly header \u2014 month 6",
       "category": "t12_raw_headers",
       "path": "t12_raw",
       "source": {
         "system": "cell",
         "sheet": "T12 Input",
         "address": "H11",
-        "label": "Analyzer T12 Input!H11 — operator's T-12 month header (e.g. 'Apr 2025')"
+        "label": "Analyzer T12 Input!H11 \u2014 operator's T-12 month header (e.g. 'Apr 2025')"
       },
       "targets": {
         "v4": null,
@@ -3335,18 +3335,18 @@
         }
       },
       "status": "mapped",
-      "notes": "Operator-requested 2026-05-27 — header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!H11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!H122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
+      "notes": "Operator-requested 2026-05-27 \u2014 header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!H11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!H122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
     },
     {
       "key": "t12_raw_month_7",
-      "label": "T-12 monthly header — month 7",
+      "label": "T-12 monthly header \u2014 month 7",
       "category": "t12_raw_headers",
       "path": "t12_raw",
       "source": {
         "system": "cell",
         "sheet": "T12 Input",
         "address": "I11",
-        "label": "Analyzer T12 Input!I11 — operator's T-12 month header (e.g. 'Apr 2025')"
+        "label": "Analyzer T12 Input!I11 \u2014 operator's T-12 month header (e.g. 'Apr 2025')"
       },
       "targets": {
         "v4": null,
@@ -3359,18 +3359,18 @@
         }
       },
       "status": "mapped",
-      "notes": "Operator-requested 2026-05-27 — header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!I11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!I122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
+      "notes": "Operator-requested 2026-05-27 \u2014 header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!I11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!I122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
     },
     {
       "key": "t12_raw_month_8",
-      "label": "T-12 monthly header — month 8",
+      "label": "T-12 monthly header \u2014 month 8",
       "category": "t12_raw_headers",
       "path": "t12_raw",
       "source": {
         "system": "cell",
         "sheet": "T12 Input",
         "address": "J11",
-        "label": "Analyzer T12 Input!J11 — operator's T-12 month header (e.g. 'Apr 2025')"
+        "label": "Analyzer T12 Input!J11 \u2014 operator's T-12 month header (e.g. 'Apr 2025')"
       },
       "targets": {
         "v4": null,
@@ -3383,18 +3383,18 @@
         }
       },
       "status": "mapped",
-      "notes": "Operator-requested 2026-05-27 — header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!J11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!J122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
+      "notes": "Operator-requested 2026-05-27 \u2014 header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!J11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!J122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
     },
     {
       "key": "t12_raw_month_9",
-      "label": "T-12 monthly header — month 9",
+      "label": "T-12 monthly header \u2014 month 9",
       "category": "t12_raw_headers",
       "path": "t12_raw",
       "source": {
         "system": "cell",
         "sheet": "T12 Input",
         "address": "K11",
-        "label": "Analyzer T12 Input!K11 — operator's T-12 month header (e.g. 'Apr 2025')"
+        "label": "Analyzer T12 Input!K11 \u2014 operator's T-12 month header (e.g. 'Apr 2025')"
       },
       "targets": {
         "v4": null,
@@ -3407,18 +3407,18 @@
         }
       },
       "status": "mapped",
-      "notes": "Operator-requested 2026-05-27 — header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!K11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!K122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
+      "notes": "Operator-requested 2026-05-27 \u2014 header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!K11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!K122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
     },
     {
       "key": "t12_raw_month_10",
-      "label": "T-12 monthly header — month 10",
+      "label": "T-12 monthly header \u2014 month 10",
       "category": "t12_raw_headers",
       "path": "t12_raw",
       "source": {
         "system": "cell",
         "sheet": "T12 Input",
         "address": "L11",
-        "label": "Analyzer T12 Input!L11 — operator's T-12 month header (e.g. 'Apr 2025')"
+        "label": "Analyzer T12 Input!L11 \u2014 operator's T-12 month header (e.g. 'Apr 2025')"
       },
       "targets": {
         "v4": null,
@@ -3431,18 +3431,18 @@
         }
       },
       "status": "mapped",
-      "notes": "Operator-requested 2026-05-27 — header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!L11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!L122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
+      "notes": "Operator-requested 2026-05-27 \u2014 header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!L11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!L122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
     },
     {
       "key": "t12_raw_month_11",
-      "label": "T-12 monthly header — month 11",
+      "label": "T-12 monthly header \u2014 month 11",
       "category": "t12_raw_headers",
       "path": "t12_raw",
       "source": {
         "system": "cell",
         "sheet": "T12 Input",
         "address": "M11",
-        "label": "Analyzer T12 Input!M11 — operator's T-12 month header (e.g. 'Apr 2025')"
+        "label": "Analyzer T12 Input!M11 \u2014 operator's T-12 month header (e.g. 'Apr 2025')"
       },
       "targets": {
         "v4": null,
@@ -3455,18 +3455,18 @@
         }
       },
       "status": "mapped",
-      "notes": "Operator-requested 2026-05-27 — header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!M11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!M122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
+      "notes": "Operator-requested 2026-05-27 \u2014 header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!M11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!M122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
     },
     {
       "key": "t12_raw_month_12",
-      "label": "T-12 monthly header — month 12 (T-12 end)",
+      "label": "T-12 monthly header \u2014 month 12 (T-12 end)",
       "category": "t12_raw_headers",
       "path": "t12_raw",
       "source": {
         "system": "cell",
         "sheet": "T12 Input",
         "address": "N11",
-        "label": "Analyzer T12 Input!N11 — operator's T-12 month header (e.g. 'Apr 2025')"
+        "label": "Analyzer T12 Input!N11 \u2014 operator's T-12 month header (e.g. 'Apr 2025')"
       },
       "targets": {
         "v4": null,
@@ -3479,7 +3479,7 @@
         }
       },
       "status": "mapped",
-      "notes": "Operator-requested 2026-05-27 — header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!N11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!N122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
+      "notes": "Operator-requested 2026-05-27 \u2014 header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!N11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!N122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
     }
   ],
   "intake_targets_unmapped": [
@@ -3529,7 +3529,7 @@
       "sheet": "T-12 Analysis",
       "rows_range": "rows 1-54",
       "kind": "derived",
-      "notes": "Layer 3 (rows 55+) is the paste target. Rows 1-54 are diagnostic outputs computed from Layer 3 — writer must not overwrite. Rows 4-16 are reconciliation/trend dashboards; rows 18-27 are economic-vs-physical occupancy; rows 29-35 are bad-debt layered analysis; rows 37-50 are RE tax / P&C accrual checks."
+      "notes": "Layer 3 (rows 55+) is the paste target. Rows 1-54 are diagnostic outputs computed from Layer 3 \u2014 writer must not overwrite. Rows 4-16 are reconciliation/trend dashboards; rows 18-27 are economic-vs-physical occupancy; rows 29-35 are bad-debt layered analysis; rows 37-50 are RE tax / P&C accrual checks."
     },
     {
       "sheet": "T-12 Analysis",
@@ -3541,19 +3541,19 @@
       "sheet": "T-12 Analysis",
       "rows_range": "rows 117-177",
       "kind": "manual",
-      "notes": "Layer 1 (raw T-12 paste, rows 119-172) is the operator's source GL — analyst pastes operator's T-12 directly here, not from Analyzer. Section J (173-177) computes raw totals from Layer 1 for tie-out."
+      "notes": "Layer 1 (raw T-12 paste, rows 119-172) is the operator's source GL \u2014 analyst pastes operator's T-12 directly here, not from Analyzer. Section J (173-177) computes raw totals from Layer 1 for tie-out."
     },
     {
       "sheet": "Rent Roll Analysis",
       "rows_range": "rows 1-209 (diagnostic sections A-R)",
       "kind": "derived",
-      "notes": "Header diagnostic sections (Health Check, Census, Status Taxonomy, GPR Reconciliation, LOS Cohort, Days Vacant, Delinquency, Payer Mix, Rate-by-Care, Charge Variance, Deposit Coverage, Move-in Seasonality, Pre-Admission Pipeline, Wing Vacancy). All formula-derived from the row 211+ paste — writer must not overwrite."
+      "notes": "Header diagnostic sections (Health Check, Census, Status Taxonomy, GPR Reconciliation, LOS Cohort, Days Vacant, Delinquency, Payer Mix, Rate-by-Care, Charge Variance, Deposit Coverage, Move-in Seasonality, Pre-Admission Pipeline, Wing Vacancy). All formula-derived from the row 211+ paste \u2014 writer must not overwrite."
     },
     {
       "sheet": "Rent Roll Analysis",
       "rows_range": "row 211+",
       "kind": "paste_anchor",
-      "notes": "34-col paste from Analyzer Rent Roll Input rows 7-606. Column positions DO NOT match 1:1 — see rent_roll path concepts. Formula-derived cols on the template side (V, X, Y, Z, AA, AB, AS) must NOT be overwritten by paste."
+      "notes": "34-col paste from Analyzer Rent Roll Input rows 7-606. Column positions DO NOT match 1:1 \u2014 see rent_roll path concepts. Formula-derived cols on the template side (V, X, Y, Z, AA, AB, AS) must NOT be overwritten by paste."
     },
     {
       "sheet": "Rent Roll Analysis",
@@ -3565,17 +3565,17 @@
       "sheet": "Rent Roll Analysis",
       "rows_range": "cols V, X, Y, Z, AA, AB",
       "kind": "derived",
-      "notes": "$/SqFt/Yr (V), Care|UnitType (X), Care|Unit (Y), _key (Z), Mkt-Actual $ (AA), Mkt-Actual % (AB) — formula columns. Do not overwrite."
+      "notes": "$/SqFt/Yr (V), Care|UnitType (X), Care|Unit (Y), _key (Z), Mkt-Actual $ (AA), Mkt-Actual % (AB) \u2014 formula columns. Do not overwrite."
     }
   ],
   "open_questions": [
-    "Bad Debt placement — revenue contra (template row 62) vs opex (template row 106). Need user decision before writer ships.",
-    "2nd Person Revenue — extend UW Output to expose, or have writer pull directly from Rent Roll Input!V?",
-    "Monthly grid — accept blank B-M in v0.1, or widen UW Export contract first?",
-    "Date header at Rent Roll Analysis!A5 — does it expect RR period date in B5 or D5? Confirm format (yyyy-mm-dd vs Excel date).",
-    "Rent Roll Analysis header rows 1-209 — the contract specifies paste anchor at row 211 (header at 210). Rows 1-209 contain diagnostic sections that read from the pasted block via formulas. Writer must not touch rows 1-210. (Confirms the existing 'derived' framing for the upper section.)",
-    "AR aging row-level routing — UW Template cols N-Q expect per-resident aging buckets, but the Analyzer's `AR & Collections` tab aggregates AR by payer, not by resident-bed. Routing aging $ to specific rent-roll rows needs an upstream substrate change (resident-key join into AR & Collections) before these concepts move off `gap_source`.",
-    "Cover substrate version stamp — deferred to v5.1 per the 2026-05-26 release handoff. Concept `substrate_version` stays gap_target for now.",
-    "Rent Roll Analysis tab-header Period Date metadata cell — still pending in v5.1. Per-row Period Date (Analyzer col S) is not pasted; concept stays gap_target."
+    "Bad Debt placement \u2014 revenue contra (template row 62) vs opex (template row 106). Need user decision before writer ships.",
+    "2nd Person Revenue \u2014 extend UW Output to expose, or have writer pull directly from Rent Roll Input!V?",
+    "Monthly grid \u2014 accept blank B-M in v0.1, or widen UW Export contract first?",
+    "Date header at Rent Roll Analysis!A5 \u2014 does it expect RR period date in B5 or D5? Confirm format (yyyy-mm-dd vs Excel date).",
+    "Rent Roll Analysis header rows 1-209 \u2014 the contract specifies paste anchor at row 211 (header at 210). Rows 1-209 contain diagnostic sections that read from the pasted block via formulas. Writer must not touch rows 1-210. (Confirms the existing 'derived' framing for the upper section.)",
+    "AR aging row-level routing \u2014 UW Template cols N-Q expect per-resident aging buckets, but the Analyzer's `AR & Collections` tab aggregates AR by payer, not by resident-bed. Routing aging $ to specific rent-roll rows needs an upstream substrate change (resident-key join into AR & Collections) before these concepts move off `gap_source`.",
+    "Cover substrate version stamp \u2014 deferred to v5.1 per the 2026-05-26 release handoff. Concept `substrate_version` stays gap_target for now.",
+    "Rent Roll Analysis tab-header Period Date metadata cell \u2014 still pending in v5.1. Per-row Period Date (Analyzer col S) is not pasted; concept stays gap_target."
   ]
 }
