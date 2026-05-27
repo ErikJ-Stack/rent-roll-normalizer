@@ -1,7 +1,7 @@
 {
   "schema": "uw-mapping/v1",
-  "registry_version": "0.4.0",
-  "generated_phase": "Track 4 / Phase 4 — v5.1 column restructure absorbed. Rent Roll Analysis: Unit Type inserted at new col D (before Status); old W (Unit Type base helper) + old AC (Apt Type) dropped; D-V shifted right to E-W; AD-AV shifted left to AC-AU. Net col count 48 → 47. rr_apt_type re-targets AC → D. Writer no code change; registry-only.",
+  "registry_version": "0.4.1",
+  "generated_phase": "Track 4 / Phase 4 — T-12 monthly headers added to registry. 12 new scalar concepts under path `t12_raw` propagate Analyzer T12 Input!C11:N11 (operator's actual T-12 period months) to UW Template T-12 Analysis!C122:N122. Row 56 (Layer 3 monthly headers) auto-updates via existing `={col}122` formula chain.",
   "analyzer": {
     "file": "ALF_Financial_Analyzer_Only.xlsx",
     "substrate_version": "v0.2.14",
@@ -243,7 +243,8 @@
     "rr_ancillary": "Rent Roll: Level-of-Care component columns (Care Level $, tier label, Med Mgmt, Pharmacy, Other LOC, Meal, Scooter, HK, Laundry, Pet).",
     "rr_subtotals": "Rent Roll: formula-derived subtotal columns (Total LOC, Total Monthly Rev, Total Ancillary).",
     "rr_other": "Rent Roll: ACH, AR Balance, Notes, Deposit — non-rate, non-ancillary per-row data.",
-    "ar_aging": "AR aging buckets per resident (0-30, 31-60, 61-90, 90+) — currently gap_source."
+    "ar_aging": "AR aging buckets per resident (0-30, 31-60, 61-90, 90+) — currently gap_source.",
+    "t12_raw_headers": "T-12 raw header row — month labels propagated from Analyzer T12 Input row 11 to UW Template T-12 Analysis row 122. Auto-cascades to row 56's standardized-layer monthly headers via existing `={col}122` formulas."
   },
   "concepts": [
     {
@@ -3191,6 +3192,294 @@
       },
       "status": "mapped",
       "notes": "Lives at Rent Roll Input!AJ as of substrate v0.2.14 (relocated from AI). Section N on Rent Roll Recon matches on Status='Preleased', not on the date column directly — the AI → AJ relocation had zero formula impact upstream. UW Template v4 still has no per-row Preleased Date column; status remains gap_target until template v5. · v5: Closed in v5 — UW Template col AR. Writer pastes from Rent Roll Input col AJ (substrate v0.2.14 relocation). Date format mm/dd/yyyy."
+    },
+    {
+      "key": "t12_raw_month_1",
+      "label": "T-12 monthly header — month 1 (T-12 start)",
+      "category": "t12_raw_headers",
+      "path": "t12_raw",
+      "source": {
+        "system": "cell",
+        "sheet": "T12 Input",
+        "address": "C11",
+        "label": "Analyzer T12 Input!C11 — operator's T-12 month header (e.g. 'Apr 2025')"
+      },
+      "targets": {
+        "v4": null,
+        "v5": {
+          "sheet": "T-12 Analysis",
+          "address": "C122",
+          "label_at": "A122",
+          "target_label": "Layer 1 header position 1 of 12",
+          "cascade_note": "Row 122 monthly headers; auto-cascades to `T-12 Analysis!C56` via existing formula `=C122` on row 56."
+        }
+      },
+      "status": "mapped",
+      "notes": "Operator-requested 2026-05-27 — header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!C11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!C122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
+    },
+    {
+      "key": "t12_raw_month_2",
+      "label": "T-12 monthly header — month 2",
+      "category": "t12_raw_headers",
+      "path": "t12_raw",
+      "source": {
+        "system": "cell",
+        "sheet": "T12 Input",
+        "address": "D11",
+        "label": "Analyzer T12 Input!D11 — operator's T-12 month header (e.g. 'Apr 2025')"
+      },
+      "targets": {
+        "v4": null,
+        "v5": {
+          "sheet": "T-12 Analysis",
+          "address": "D122",
+          "label_at": "A122",
+          "target_label": "Layer 1 header position 2 of 12",
+          "cascade_note": "Row 122 monthly headers; auto-cascades to `T-12 Analysis!C56` via existing formula `=D122` on row 56."
+        }
+      },
+      "status": "mapped",
+      "notes": "Operator-requested 2026-05-27 — header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!D11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!D122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
+    },
+    {
+      "key": "t12_raw_month_3",
+      "label": "T-12 monthly header — month 3",
+      "category": "t12_raw_headers",
+      "path": "t12_raw",
+      "source": {
+        "system": "cell",
+        "sheet": "T12 Input",
+        "address": "E11",
+        "label": "Analyzer T12 Input!E11 — operator's T-12 month header (e.g. 'Apr 2025')"
+      },
+      "targets": {
+        "v4": null,
+        "v5": {
+          "sheet": "T-12 Analysis",
+          "address": "E122",
+          "label_at": "A122",
+          "target_label": "Layer 1 header position 3 of 12",
+          "cascade_note": "Row 122 monthly headers; auto-cascades to `T-12 Analysis!D56` via existing formula `=E122` on row 56."
+        }
+      },
+      "status": "mapped",
+      "notes": "Operator-requested 2026-05-27 — header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!E11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!E122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
+    },
+    {
+      "key": "t12_raw_month_4",
+      "label": "T-12 monthly header — month 4",
+      "category": "t12_raw_headers",
+      "path": "t12_raw",
+      "source": {
+        "system": "cell",
+        "sheet": "T12 Input",
+        "address": "F11",
+        "label": "Analyzer T12 Input!F11 — operator's T-12 month header (e.g. 'Apr 2025')"
+      },
+      "targets": {
+        "v4": null,
+        "v5": {
+          "sheet": "T-12 Analysis",
+          "address": "F122",
+          "label_at": "A122",
+          "target_label": "Layer 1 header position 4 of 12",
+          "cascade_note": "Row 122 monthly headers; auto-cascades to `T-12 Analysis!E56` via existing formula `=F122` on row 56."
+        }
+      },
+      "status": "mapped",
+      "notes": "Operator-requested 2026-05-27 — header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!F11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!F122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
+    },
+    {
+      "key": "t12_raw_month_5",
+      "label": "T-12 monthly header — month 5",
+      "category": "t12_raw_headers",
+      "path": "t12_raw",
+      "source": {
+        "system": "cell",
+        "sheet": "T12 Input",
+        "address": "G11",
+        "label": "Analyzer T12 Input!G11 — operator's T-12 month header (e.g. 'Apr 2025')"
+      },
+      "targets": {
+        "v4": null,
+        "v5": {
+          "sheet": "T-12 Analysis",
+          "address": "G122",
+          "label_at": "A122",
+          "target_label": "Layer 1 header position 5 of 12",
+          "cascade_note": "Row 122 monthly headers; auto-cascades to `T-12 Analysis!F56` via existing formula `=G122` on row 56."
+        }
+      },
+      "status": "mapped",
+      "notes": "Operator-requested 2026-05-27 — header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!G11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!G122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
+    },
+    {
+      "key": "t12_raw_month_6",
+      "label": "T-12 monthly header — month 6",
+      "category": "t12_raw_headers",
+      "path": "t12_raw",
+      "source": {
+        "system": "cell",
+        "sheet": "T12 Input",
+        "address": "H11",
+        "label": "Analyzer T12 Input!H11 — operator's T-12 month header (e.g. 'Apr 2025')"
+      },
+      "targets": {
+        "v4": null,
+        "v5": {
+          "sheet": "T-12 Analysis",
+          "address": "H122",
+          "label_at": "A122",
+          "target_label": "Layer 1 header position 6 of 12",
+          "cascade_note": "Row 122 monthly headers; auto-cascades to `T-12 Analysis!G56` via existing formula `=H122` on row 56."
+        }
+      },
+      "status": "mapped",
+      "notes": "Operator-requested 2026-05-27 — header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!H11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!H122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
+    },
+    {
+      "key": "t12_raw_month_7",
+      "label": "T-12 monthly header — month 7",
+      "category": "t12_raw_headers",
+      "path": "t12_raw",
+      "source": {
+        "system": "cell",
+        "sheet": "T12 Input",
+        "address": "I11",
+        "label": "Analyzer T12 Input!I11 — operator's T-12 month header (e.g. 'Apr 2025')"
+      },
+      "targets": {
+        "v4": null,
+        "v5": {
+          "sheet": "T-12 Analysis",
+          "address": "I122",
+          "label_at": "A122",
+          "target_label": "Layer 1 header position 7 of 12",
+          "cascade_note": "Row 122 monthly headers; auto-cascades to `T-12 Analysis!H56` via existing formula `=I122` on row 56."
+        }
+      },
+      "status": "mapped",
+      "notes": "Operator-requested 2026-05-27 — header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!I11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!I122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
+    },
+    {
+      "key": "t12_raw_month_8",
+      "label": "T-12 monthly header — month 8",
+      "category": "t12_raw_headers",
+      "path": "t12_raw",
+      "source": {
+        "system": "cell",
+        "sheet": "T12 Input",
+        "address": "J11",
+        "label": "Analyzer T12 Input!J11 — operator's T-12 month header (e.g. 'Apr 2025')"
+      },
+      "targets": {
+        "v4": null,
+        "v5": {
+          "sheet": "T-12 Analysis",
+          "address": "J122",
+          "label_at": "A122",
+          "target_label": "Layer 1 header position 8 of 12",
+          "cascade_note": "Row 122 monthly headers; auto-cascades to `T-12 Analysis!I56` via existing formula `=J122` on row 56."
+        }
+      },
+      "status": "mapped",
+      "notes": "Operator-requested 2026-05-27 — header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!J11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!J122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
+    },
+    {
+      "key": "t12_raw_month_9",
+      "label": "T-12 monthly header — month 9",
+      "category": "t12_raw_headers",
+      "path": "t12_raw",
+      "source": {
+        "system": "cell",
+        "sheet": "T12 Input",
+        "address": "K11",
+        "label": "Analyzer T12 Input!K11 — operator's T-12 month header (e.g. 'Apr 2025')"
+      },
+      "targets": {
+        "v4": null,
+        "v5": {
+          "sheet": "T-12 Analysis",
+          "address": "K122",
+          "label_at": "A122",
+          "target_label": "Layer 1 header position 9 of 12",
+          "cascade_note": "Row 122 monthly headers; auto-cascades to `T-12 Analysis!J56` via existing formula `=K122` on row 56."
+        }
+      },
+      "status": "mapped",
+      "notes": "Operator-requested 2026-05-27 — header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!K11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!K122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
+    },
+    {
+      "key": "t12_raw_month_10",
+      "label": "T-12 monthly header — month 10",
+      "category": "t12_raw_headers",
+      "path": "t12_raw",
+      "source": {
+        "system": "cell",
+        "sheet": "T12 Input",
+        "address": "L11",
+        "label": "Analyzer T12 Input!L11 — operator's T-12 month header (e.g. 'Apr 2025')"
+      },
+      "targets": {
+        "v4": null,
+        "v5": {
+          "sheet": "T-12 Analysis",
+          "address": "L122",
+          "label_at": "A122",
+          "target_label": "Layer 1 header position 10 of 12",
+          "cascade_note": "Row 122 monthly headers; auto-cascades to `T-12 Analysis!K56` via existing formula `=L122` on row 56."
+        }
+      },
+      "status": "mapped",
+      "notes": "Operator-requested 2026-05-27 — header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!L11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!L122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
+    },
+    {
+      "key": "t12_raw_month_11",
+      "label": "T-12 monthly header — month 11",
+      "category": "t12_raw_headers",
+      "path": "t12_raw",
+      "source": {
+        "system": "cell",
+        "sheet": "T12 Input",
+        "address": "M11",
+        "label": "Analyzer T12 Input!M11 — operator's T-12 month header (e.g. 'Apr 2025')"
+      },
+      "targets": {
+        "v4": null,
+        "v5": {
+          "sheet": "T-12 Analysis",
+          "address": "M122",
+          "label_at": "A122",
+          "target_label": "Layer 1 header position 11 of 12",
+          "cascade_note": "Row 122 monthly headers; auto-cascades to `T-12 Analysis!L56` via existing formula `=M122` on row 56."
+        }
+      },
+      "status": "mapped",
+      "notes": "Operator-requested 2026-05-27 — header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!M11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!M122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
+    },
+    {
+      "key": "t12_raw_month_12",
+      "label": "T-12 monthly header — month 12 (T-12 end)",
+      "category": "t12_raw_headers",
+      "path": "t12_raw",
+      "source": {
+        "system": "cell",
+        "sheet": "T12 Input",
+        "address": "N11",
+        "label": "Analyzer T12 Input!N11 — operator's T-12 month header (e.g. 'Apr 2025')"
+      },
+      "targets": {
+        "v4": null,
+        "v5": {
+          "sheet": "T-12 Analysis",
+          "address": "N122",
+          "label_at": "A122",
+          "target_label": "Layer 1 header position 12 of 12",
+          "cascade_note": "Row 122 monthly headers; auto-cascades to `T-12 Analysis!M56` via existing formula `=N122` on row 56."
+        }
+      },
+      "status": "mapped",
+      "notes": "Operator-requested 2026-05-27 — header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!N11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!N122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
     }
   ],
   "intake_targets_unmapped": [

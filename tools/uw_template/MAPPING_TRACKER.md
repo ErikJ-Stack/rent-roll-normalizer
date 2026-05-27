@@ -1,6 +1,6 @@
 # ALF UW Template — Mapping Tracker
 
-> Generated from `tools/uw_template/registry.json` on 2026-05-27 17:23 UTC.  **Do not edit by hand** — edit `registry.json` and re-run `python tools/uw_template/build_mapping_artifacts.py`.
+> Generated from `tools/uw_template/registry.json` on 2026-05-27 18:24 UTC.  **Do not edit by hand** — edit `registry.json` and re-run `python tools/uw_template/build_mapping_artifacts.py`.
 
 - Analyzer source: `ALF_Financial_Analyzer_Only.xlsx` (substrate `v0.2.14`)
 - Primary template: `v4` → `Sample Files/ALF_UW_Template_v4.xlsx`
@@ -22,14 +22,14 @@
 
 | Status | Count |
 |---|---|
-| `mapped` | 95 |
+| `mapped` | 107 |
 | `gap_source` | 5 |
 | `proposed` | 4 |
 | `derived` | 3 |
 | `gap_target` | 2 |
 | `header_only` | 1 |
 | `substrate_ready_parser_pending` | 1 |
-| **Total concepts** | **111** |
+| **Total concepts** | **123** |
 
 ## Status rollup by path
 

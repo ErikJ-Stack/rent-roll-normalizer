@@ -73,7 +73,7 @@ APP_LAST_UPDATED = "2026-05-08"   # alias for RR_LAST_UPDATED
 RR_VERSION = "1.18.1"
 RR_LAST_UPDATED = "2026-05-25"
 
-UWT_VERSION = "0.5.1"             # Track 4 — UW Template integration (Phase 2.5)
+UWT_VERSION = "0.5.2"             # Track 4 — UW Template integration (Phase 2.5)
 UWT_LAST_UPDATED = "2026-05-27"
 
 T12_VERSION = "0.2.1"
@@ -822,13 +822,19 @@ with top_tab_workspace:
                   download alongside the populated Analyzer.
                 - Drill-in `PopulateReport` expander surfaces warnings,
                   outcome counts, and per-error notes.
-                - **Cache caveat:** openpyxl doesn't compute formulas, so
-                  the in-line populate flow leaves t12-path values blank
-                  on first pass. Workaround: download the Analyzer →
-                  open in Excel once (let it recalc + save) → re-upload
-                  via the "Analyzer template override" Advanced expander
-                  → re-trigger populate. The app surfaces this banner
-                  only when it actually applies.
+                - **⚠️ Cache caveat (READ THIS — known issue):**
+                  openpyxl (Python's xlsx library) **doesn't compute
+                  Excel formulas**. The Analyzer this app builds has
+                  formula text but no cached values. The UW Template
+                  writer reads cached values — so on first pass, the
+                  populated UW Template's T-12 Analysis Layer 3 (EGI,
+                  EBITDARM, opex line items) will be **BLANK**.
+                  Workaround: (1) download Analyzer, (2) open in Excel,
+                  let it compute, save, (3) upload as **"Analyzer
+                  template override"** in sidebar's Advanced expander,
+                  (4) re-download UW Template — now fully populated.
+                  An in-Python formula evaluator is on the roadmap to
+                  eliminate this round-trip entirely.
 
                 **Combined output:** When you upload RR + T12 (+ optional
                 AR + optional UW Template), you get a single populated
@@ -1438,22 +1444,44 @@ with top_tab_workspace:
                             key="dl_uw_template",
                         )
 
-                        # Cache-state caveat — surface so the analyst knows
-                        # why some t12-path cells may be blank even though
-                        # the Analyzer "has" the data.
-                        if any(
-                            r.outcome == "no_source"
-                            and r.path == "t12"
-                            for r in uw_report.results
-                        ):
-                            st.info(
-                                "ℹ️ Some UW Output values came through as "
-                                "blank — Analyzer formulas haven't been "
-                                "computed yet. Open the downloaded Analyzer "
-                                "in Excel once (let it recalc), save, then "
-                                "re-upload as 'Analyzer template override' "
-                                "in the Advanced expander to get fully "
-                                "populated UW Template values."
+                        # Cache-state caveat — IMPOSSIBLE-TO-MISS warning
+                        # when the t12-path comes through empty. The
+                        # populated template will have BLANK T-12 Analysis
+                        # values unless the analyst round-trips the
+                        # Analyzer through Excel first. We've had operators
+                        # hit this without realizing — promote to
+                        # st.warning + explicit step-by-step.
+                        t12_no_source = [
+                            r for r in uw_report.results
+                            if r.outcome == "no_source" and r.path == "t12"
+                        ]
+                        if t12_no_source:
+                            n_blank = len(t12_no_source)
+                            st.warning(
+                                f"⚠️ **T-12 Analysis tab will be mostly "
+                                f"BLANK** — {n_blank} of the T-12 values "
+                                f"came through as `no_source` because "
+                                f"openpyxl (Python's xlsx library) doesn't "
+                                f"compute Excel formulas. The Analyzer "
+                                f"this app just built has the formula "
+                                f"text but no cached values — and the "
+                                f"writer reads cached values.\n\n"
+                                f"**To get a fully populated UW Template:**\n"
+                                f"1. Download the Analyzer (above).\n"
+                                f"2. **Open it in Excel.** Wait for it to "
+                                f"compute (a few seconds). Save it.\n"
+                                f"3. Come back here and **upload the "
+                                f"saved-from-Excel Analyzer as "
+                                f"\"Analyzer template override\"** in the "
+                                f"sidebar's Advanced expander.\n"
+                                f"4. The page reruns. Re-download the UW "
+                                f"Template — T-12 Analysis Layer 3 will "
+                                f"now be populated with EGI, EBITDARM, "
+                                f"opex line items, etc.\n\n"
+                                f"This is a known limitation (openpyxl "
+                                f"quirk) — an in-Python formula evaluator "
+                                f"is on the roadmap to eliminate this "
+                                f"workaround entirely."
                             )
 
                 except UWTemplateWriterError as e:

@@ -13,13 +13,14 @@
 > add-in taskpane). Path forward: operator authors the two cells in Excel via
 > Cowork per `tools/uw_template/handoffs/2026-05-26-uwt-v5-to-v51-residual-gaps.md`.
 > See openpyxl quirk #6 in CLAUDE.md for technical detail.
-> **Current code version:** UWT v0.5.1 (registry v0.4.0 — substantial
-> structural shift). v5.1 column restructure absorbed: Unit Type
-> inserted at new Rent Roll Analysis col D (before Status), old W +
-> AC dropped, 36 rent_roll-path concept targets shifted accordingly
-> (right-shift D-V → E-W; left-shift AD-AV → AC-AU); T-12 Analysis +
-> Prop Info + Cover targets unchanged. Skipped v0.5.0 — used by
-> rolled-back metadata-cells attempt.
+> **Current code version:** UWT v0.5.2 (registry v0.4.1 — 12 new
+> month-header concepts added under path `t12_raw`). Writer now
+> pastes Analyzer's T12 Input!C11:N11 (actual T-12 period months)
+> into T-12 Analysis!C122:N122; auto-cascades to row 56's monthly
+> headers via existing `=C122..=N122` formula chain. Also: cache
+> caveat surfaced loud-and-clear via `st.warning` (was `st.info`)
+> with explicit step-by-step workaround instructions; added to
+> Workspace "What the app does" expander as a known-issue callout.
 > **Target template version:** `v5` (`Sample Files/ALF_UW_Template_v5.xlsx`
 > — repo canonical copy mirrored from `Deals/Acquisition/_Template/ALF Templates/`).
 > v4 still supported via `template_version='v4'` for backward compat.
@@ -285,6 +286,7 @@ All 15 are tracked as `open_questions` in `registry.json`.
 - Phase 2.5 patch ships UWT v0.4.3 — fills v5 template's W/X/Y formula columns through row 610, unblocking Section R / Section S diagnostics that depended on those columns.
 - Phase 2.5 re-fix ships UWT v0.4.4 — operator's `deacc41` "refresh assets" edit replaced v0.4.3's `W = =AC{r}` with a substring-Notes-parser that fails on real rent rolls (Notes col S doesn't carry unit-type wording). v0.4.4 restores AC reference with occupancy gate, adds IFERROR wrappers on A173/B173, swaps D173 placeholders for real per-unit sq ft via AVERAGEIFS on col T.
 - **Phase 4 ships UWT v0.5.1 — v5.1 column restructure absorbed** (skipping v0.5.0 used by rolled-back attempt). Operator authored in Excel: Unit Type inserted at new col D before Status; old W + AC dropped; 18 concepts right-shift (D-V→E-W); 17 concepts left-shift (AD-AV→AC-AU); rr_apt_type retargets AC→D. 36 total rent_roll concept target updates. T-12 / Prop Info / Cover targets unchanged (caught + fixed an absorber bug that initially shifted T-12 cells too).
+- **Phase 4 follow-up ships UWT v0.5.2 — T-12 monthly headers + cache caveat UX**. Operator-reported sample-run issue: T-12 data not populated + headers should be actual months/year. Investigation: labels match correctly (no fix needed); T-12 data empty due to cache caveat (openpyxl doesn't compute Analyzer formulas — UX fix shipped: promoted banner from `st.info` to `st.warning` with explicit step-by-step; added callout to Workspace expander); month headers hardcoded (fix shipped: 12 new `t12_raw` scalar concepts paste Analyzer T12 Input!C11:N11 → T-12 Analysis!C122:N122, auto-cascading to row 56). Registry 0.4.0 → 0.4.1. In-Python formula evaluator queued as follow-up to eliminate the cache caveat round-trip entirely.
 - Phase 3.5 ships **handoff infrastructure** (`tools/uw_template/HANDOFF_TRACKER.md` + `HANDOFF_TEMPLATE.md` + `handoffs/`) bundled into commit `031e24f` (UWT v0.2.0 → v0.4.0 ship, earlier 2026-05-26) — no separate UWT version bump for the infrastructure itself. Later-2026-05-26 augmentations during the v0.5.0 attempt: added `Superseded` to the status legend, added the 2026-05-26 handoff brief, marked the older 2026-05-25 brief Superseded.
 - Phase 3.6 / UWT v0.5.0 **attempted then rolled back** on 2026-05-26 — direct openpyxl patch of v5 template's two residual `gap_target` cells (substrate version stamp on Cover, RR Analysis Period Date at B5) appeared clean at the Worksheet-object fidelity layer but silently dropped `xl/metadata.xml` (`XLDAPR`/`fDynamic` dynamic-array properties) and `xl/webextensions/` (Claude-for-Excel add-in) at the xlsx-zip-archive layer. Template restored from git `deacc41`, registry reverted v0.3.1 → v0.3.0, UWT_VERSION restored 0.5.0 → 0.4.3. Two patch scripts retained as audit trail (`tools/uw_template/_patch_v5_to_v51_metadata_cells.py` + `_revert_registry_to_v030.py`) — **do not re-run the patch script.** Operator-authored v5.1 (via Cowork → Excel) is the only safe path forward. See CHANGELOG-UWT.md and CLAUDE.md openpyxl quirk #6 for forensics.
 

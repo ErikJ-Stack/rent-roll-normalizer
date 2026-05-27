@@ -8,6 +8,121 @@ opened (none yet — Phase 0 is the seed release).
 
 ---
 
+## v0.5.2 — T-12 monthly headers from operator's raw T-12 (2026-05-27)
+
+Operator-reported 2026-05-27 after sample-running v0.5.1 populated UW
+Template: "The T12 data isn't populated. Check that the headers match
+from the analyzer. Also, header dates should be actual months and Year
+that's in the t12 raw data."
+
+Three findings investigated:
+
+  1. **Labels match correctly** ✓ — registry's target rows align with
+     T-12 Analysis labels (EGI → N69, EBITDARM → N116, etc.). No fix
+     needed.
+  2. **T-12 data not populated** — cache caveat in action. The
+     Analyzer the writer read from didn't have cached UW Output formula
+     values (openpyxl doesn't compute formulas), so writer's
+     `_resolve_source()` returned None for every t12-path concept,
+     producing `no_source` outcomes across the board. None of the
+     T-12 Analysis Layer 3 cells got writer-pasted; template's fallback
+     SUM formulas at N69/N85/N111/N116 evaluate to 0 because upstream
+     cells (N58, N71:N84, etc.) are all empty.
+  3. **Hardcoded month headers** — `T-12 Analysis!C122:N122` are
+     static `Apr-25`...`Mar-26` strings, not per-deal months. For any
+     T-12 period other than Apr 2025 - Mar 2026, the template would
+     show the wrong months on Layer 1 (Section 3) AND on Layer 3
+     (row 56 monthly headers, which formula-pull from row 122).
+
+### Shipped — fixes #1 and #3 (label finding) + #3 (month headers)
+
+  **12 new month-header concepts** added to registry via
+  `tools/uw_template/_phase4_add_month_headers.py`:
+
+    t12_raw_month_1   T12 Input!C11 ('Apr 2025')  →  T-12 Analysis!C122
+    t12_raw_month_2   T12 Input!D11 ('May 2025')  →  T-12 Analysis!D122
+    ...
+    t12_raw_month_12  T12 Input!N11 ('Mar 2026')  →  T-12 Analysis!N122
+
+  Path: `t12_raw`. Status: `mapped`. Source.system: `cell` (existing
+  scalar handler). 12 scalar concepts — no writer code change. Row 56's
+  existing `=C122..=N122` formula chain auto-pulls the new values.
+
+  Registry: 0.4.0 → 0.4.1. Total concepts: 111 → 123 (+12). New
+  category: `t12_raw_headers`.
+
+### Shipped — cache caveat surfaced loud-and-clear
+
+  Promoted the in-app cache caveat banner from `st.info` to `st.warning`
+  with explicit step-by-step instructions. Operators were hitting the
+  cache caveat without realizing — populated UW Template's T-12 tab
+  came up empty and they thought the writer was broken. The new warning:
+
+    ⚠️ T-12 Analysis tab will be mostly BLANK — {N} of the T-12 values
+    came through as no_source because openpyxl doesn't compute Excel
+    formulas. The Analyzer this app just built has formula text but
+    no cached values — and the writer reads cached values.
+
+    To get a fully populated UW Template:
+    1. Download the Analyzer (above).
+    2. Open it in Excel. Wait for it to compute. Save it.
+    3. Come back here and upload the saved-from-Excel Analyzer as
+       "Analyzer template override" in the sidebar's Advanced expander.
+    4. The page reruns. Re-download the UW Template.
+
+    This is a known limitation (openpyxl quirk) — an in-Python
+    formula evaluator is on the roadmap.
+
+  Also added a ⚠️ Cache caveat callout to the **"What the app does"**
+  workspace expander so operators see it BEFORE hitting the issue, not
+  AFTER.
+
+### Verification
+
+  - Writer regression on Homestead populated fixture: 102 concepts
+    written (was 90, +12 month headers) / 3,244 cells (was 3,232, +12).
+  - Spot-check: T-12 Analysis C122 = 'Apr 2025', D122 = 'May 2025',
+    ..., N122 = 'Mar 2026' (the real T-12 period months). Row 56's
+    `=C122..=N122` formulas pick these up on Excel open.
+  - Labels still align: registry's target rows for `egi` (N69),
+    `ebitdarm` (N116), `ebitda` (N118), etc. match the template's
+    A-column labels exactly.
+  - Empty-Analyzer smoke test passes — concept count assertion
+    updated 111 → 123.
+  - `app.py` parses clean.
+  - No registry schema changes — just additive new concepts.
+
+### In-Python formula evaluator (roadmap, NOT in this release)
+
+The cache caveat is the last big rough edge in the operator workflow.
+Logged as a follow-up: embed `formulas` / `pycel` / `xlcalculator` (or
+extend the `dashboard_model.py` pure-Python pattern from Track 5) so
+the writer can read computed UW Output values directly from the
+in-memory Analyzer the app just built, without requiring the Excel
+round-trip. Estimated 4-8 hours; substantial but eliminates the
+biggest UX friction.
+
+### Out of scope
+
+  - **BL-0026 (broader T-12 Raw path)** — still blocked on operator
+    direction pick. The month headers shipped today are the
+    independent "cherry on top" piece — they don't depend on the
+    Layer 1 capacity question.
+  - **BL-0027** (README modernization) — low priority.
+  - **v5.1 metadata cells** (Cover stamp + RR Period Date in
+    `_v51_metadata_cells` handoff brief) — still pending operator
+    Excel pass; `_absorb_v51_metadata_cells.py` pre-wired.
+
+### Versioning
+
+  - UWT code version: **v0.5.2** (T-12 month-header concepts +
+    cache-caveat UX).
+  - Mapping registry version: **0.4.1** (additive — 12 new concepts).
+  - Template versions supported: v4 + v5 (unchanged).
+  - Analyzer substrate mapped against: v0.2.14 (unchanged).
+
+---
+
 ## v0.5.1 — v5.1 column restructure absorbed (2026-05-27)
 
 Operator authored v5.1 in Excel per the
