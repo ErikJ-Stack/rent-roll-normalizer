@@ -116,6 +116,15 @@ _T12_MONTH_COLS = tuple(range(2, 14))  # B..M
 _T12_NET_RENT_ROW = 63
 _N_REF_RE = re.compile(r"\bN(\d+)")
 
+# Section I (Layer 1 — Raw T-12): header at row 122; data rows 123..172;
+# cols A(1)=Acct#, B(2)=Account Name, C..N(3..14)=12 months, O(15)=T-12 Total,
+# P(16)=→ MAPPING bucket. Section J raw-totals reconciliation at 176/177/178.
+_SECTION_I_START = 123
+_SECTION_I_END = 172
+_SECTION_J_REVENUE_ROW = 176
+_SECTION_J_OPEX_ROW = 177
+_SECTION_J_EBITDAR_ROW = 178
+
 # Status colours mirror the generator — duplicated here so the writer can
 # tag the report with consistent labels.
 _STATUS_LABELS: dict[str, str] = {
@@ -447,6 +456,64 @@ def _finalize_t12_layer3(ws, monthly: dict[str, list]) -> int:
     return written
 
 
+def _write_section_i_raw(ws, raw_lines: list) -> tuple[int, list[str]]:
+    """Populate Section I (Layer 1 — Raw T-12) from the summarized raw lines.
+
+    Rebuilds the section: clears the pre-filled skeleton (rows 123–172, cols
+    A–P) and writes one row per Analyzer label —
+    B = matched GL account names, C–N = 12 monthly values, O = T-12 total,
+    P = the standardized bucket (label). Authors the Section J raw-totals
+    reconciliation (Total Revenue / Total OpEx / EBITDAR) as live SUM formulas
+    over the rows just written.
+
+    Returns (cells_written, warnings).
+    """
+    warnings: list[str] = []
+    capacity = _SECTION_I_END - _SECTION_I_START + 1
+    if len(raw_lines) > capacity:
+        warnings.append(
+            f"Section I holds {capacity} raw lines but the T-12 has "
+            f"{len(raw_lines)} — truncating."
+        )
+        raw_lines = raw_lines[:capacity]
+
+    # Clear the skeleton (A..P) across the full data band.
+    for r in range(_SECTION_I_START, _SECTION_I_END + 1):
+        for c in range(1, 17):
+            ws.cell(row=r, column=c).value = None
+
+    written = 0
+    rev_rows: list[int] = []
+    opex_rows: list[int] = []
+    for i, line in enumerate(raw_lines):
+        r = _SECTION_I_START + i
+        ws.cell(row=r, column=2).value = " | ".join(line.get("descriptions") or []) or line["label"]
+        mvals = line.get("monthly") or []
+        # Section I months are cols C..N (3..14); O(15)=total, P(16)=bucket.
+        for j in range(min(12, len(mvals))):
+            ws.cell(row=r, column=3 + j).value = mvals[j]
+        ws.cell(row=r, column=15).value = line.get("total")
+        ws.cell(row=r, column=16).value = line["label"]
+        written += 3 + min(len(mvals), 12)  # B + O + P + months
+        (rev_rows if line.get("section") == "Revenue" else opex_rows).append(r)
+
+    # Section J — raw-totals reconciliation (live SUM formulas over O-column).
+    def _sum_o(rows: list[int]) -> str:
+        if not rows:
+            return "0"
+        return "=" + "+".join(f"O{r}" for r in rows) if len(rows) <= 3 else (
+            f"=SUM(O{rows[0]}:O{rows[-1]})"
+        )
+
+    ws.cell(row=_SECTION_J_REVENUE_ROW, column=15).value = _sum_o(rev_rows)
+    ws.cell(row=_SECTION_J_OPEX_ROW, column=15).value = _sum_o(opex_rows)
+    ws.cell(row=_SECTION_J_EBITDAR_ROW, column=15).value = (
+        f"=O{_SECTION_J_REVENUE_ROW}-O{_SECTION_J_OPEX_ROW}"
+    )
+    written += 3
+    return written, warnings
+
+
 def _write_column_stride(
     ws, col_letter: str, start_row: int, values: list[Any],
     max_rows: int = 600,
@@ -664,6 +731,7 @@ def populate_uw_template(
     allow_special_keys: frozenset[str] | None = None,
     computed_values: dict[str, Any] | None = None,
     computed_monthly: dict[str, list] | None = None,
+    raw_t12_lines: list | None = None,
 ) -> tuple[bytes, PopulateReport]:
     """Populate the UW Template from a populated Analyzer workbook.
 
@@ -948,11 +1016,20 @@ def populate_uw_template(
     # across the monthly grid B–M), so they recompute from the line items and
     # tie month-to-annual. Runs after the line items are written.
     t12_finalized = 0
+    section_i_cells = 0
     if template_version == "v5" and "T-12 Analysis" in wb_template.sheetnames:
+        ws_t12 = wb_template["T-12 Analysis"]
         try:
-            t12_finalized = _finalize_t12_layer3(wb_template["T-12 Analysis"], monthly)
+            t12_finalized = _finalize_t12_layer3(ws_t12, monthly)
         except Exception as e:  # never fail the populate over the finalize pass
             report.warnings.append(f"T-12 Analysis total-formula finalize skipped ({e}).")
+        # Section I (Layer 1 — Raw T-12): rebuild from the summarized raw lines.
+        if raw_t12_lines:
+            try:
+                section_i_cells, si_warnings = _write_section_i_raw(ws_t12, raw_t12_lines)
+                report.warnings.extend(si_warnings)
+            except Exception as e:
+                report.warnings.append(f"Section I (raw T-12) population skipped ({e}).")
 
     # ── Summary ───────────────────────────────────────────────────────────────
     by = report.by_outcome()
@@ -964,6 +1041,7 @@ def populate_uw_template(
     )
     report.summary["monthly_cells_written"] = monthly_cells
     report.summary["t12_totals_finalized"] = t12_finalized
+    report.summary["section_i_raw_cells"] = section_i_cells
 
     # ── Serialize ─────────────────────────────────────────────────────────────
     out = io.BytesIO()

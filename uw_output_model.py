@@ -269,6 +269,75 @@ def compute_uw_output_values(
     return out
 
 
+# Canonical Layer-1 raw-line order (P&L sequence) + revenue classification.
+_T12_RAW_LINE_ORDER: tuple = (
+    "Base rent — IL", "Base rent — AL", "Base rent — MC",
+    "Gross Rent Revenue",
+    "LOC revenue — IL", "LOC revenue — AL", "LOC revenue — MC",
+    "2nd Person Revenue",
+    *_LABELS_OTHER_REV,
+    *_LABELS_DIRECT_LABOR,
+    *_LABELS_PAYROLL_BURDEN,
+    *_LABELS_NON_LABOR,
+    "Management fee",
+)
+_T12_RAW_REVENUE_LABELS: frozenset = frozenset({
+    "Base rent — IL", "Base rent — AL", "Base rent — MC", "Gross Rent Revenue",
+    "LOC revenue — IL", "LOC revenue — AL", "LOC revenue — MC",
+    "2nd Person Revenue", *_LABELS_OTHER_REV,
+})
+
+
+def compute_t12_raw_lines(
+    t12_result: Optional[T12ParseResult] = None,
+    *,
+    analyzer_path: Optional[Path] = None,
+) -> list:
+    """Return the summarized raw T-12, grouped by Description_Map label.
+
+    One entry per label that has GL data, each a dict::
+
+        {"label": str, "section": "Revenue"|"Expense",
+         "descriptions": [raw GL account names], "monthly": [12 floats],
+         "total": float}
+
+    Feeds the UW Template writer's Section I (Layer 1 — Raw T-12) population.
+    Computed from the parsed T12 (not read from the Analyzer's `T12 Raw Data`
+    sheet, whose monthly cells are formulas and would be blank on a freshly
+    built Analyzer — same cache caveat as the rest of the engine). Ordered in
+    P&L sequence; any label outside the canonical order is appended.
+    """
+    if t12_result is None:
+        return []
+    descmap = load_description_map(analyzer_path or _BUNDLED_ANALYZER)
+
+    by_label: Dict[str, dict] = {}
+    for row in t12_result.gl_rows:
+        desc = (row.description or "").strip()
+        label = descmap.get(desc)
+        if not label:
+            continue  # unmapped lines are excluded (mirrors T12 Raw Data)
+        d = by_label.get(label)
+        if d is None:
+            d = {
+                "label": label,
+                "section": "Revenue" if label in _T12_RAW_REVENUE_LABELS else "Expense",
+                "descriptions": [],
+                "monthly": [0.0] * 12,
+                "total": 0.0,
+            }
+            by_label[label] = d
+        if desc and desc not in d["descriptions"]:
+            d["descriptions"].append(desc)
+        d["total"] += float(row.total or 0.0)
+        for i, v in enumerate(row.monthly or []):
+            if i < 12:
+                d["monthly"][i] += float(v or 0.0)
+
+    order = {lbl: i for i, lbl in enumerate(_T12_RAW_LINE_ORDER)}
+    return sorted(by_label.values(), key=lambda d: order.get(d["label"], 9999))
+
+
 def compute_uw_output_monthly(
     rr_result: NormalizeResult,
     t12_result: Optional[T12ParseResult] = None,

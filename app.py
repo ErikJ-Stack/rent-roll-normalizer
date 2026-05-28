@@ -60,7 +60,11 @@ from uw_template_writer import (
     UWTemplateWriterError,
     populate_uw_template,
 )
-from uw_output_model import compute_uw_output_values, compute_uw_output_monthly
+from uw_output_model import (
+    compute_uw_output_values,
+    compute_uw_output_monthly,
+    compute_t12_raw_lines,
+)
 from writer import write_output
 
 
@@ -74,7 +78,7 @@ APP_LAST_UPDATED = "2026-05-08"   # alias for RR_LAST_UPDATED
 RR_VERSION = "1.19.0"
 RR_LAST_UPDATED = "2026-05-27"
 
-UWT_VERSION = "0.6.3"             # Track 4 — T-12 Analysis totals as live formulas + waterfall sign fix
+UWT_VERSION = "0.6.4"             # Track 4 — Section I (Layer 1 Raw T-12) populated from summarized raw lines
 UWT_LAST_UPDATED = "2026-05-28"
 
 T12_VERSION = "0.2.1"
@@ -1392,6 +1396,8 @@ with top_tab_workspace:
                     # Monthly breakdown for the T-12 Analysis Layer-3 grid
                     # (cols B–M). Empty when no T12 — those rows stay blank.
                     uw_monthly = compute_uw_output_monthly(result, t12_parse_result)
+                    # Summarized raw T-12 (by label) for Section I / Layer 1.
+                    uw_raw_lines = compute_t12_raw_lines(t12_parse_result)
 
                     with _show_loading("Populating UW Template…"):
                         populated_uw, uw_report = populate_uw_template(
@@ -1401,6 +1407,7 @@ with top_tab_workspace:
                             template_version=uw_template_version,
                             computed_values=uw_computed,
                             computed_monthly=uw_monthly,
+                            raw_t12_lines=uw_raw_lines,
                         )
                         # Sanitize for filename
                         safe_property = "".join(

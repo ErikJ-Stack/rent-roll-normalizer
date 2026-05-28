@@ -8,6 +8,24 @@ opened (none yet — Phase 0 is the seed release).
 
 ---
 
+## v0.6.4 — Section I (Layer 1 — Raw T-12) populated (2026-05-28)
+
+Operator request: "the summarized Raw data should be inserted in Section I of T-12 Analysis." Section I is the Layer-1 raw-T12 paste grid (rows 122–172: `Acct # | Account Name | Apr-25…Mar-26 | T-12 Total | → MAPPING`) — previously an empty skeleton with pre-assigned bucket labels in col P. Two operator decisions confirmed: **rebuild one row per Analyzer label** and **Account Name = matched GL account names**.
+
+### Engine — `compute_t12_raw_lines` (`uw_output_model.py`)
+
+New function returning the summarized raw T-12 grouped by Description_Map label: `{label, section (Revenue/Expense), descriptions [raw GL names], monthly [12], total}`. Computed from the parsed `T12ParseResult.gl_rows` (not read from the Analyzer's `T12 Raw Data` sheet, whose monthly cells are formulas → blank on a fresh Analyzer — same cache caveat). Ordered in P&L sequence; unmapped GL lines excluded (mirrors `T12 Raw Data`).
+
+### Writer — `_write_section_i_raw` + `populate_uw_template(..., raw_t12_lines=...)`
+
+Rebuilds Section I: clears the skeleton (rows 123–172, cols A–P) and writes one row per label — B = matched GL account names (`" | ".join`), C–N = 12 monthly values, O = T-12 total, P = standardized bucket (label). Authors the **Section J raw-totals reconciliation** (Total Revenue / Total OpEx / EBITDAR) as live SUM formulas over the rows written. New `report.summary['section_i_raw_cells']`.
+
+### Result (Homestead)
+
+44 raw lines (8 revenue / 36 expense), 663 cells. Each row's 12 months tie to its T-12 Total; Section J EBITDAR reconciles to **$1,411,324 — the penny-exact as-reported NOI** (vs the standardized Layer-3 EBITDAR $1,417,385; the ~$6K gap is the bad-debt-as-revenue-contra standardization, which is exactly what the raw-vs-standardized reconciliation is for). New `tests/test_uw_output_model.py::test_section_i_raw_populated`. `UWT_VERSION` 0.6.3 → 0.6.4.
+
+---
+
 ## v0.6.3 — T-12 Analysis totals as live formulas + waterfall sign fix (2026-05-28)
 
 Operator-reported math inconsistencies on the populated UW Template's T-12 Analysis Layer 3: (1) the totals were pasted values that didn't recompute or tie to the line items; (2) the GPR→Net Rent income waterfall didn't subtract its loss lines ("$9.5M GPR minus losses ≠ $6.98M Net Rent"); (3) `Total Operating Expenses (N114) = 0`. Two operator decisions confirmed before implementing: **bad debt reduces EGI** (honor the template's N63 formula) and **monthly totals mirror formulas across B–M**.

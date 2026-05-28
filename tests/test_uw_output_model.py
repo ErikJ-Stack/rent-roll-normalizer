@@ -322,6 +322,54 @@ def test_monthly_grid_reconciles() -> None:
     )
 
 
+def test_section_i_raw_populated() -> None:
+    """Section I (Layer 1 — Raw T-12) is rebuilt one row per Analyzer label:
+    Account Name = matched GL names, months C–N tie to the T-12 Total (O)."""
+    if not (RR_FIXTURE.exists() and T12_FIXTURE.exists() and TEMPLATE_V5.exists()):
+        print("  ⊘ SKIP test_section_i_raw_populated — fixtures absent")
+        return
+
+    import io as _io
+    from analyzer_rr_translator import translate_for_t12
+    from analyzer_rr_writer import populate_rr_input
+    from t12_normalizer_writer import populate_t12_input
+    from uw_output_model import (
+        compute_uw_output_values, compute_uw_output_monthly, compute_t12_raw_lines,
+    )
+    from uw_template_writer import populate_uw_template
+
+    rr, t12 = _parse_inputs()
+    raw = compute_t12_raw_lines(t12)
+    _check(len(raw) >= 20, f"expected many raw lines, got {len(raw)}")
+    _check(all(abs(sum(l["monthly"]) - l["total"]) < 1.0 for l in raw),
+           "a raw line's monthly sum != its total")
+
+    after_rr = populate_rr_input(
+        BUNDLED_ANALYZER.read_bytes(), translate_for_t12(rr.condensed),
+        PERIOD, source_filename="h.xlsx",
+    )
+    fresh = populate_t12_input(after_rr, t12, new_descmap_entries=[], source_filename="t.xlsx")
+    out_bytes, rep = populate_uw_template(
+        fresh, TEMPLATE_V5.read_bytes(), template_version="v5",
+        computed_values=compute_uw_output_values(rr, t12),
+        computed_monthly=compute_uw_output_monthly(rr, t12),
+        raw_t12_lines=raw,
+    )
+    _check(rep.summary.get("section_i_raw_cells", 0) > 100, "Section I not populated")
+
+    ws = openpyxl.load_workbook(_io.BytesIO(out_bytes), data_only=False)["T-12 Analysis"]
+    # First data row (123): Account Name is text, months tie to T-12 Total.
+    b123 = ws.cell(row=123, column=2).value
+    _check(isinstance(b123, str) and not b123.replace(".", "").isdigit(),
+           f"Section I Account Name should be GL text, got {b123!r}")
+    months = sum((_num(ws.cell(row=123, column=c).value) or 0.0) for c in range(3, 15))
+    total = _num(ws.cell(row=123, column=15).value)
+    _check(abs(months - total) < 2.0, f"row 123 months {months:,.2f} != total {total:,.2f}")
+    # Section J reconciliation formulas authored.
+    _check(isinstance(ws.cell(row=178, column=15).value, str), "Section J EBITDAR not authored")
+    print(f"  ✓ Section I: {len(raw)} raw lines; Account Name=GL text; months tie to total; Section J authored")
+
+
 def main() -> int:
     print("=== test_uw_output_model ===")
     failures = 0
@@ -330,6 +378,7 @@ def main() -> int:
         test_writer_fallback_populates,
         test_dynamic_array_metadata_restored,
         test_monthly_grid_reconciles,
+        test_section_i_raw_populated,
     ):
         print(f"\n--- {fn.__name__} ---")
         try:

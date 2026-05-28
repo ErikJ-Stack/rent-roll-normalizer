@@ -9,6 +9,26 @@ Newest at top.
 
 ---
 
+## 2026-05-28 — UWT v0.6.4 — Section I (Layer 1 — Raw T-12) populated
+
+**Track:** Track 4. Same chat, after v0.6.3 — the 3rd of the operator's 3 requirements.
+
+**Request:** "the summarized Raw data should be inserted in Section I of T-12 Analysis." Section I = raw-T12 paste grid (rows 122–172), previously an empty skeleton with pre-assigned bucket labels in col P.
+
+**Decisions (AskUserQuestion):** rebuild one row per Analyzer label; Account Name = matched GL account names.
+
+**Engine:** `compute_t12_raw_lines(t12_result)` → list of `{label, section, descriptions, monthly[12], total}` grouped by Description_Map label from `T12ParseResult.gl_rows`. Computed in Python (NOT read from the Analyzer T12 Raw Data sheet — its monthly cells are formulas, blank on a fresh Analyzer; cache caveat). Ordered P&L; unmapped lines excluded.
+
+**Writer:** `_write_section_i_raw` + `populate_uw_template(..., raw_t12_lines=)`. Clears skeleton (123–172, A–P), writes one row per label (B=GL names joined, C–N=months, O=total, P=bucket); authors Section J raw-totals reconciliation as SUM formulas. New `summary['section_i_raw_cells']`.
+
+**Bug caught mid-build:** reused Layer-3 `_T12_MONTH_COLS` (B–M) but Section I months are C–N (cols 3–14) → first month overwrote Account Name. Fixed to `range(3,15)`.
+
+**Result:** 44 raw lines (8 rev/36 exp), 663 cells; months tie to total per row; Section J EBITDAR = $1,411,324 (penny-exact as-reported NOI). New test `test_section_i_raw_populated`. `UWT_VERSION` 0.6.3 → 0.6.4. **All 3 operator requirements shipped.**
+
+**Commit:** `feat: UWT v0.6.4 — populate Section I (Layer 1 Raw T-12) from summarized raw lines`.
+
+---
+
 ## 2026-05-28 — UWT v0.6.3 — T-12 Analysis totals as live formulas + waterfall sign fix
 
 **Track:** Track 4. Same chat, after v0.6.2. Operator reported math inconsistencies + two requirements (totals as formulas; raw data → Section I) with the attached `Homestead_Village_UW_Template_2026-04-24_normalized.xlsx`.
