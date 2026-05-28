@@ -1,7 +1,7 @@
 {
   "schema": "uw-mapping/v1",
-  "registry_version": "0.4.2",
-  "generated_phase": "Track 4 v0.4.2 \u2014 v5.1 K211/L211 template-formula absorption. rr_total_loc + rr_total_monthly_rev moved mapped \u2192 derived (template owns the formula now, writer skips).",
+  "registry_version": "0.5.0",
+  "generated_phase": "Track 4 v6 \u2014 T-12 Analysis income restructure to actual-T12 categories. templates.v6 (income_model=actual_t12); by-care Base Rent + LOC, 5 ancillary income lines, Auto Expense; GPR waterfall demoted to diagnostic. Default template stays v5 until the Excel-resaved v6 binary lands.",
   "analyzer": {
     "file": "ALF_Financial_Analyzer_Only.xlsx",
     "substrate_version": "v0.2.14",
@@ -216,6 +216,138 @@
       ],
       "last_structural_update": "2026-05-27 (v5.1 column restructure: Unit Type inserted at new D; W + AC dropped)",
       "rent_roll_last_col": "AU"
+    },
+    "v6": {
+      "file": "assets/ALF_UW_Template_v6.xlsx",
+      "released": "2026-05-28",
+      "supersedes": "v5.1",
+      "intake_sheets": [
+        "Prop Info",
+        "T-12 Analysis",
+        "Rent Roll Analysis"
+      ],
+      "annual_total_column": "N",
+      "monthly_columns": [
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H",
+        "I",
+        "J",
+        "K",
+        "L",
+        "M"
+      ],
+      "monthly_header_row": 56,
+      "monthly_header_strategy": "Formula-driven from on-sheet Layer 1 raw row 137 (B56 SHOULD be =C137..=N137). KNOWN v6 BUG: B56:M56 still reference row 122 (pre-restructure) \u2014 operator repointing pass missed this chain (openpyxl quirk #4). Cosmetic header-only; fix in v6.1.",
+      "rent_roll_paste_anchor": "Rent Roll Analysis!A211",
+      "rent_roll_header_row": 210,
+      "rent_roll_data_end_row": 610,
+      "rent_roll_diagnostic_rows": "1-209 (formula-derived from paste; writer must not overwrite)",
+      "rr_input_data_range": "'Rent Roll Input'!$A$7:$AJ$606  (unchanged from substrate v0.2.14)",
+      "sheet_count": 16,
+      "removed_sheets_vs_v4": [
+        "Additional Fees"
+      ],
+      "new_rows_vs_v4": [
+        {
+          "sheet": "T-12 Analysis",
+          "row": 115,
+          "label": "Total Operating Expenses (excl. mgmt)",
+          "formula": "=N114-N113",
+          "note": "Template owns formula; writer overwrites with UW Output value when present"
+        },
+        {
+          "sheet": "T-12 Analysis",
+          "row": 118,
+          "label": "EBITDA",
+          "formula": null,
+          "note": "Label only; writer populates from UW Output row 68"
+        },
+        {
+          "sheet": "Prop Info",
+          "row": 19,
+          "label": "Occupied Beds \u2014 Total",
+          "formula": "=SUM(B20:B22)",
+          "note": "Template formula; writer must not overwrite"
+        },
+        {
+          "sheet": "Prop Info",
+          "row": 20,
+          "label": "Occupied Beds \u2014 IL"
+        },
+        {
+          "sheet": "Prop Info",
+          "row": 21,
+          "label": "Occupied Beds \u2014 AL"
+        },
+        {
+          "sheet": "Prop Info",
+          "row": 22,
+          "label": "Occupied Beds \u2014 MC"
+        }
+      ],
+      "new_cols_vs_v4": [
+        {
+          "sheet": "Rent Roll Analysis",
+          "col": "AP",
+          "label": "Care Level Tier",
+          "from_analyzer_col": "K"
+        },
+        {
+          "sheet": "Rent Roll Analysis",
+          "col": "AQ",
+          "label": "Total Ancillary $",
+          "formula": "=SUM(AK211:AO211)",
+          "note": "Template-owned formula; writer skips"
+        },
+        {
+          "sheet": "Rent Roll Analysis",
+          "col": "AR",
+          "label": "Preleased Date",
+          "from_analyzer_col": "AJ  (substrate v0.2.14)"
+        }
+      ],
+      "shifted_cols_vs_v4": [
+        {
+          "sheet": "Rent Roll Analysis",
+          "label": "ACH",
+          "v4": "AP",
+          "v5": "AS"
+        },
+        {
+          "sheet": "Rent Roll Analysis",
+          "label": "Market PSF",
+          "v4": "AQ",
+          "v5": "AT"
+        },
+        {
+          "sheet": "Rent Roll Analysis",
+          "label": "Conc Source",
+          "v4": "AR",
+          "v5": "AU",
+          "note": "Analyst-input; writer must preserve on re-paste"
+        },
+        {
+          "sheet": "Rent Roll Analysis",
+          "label": "Effective Conc $",
+          "v4": "AS",
+          "v5": "AV",
+          "note": "Analyst-input or formula; writer must preserve on re-paste"
+        }
+      ],
+      "deferred_to_v5_1": [
+        "Cover substrate version stamp \u2014 concept `substrate_version` stays gap_target",
+        "Per-row Period Date / metadata cell on Rent Roll Analysis tab header"
+      ],
+      "last_structural_update": "2026-05-27 (v5.1 column restructure: Unit Type inserted at new D; W + AC dropped)",
+      "rent_roll_last_col": "AU",
+      "income_model": "actual_t12",
+      "income_block_note": "Layer 3 INCOME rebuilt to actual-T12 categories (rows 58-77); GPR waterfall demoted to DIAGNOSTIC sub-section (rows 79-83, does NOT feed EGI). EGI N77 = N61+N65+SUM(N66:N76). Auto Expense new at N114 inside TOTAL NON-LABOR (N126).",
+      "binary_caveat": "assets/ALF_UW_Template_v6.xlsx as dropped is the pre-Excel-resave openpyxl version (39 zip parts, missing xl/metadata.xml + xl/webextensions). Operator must open in Excel + save to restore metadata.xml before populated outputs have working Section R/S dynamic-array spills. Default stays v5 until then."
     }
   },
   "status_legend": {
@@ -264,6 +396,10 @@
         "v5": {
           "sheet": "Prop Info",
           "address": "B4"
+        },
+        "v6": {
+          "sheet": "Prop Info",
+          "address": "B4"
         }
       },
       "status": "mapped",
@@ -286,6 +422,11 @@
           "label_at": "A5"
         },
         "v5": {
+          "sheet": "Rent Roll Analysis",
+          "address": "B5",
+          "label_at": "A5"
+        },
+        "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "B5",
           "label_at": "A5"
@@ -350,6 +491,11 @@
           "sheet": "Prop Info",
           "address": "B16",
           "label_at": "A16"
+        },
+        "v6": {
+          "sheet": "Prop Info",
+          "address": "B16",
+          "label_at": "A16"
         }
       },
       "status": "mapped",
@@ -373,6 +519,11 @@
           "label_at": "A17"
         },
         "v5": {
+          "sheet": "Prop Info",
+          "address": "B17",
+          "label_at": "A17"
+        },
+        "v6": {
           "sheet": "Prop Info",
           "address": "B17",
           "label_at": "A17"
@@ -401,6 +552,11 @@
           "sheet": "Prop Info",
           "address": "B18",
           "label_at": "A18"
+        },
+        "v6": {
+          "sheet": "Prop Info",
+          "address": "B18",
+          "label_at": "A18"
         }
       },
       "status": "mapped",
@@ -424,6 +580,11 @@
           "sheet": "Prop Info",
           "address": "B15",
           "label_at": "A15"
+        },
+        "v6": {
+          "sheet": "Prop Info",
+          "address": "B15",
+          "label_at": "A15"
         }
       },
       "status": "mapped",
@@ -443,6 +604,12 @@
       "targets": {
         "v4": null,
         "v5": {
+          "sheet": "Prop Info",
+          "address": "B20",
+          "label_at": "A20",
+          "target_label": "Occupied Beds \u2014 IL"
+        },
+        "v6": {
           "sheet": "Prop Info",
           "address": "B20",
           "label_at": "A20",
@@ -470,6 +637,12 @@
           "address": "B21",
           "label_at": "A21",
           "target_label": "Occupied Beds \u2014 AL"
+        },
+        "v6": {
+          "sheet": "Prop Info",
+          "address": "B21",
+          "label_at": "A21",
+          "target_label": "Occupied Beds \u2014 AL"
         }
       },
       "status": "mapped",
@@ -489,6 +662,12 @@
       "targets": {
         "v4": null,
         "v5": {
+          "sheet": "Prop Info",
+          "address": "B22",
+          "label_at": "A22",
+          "target_label": "Occupied Beds \u2014 MC"
+        },
+        "v6": {
           "sheet": "Prop Info",
           "address": "B22",
           "label_at": "A22",
@@ -522,6 +701,11 @@
           "address": "N63",
           "label_at": "A63",
           "target_label": "Net Rent Revenue"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N61",
+          "label_at": "A61"
         }
       },
       "status": "mapped",
@@ -548,6 +732,11 @@
           "sheet": "T-12 Analysis",
           "address": "N64",
           "label_at": "A64"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N65",
+          "label_at": "A65"
         }
       },
       "status": "mapped",
@@ -573,6 +762,11 @@
           "sheet": "T-12 Analysis",
           "address": "N65",
           "label_at": "A65"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N67",
+          "label_at": "A67"
         }
       },
       "status": "mapped",
@@ -598,6 +792,11 @@
           "sheet": "T-12 Analysis",
           "address": "N61",
           "label_at": "A61"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N75",
+          "label_at": "A75"
         }
       },
       "status": "mapped",
@@ -624,6 +823,11 @@
           "sheet": "T-12 Analysis",
           "address": "N66",
           "label_at": "A66"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N68",
+          "label_at": "A68"
         }
       },
       "status": "mapped",
@@ -649,6 +853,11 @@
           "sheet": "T-12 Analysis",
           "address": "N68",
           "label_at": "A68"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N74",
+          "label_at": "A74"
         }
       },
       "status": "mapped",
@@ -674,6 +883,11 @@
           "sheet": "T-12 Analysis",
           "address": "N69",
           "label_at": "A69"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N77",
+          "label_at": "A77"
         }
       },
       "status": "mapped",
@@ -697,10 +911,15 @@
           "sheet": "T-12 Analysis",
           "address": "N67",
           "label_at": "A67"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N66",
+          "label_at": "A66"
         }
       },
-      "status": "gap_source",
-      "notes": "Template has a dedicated 2P Revenue row but UW Output does not. Options: (a) extend UW Output with a new row; (b) writer derives from RR_Input_Data!V column directly; (c) leave blank for analyst entry.",
+      "status": "mapped",
+      "notes": "Template has a dedicated 2P Revenue row but UW Output does not. Options: (a) extend UW Output with a new row; (b) writer derives from RR_Input_Data!V column directly; (c) leave blank for analyst entry. \u00b7 v6: re-mapped Description_Map labels (Second Persons Revenue | care + Second Person Fee \u2192 '2nd Person Revenue' label, substrate v0.2.15) now feed this; target N66. EGI unchanged (pure reallocation out of Base Rent).",
       "path": "t12"
     },
     {
@@ -724,6 +943,11 @@
           "sheet": "T-12 Analysis",
           "address": "N62",
           "label_at": "A62"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N76",
+          "label_at": "A76"
         }
       },
       "status": "proposed",
@@ -750,6 +974,11 @@
           "sheet": "T-12 Analysis",
           "address": "N58",
           "label_at": "A58"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N80",
+          "label_at": "A80"
         }
       },
       "status": "mapped",
@@ -775,6 +1004,11 @@
           "sheet": "T-12 Analysis",
           "address": "N60",
           "label_at": "A60"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N82",
+          "label_at": "A82"
         }
       },
       "status": "mapped",
@@ -818,6 +1052,11 @@
           "sheet": "T-12 Analysis",
           "address": "N59",
           "label_at": "A59"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N81",
+          "label_at": "A81"
         }
       },
       "status": "mapped",
@@ -860,6 +1099,11 @@
           "sheet": "T-12 Analysis",
           "address": "N71",
           "label_at": "A71"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N85",
+          "label_at": "A85"
         }
       },
       "status": "mapped",
@@ -885,6 +1129,11 @@
           "sheet": "T-12 Analysis",
           "address": "N72",
           "label_at": "A72"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N86",
+          "label_at": "A86"
         }
       },
       "status": "mapped",
@@ -910,6 +1159,11 @@
           "sheet": "T-12 Analysis",
           "address": "N73",
           "label_at": "A73"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N87",
+          "label_at": "A87"
         }
       },
       "status": "mapped",
@@ -935,6 +1189,11 @@
           "sheet": "T-12 Analysis",
           "address": "N74",
           "label_at": "A74"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N88",
+          "label_at": "A88"
         }
       },
       "status": "mapped",
@@ -960,6 +1219,11 @@
           "sheet": "T-12 Analysis",
           "address": "N75",
           "label_at": "A75"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N89",
+          "label_at": "A89"
         }
       },
       "status": "mapped",
@@ -985,6 +1249,11 @@
           "sheet": "T-12 Analysis",
           "address": "N76",
           "label_at": "A76"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N90",
+          "label_at": "A90"
         }
       },
       "status": "mapped",
@@ -1010,6 +1279,11 @@
           "sheet": "T-12 Analysis",
           "address": "N77",
           "label_at": "A77"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N91",
+          "label_at": "A91"
         }
       },
       "status": "mapped",
@@ -1035,6 +1309,11 @@
           "sheet": "T-12 Analysis",
           "address": "N78",
           "label_at": "A78"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N92",
+          "label_at": "A92"
         }
       },
       "status": "mapped",
@@ -1060,6 +1339,11 @@
           "sheet": "T-12 Analysis",
           "address": "N79",
           "label_at": "A79"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N93",
+          "label_at": "A93"
         }
       },
       "status": "mapped",
@@ -1085,6 +1369,11 @@
           "sheet": "T-12 Analysis",
           "address": "N80",
           "label_at": "A80"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N94",
+          "label_at": "A94"
         }
       },
       "status": "mapped",
@@ -1110,6 +1399,11 @@
           "sheet": "T-12 Analysis",
           "address": "N81",
           "label_at": "A81"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N95",
+          "label_at": "A95"
         }
       },
       "status": "mapped",
@@ -1135,6 +1429,11 @@
           "sheet": "T-12 Analysis",
           "address": "N82",
           "label_at": "A82"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N96",
+          "label_at": "A96"
         }
       },
       "status": "mapped",
@@ -1160,6 +1459,11 @@
           "sheet": "T-12 Analysis",
           "address": "N83",
           "label_at": "A83"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N97",
+          "label_at": "A97"
         }
       },
       "status": "mapped",
@@ -1185,6 +1489,11 @@
           "sheet": "T-12 Analysis",
           "address": "N84",
           "label_at": "A84"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N98",
+          "label_at": "A98"
         }
       },
       "status": "mapped",
@@ -1210,6 +1519,11 @@
           "sheet": "T-12 Analysis",
           "address": "N85",
           "label_at": "A85"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N99",
+          "label_at": "A99"
         }
       },
       "status": "mapped",
@@ -1236,6 +1550,11 @@
           "sheet": "T-12 Analysis",
           "address": "N87",
           "label_at": "A87"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N101",
+          "label_at": "A101"
         }
       },
       "status": "mapped",
@@ -1261,6 +1580,11 @@
           "sheet": "T-12 Analysis",
           "address": "N88",
           "label_at": "A88"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N102",
+          "label_at": "A102"
         }
       },
       "status": "mapped",
@@ -1286,6 +1610,11 @@
           "sheet": "T-12 Analysis",
           "address": "N89",
           "label_at": "A89"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N103",
+          "label_at": "A103"
         }
       },
       "status": "mapped",
@@ -1311,6 +1640,11 @@
           "sheet": "T-12 Analysis",
           "address": "N90",
           "label_at": "A90"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N104",
+          "label_at": "A104"
         }
       },
       "status": "mapped",
@@ -1336,6 +1670,11 @@
           "sheet": "T-12 Analysis",
           "address": "N91",
           "label_at": "A91"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N105",
+          "label_at": "A105"
         }
       },
       "status": "mapped",
@@ -1361,6 +1700,11 @@
           "sheet": "T-12 Analysis",
           "address": "N92",
           "label_at": "A92"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N106",
+          "label_at": "A106"
         }
       },
       "status": "mapped",
@@ -1386,6 +1730,11 @@
           "sheet": "T-12 Analysis",
           "address": "N93",
           "label_at": "A93"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N107",
+          "label_at": "A107"
         }
       },
       "status": "mapped",
@@ -1411,6 +1760,11 @@
           "sheet": "T-12 Analysis",
           "address": "N94",
           "label_at": "A94"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N108",
+          "label_at": "A108"
         }
       },
       "status": "mapped",
@@ -1436,6 +1790,11 @@
           "sheet": "T-12 Analysis",
           "address": "N95",
           "label_at": "A95"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N109",
+          "label_at": "A109"
         }
       },
       "status": "mapped",
@@ -1461,6 +1820,11 @@
           "sheet": "T-12 Analysis",
           "address": "N96",
           "label_at": "A96"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N110",
+          "label_at": "A110"
         }
       },
       "status": "mapped",
@@ -1486,6 +1850,11 @@
           "sheet": "T-12 Analysis",
           "address": "N97",
           "label_at": "A97"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N111",
+          "label_at": "A111"
         }
       },
       "status": "mapped",
@@ -1511,6 +1880,11 @@
           "sheet": "T-12 Analysis",
           "address": "N98",
           "label_at": "A98"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N112",
+          "label_at": "A112"
         }
       },
       "status": "mapped",
@@ -1536,6 +1910,11 @@
           "sheet": "T-12 Analysis",
           "address": "N99",
           "label_at": "A99"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N113",
+          "label_at": "A113"
         }
       },
       "status": "mapped",
@@ -1561,6 +1940,11 @@
           "sheet": "T-12 Analysis",
           "address": "N100",
           "label_at": "A100"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N115",
+          "label_at": "A115"
         }
       },
       "status": "mapped",
@@ -1586,6 +1970,11 @@
           "sheet": "T-12 Analysis",
           "address": "N101",
           "label_at": "A101"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N116",
+          "label_at": "A116"
         }
       },
       "status": "mapped",
@@ -1611,6 +2000,11 @@
           "sheet": "T-12 Analysis",
           "address": "N102",
           "label_at": "A102"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N117",
+          "label_at": "A117"
         }
       },
       "status": "mapped",
@@ -1637,6 +2031,11 @@
           "sheet": "T-12 Analysis",
           "address": "N103",
           "label_at": "A103"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N118",
+          "label_at": "A118"
         }
       },
       "status": "mapped",
@@ -1662,6 +2061,11 @@
           "sheet": "T-12 Analysis",
           "address": "N104",
           "label_at": "A104"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N119",
+          "label_at": "A119"
         }
       },
       "status": "mapped",
@@ -1687,6 +2091,11 @@
           "sheet": "T-12 Analysis",
           "address": "N105",
           "label_at": "A105"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N120",
+          "label_at": "A120"
         }
       },
       "status": "mapped",
@@ -1712,6 +2121,11 @@
           "sheet": "T-12 Analysis",
           "address": "N106",
           "label_at": "A106"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N121",
+          "label_at": "A121"
         }
       },
       "status": "proposed",
@@ -1738,6 +2152,11 @@
           "sheet": "T-12 Analysis",
           "address": "N107",
           "label_at": "A107"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N122",
+          "label_at": "A122"
         }
       },
       "status": "mapped",
@@ -1763,6 +2182,11 @@
           "sheet": "T-12 Analysis",
           "address": "N108",
           "label_at": "A108"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N123",
+          "label_at": "A123"
         }
       },
       "status": "mapped",
@@ -1788,6 +2212,11 @@
           "sheet": "T-12 Analysis",
           "address": "N109",
           "label_at": "A109"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N124",
+          "label_at": "A124"
         }
       },
       "status": "mapped",
@@ -1813,6 +2242,11 @@
           "sheet": "T-12 Analysis",
           "address": "N110",
           "label_at": "A110"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N125",
+          "label_at": "A125"
         }
       },
       "status": "mapped",
@@ -1839,6 +2273,11 @@
           "sheet": "T-12 Analysis",
           "address": "N111",
           "label_at": "A111"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N126",
+          "label_at": "A126"
         }
       },
       "status": "mapped",
@@ -1861,6 +2300,11 @@
           "address": "N115",
           "label_at": "A115",
           "target_label": "Total Operating Expenses (excl. mgmt)"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N130",
+          "label_at": "A130"
         }
       },
       "status": "mapped",
@@ -1887,6 +2331,11 @@
           "sheet": "T-12 Analysis",
           "address": "N113",
           "label_at": "A113"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N128",
+          "label_at": "A128"
         }
       },
       "status": "mapped",
@@ -1910,6 +2359,11 @@
           "sheet": "T-12 Analysis",
           "address": "N114",
           "label_at": "A114"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N129",
+          "label_at": "A129"
         }
       },
       "status": "proposed",
@@ -1937,6 +2391,11 @@
           "address": "N116",
           "label_at": "A116",
           "target_label": "EBITDARM"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N131",
+          "label_at": "A131"
         }
       },
       "status": "mapped",
@@ -1965,6 +2424,11 @@
           "address": "N117",
           "label_at": "A117",
           "target_label": "EBITDAR  (= NOI)"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N132",
+          "label_at": "A132"
         }
       },
       "status": "mapped",
@@ -1988,6 +2452,11 @@
           "address": "N118",
           "label_at": "A118",
           "target_label": "EBITDA"
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N133",
+          "label_at": "A133"
         }
       },
       "status": "mapped",
@@ -2037,6 +2506,13 @@
           "label_at": "A210",
           "target_label": "Unit/Bed",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
+          "sheet": "Rent Roll Analysis",
+          "address": "A211+",
+          "label_at": "A210",
+          "target_label": "Unit/Bed",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "mapped",
@@ -2063,6 +2539,13 @@
           "paste_anchor": "Rent Roll Analysis!A211"
         },
         "v5": {
+          "sheet": "Rent Roll Analysis",
+          "address": "B211+",
+          "label_at": "B210",
+          "target_label": "Bed",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "B211+",
           "label_at": "B210",
@@ -2099,6 +2582,13 @@
           "label_at": "U210",
           "target_label": "Sq Ft (est)",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
+          "sheet": "Rent Roll Analysis",
+          "address": "U211+",
+          "label_at": "U210",
+          "target_label": "Sq Ft (est)",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "mapped",
@@ -2125,6 +2615,13 @@
           "paste_anchor": "Rent Roll Analysis!A211"
         },
         "v5": {
+          "sheet": "Rent Roll Analysis",
+          "address": "C211+",
+          "label_at": "C210",
+          "target_label": "Care Level",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "C211+",
           "label_at": "C210",
@@ -2161,6 +2658,13 @@
           "label_at": "E210",
           "target_label": "Status",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
+          "sheet": "Rent Roll Analysis",
+          "address": "E211+",
+          "label_at": "E210",
+          "target_label": "Status",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "mapped",
@@ -2187,6 +2691,13 @@
           "paste_anchor": "Rent Roll Analysis!A211"
         },
         "v5": {
+          "sheet": "Rent Roll Analysis",
+          "address": "D211+",
+          "label_at": "D210",
+          "target_label": "Apt Type",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "D211+",
           "label_at": "D210",
@@ -2223,6 +2734,13 @@
           "label_at": "F210",
           "target_label": "Resident",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
+          "sheet": "Rent Roll Analysis",
+          "address": "F211+",
+          "label_at": "F210",
+          "target_label": "Resident",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "mapped",
@@ -2249,6 +2767,13 @@
           "paste_anchor": "Rent Roll Analysis!A211"
         },
         "v5": {
+          "sheet": "Rent Roll Analysis",
+          "address": "G211+",
+          "label_at": "G210",
+          "target_label": "Move-In Date",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "G211+",
           "label_at": "G210",
@@ -2285,6 +2810,13 @@
           "label_at": "H210",
           "target_label": "Discharge Date",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
+          "sheet": "Rent Roll Analysis",
+          "address": "H211+",
+          "label_at": "H210",
+          "target_label": "Discharge Date",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "mapped",
@@ -2311,6 +2843,13 @@
           "paste_anchor": "Rent Roll Analysis!A211"
         },
         "v5": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AD211+",
+          "label_at": "AD210",
+          "target_label": "Concession End",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "AD211+",
           "label_at": "AD210",
@@ -2347,6 +2886,13 @@
           "label_at": "I210",
           "target_label": "Market Rate",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
+          "sheet": "Rent Roll Analysis",
+          "address": "I211+",
+          "label_at": "I210",
+          "target_label": "Market Rate",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "mapped",
@@ -2373,6 +2919,13 @@
           "paste_anchor": "Rent Roll Analysis!A211"
         },
         "v5": {
+          "sheet": "Rent Roll Analysis",
+          "address": "J211+",
+          "label_at": "J210",
+          "target_label": "Actual Charges",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "J211+",
           "label_at": "J210",
@@ -2409,6 +2962,13 @@
           "label_at": "AS210",
           "target_label": "Market PSF",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AS211+",
+          "label_at": "AS210",
+          "target_label": "Market PSF",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "mapped",
@@ -2435,6 +2995,13 @@
           "paste_anchor": "Rent Roll Analysis!A211"
         },
         "v5": {
+          "sheet": "Rent Roll Analysis",
+          "address": "V211+",
+          "label_at": "V210",
+          "target_label": "$/SqFt/Mo",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "V211+",
           "label_at": "V210",
@@ -2471,6 +3038,13 @@
           "label_at": "AC210",
           "target_label": "Concession $",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AC211+",
+          "label_at": "AC210",
+          "target_label": "Concession $",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "mapped",
@@ -2497,6 +3071,13 @@
           "paste_anchor": "Rent Roll Analysis!A211"
         },
         "v5": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AI211+",
+          "label_at": "AI210",
+          "target_label": "2nd Person $",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "AI211+",
           "label_at": "AI210",
@@ -2533,6 +3114,13 @@
           "label_at": "AE210",
           "target_label": "Care Level $",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AE211+",
+          "label_at": "AE210",
+          "target_label": "Care Level $",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "mapped",
@@ -2553,6 +3141,13 @@
       "targets": {
         "v4": null,
         "v5": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AO211+",
+          "label_at": "AO210",
+          "target_label": "Care Level Tier",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "AO211+",
           "label_at": "AO210",
@@ -2589,6 +3184,13 @@
           "label_at": "AF210",
           "target_label": "Med Mgmt $",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AF211+",
+          "label_at": "AF210",
+          "target_label": "Med Mgmt $",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "mapped",
@@ -2615,6 +3217,13 @@
           "paste_anchor": "Rent Roll Analysis!A211"
         },
         "v5": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AG211+",
+          "label_at": "AG210",
+          "target_label": "Pharmacy $",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "AG211+",
           "label_at": "AG210",
@@ -2651,6 +3260,13 @@
           "label_at": "AH210",
           "target_label": "Other LOC $",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AH211+",
+          "label_at": "AH210",
+          "target_label": "Other LOC $",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "mapped",
@@ -2677,6 +3293,13 @@
           "paste_anchor": "Rent Roll Analysis!A211"
         },
         "v5": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AJ211+",
+          "label_at": "AJ210",
+          "target_label": "Meal Plan $",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "AJ211+",
           "label_at": "AJ210",
@@ -2713,6 +3336,13 @@
           "label_at": "AK210",
           "target_label": "Scooter $",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AK211+",
+          "label_at": "AK210",
+          "target_label": "Scooter $",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "mapped",
@@ -2739,6 +3369,13 @@
           "paste_anchor": "Rent Roll Analysis!A211"
         },
         "v5": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AL211+",
+          "label_at": "AL210",
+          "target_label": "Housekeeping $",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "AL211+",
           "label_at": "AL210",
@@ -2775,6 +3412,13 @@
           "label_at": "AM210",
           "target_label": "Laundry $",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AM211+",
+          "label_at": "AM210",
+          "target_label": "Laundry $",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "mapped",
@@ -2801,6 +3445,13 @@
           "paste_anchor": "Rent Roll Analysis!A211"
         },
         "v5": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AN211+",
+          "label_at": "AN210",
+          "target_label": "Pet $",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "AN211+",
           "label_at": "AN210",
@@ -2837,6 +3488,13 @@
           "label_at": "K210",
           "target_label": "LOC Revenue",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
+          "sheet": "Rent Roll Analysis",
+          "address": "K211+",
+          "label_at": "K210",
+          "target_label": "LOC Revenue",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "derived",
@@ -2868,6 +3526,13 @@
           "label_at": "L210",
           "target_label": "Total Sched (Base+LOC)",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
+          "sheet": "Rent Roll Analysis",
+          "address": "L211+",
+          "label_at": "L210",
+          "target_label": "Total Sched (Base+LOC)",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "derived",
@@ -2888,6 +3553,14 @@
       "targets": {
         "v4": null,
         "v5": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AP211+",
+          "label_at": "AP210",
+          "target_label": "Total Ancillary $",
+          "paste_anchor": "Rent Roll Analysis!A211",
+          "template_owned_formula": "=SUM(AK211:AO211)"
+        },
+        "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "AP211+",
           "label_at": "AP210",
@@ -2925,6 +3598,13 @@
           "label_at": "S210",
           "target_label": "Payer Type",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
+          "sheet": "Rent Roll Analysis",
+          "address": "S211+",
+          "label_at": "S210",
+          "target_label": "Payer Type",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "mapped",
@@ -2951,6 +3631,13 @@
           "paste_anchor": "Rent Roll Analysis!A211"
         },
         "v5": {
+          "sheet": "Rent Roll Analysis",
+          "address": "M211+",
+          "label_at": "M210",
+          "target_label": "AR Balance",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "M211+",
           "label_at": "M210",
@@ -2987,6 +3674,13 @@
           "label_at": "T210",
           "target_label": "Notes",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
+          "sheet": "Rent Roll Analysis",
+          "address": "T211+",
+          "label_at": "T210",
+          "target_label": "Notes",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "mapped",
@@ -3013,6 +3707,13 @@
           "paste_anchor": "Rent Roll Analysis!A211"
         },
         "v5": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AR211+",
+          "label_at": "AR210",
+          "target_label": "ACH",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "AR211+",
           "label_at": "AR210",
@@ -3046,6 +3747,13 @@
           "label_at": "O210",
           "target_label": "0\u201330 Days",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
+          "sheet": "Rent Roll Analysis",
+          "address": "O211+",
+          "label_at": "O210",
+          "target_label": "0\u201330 Days",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "gap_source",
@@ -3069,6 +3777,13 @@
           "paste_anchor": "Rent Roll Analysis!A211"
         },
         "v5": {
+          "sheet": "Rent Roll Analysis",
+          "address": "P211+",
+          "label_at": "P210",
+          "target_label": "31\u201360",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "P211+",
           "label_at": "P210",
@@ -3102,6 +3817,13 @@
           "label_at": "Q210",
           "target_label": "61\u201390",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
+          "sheet": "Rent Roll Analysis",
+          "address": "Q211+",
+          "label_at": "Q210",
+          "target_label": "61\u201390",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "gap_source",
@@ -3125,6 +3847,13 @@
           "paste_anchor": "Rent Roll Analysis!A211"
         },
         "v5": {
+          "sheet": "Rent Roll Analysis",
+          "address": "R211+",
+          "label_at": "R210",
+          "target_label": "90+",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "R211+",
           "label_at": "R210",
@@ -3162,6 +3891,13 @@
           "label_at": "N210",
           "target_label": "Deposit",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
+          "sheet": "Rent Roll Analysis",
+          "address": "N211+",
+          "label_at": "N210",
+          "target_label": "Deposit",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "substrate_ready_parser_pending",
@@ -3183,6 +3919,13 @@
       "targets": {
         "v4": null,
         "v5": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AQ211+",
+          "label_at": "AQ210",
+          "target_label": "Preleased Date",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "AQ211+",
           "label_at": "AQ210",
@@ -3212,6 +3955,10 @@
           "label_at": "A122",
           "target_label": "Layer 1 header position 1 of 12",
           "cascade_note": "Row 122 monthly headers; auto-cascades to `T-12 Analysis!C56` via existing formula `=C122` on row 56."
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "C137"
         }
       },
       "status": "mapped",
@@ -3236,6 +3983,10 @@
           "label_at": "A122",
           "target_label": "Layer 1 header position 2 of 12",
           "cascade_note": "Row 122 monthly headers; auto-cascades to `T-12 Analysis!C56` via existing formula `=D122` on row 56."
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "D137"
         }
       },
       "status": "mapped",
@@ -3260,6 +4011,10 @@
           "label_at": "A122",
           "target_label": "Layer 1 header position 3 of 12",
           "cascade_note": "Row 122 monthly headers; auto-cascades to `T-12 Analysis!D56` via existing formula `=E122` on row 56."
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "E137"
         }
       },
       "status": "mapped",
@@ -3284,6 +4039,10 @@
           "label_at": "A122",
           "target_label": "Layer 1 header position 4 of 12",
           "cascade_note": "Row 122 monthly headers; auto-cascades to `T-12 Analysis!E56` via existing formula `=F122` on row 56."
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "F137"
         }
       },
       "status": "mapped",
@@ -3308,6 +4067,10 @@
           "label_at": "A122",
           "target_label": "Layer 1 header position 5 of 12",
           "cascade_note": "Row 122 monthly headers; auto-cascades to `T-12 Analysis!F56` via existing formula `=G122` on row 56."
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "G137"
         }
       },
       "status": "mapped",
@@ -3332,6 +4095,10 @@
           "label_at": "A122",
           "target_label": "Layer 1 header position 6 of 12",
           "cascade_note": "Row 122 monthly headers; auto-cascades to `T-12 Analysis!G56` via existing formula `=H122` on row 56."
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "H137"
         }
       },
       "status": "mapped",
@@ -3356,6 +4123,10 @@
           "label_at": "A122",
           "target_label": "Layer 1 header position 7 of 12",
           "cascade_note": "Row 122 monthly headers; auto-cascades to `T-12 Analysis!H56` via existing formula `=I122` on row 56."
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "I137"
         }
       },
       "status": "mapped",
@@ -3380,6 +4151,10 @@
           "label_at": "A122",
           "target_label": "Layer 1 header position 8 of 12",
           "cascade_note": "Row 122 monthly headers; auto-cascades to `T-12 Analysis!I56` via existing formula `=J122` on row 56."
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "J137"
         }
       },
       "status": "mapped",
@@ -3404,6 +4179,10 @@
           "label_at": "A122",
           "target_label": "Layer 1 header position 9 of 12",
           "cascade_note": "Row 122 monthly headers; auto-cascades to `T-12 Analysis!J56` via existing formula `=K122` on row 56."
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "K137"
         }
       },
       "status": "mapped",
@@ -3428,6 +4207,10 @@
           "label_at": "A122",
           "target_label": "Layer 1 header position 10 of 12",
           "cascade_note": "Row 122 monthly headers; auto-cascades to `T-12 Analysis!K56` via existing formula `=L122` on row 56."
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "L137"
         }
       },
       "status": "mapped",
@@ -3452,6 +4235,10 @@
           "label_at": "A122",
           "target_label": "Layer 1 header position 11 of 12",
           "cascade_note": "Row 122 monthly headers; auto-cascades to `T-12 Analysis!L56` via existing formula `=M122` on row 56."
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "M137"
         }
       },
       "status": "mapped",
@@ -3476,10 +4263,292 @@
           "label_at": "A122",
           "target_label": "Layer 1 header position 12 of 12",
           "cascade_note": "Row 122 monthly headers; auto-cascades to `T-12 Analysis!M56` via existing formula `=N122` on row 56."
+        },
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N137"
         }
       },
       "status": "mapped",
       "notes": "Operator-requested 2026-05-27 \u2014 header dates should reflect actual T-12 period months instead of template's hardcoded 'Apr-25' placeholders. Writer pastes Analyzer's T12 Input!N11 (the T12 normalizer-populated month header, e.g. 'Apr 2025') into UW Template T-12 Analysis!N122. Row 56's `={col}122` formula picks up the new value automatically. Independent of the broader BL-0026 Layer 1 raw GL paste."
+    },
+    {
+      "key": "base_rent_il",
+      "label": "Base Rent \u2014 IL",
+      "category": "revenue",
+      "path": "t12",
+      "source": {
+        "system": "uw_output_derived",
+        "t12_label": "Base rent \u2014 IL",
+        "note": "Computed by compute_uw_output_values from the T12 Description_Map label sum; passed to the writer via computed_values=."
+      },
+      "targets": {
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N58",
+          "label_at": "A58"
+        }
+      },
+      "status": "mapped",
+      "notes": "New in v6 (income restructure). T-12 Analysis N58."
+    },
+    {
+      "key": "base_rent_al",
+      "label": "Base Rent \u2014 AL",
+      "category": "revenue",
+      "path": "t12",
+      "source": {
+        "system": "uw_output_derived",
+        "t12_label": "Base rent \u2014 AL",
+        "note": "Computed by compute_uw_output_values from the T12 Description_Map label sum; passed to the writer via computed_values=."
+      },
+      "targets": {
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N59",
+          "label_at": "A59"
+        }
+      },
+      "status": "mapped",
+      "notes": "New in v6 (income restructure). T-12 Analysis N59."
+    },
+    {
+      "key": "base_rent_mc",
+      "label": "Base Rent \u2014 MC",
+      "category": "revenue",
+      "path": "t12",
+      "source": {
+        "system": "uw_output_derived",
+        "t12_label": "Base rent \u2014 MC",
+        "note": "Computed by compute_uw_output_values from the T12 Description_Map label sum; passed to the writer via computed_values=."
+      },
+      "targets": {
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N60",
+          "label_at": "A60"
+        }
+      },
+      "status": "mapped",
+      "notes": "New in v6 (income restructure). T-12 Analysis N60."
+    },
+    {
+      "key": "total_base_rent",
+      "label": "Total Base Rent",
+      "category": "revenue",
+      "path": "t12",
+      "source": {
+        "system": "derived",
+        "formula": "Template SUM subtotal \u2014 writer skips; template self-derives."
+      },
+      "targets": {
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N61",
+          "label_at": "A61"
+        }
+      },
+      "status": "derived",
+      "notes": "New in v6 (income restructure). T-12 Analysis N61."
+    },
+    {
+      "key": "loc_il",
+      "label": "LOC / Care Services \u2014 IL",
+      "category": "revenue",
+      "path": "t12",
+      "source": {
+        "system": "uw_output_derived",
+        "t12_label": "LOC revenue \u2014 IL",
+        "note": "Computed by compute_uw_output_values from the T12 Description_Map label sum; passed to the writer via computed_values=."
+      },
+      "targets": {
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N62",
+          "label_at": "A62"
+        }
+      },
+      "status": "mapped",
+      "notes": "New in v6 (income restructure). T-12 Analysis N62."
+    },
+    {
+      "key": "loc_al",
+      "label": "LOC / Care Services \u2014 AL",
+      "category": "revenue",
+      "path": "t12",
+      "source": {
+        "system": "uw_output_derived",
+        "t12_label": "LOC revenue \u2014 AL",
+        "note": "Computed by compute_uw_output_values from the T12 Description_Map label sum; passed to the writer via computed_values=."
+      },
+      "targets": {
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N63",
+          "label_at": "A63"
+        }
+      },
+      "status": "mapped",
+      "notes": "New in v6 (income restructure). T-12 Analysis N63."
+    },
+    {
+      "key": "loc_mc",
+      "label": "LOC / Care Services \u2014 MC",
+      "category": "revenue",
+      "path": "t12",
+      "source": {
+        "system": "uw_output_derived",
+        "t12_label": "LOC revenue \u2014 MC",
+        "note": "Computed by compute_uw_output_values from the T12 Description_Map label sum; passed to the writer via computed_values=."
+      },
+      "targets": {
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N64",
+          "label_at": "A64"
+        }
+      },
+      "status": "mapped",
+      "notes": "New in v6 (income restructure). T-12 Analysis N64."
+    },
+    {
+      "key": "total_loc",
+      "label": "Total LOC / Care Services",
+      "category": "revenue",
+      "path": "t12",
+      "source": {
+        "system": "derived",
+        "formula": "Template SUM subtotal \u2014 writer skips; template self-derives."
+      },
+      "targets": {
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N65",
+          "label_at": "A65"
+        }
+      },
+      "status": "derived",
+      "notes": "New in v6 (income restructure). T-12 Analysis N65."
+    },
+    {
+      "key": "rev_meal_income",
+      "label": "Meal Income",
+      "category": "revenue",
+      "path": "t12",
+      "source": {
+        "system": "uw_output_derived",
+        "t12_label": "Meal Income",
+        "note": "Computed by compute_uw_output_values from the T12 Description_Map label sum; passed to the writer via computed_values=."
+      },
+      "targets": {
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N69",
+          "label_at": "A69"
+        }
+      },
+      "status": "mapped",
+      "notes": "New in v6 (income restructure). T-12 Analysis N69."
+    },
+    {
+      "key": "rev_housekeeping_income",
+      "label": "Housekeeping Income",
+      "category": "revenue",
+      "path": "t12",
+      "source": {
+        "system": "uw_output_derived",
+        "t12_label": "Housekeeping Income",
+        "note": "Computed by compute_uw_output_values from the T12 Description_Map label sum; passed to the writer via computed_values=."
+      },
+      "targets": {
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N70",
+          "label_at": "A70"
+        }
+      },
+      "status": "mapped",
+      "notes": "New in v6 (income restructure). T-12 Analysis N70."
+    },
+    {
+      "key": "rev_laundry_income",
+      "label": "Laundry Income",
+      "category": "revenue",
+      "path": "t12",
+      "source": {
+        "system": "uw_output_derived",
+        "t12_label": "Laundry Income",
+        "note": "Computed by compute_uw_output_values from the T12 Description_Map label sum; passed to the writer via computed_values=."
+      },
+      "targets": {
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N71",
+          "label_at": "A71"
+        }
+      },
+      "status": "mapped",
+      "notes": "New in v6 (income restructure). T-12 Analysis N71."
+    },
+    {
+      "key": "rev_scooter_fee",
+      "label": "Scooter Fee Revenue",
+      "category": "revenue",
+      "path": "t12",
+      "source": {
+        "system": "uw_output_derived",
+        "t12_label": "Scooter Fee Revenue",
+        "note": "Computed by compute_uw_output_values from the T12 Description_Map label sum; passed to the writer via computed_values=."
+      },
+      "targets": {
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N72",
+          "label_at": "A72"
+        }
+      },
+      "status": "mapped",
+      "notes": "New in v6 (income restructure). T-12 Analysis N72."
+    },
+    {
+      "key": "rev_transfer_fee",
+      "label": "Transfer Fee Revenue",
+      "category": "revenue",
+      "path": "t12",
+      "source": {
+        "system": "uw_output_derived",
+        "t12_label": "Transfer Fee Revenue",
+        "note": "Computed by compute_uw_output_values from the T12 Description_Map label sum; passed to the writer via computed_values=."
+      },
+      "targets": {
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N73",
+          "label_at": "A73"
+        }
+      },
+      "status": "mapped",
+      "notes": "New in v6 (income restructure). T-12 Analysis N73."
+    },
+    {
+      "key": "opex_auto_expense",
+      "label": "Auto Expense",
+      "category": "nonlabor",
+      "path": "t12",
+      "source": {
+        "system": "uw_output_derived",
+        "t12_label": "Auto Expense",
+        "note": "Computed by compute_uw_output_values from the T12 Description_Map label sum; passed to the writer via computed_values=."
+      },
+      "targets": {
+        "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N114",
+          "label_at": "A114"
+        }
+      },
+      "status": "mapped",
+      "notes": "New in v6 (income restructure). T-12 Analysis N114."
     }
   ],
   "intake_targets_unmapped": [

@@ -1,6 +1,6 @@
 # ALF UW Template — Mapping Tracker
 
-> Generated from `tools/uw_template/registry.json` on 2026-05-27 21:31 UTC.  **Do not edit by hand** — edit `registry.json` and re-run `python tools/uw_template/build_mapping_artifacts.py`.
+> Generated from `tools/uw_template/registry.json` on 2026-05-28 22:21 UTC.  **Do not edit by hand** — edit `registry.json` and re-run `python tools/uw_template/build_mapping_artifacts.py`.
 
 - Analyzer source: `ALF_Financial_Analyzer_Only.xlsx` (substrate `v0.2.14`)
 - Primary template: `v4` → `Sample Files/ALF_UW_Template_v4.xlsx`
@@ -22,20 +22,20 @@
 
 | Status | Count |
 |---|---|
-| `mapped` | 104 |
-| `derived` | 6 |
-| `gap_source` | 5 |
+| `mapped` | 117 |
+| `derived` | 8 |
 | `proposed` | 4 |
+| `gap_source` | 4 |
 | `gap_target` | 2 |
 | `header_only` | 1 |
 | `substrate_ready_parser_pending` | 1 |
-| **Total concepts** | **123** |
+| **Total concepts** | **137** |
 
 ## Status rollup by path
 
 | Path | Total | mapped | gap_target | gap_source | proposed | other |
 |---|---|---|---|---|---|---|
-| **t12** | 72 | 62 | 2 | 1 | 4 | 3 |
+| **t12** | 86 | 75 | 2 | 0 | 4 | 5 |
 | **rent_roll** | 35 | 30 | 0 | 0 | 0 | 5 |
 | **ar** | 4 | 0 | 0 | 4 | 0 | 0 |
 
@@ -64,7 +64,7 @@
 | **Stabilized occupied beds — AL** <br/> `occupied_beds_al` | `UW Output!C71` | `—` | `mapped` | v5: Closed in v5 — writer populates B21 from UW Output!C71. |
 | **Stabilized occupied beds — MC** <br/> `occupied_beds_mc` | `UW Output!D71` | `—` | `mapped` | v5: Closed in v5 — writer populates B22 from UW Output!D71. |
 
-#### revenue (9)
+#### revenue (22)
 
 | Concept | Source | Target (`v4`) | Status | Notes |
 |---|---|---|---|---|
@@ -75,8 +75,21 @@
 | **Respite Care Revenue** <br/> `respite_care` | `UW Output!E_or_F10` | `T-12 Analysis!N66` | `mapped` |  |
 | **Other Community Revenue** <br/> `other_community_revenue` | `UW Output!E_or_F11` | `T-12 Analysis!N68` | `mapped` |  |
 | **Effective Gross Income (EGI)** <br/> `egi` | `UW Output!E_or_F12` | `T-12 Analysis!N69` | `mapped` |  |
-| **2nd Person Revenue** <br/> `second_person_revenue` | `derived` | `T-12 Analysis!N67` | `gap_source` | Template has a dedicated 2P Revenue row but UW Output does not. Options: (a) extend UW Output with a new row; (b) writer derives from RR_Input_Data!V column directly; (c) leave blank for analyst entry. |
+| **2nd Person Revenue** <br/> `second_person_revenue` | `derived` | `T-12 Analysis!N67` | `mapped` | Template has a dedicated 2P Revenue row but UW Output does not. Options: (a) extend UW Output with a new row; (b) writer derives from RR_Input_Data!V column directly; (c) leave blank for analyst entry. · v6: re-mapped Description_Map labels (Second Persons Revenue \| care + Second Person Fee → '2nd Person Revenue' label, substrate v0.2.15) now feed this; target N66. EGI unchanged (pure reallocation out of Base Rent). |
 | **Bad Debt / Write-offs (revenue offset)** <br/> `bad_debt_writeoffs_revenue` | `UW Output!E_or_F57` | `T-12 Analysis!N62` | `proposed` | Conceptual divergence: template places Bad Debt as a revenue contra-line (row 62, above Net Rent Revenue at 63); Analyzer places it as an opex line (UW Output row 57). For the template to balance, the value should likely be pasted into row 62 AND row 106 reset to zero — or vice versa. Decide which placement is canonical for the model before writer ships. |
+| **Base Rent — IL** <br/> `base_rent_il` | `uw_output_derived` | `—` | `mapped` | New in v6 (income restructure). T-12 Analysis N58. |
+| **Base Rent — AL** <br/> `base_rent_al` | `uw_output_derived` | `—` | `mapped` | New in v6 (income restructure). T-12 Analysis N59. |
+| **Base Rent — MC** <br/> `base_rent_mc` | `uw_output_derived` | `—` | `mapped` | New in v6 (income restructure). T-12 Analysis N60. |
+| **Total Base Rent** <br/> `total_base_rent` | `derived` | `—` | `derived` | New in v6 (income restructure). T-12 Analysis N61. |
+| **LOC / Care Services — IL** <br/> `loc_il` | `uw_output_derived` | `—` | `mapped` | New in v6 (income restructure). T-12 Analysis N62. |
+| **LOC / Care Services — AL** <br/> `loc_al` | `uw_output_derived` | `—` | `mapped` | New in v6 (income restructure). T-12 Analysis N63. |
+| **LOC / Care Services — MC** <br/> `loc_mc` | `uw_output_derived` | `—` | `mapped` | New in v6 (income restructure). T-12 Analysis N64. |
+| **Total LOC / Care Services** <br/> `total_loc` | `derived` | `—` | `derived` | New in v6 (income restructure). T-12 Analysis N65. |
+| **Meal Income** <br/> `rev_meal_income` | `uw_output_derived` | `—` | `mapped` | New in v6 (income restructure). T-12 Analysis N69. |
+| **Housekeeping Income** <br/> `rev_housekeeping_income` | `uw_output_derived` | `—` | `mapped` | New in v6 (income restructure). T-12 Analysis N70. |
+| **Laundry Income** <br/> `rev_laundry_income` | `uw_output_derived` | `—` | `mapped` | New in v6 (income restructure). T-12 Analysis N71. |
+| **Scooter Fee Revenue** <br/> `rev_scooter_fee` | `uw_output_derived` | `—` | `mapped` | New in v6 (income restructure). T-12 Analysis N72. |
+| **Transfer Fee Revenue** <br/> `rev_transfer_fee` | `uw_output_derived` | `—` | `mapped` | New in v6 (income restructure). T-12 Analysis N73. |
 
 #### waterfall (5)
 
@@ -108,7 +121,7 @@
 | **Employee 401(k)** <br/> `labor_401k` | `UW Output!E_or_F35` | `T-12 Analysis!N84` | `mapped` |  |
 | **Total Labor & Burden** <br/> `labor_total` | `UW Output!E_or_F36` | `T-12 Analysis!N85` | `mapped` | Subtotal — writer should write this even though template likely re-derives it; supports the reconciliation block at rows 4-5. |
 
-#### nonlabor (26)
+#### nonlabor (27)
 
 | Concept | Source | Target (`v4`) | Status | Notes |
 |---|---|---|---|---|
@@ -138,6 +151,7 @@
 | **Lease / Ground Lease** <br/> `opex_lease_ground` | `UW Output!E_or_F61` | `T-12 Analysis!N110` | `mapped` | UW Output row 61 currently resolves to 0 (known upstream deferral — see UW-OUTPUT-HANDOFF-CONTRACT.md §4 item 4). Template will show $0 until upstream lease formula is fixed. |
 | **Total Non-Labor** <br/> `opex_nonlabor_total` | `UW Output!E_or_F62` | `T-12 Analysis!N111` | `mapped` |  |
 | **Total OpEx (excl. mgmt)** <br/> `opex_total_excl_mgmt` | `UW Output!E_or_F63` | `—` | `mapped` | Template's TOTAL OPERATING EXPENSES (row 114) is inclusive of management fee — no direct row for opex-excl-mgmt. Could derive as N111 + N85. · v5: Closed in v5 — N115 has template formula `=N114-N113`. Writer overwrites with UW Output row 63 value (Total opex excl. mgmt) when present; falls back to template formula on empty Analyzer. |
+| **Auto Expense** <br/> `opex_auto_expense` | `uw_output_derived` | `—` | `mapped` | New in v6 (income restructure). T-12 Analysis N114. |
 
 #### mgmt_noi (6)
 
