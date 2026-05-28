@@ -7,6 +7,54 @@ particular commit looks the way it does.
 
 Newest at top.
 
+---
+
+## 2026-05-27 (evening) — RR v1.19.0 — River Oaks / SSMG-Yardi format support + Deposit capture
+
+**Track:** Track 1 (RR Normalizer) — cross-track pivot from earlier Track 4 (UWT v0.5.3) work in the same chat. Resumed + shipped 2026-05-28 after a context break.
+
+**Trigger:** User reported `River Oaks Place Lenoir City - April 2026 Rent Roll.xls` (a Senior Solutions Management Group property exported from Yardi) would not parse.
+
+**Status:** **SHIPPED.** Parser + writer working on River Oaks; existing fixtures unaffected; version bumped, changelog written, UWT side re-verified, committed + pushed.
+
+### What shipped (verified via end-to-end pipeline test)
+
+- `xlrd>=2.0.1` added to `requirements.txt`. pandas `ExcelFile` content-sniffs the OLE2 magic bytes and routes legacy `.xls` to xlrd automatically — no `engine=` plumbing. xlrd 2.0+ is `.xls`-only (dropped `.xlsx`), exactly the slot needed.
+- `.xls` upload accepted in all three app.py file_uploaders (RR + T12 + AR), with label + help-text updates.
+- River Oaks (89 source rows, 26 cols, 3 sheets) parses to **86 beds**: 56 IL · 16 AL · 11 MC · 3 blank (Comm units, intentional). Market Rate $353k, Actual Rate $185k, **Med Mgmt $ $9,400 (from MEDADMIN)**, **Other LOC $ $1,800 (from COMMAPT)**, Balance −$44,697, **Deposit $1,300 (2 rows)**.
+- Writer produces 244,990-byte populated Analyzer; `Rent Roll Input!AI4 = "Deposit"`; deposit values land at AI per substrate v0.2.14 slot (`$#,##0.00`).
+- **Regression clean:** Homestead re-parses to the same 176 beds (IL 62 / AL 62 / MC 52), Condensed_RR now 32 cols with Deposit blank; Salem / Briar Glen unaffected. New rules don't over-match (`normalize_care_type("RHA")` → IL; `normalize_bed_status("Admin")` → Vacant; zero unmapped on existing fixtures).
+- **UWT side re-verified:** `tests/test_uw_template_writer.py` passes — Deposit has no template target so the writer ignores it.
+
+### Files changed (6 files)
+
+| File | What changed |
+|---|---|
+| `requirements.txt` | `+ xlrd>=2.0.1` |
+| `app.py` | Three file_uploader `type=` lists extended with `xls` (RR / T12 / AR) + help-text. `RR_VERSION` `1.18.1` → `1.19.0`, `RR_LAST_UPDATED` → `2026-05-27`. |
+| `normalizer.py` | FIELD_PATTERNS extended: `bed_status` (Unit/Lease Status, Lease Status), `resident_full` (bare Name), `market_rate` (Market + Addl.), `actual_rate` (Lease Rent), `move_in`/`move_out` (hyphenated), new `deposit` field. New care_type fallback 4.5 (re-runs normalize_care_type on raw apt_type — catches Yardi Floorplan IL/AL/MC/RHA). `looks_care` extended with `medadmin`/`medmanage`/`commapt`. `CONDENSED_COLUMNS` appends `Deposit` (col 32); bed-record builder + condensed-DataFrame emit it. |
+| `mappings.py` | `DEFAULT_BED_STATUS`: `(r"\badmin", "Vacant")` before `\bdown\b`. `DEFAULT_CARE_TYPE`: `(r"\brha\b", "IL")`. `DEFAULT_CARE_BUCKETS`: `medadmin`/`medmanage` → Med Mgmt $. |
+| `analyzer_rr_writer.py` | `has_v119_cols` gate; per-row Deposit write to AI via `COL_AI_INDEX = 35`, `$#,##0.00`. AH=34 (Total Ancillary) + AJ=36 (Preleased) protections preserved. |
+| `CHANGELOG-RR.md` | New `[1.19.0]` entry at top. |
+
+### Open questions (not blocking — recorded for a future deal)
+
+- **Apt Type for Yardi IL/AL/MC floorplans**: River Oaks's Floorplan column doubles as care type AND apt type. Fallback 4.5 extracts care type correctly but leaves apt_type raw "IL"/"AL"/"MC"; substrate DV expects (Studio / 1 Bedroom / …). Values DV-flag but still write. Left as raw — explicit `("^il$","Studio")` rules would guess and may be wrong. Operator adjusts per-deal.
+- **3 rows lost (89 → 86)**: trailing Totals/Note/blank. Acceptable.
+- **Comm units (3 rows, no care type)**: community/amenity space; emit with blank care type + $0 rate. Acceptable.
+- **Deposit has no UW Template v5 column**: lands in Analyzer AI substrate slot but `rr_deposit` registry concept stays `substrate_ready_parser_pending` — no `Rent Roll Analysis` target. A v5.1 template handoff would surface it downstream. Deferred.
+- **A173/B173 IFERROR carry-forward** from earlier Track 4 (UWT v0.5.3) work — still in the next-Cowork-pass bundle.
+
+### Earlier this session (already committed before the RR work)
+
+Track 4: `f7a422d` UWT v0.5.0 attempted-then-rolled-back, `d670bab` prevention docs (preflight + openpyxl quirk #6), `945060b` UWT v0.5.3 (v5.1 K/L/V template-formula absorption). All on `origin/main`.
+
+### Next up
+
+Build the **in-Python formula evaluator** to kill the cache caveat (the biggest UX friction in the UW Template populate flow). Chosen engine approach: extend the `dashboard_model.py` pure-Python pattern (Track 5) so the writer reads computed UW Output values directly from the in-memory Analyzer without an Excel round-trip. Now unblocked — the tree is clean after RR v1.19.0.
+
+---
+
 > **Note (2026-05-14):** journal.md was not updated as substrate moved through v0.1.11 → v0.1.12 → v0.1.13 → v0.1.14 → v0.1.15 → v0.2.0 → v0.2.1 → v0.2.2 (8 releases since the v0.1.10 entry below). Those releases lived in `CHANGELOG-T12.md` and `UW-BACKLOG.md` only. The 2026-05-14 v0.2.3 entry below (BL-0015) is the first journal entry in 3 days. Back-filling the missing ones is on the BL-0014 docket.
 
 ---

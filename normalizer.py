@@ -69,22 +69,27 @@ FIELD_PATTERNS: Dict[str, List[str]] = {
     "first_name":      [r"^resident\s*first\s*name$", r"^first\s*name$"],
     "last_name":       [r"^resident\s*last\s*name$", r"^last\s*name$"],
     "resident_full":   [r"^resident(\s*name)?$", r"^resident\s*full\s*name$",
-                        r"^tenant$"],
+                        r"^tenant$",
+                        r"^name$"],   # River Oaks / Yardi: bare "Name" col
     "payer":           [r"^payer$", r"^payer\s*type$", r"^payor$"],
     "market_rate":     [r"^market\s*rate$", r"^gross\s*rent$",
                         r"^scheduled\s*rent$",
                         r"^unit\s*market\s*rate$",   # Briar Glen
-                        r"^market\s*/\s*mo(\s*\d{4})?$"],   # Homestead: "Market / Mo 2026"
+                        r"^market\s*/\s*mo(\s*\d{4})?$",   # Homestead: "Market / Mo 2026"
+                        r"^market\s*\+\s*addl\.?$"],   # River Oaks / Yardi: "Market + Addl."
     "actual_rate":     [r"^actual\s*rate$", r"^net\s*rent$",
                         r"^contract\s*rent$", r"^current\s*rent$",
                         r"^accommodation(\s*service)?$",   # Briar Glen
-                        r"^actual\s*/\s*mo(\s*\d{4})?$"],   # Homestead: "Actual / Mo 2026"
+                        r"^actual\s*/\s*mo(\s*\d{4})?$",   # Homestead: "Actual / Mo 2026"
+                        r"^lease\s*rent$"],   # River Oaks / Yardi: "Lease Rent"
     "discount":        [r"^discount$"],
     "move_in":         [r"^move\s*in$", r"^move[\- ]in\s*date$",
+                        r"^move[\s\-]in$",   # River Oaks / Yardi: "Move-In" (hyphenated)
                         r"^lease\s*start$",
                         r"^resident\s*move\s*in\s*date$",   # Briar Glen
                         r"^rent\s*start$"],   # Homestead: "Rent Start"
     "move_out":        [r"^estimated\s*move\s*out$", r"^move\s*out$",
+                        r"^move[\s\-]out$",   # River Oaks / Yardi: "Move-Out" (hyphenated)
                         r"^lease\s*end$",
                         r"^move\s*out\s*date$",   # Homestead: "MoveOut Date" -> "moveout date"
                         r"^moveout\s*date$",
@@ -93,7 +98,9 @@ FIELD_PATTERNS: Dict[str, List[str]] = {
                         r"^pre[\- ]?lease(d)?\s*date$",
                         r"^prelease\s*signed$"],
     "bed_status":      [r"^bed\s*status$",
-                        r"^status$"],   # Homestead self-contained: one row per unit, "Status" = bed status
+                        r"^status$",   # Homestead self-contained: one row per unit, "Status" = bed status
+                        r"^unit/lease\s*status$",   # River Oaks / Yardi: "Unit/Lease Status"
+                        r"^lease\s*status$"],   # Yardi-style fallback
     "apt_status":      [r"^apartment\s*status$", r"^unit\s*status$"],
     "sqft":            [r"^sq\s*ft$", r"^square\s*feet$", r"^size$",
                         r"^unit\s*sqft$",   # Briar Glen
@@ -117,6 +124,13 @@ FIELD_PATTERNS: Dict[str, List[str]] = {
                             r"^market\s*\$\s*/\s*sf$"],
     "actual_psf":          [r"^actual\s*psf$", r"^actual.*per\s*sq\s*ft$",
                             r"^actual\s*\$\s*/\s*sf$"],
+    # --- New at v1.19.0 (River Oaks / SSMG-Yardi format) ------------------
+    # Substrate slot reserved at Rent Roll Input!AI since v0.2.14. River
+    # Oaks "Required Deposit" col is the first operator fixture with this
+    # field exposed; parser support shipped 2026-05-27 in this version.
+    "deposit":             [r"^required\s*deposit$",   # River Oaks / Yardi: "Required Deposit"
+                            r"^deposit$",               # generic
+                            r"^security\s*deposit$"],   # alternate label
 }
 
 
@@ -290,6 +304,13 @@ def detect_care_groups(headers: List[str], mappings: MappingSet) -> Tuple[List[C
                 # Section M ancillaries (v1.16.2 / BL-0007) — meal-delivery,
                 # motorized-scooter / mobility-aid, resident-transport:
                 "meal", "scooter", "mobility", "transport",
+                # River Oaks / SSMG-Yardi billing codes (v1.19.0):
+                # MEDADMIN = medication administration ($-typed care fee per
+                # resident, ~$250/mo); MEDMANAGE = medication management
+                # (Yardi variant, usually 0 when MEDADMIN populated);
+                # COMMAPT = community apartment fee (move-in or recurring
+                # community charge — falls through to Other LOC $).
+                "medadmin", "medmanage", "commapt",
             ])
             if not looks_care:
                 continue
@@ -547,6 +568,13 @@ CONDENSED_COLUMNS = [
     # Rent Roll Recon counts Preleased units against this and offsets gross
     # exposure (Vacant + Notice) so net exposure isn't overstated.
     "Preleased Date",
+    # Col 32 (AF on Condensed_RR): new at v1.19.0 (River Oaks / SSMG-Yardi).
+    # Required deposit per unit — typically a security/refundable deposit
+    # the operator collects at move-in. Substrate slot at Rent Roll Input!AI
+    # has been reserved since v0.2.14 awaiting a source RR fixture; River
+    # Oaks (col 14 "Required Deposit") is the first. Written to
+    # Rent Roll Input col AI by analyzer_rr_writer via COL_AI_INDEX.
+    "Deposit",
 ]
 
 
@@ -997,6 +1025,17 @@ def normalize_rent_roll(
                     care_type_norm = cl_norm
                     care_type_source_label = "Care Level"
 
+            # Fallback 4.5: Apt Type prefix (River Oaks / SSMG-Yardi: Floorplan
+            # column has "IL" / "AL" / "MC" / "RHA-1BR" / "IL - C" etc. — the
+            # care_type is embedded in what we mapped as apt_type). Tries to
+            # extract a care_type via the same DEFAULT_CARE_TYPE rules. Added at
+            # RR v1.19.0.
+            if not care_type_norm and raw_apt_type:
+                apt_ct_norm, _ = normalize_care_type(str(raw_apt_type), mappings)
+                if apt_ct_norm:
+                    care_type_norm = apt_ct_norm
+                    care_type_source_label = "Apt Type"
+
             # Fallback 5: Property default
             care_type_from_default = False
             if not care_type_norm and prop_default:
@@ -1122,6 +1161,13 @@ def normalize_rent_roll(
                 # CHANGELOG-RR.md [1.16.0] for the field-by-field rationale.
                 "2nd Person Rent $":  _blank_if_zero(_to_num(row.get(field_map.get("second_person_rent"))) if field_map.get("second_person_rent") else 0.0),
                 "Balance":            _blank_if_zero(_to_num(row.get(field_map.get("balance"))) if field_map.get("balance") else 0.0),
+                # --- New at v1.19.0 (River Oaks / SSMG-Yardi fixture)
+                # Substrate slot reserved at Rent Roll Input!AI since v0.2.14
+                # (per UW Template handoff contract). Routed by
+                # analyzer_rr_writer.py via COL_AI_INDEX. Blank when source
+                # has no Deposit column (Salem / Briar Glen / Homestead all
+                # lack this field; safe to default 0 → blank).
+                "Deposit":            _blank_if_zero(_to_num(row.get(field_map.get("deposit"))) if field_map.get("deposit") else 0.0),
                 "Notes":              (row.get(field_map.get("notes")) if field_map.get("notes") else "") or "",
                 "Market PSF":         _blank_if_zero(_to_num(row.get(field_map.get("market_psf"))) if field_map.get("market_psf") else 0.0),
                 "Actual PSF":         _blank_if_zero(_to_num(row.get(field_map.get("actual_psf"))) if field_map.get("actual_psf") else 0.0),
@@ -1211,6 +1257,8 @@ def normalize_rent_roll(
             "Pet $":             normalized["Pet $"],
             # --- New at v1.18.0 (col 31, AE of Condensed_RR sheet) ---
             "Preleased Date":    normalized["Preleased Date"],
+            # --- New at v1.19.0 (col 32, AF of Condensed_RR sheet) ---
+            "Deposit":           normalized["Deposit"],
         })
     else:
         condensed = pd.DataFrame(columns=CONDENSED_COLUMNS)

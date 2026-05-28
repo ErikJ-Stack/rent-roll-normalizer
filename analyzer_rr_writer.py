@@ -277,6 +277,9 @@ def populate_rr_input(
     has_v117_cols = all(c in translated_df.columns for c in SOURCE_COLUMNS_AC_TO_AG)
     # v1.18.0 Preleased Date is optional too (relocated AI → AJ in v1.18.1).
     has_v118_cols = all(c in translated_df.columns for c in SOURCE_COLUMNS_AJ)
+    # v1.19.0 Deposit is optional too — only River Oaks / SSMG-Yardi formats
+    # carry a Required Deposit column; Salem / Briar Glen / Homestead do not.
+    has_v119_cols = "Deposit" in translated_df.columns
 
     for i, (_, row) in enumerate(translated_df.iterrows()):
         excel_row = DATA_START_ROW + i
@@ -302,10 +305,17 @@ def populate_rr_input(
                 col_idx = COL_AC_INDEX + offset
                 value = _coerce_value(row[src_col])
                 ws.cell(row=excel_row, column=col_idx).value = value
-        # Col AJ (36) ← v1.18.0 Preleased Date, when available. Skips
-        # AH=34 (Total Ancillary $ formula, substrate v0.1.13) and AI=35
-        # (Deposit slot, substrate v0.2.14 — clear-only, no parser support
-        # yet per the 2026-05-25 UW Template handoff contract).
+        # Col AI (35) ← v1.19.0 Deposit, when available. Substrate slot
+        # reserved since v0.2.14 (per the 2026-05-25 UW Template handoff
+        # contract); parser support shipped 2026-05-27 with the River
+        # Oaks / SSMG-Yardi fixture. Skip rest unchanged: AH=34 (Total
+        # Ancillary $ formula, substrate v0.1.13) is template-formula
+        # owned and must NOT be overwritten.
+        if has_v119_cols:
+            ai_cell = ws.cell(row=excel_row, column=COL_AI_INDEX)
+            ai_cell.value = _coerce_value(row["Deposit"])
+            ai_cell.number_format = "$#,##0.00"
+        # Col AJ (36) ← v1.18.0 Preleased Date, when available.
         if has_v118_cols:
             aj_cell = ws.cell(row=excel_row, column=COL_AJ_INDEX)
             aj_cell.value = _coerce_value(row["Preleased Date"])

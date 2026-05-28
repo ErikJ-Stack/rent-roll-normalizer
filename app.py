@@ -70,8 +70,8 @@ from writer import write_output
 APP_VERSION = "1.14.0"            # alias for RR_VERSION; kept for back-compat
 APP_LAST_UPDATED = "2026-05-08"   # alias for RR_LAST_UPDATED
 
-RR_VERSION = "1.18.1"
-RR_LAST_UPDATED = "2026-05-25"
+RR_VERSION = "1.19.0"
+RR_LAST_UPDATED = "2026-05-27"
 
 UWT_VERSION = "0.5.3"             # Track 4 — UW Template integration (Phase 2.5)
 UWT_LAST_UPDATED = "2026-05-27"
@@ -502,9 +502,13 @@ with st.sidebar:
     st.markdown("##### 📁 Uploads")
 
     rr_file = st.file_uploader(
-        "Rent Roll (.xlsx) — required",
-        type=["xlsx", "xlsm"],
-        help="Any senior housing rent roll. Header doesn't need to be on row 1.",
+        "Rent Roll (.xlsx / .xlsm / .xls) — required",
+        type=["xlsx", "xlsm", "xls"],
+        help=(
+            "Any senior housing rent roll. Header doesn't need to be on row 1. "
+            "Legacy .xls (binary Excel) supported via xlrd — Yardi exports "
+            "frequently land in this format."
+        ),
     )
 
     auto_detected_date = None
@@ -526,8 +530,8 @@ with st.sidebar:
         st.caption("Could not auto-detect — set manually.")
 
     raw_t12_file = st.file_uploader(
-        "Raw T12 (.xlsx) — optional",
-        type=["xlsx", "xlsm"],
+        "Raw T12 (.xlsx / .xlsm / .xls) — optional",
+        type=["xlsx", "xlsm", "xls"],
         key="raw_t12_uploader",
         help=(
             "Optional. Upload a raw T12 export from Yardi (Income to Budget), "
@@ -556,8 +560,8 @@ with st.sidebar:
     )
 
     ar_file = st.file_uploader(
-        "AR Aging (.xlsx / .csv) — optional",
-        type=["xlsx", "xlsm", "csv"],
+        "AR Aging (.xlsx / .xlsm / .xls / .csv) — optional",
+        type=["xlsx", "xlsm", "xls", "csv"],
         key="ar_aging_uploader",
         help=(
             "Optional. Upload an AR aging report from the operator. The app "

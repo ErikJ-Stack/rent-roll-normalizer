@@ -8,6 +8,107 @@ When making a code change in a chat, add an entry here in the same commit.
 
 ---
 
+## [1.19.0] — 2026-05-27 — River Oaks / SSMG-Yardi format support + Deposit capture
+
+### Summary
+
+New operator fixture (**River Oaks**, a Senior Solutions Management Group
+property exported from Yardi) surfaced a rent-roll shape the parser didn't
+handle, plus the first source file carrying a **Required Deposit** column —
+which closes the v1.18.1 / substrate v0.2.14 carry-forward that reserved
+`Rent Roll Input!AI` for Deposit but had no fixture to design patterns
+against.
+
+River Oaks parses end-to-end: 89 source rows → 86 beds (56 IL / 16 AL /
+11 MC / 3 blank community units); Market Rate $353k, Actual Rate $185k,
+Med Mgmt $9,400 (from `MEDADMIN` billing code), Other LOC $1,800 (from
+`COMMAPT`), Balance −$44,697, Deposit $1,300 (2 rows). Populated Analyzer
+244,990 bytes with `Rent Roll Input!AI4 = "Deposit"` and AI7+ carrying the
+two deposit values, number-formatted `$#,##0.00`.
+
+The three existing reference fixtures (Salem / Briar Glen / Homestead) are
+**unaffected** — Homestead re-parses to the same 176 beds (IL 62 / AL 62 /
+MC 52), now with a 32-column Condensed_RR (the new Deposit column comes
+through blank since Homestead has no deposit field). All new mapping rules
+are additive and ordered so they don't over-match the existing fixtures.
+
+### Files changed
+
+- **`requirements.txt`** — `+ xlrd>=2.0.1`. Yardi exports frequently land
+  as legacy binary `.xls`; xlrd 2.0+ is `.xls`-only (it dropped `.xlsx`
+  support), which is exactly the slot we need. pandas `ExcelFile`
+  content-sniffs the OLE2 magic bytes and routes `.xls` to xlrd
+  automatically — no `engine=` plumbing required.
+
+- **`app.py`** — three `file_uploader` `type=` lists extended to accept
+  `.xls` (Rent Roll, Raw T12, AR Aging); labels + help text updated to
+  mention legacy binary Excel. `RR_VERSION` `1.18.1` → `1.19.0`,
+  `RR_LAST_UPDATED` `2026-05-25` → `2026-05-27`.
+
+- **`mappings.py`** — three additive closed-vocabulary rules:
+  - `DEFAULT_BED_STATUS`: new `(r"\badmin", "Vacant")` ordered **before**
+    `\bdown\b` so the specific "Admin/Down" (unit administratively offline /
+    off-market) prefix wins and collapses into Vacant (substrate DV has no
+    separate Admin/Down status).
+  - `DEFAULT_CARE_TYPE`: new `(r"\brha\b", "IL")` — RHA = Residential
+    Housing Apartment, a Senior Solutions billing code for independent
+    apartments without bundled care, effectively IL for UW.
+  - `DEFAULT_CARE_BUCKETS`: new `medadmin` + `medmanage` → `Med Mgmt $`
+    (the two Yardi medication billing codes; MEDADMIN is the per-resident
+    administration fee, MEDMANAGE the alternate code usually 0 when MEDADMIN
+    is populated).
+
+- **`normalizer.py`** — five additive `FIELD_PATTERNS` extensions for the
+  Yardi header vocabulary (`Name` → resident_full, `Market + Addl.` →
+  market_rate, `Lease Rent` → actual_rate, hyphenated `Move-In` / `Move-Out`,
+  `Unit/Lease Status` / `Lease Status` → bed_status) plus a new `deposit`
+  field (`Required Deposit` / `Deposit` / `Security Deposit`). New
+  care-bucket keywords `medadmin` / `medmanage` / `commapt` added to the
+  `looks_care` heuristic in `detect_care_groups` so those `$`-typed columns
+  get caught as Other LOC / Med Mgmt rather than dropped. New care-type
+  **fallback 4.5**: when no care type resolved from the usual sources but an
+  apt_type is present, re-run `normalize_care_type` on the raw apt_type
+  (River Oaks embeds care in the floorplan code, e.g. `RHA-1BR`, `IL - C`).
+  `CONDENSED_COLUMNS` gains col 32 `Deposit` (AF on Condensed_RR); the
+  bed-record builder and the condensed-DataFrame projection both emit it
+  (`_blank_if_zero` so it's blank, not 0, when absent).
+
+- **`analyzer_rr_writer.py`** — Deposit now actually flows. New
+  `has_v119_cols = "Deposit" in translated_df.columns` gate; per-row write
+  to `Rent Roll Input!AI` via the existing `COL_AI_INDEX = 35`, number
+  format `$#,##0.00`. AH=34 (Total Ancillary $ template formula) and AJ=36
+  (Preleased Date) protections unchanged — only the previously-reserved
+  AI slot is now populated.
+
+### Out of scope
+
+- Deposit has **no UW Template v5 column** yet — it lands in the Analyzer's
+  `Rent Roll Input!AI` substrate slot but the registry's `rr_deposit`
+  concept stays `substrate_ready_parser_pending` → there's no
+  `Rent Roll Analysis` target for the writer to paste it to. A v5.1 template
+  handoff would be needed to surface it downstream; not blocking anyone, so
+  deferred.
+
+### Verification
+
+- All four reference fixtures re-parse: River Oaks (new) 86 beds; Homestead
+  176 beds unchanged (IL 62 / AL 62 / MC 52), Condensed_RR now 32 cols with
+  Deposit blank; Salem / Briar Glen unaffected.
+- New rules don't over-match: `normalize_care_type("RHA", ms)` →
+  `("IL", r"\brha\b")`; `normalize_bed_status("Admin", ms)` →
+  `("Vacant", r"\badmin")`; existing fixtures show zero unmapped.
+- `mappings.py` / `normalizer.py` / `analyzer_rr_writer.py` / `app.py` all
+  parse cleanly.
+- Track 4 (UWT) unaffected — `tests/test_uw_template_writer.py` still passes
+  (Deposit has no template target so the writer ignores it).
+
+### Cross-track companions
+
+- None required. Substrate slot was already reserved (v0.2.14); this release
+  is the parser/writer side that finally feeds it.
+
+---
+
 ## [1.18.1] — 2026-05-25 — Preleased AI→AJ relocation (writer-side)
 
 ### Summary

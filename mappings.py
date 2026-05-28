@@ -60,6 +60,12 @@ DEFAULT_BED_STATUS = [
     (r"\breserved\b",               "Hold"),
     (r"\bnotice\b",                 "Notice"),
     (r"\bmodel\b",                  "Model"),
+    # River Oaks / SSMG-Yardi: "Admin/Down" = unit administratively offline
+    # (held for maintenance or off-market). Substrate DV doesn't have a
+    # separate Admin/Down status; collapse into Vacant since it's
+    # effectively non-rentable. Ordered before \bdown\b so the specific
+    # "admin" prefix wins. Added at RR v1.19.0.
+    (r"\badmin",                    "Vacant"),
     (r"\bdown\b",                   "Down"),
     (r"\bout of service\b",         "Down"),
 ]
@@ -156,6 +162,10 @@ DEFAULT_CARE_TYPE = [
     (r"\bindependent\s*living\b",   "IL"),
     (r"\bil\b",                     "IL"),
     (r"\bindependent\b",            "IL"),
+    # River Oaks / SSMG-Yardi: "RHA" = Residential Housing Apartment, a
+    # billing code Senior Solutions uses for independent apartments without
+    # bundled care services. Effectively IL for UW purposes. Added at RR v1.19.0.
+    (r"\brha\b",                    "IL"),
 ]
 
 # -- Care bucket detection (for Other LOC $ auto-catch) ----------------------
@@ -179,6 +189,12 @@ DEFAULT_CARE_BUCKETS = [
     (r"^care\s*services?\b",        "Care Level $"),
     (r"med\s*mgmt",                 "Med Mgmt $"),
     (r"medication",                 "Med Mgmt $"),
+    # River Oaks / SSMG-Yardi (v1.19.0): MEDADMIN + MEDMANAGE billing codes,
+    # both route to Med Mgmt $. MEDADMIN is the per-resident med-administration
+    # fee ($~250/mo); MEDMANAGE is the alternative billing code (usually 0
+    # when MEDADMIN is populated).
+    (r"medadmin",                   "Med Mgmt $"),
+    (r"medmanage",                  "Med Mgmt $"),
     (r"pharmacy",                   "Pharmacy $"),
     (r"\brx\b",                     "Pharmacy $"),
     # Per-fee ancillary buckets (v1.17.0 — UW-BACKLOG BL-0003) ----------
