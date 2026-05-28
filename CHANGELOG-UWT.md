@@ -8,6 +8,37 @@ opened (none yet — Phase 0 is the seed release).
 
 ---
 
+## v0.6.2 — T-12 Analysis monthly grid populated (cols B–M) (2026-05-28)
+
+Operator-reported: the populated UW Template's **T-12 Analysis Layer-3 grid shows the T-12 Total column but the 12 monthly columns (Apr 2025 … Mar 2026) are all $0.** This was the original Phase-2 "monthly grid annual-only" locked default (writer wrote col N, left B–M blank) — by design, not a regression — but the operator wants the monthly trending visible.
+
+### Layout (confirmed against the template)
+
+Layer-3 months are **columns B–M** (12 cols; headers `=C122…=N122`), T-12 Total is **column N**, then O/P/Q (T-3 Annlzd / Per Bed/Mo / % of EGI). The B–M cells are literal-`0` paste targets — **not** formulas, even on subtotal rows (EGI N69 is a formula, but B69–M69 are plain 0s) — so each month must be pasted explicitly.
+
+### Engine — `compute_uw_output_monthly` (`uw_output_model.py`)
+
+New function returning `{concept_key: [12 monthly floats]}`, reusing `_aggregate_t12`'s month-by-month GL bucketing (same primitive the annual evaluator and `dashboard_model` use). Covers all T12-derived concepts: every labor + non-labor line item, base rent / LOC / other-revenue, the subtotals, and the EBITDA chain. GPR / physical_vacancy_loss / loss_to_lease are **omitted** — they're rent-roll projections with no monthly source, so those rows stay blank in the grid (matching the Analyzer's own T12 Analytics). Returns `{}` when no T12 uploaded.
+
+### Writer — `populate_uw_template(..., computed_monthly=None)`
+
+New optional param + `_write_monthly_grid` helper. For any concept whose target is a `T-12 Analysis` column-N scalar (the annual total), the 12 monthly values are pasted across cols B–M of the same row. Written unconditionally when monthly data is present (the grid is a pure paste target — no Analyzer-cached monthly to defer to). New `report.summary['monthly_cells_written']`.
+
+### App
+
+Populate flow calls `compute_uw_output_monthly(result, t12_parse_result)` and passes `computed_monthly=`. The success caption now notes the monthly cell count.
+
+### Verification
+
+- 636 monthly cells written (53 concepts × 12). Every populated row reconciles **to the penny**: Base Rent ΣB:M = $6,983,357 = N; EGI = $7,001,957 = N; Care Staff Labor = $1,184,692 = N; Total Labor = $3,060,543 = N. GPR row blank monthly (N = $9,524,893), as designed.
+- New `tests/test_uw_output_model.py::test_monthly_grid_reconciles` asserts ≥500 monthly cells and that EGI/Base/Labor monthly sums equal their annual N. `UWT_VERSION` 0.6.1 → 0.6.2.
+
+### Not in scope
+
+Columns O (T-3 Annlzd), P (Per Bed/Mo), Q (% of EGI) remain blank — their per-row denominator/sign semantics weren't confirmed and they were never populated before (no regression). Candidates for a follow-up once the intended formula for each is pinned.
+
+---
+
 ## v0.6.1 — Dynamic-array repair: Section R/S spills survive the writer (2026-05-28)
 
 Operator-reported bug on the populated `Homestead_Village_UW_Template_2026-04-24_normalized.xlsx`: **Section R (Unit Type Pricing By Care Level, rows 170–181) displays only one row** (AL · 1 Bedroom) instead of the full Care Level × Unit Type matrix, so row 180/181 totals are understated (C180 = 14 vs ~272; J181 ≈ $943,841 vs ~10× that). No `#SPILL!`/`#VALUE!`/`#REF!` — silently wrong.

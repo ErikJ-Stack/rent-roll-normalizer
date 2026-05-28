@@ -234,6 +234,51 @@ def test_dynamic_array_metadata_restored() -> None:
     print(f"  ✓ dynamic-array repair: metadata.xml restored, {cm_total} cm markers, Z173 marked dynamic")
 
 
+def test_monthly_grid_reconciles() -> None:
+    """The T-12 Analysis Layer-3 monthly grid (cols B–M) is populated and each
+    row's monthly sum reconciles to its annual T-12 Total (col N)."""
+    if not (RR_FIXTURE.exists() and T12_FIXTURE.exists() and TEMPLATE_V5.exists()):
+        print("  ⊘ SKIP test_monthly_grid_reconciles — fixtures absent")
+        return
+
+    import io as _io
+    from analyzer_rr_translator import translate_for_t12
+    from analyzer_rr_writer import populate_rr_input
+    from t12_normalizer_writer import populate_t12_input
+    from uw_output_model import compute_uw_output_values, compute_uw_output_monthly
+    from uw_template_writer import populate_uw_template
+
+    rr, t12 = _parse_inputs()
+    after_rr = populate_rr_input(
+        BUNDLED_ANALYZER.read_bytes(), translate_for_t12(rr.condensed),
+        PERIOD, source_filename="h.xlsx",
+    )
+    fresh = populate_t12_input(after_rr, t12, new_descmap_entries=[], source_filename="t.xlsx")
+    vals = compute_uw_output_values(rr, t12)
+    mon = compute_uw_output_monthly(rr, t12)
+    out_bytes, rep = populate_uw_template(
+        fresh, TEMPLATE_V5.read_bytes(), template_version="v5",
+        computed_values=vals, computed_monthly=mon,
+    )
+
+    n_monthly = rep.summary.get("monthly_cells_written", 0)
+    _check(n_monthly >= 500, f"expected ~636 monthly cells, got {n_monthly}")
+
+    ta = openpyxl.load_workbook(_io.BytesIO(out_bytes), data_only=False)["T-12 Analysis"]
+
+    def _row_sum(r):  # cols B..M = 2..13
+        return sum(_num(ta.cell(row=r, column=c).value) or 0.0 for c in range(2, 14))
+
+    # EGI (69), Base/Net Rent (63), Care Staff Labor (71), Total Labor (85)
+    for r, label in [(63, "Base rent"), (69, "EGI"), (71, "Care staff"), (85, "Total Labor")]:
+        s = _row_sum(r)
+        n = _num(ta.cell(row=r, column=14).value)  # col N
+        _check(s > 0, f"row {r} ({label}) monthly grid is blank")
+        _check(abs(s - n) < 2.0, f"row {r} ({label}) monthly sum {s:,.2f} != annual {n:,.2f}")
+
+    print(f"  ✓ monthly grid: {n_monthly} cells; EGI/Base/Labor monthly sums reconcile to annual N")
+
+
 def main() -> int:
     print("=== test_uw_output_model ===")
     failures = 0
@@ -241,6 +286,7 @@ def main() -> int:
         test_engine_matches_cached,
         test_writer_fallback_populates,
         test_dynamic_array_metadata_restored,
+        test_monthly_grid_reconciles,
     ):
         print(f"\n--- {fn.__name__} ---")
         try:

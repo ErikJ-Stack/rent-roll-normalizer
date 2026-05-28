@@ -317,6 +317,26 @@ def _write_scalar(ws, addr: str, value: Any) -> None:
     ws[addr] = value
 
 
+def _write_monthly_grid(
+    ws, row: int, monthly_values: list, start_col: int = 2, n_months: int = 12
+) -> int:
+    """Write 12 monthly values across the UW Template Layer-3 grid (cols B–M).
+
+    The `T-12 Analysis` Layer-3 rows lay out 12 months in columns B..M with the
+    annual total in column N. Those monthly cells are literal-`0` paste targets
+    (not formulas — even the subtotal rows), so the writer must paste each
+    month explicitly. Returns the count of cells written.
+    """
+    written = 0
+    for i in range(min(n_months, len(monthly_values))):
+        v = monthly_values[i]
+        if v is None:
+            continue
+        ws.cell(row=row, column=start_col + i).value = v
+        written += 1
+    return written
+
+
 def _write_column_stride(
     ws, col_letter: str, start_row: int, values: list[Any],
     max_rows: int = 600,
@@ -533,6 +553,7 @@ def populate_uw_template(
     include_statuses: frozenset[str] | None = None,
     allow_special_keys: frozenset[str] | None = None,
     computed_values: dict[str, Any] | None = None,
+    computed_monthly: dict[str, list] | None = None,
 ) -> tuple[bytes, PopulateReport]:
     """Populate the UW Template from a populated Analyzer workbook.
 
@@ -569,12 +590,22 @@ def populate_uw_template(
         Analyzer with real cached values still wins; the fallback only fills
         gaps. Concepts filled this way are counted in
         `report.summary['computed_in_python']` and noted per-concept.
+    computed_monthly : dict[str, list] | None
+        Optional `{concept_key: [12 monthly values]}` (e.g. from
+        `uw_output_model.compute_uw_output_monthly`). For any concept whose
+        target is a `T-12 Analysis` column-N scalar (the annual T-12 Total),
+        the 12 values are pasted across the Layer-3 monthly grid (cols B–M).
+        Those grid cells are literal paste targets (not formulas), so monthly
+        is written whenever available — no Analyzer-cached monthly to defer
+        to. Counted in `report.summary['monthly_cells_written']`.
 
     Returns
     -------
     (populated_bytes, PopulateReport)
     """
     computed = computed_values or {}
+    monthly = computed_monthly or {}
+    monthly_cells = 0
     reg = _load_registry(registry_path)
     templates = reg.get("templates", {})
     if template_version not in templates:
@@ -759,6 +790,18 @@ def populate_uw_template(
             result.outcome = "written"
             result.cells_written = 1
             result.sample_value = value
+
+            # Monthly grid (UW Template Layer-3): paste the 12 monthly values
+            # across cols B–M for T-12 Analysis column-N (annual) targets.
+            if (
+                key in monthly
+                and target_sheet == "T-12 Analysis"
+                and col_letter == "N"
+            ):
+                mvals = monthly[key]
+                if isinstance(mvals, (list, tuple)) and mvals:
+                    monthly_cells += _write_monthly_grid(ws, start_row, list(mvals))
+
             if used_computed_fallback:
                 result.computed_fallback = True
                 result.notes = (
@@ -776,6 +819,7 @@ def populate_uw_template(
     report.summary["computed_in_python"] = sum(
         1 for r in report.results if r.computed_fallback
     )
+    report.summary["monthly_cells_written"] = monthly_cells
 
     # ── Serialize ─────────────────────────────────────────────────────────────
     out = io.BytesIO()

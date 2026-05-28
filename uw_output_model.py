@@ -267,3 +267,79 @@ def compute_uw_output_values(
         out["ebitda"] = ebitdar  # less depreciation (0)
 
     return out
+
+
+def compute_uw_output_monthly(
+    rr_result: NormalizeResult,
+    t12_result: Optional[T12ParseResult] = None,
+    *,
+    analyzer_path: Optional[Path] = None,
+) -> Dict[str, list]:
+    """Return ``{concept_key: [12 monthly floats]}`` for the T12-derived UW
+    Output concepts that have a monthly breakdown.
+
+    Feeds the writer's `computed_monthly=` parameter, which pastes the 12
+    values into the UW Template's `T-12 Analysis` Layer-3 monthly grid (cols
+    B–M; col N is the T-12 Total). Mirrors `_aggregate_t12`'s month-by-month
+    GL bucketing — the same primitive `compute_dashboard` / the annual
+    evaluator use — so monthly sums reconcile to the annual values to the
+    penny.
+
+    Returns ``{}`` when no T12 is present. GPR / physical_vacancy_loss /
+    loss_to_lease are intentionally omitted — they're rent-roll *projections*
+    with no monthly source (their rows stay blank in the monthly grid, same as
+    the Analyzer's own T12 Analytics).
+    """
+    if t12_result is None:
+        return {}
+    descmap = load_description_map(analyzer_path or _BUNDLED_ANALYZER)
+    _totals, monthly, _months = _aggregate_t12(t12_result, descmap)
+
+    def M(label: str) -> list:
+        arr = monthly.get(label)
+        return list(arr) if arr else [0.0] * 12
+
+    def Msum(labels) -> list:
+        out = [0.0] * 12
+        for lb in labels:
+            arr = monthly.get(lb)
+            if arr:
+                for i in range(12):
+                    out[i] += arr[i]
+        return out
+
+    res: Dict[str, list] = {}
+
+    # 1:1 line items (labor + non-labor opex + other revenue)
+    for key, label in _CONCEPT_LABEL.items():
+        res[key] = M(label)
+
+    # Revenue aggregates
+    base = Msum(["Base rent — IL", "Base rent — AL", "Base rent — MC"])
+    loc = Msum(["LOC revenue — IL", "LOC revenue — AL", "LOC revenue — MC"])
+    other = Msum(_LABELS_OTHER_REV)
+    res["base_rent_normalized"] = base
+    res["loc_revenue"] = loc
+    res["bad_debt_writeoffs_revenue"] = M("Bad debt expense")
+    egi = [base[i] + loc[i] + other[i] for i in range(12)]
+    res["egi"] = egi
+
+    # Subtotals + P&L chain
+    direct = Msum(_LABELS_DIRECT_LABOR)
+    burden = Msum(_LABELS_PAYROLL_BURDEN)
+    labor = [direct[i] + burden[i] for i in range(12)]
+    nonlabor = Msum(_LABELS_NON_LABOR)
+    total_opex = [labor[i] + nonlabor[i] for i in range(12)]
+    mgmt = M("Management fee")
+    res["labor_total"] = labor
+    res["opex_nonlabor_total"] = nonlabor
+    res["opex_total_excl_mgmt"] = total_opex
+    res["opex_total_incl_mgmt"] = [total_opex[i] + mgmt[i] for i in range(12)]
+    res["mgmt_fee"] = mgmt
+    ebitdarm = [egi[i] - total_opex[i] for i in range(12)]
+    ebitdar = [ebitdarm[i] - mgmt[i] for i in range(12)]
+    res["ebitdarm"] = ebitdarm
+    res["ebitdar"] = ebitdar
+    res["ebitda"] = ebitdar  # less depreciation (0)
+
+    return res

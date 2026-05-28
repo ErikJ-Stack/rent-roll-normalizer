@@ -60,7 +60,7 @@ from uw_template_writer import (
     UWTemplateWriterError,
     populate_uw_template,
 )
-from uw_output_model import compute_uw_output_values
+from uw_output_model import compute_uw_output_values, compute_uw_output_monthly
 from writer import write_output
 
 
@@ -74,7 +74,7 @@ APP_LAST_UPDATED = "2026-05-08"   # alias for RR_LAST_UPDATED
 RR_VERSION = "1.19.0"
 RR_LAST_UPDATED = "2026-05-27"
 
-UWT_VERSION = "0.6.1"             # Track 4 — dynamic-array repair (Section R/S spills survive openpyxl save)
+UWT_VERSION = "0.6.2"             # Track 4 — T-12 Analysis monthly grid (cols B–M) populated in-Python
 UWT_LAST_UPDATED = "2026-05-28"
 
 T12_VERSION = "0.2.1"
@@ -1389,6 +1389,9 @@ with top_tab_workspace:
                     )
                     uw_computed.setdefault("property_name", property_name)
                     uw_computed.setdefault("rr_period_date", period_date_input)
+                    # Monthly breakdown for the T-12 Analysis Layer-3 grid
+                    # (cols B–M). Empty when no T12 — those rows stay blank.
+                    uw_monthly = compute_uw_output_monthly(result, t12_parse_result)
 
                     with _show_loading("Populating UW Template…"):
                         populated_uw, uw_report = populate_uw_template(
@@ -1397,6 +1400,7 @@ with top_tab_workspace:
                             scenario=uw_template_scenario,
                             template_version=uw_template_version,
                             computed_values=uw_computed,
+                            computed_monthly=uw_monthly,
                         )
                         # Sanitize for filename
                         safe_property = "".join(
@@ -1478,13 +1482,19 @@ with top_tab_workspace:
                         # values still came through blank (e.g. no T12
                         # uploaded, or an analyst-override Analyzer with an
                         # unexpectedly empty UW Output).
+                        n_monthly = uw_report.summary.get("monthly_cells_written", 0)
                         if n_computed > 0:
+                            monthly_note = (
+                                f" Plus **{n_monthly} monthly cells** across the "
+                                f"T-12 Analysis Apr→Mar grid."
+                                if n_monthly else ""
+                            )
                             st.success(
                                 f"✅ **{n_computed} UW Output value(s) computed "
                                 f"in-Python** (EGI, EBITDARM, EBITDA, opex line "
                                 f"items, bed counts, …) — the T-12 Analysis tab "
                                 f"is populated directly from the parsed RR + "
-                                f"T12. No Excel round-trip required."
+                                f"T12. No Excel round-trip required." + monthly_note
                             )
                         t12_no_source = [
                             r for r in uw_report.results

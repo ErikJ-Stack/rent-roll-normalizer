@@ -16,7 +16,13 @@
 > `xl/metadata.xml` + the per-cell `cm` markers openpyxl drops on save, so the
 > template's Section R / S `SORT`/`UNIQUE`/`FILTER` spills survive instead of
 > demoting to single-cell CSE arrays (which had collapsed Section R to one
-> row). See §13 and CHANGELOG-UWT v0.6.1. Phase 3.6
+> row). See §13 and CHANGELOG-UWT v0.6.1.
+> **UWT v0.6.2 (2026-05-28):** T-12 Analysis Layer-3 **monthly grid** (cols
+> B–M) now populated — `compute_uw_output_monthly` produces per-month values
+> from the same `_aggregate_t12` bucketing, pasted across each T12-derived
+> row; monthly sums reconcile to the annual col-N total to the penny.
+> GPR/vacancy/loss-to-lease rows stay blank monthly (RR projections, no
+> monthly source). See §12 and CHANGELOG-UWT v0.6.2. Phase 3.6
 > (v5 → v5.1 metadata cells) attempted as UWT v0.5.0 on 2026-05-26 and
 > **rolled back same-session** due to openpyxl `wb.save()` silently dropping
 > `xl/metadata.xml` (dynamic-array `XLDAPR` props the v0.4.3 Section R/S

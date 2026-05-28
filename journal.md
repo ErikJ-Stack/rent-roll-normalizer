@@ -9,6 +9,30 @@ Newest at top.
 
 ---
 
+## 2026-05-28 — UWT v0.6.2 — T-12 Analysis monthly grid populated (cols B–M)
+
+**Track:** Track 4. Same chat, after v0.6.1.
+
+**Trigger:** Operator screenshot — populated UW Template T-12 Analysis Layer 3 shows the T-12 Total column fully populated (EGI $7,001,957, Total Labor $3,060,543, etc.) but the 12 monthly columns (Apr 2025…Mar 2026) all $0. "I don't see the data in the t12 analysis monthly."
+
+**Diagnosis:** by-design, not a regression. The Phase-2 writer had a locked default "monthly grid annual-only" — write col N (T-12 Total), leave B–M blank. The engine already had monthly data internally (`_aggregate_t12` buckets GL rows month-by-month), so populating the grid was straightforward.
+
+**Layout (confirmed against template):** Layer-3 months = cols B–M (headers `=C122…=N122`), T-12 Total = col N, then O/P/Q. The B–M cells are literal-`0` paste targets (not formulas — even subtotal rows; EGI N69 is a formula but B69–M69 are plain 0s), so each month is pasted explicitly.
+
+**Engine:** new `compute_uw_output_monthly(rr_result, t12_result) → {concept_key: [12 floats]}` — reuses `_aggregate_t12`'s monthly bucketing; covers labor, non-labor opex, base rent/LOC/other-rev, subtotals, EBITDA chain. GPR/vacancy/loss-to-lease omitted (RR projections, no monthly source → rows stay blank). Returns {} with no T12.
+
+**Writer:** `populate_uw_template(..., computed_monthly=None)` + `_write_monthly_grid`; for T-12 Analysis col-N concepts, pastes 12 values to cols B–M. New `summary['monthly_cells_written']`.
+
+**App:** passes `compute_uw_output_monthly(...)`; success caption notes monthly count.
+
+**Verified:** 636 cells (53 concepts × 12); every populated row reconciles to the penny (Base Rent ΣB:M=$6,983,357=N, EGI=$7,001,957=N, Total Labor=$3,060,543=N); GPR blank monthly as designed. New test `test_monthly_grid_reconciles`; all 4 model tests + writer suite green. `UWT_VERSION` 0.6.1 → 0.6.2.
+
+**Not in scope:** cols O (T-3 Annlzd), P (Per Bed/Mo), Q (% of EGI) stay blank — semantics unconfirmed, never populated before (no regression). Follow-up candidate.
+
+**Commit:** `feat: UWT v0.6.2 — populate T-12 Analysis monthly grid (cols B–M)`.
+
+---
+
 ## 2026-05-28 — UWT v0.6.1 — dynamic-array repair (Section R/S spills survive the writer)
 
 **Track:** Track 4. Same chat as v0.6.0, immediately after.
