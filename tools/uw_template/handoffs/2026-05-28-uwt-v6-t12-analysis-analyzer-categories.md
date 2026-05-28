@@ -181,3 +181,50 @@ after your inserts (Excel will shift them down — fine).
   items; it expects the same column geometry as v5).
 - Do **not** round-trip through openpyxl / Sheets / LibreOffice (dynamic-array +
   `_xludf` prefix hazards).
+
+## Pre-work verified 2026-05-28 (parallel chat — turnkey facts for the absorption)
+
+A parallel session verified the two Claude-Code engine/substrate checklist
+items against the Homestead fixture so the absorption applies them with no
+re-investigation. Neither was executed in parallel (both touch files the v6
+absorption rewrites — `uw_output_model.py` / `dashboard_model.py` / `registry.json`
+— so they land atomically with v6 to avoid an engine-vs-template mismatch).
+
+### `opex_auto_expense` — the $6,061 NOI gap is exactly Auto Expense
+
+- **Confirmed:** on Homestead the `Auto Expense` Description_Map label sums to
+  **$6,061.32** — penny-exact to the standardized-vs-as-reported NOI gap
+  ($1,417,385 − $1,411,324). The v0.6.4 changelog's "bad-debt-as-revenue-contra"
+  attribution was imprecise; the gap is **Auto Expense dropped from the opex total**.
+- **Root cause:** `Auto Expense` is **absent from `_LABELS_NON_LABOR`** in
+  `dashboard_model.py` (only `Auto insurance` is present). The label aggregates
+  correctly but never reaches `opex_nonlabor_total` → falls out of EBITDARM.
+- **Fix (lands with v6 — changes NOI by $6,061, re-baseline tests):** add
+  `"Auto Expense"` to `_LABELS_NON_LABOR`. Drops EBITDARM/EBITDAR/EBITDA by
+  $6,061 on every property; standardized NOI then ties to as-reported
+  $1,411,324. **Test impact:** `tests/test_uw_output_model.py` + writer tests
+  assert the old EBITDA $1,417,385 / EBITDARM $1,767,483 — bump down $6,061 each.
+- The engine already computes `Base rent — IL/AL/MC` and `LOC revenue — IL/AL/MC`
+  as intermediates (summed for EGI in `compute_uw_output_values`) — exposing
+  `base_rent_il/al/mc`, `loc_il/al/mc` + the 5 ancillary income keys is purely
+  additive re-exposure of existing label sums.
+
+### 2nd Person Revenue Description_Map re-map — exact rows + zero Homestead impact
+
+- **Exact rows** in `ALF_Financial_Analyzer_Only.xlsx` → `Description_Map`
+  (col A = description, col B = label):
+  - **r400** `Second Persons Revenue | Assisted Living` — currently `Base rent — AL` → `2nd Person Revenue`
+  - **r401** `Second Persons Revenue | Independent Living` — currently `Base rent — IL` → `2nd Person Revenue`
+  - **r402** `Second Persons Revenue | Memory Care` — currently `Base rent — MC` → `2nd Person Revenue`
+- **Open question (r127):** `Second Person Fee` — currently `Base rent — IL`. A
+  *fee* description, distinct from the three "...Revenue | care" rows the brief
+  names. Recommend leaving it unless the operator confirms it's recurring
+  2nd-person revenue. **Decision needed.**
+- **Zero Homestead impact confirmed:** all three `Second Persons Revenue | care`
+  descriptions sum to **$0** on Homestead (no GL lines), so Base Rent totals
+  don't move and `2nd Person Revenue` stays $0. EGI unchanged (pure
+  reallocation). The current template's N67 row populates immediately for any
+  property that *does* carry 2nd-person GL lines.
+- Substrate migration (Description_Map content change) → bump the substrate
+  stream (v0.2.14 → v0.2.15) via `migrate_to_v0215.py` + verify + idempotency,
+  applied to the bundled Analyzer.
