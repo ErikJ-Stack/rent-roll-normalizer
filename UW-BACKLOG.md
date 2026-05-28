@@ -39,28 +39,6 @@ truth.
 
 ---
 
-### [BL-0026] Wire T-12 Raw path: Analyzer `T12 Input` → UW Template `T-12 Analysis!A123+` (Layer 1)
-- **Track:** UWT (Track 4)
-- **Target:** UWT v0.5.0 — after Phase 2.5 is fully integrated and sample-run-verified
-- **Originally surfaced in:** chat 2026-05-26, post-Phase-2.5 ship. User noticed the analyst still has to manually paste raw operator T-12 into the UW Template's Layer 1 (`T-12 Analysis!A123+`) even though the same data was already parsed and lives at Analyzer `T12 Input!A12:N511`. Duplicate paste step.
-- **Summary:** Add a third paste path to the registry — `t12_raw` — modeling Analyzer `T12 Input` → UW Template `T-12 Analysis!A123+` Layer 1. Shapes are functionally identical (Account # / Description / 12 monthly cols / T-12 Total) on both sides, just with the template adding cols P/Q for mapping label and variance.
-    - **Concepts to add (~5)** as column-stride mappings:
-        - `t12_raw_account_num` — `T12 Input!A12:A511` → `T-12 Analysis!A123:A622+`
-        - `t12_raw_description` — `T12 Input!B12:B511` → `T-12 Analysis!B123:B622+`
-        - `t12_raw_monthly` (single concept that writes 12 cols × N rows) — `T12 Input!C12:N511` → `T-12 Analysis!C123:N622`. May need a small writer extension to handle 2-D stride paste; otherwise model as 12 separate column concepts.
-        - `t12_raw_total` — `T12 Input!O` — template formula, writer skips.
-        - **`t12_raw_month_headers`** — `T12 Input!C11:N11` → `T-12 Analysis!C122:N122`. Cherry on top: the template's `B56:M56` monthly headers already pull from `=C122..=N122` via the v5 formula chain, so populating row 122 from the Analyzer's dynamic month headers auto-updates the standardized layer's headers to real per-deal dates instead of the hardcoded `Apr-25..Mar-26`.
-    - **Open question to resolve before shipping:** template col P (`→ MAPPING`) holds standardized-bucket labels. Should writer populate from Analyzer `Description_Map` join, or leave as analyst dropdown on the template side? User leaned toward "populate but allow override" but final call deferred.
-- **Why deferred:** Phase 2.5 just shipped (2026-05-26). The current write loop must be fully integrated and validated against a real deal end-to-end before adding a new path. Adding the t12_raw path is a clean additive extension to the existing modular registry, so no foundational work is wasted by deferring.
-- **Dependencies / unblocks:** None — Phase 2.5 doesn't block this conceptually, but operationally we want to validate Phase 2.5 first. After this lands, the only remaining T-12 friction in the analyst workflow is the cache caveat (Excel-round-trip for cached UW Output values), which is its own separate item.
-- **Update 2026-05-27 (Track 4 chat investigation):** Mid-implementation, surveyed actual Layer 1 shape on `assets/ALF_UW_Template_v5.xlsx` and found a structural mismatch that the original ticket didn't anticipate. **Capacity:** Layer 1 data band is only **50 rows (123-172)** — too small for real-world T-12s (Homestead has 101 GL rows; many operators have more). **Col P semantic conflict:** rows 123-172 are **pre-populated** with suggested bucket labels in col P only (`Gross Potential Rent (GPR)`, `LOC / Care Services Revenue`, `Concessions & Specials` × 3, `Bad Debt / Write-offs`, ... all the way to `Management Fee` at r172). These are not data rows — they're a vocabulary cheat-sheet showing the analyst the expected bucket→row binding when manually mapping their pasted GL. **Three plausible directions, none pickable without operator input:**
-  1. **Truncate + warn** — writer pastes first 50 rows, drops overflow, surfaces a warning. Quick ship, lossy.
-  2. **Aggregate by bucket** — writer pre-aggregates Analyzer's full GL into ~50 bucket-summed rows using Description_Map's Label → bucket map before pasting. Matches the template's design intent. Substantial new writer logic — needs a `_aggregate_t12_for_layer1()` step.
-  3. **Template restructure to v5.1+** — operator extends Layer 1 to ~200 rows in Excel, moves the pre-populated col P bucket-label hints to a separate reference zone (e.g. `T-12 Analysis!T1:T50` as a key-list), so the writer can paste raw GL 1:1. Cleanest end state; operator-side work.
-  Operator needs to pick the direction before BL-0026 can implement. Recommend **direction 3** (template restructure) for analytical fidelity — pasting full GL detail enables Analyzer-style coverage checking on the template side without forcing the writer to make aggregation decisions.
-
----
-
 ### [BL-0019] Persistent audit log for password gate (external store + manual sync)
 - **Track:** RR (Track 1)
 - **Target:** TBD (likely RR v1.18.0 + new `tools/sync_audit_log.py`)
@@ -76,6 +54,12 @@ truth.
 ---
 
 ## Shipped
+
+### [BL-0026] Wire T-12 Raw path: Analyzer T12 → UW Template Layer 1
+- **Shipped in:** UWT v0.6.4 (2026-05-28) via `compute_t12_raw_lines` + `_write_section_i_raw` in `uw_output_model.py` / `uw_template_writer.py`. (Closed by the **aggregate-by-label** approach — direction 2 of the three the 2026-05-27 investigation laid out — rather than a raw 1:1 paste.)
+- **Track:** UWT (Track 4)
+- **Originally surfaced in:** chat 2026-05-26 — analyst had to manually paste raw operator T-12 into the UW Template's Layer 1 (`T-12 Analysis` Section I) even though the same data already lived in Analyzer `T12 Input`. The 2026-05-27 investigation found Layer 1's 50-row band (rows 123-172) couldn't hold a raw 1:1 paste of a real T-12 (Homestead has 101 GL lines) and that col P carried a pre-assigned bucket-label cheat-sheet.
+- **Summary:** v0.6.4 resolved the capacity + col-P-semantics tension by **summarizing** the raw T-12 to one row per Description_Map label before pasting. `compute_t12_raw_lines(t12_result)` returns `{label, section, descriptions, monthly[12], total}` grouped by label (computed from `T12ParseResult.gl_rows`, not the Analyzer's formula-bearing `T12 Raw Data` sheet — same cache caveat). `_write_section_i_raw` clears the skeleton (rows 123-172) and writes one row per label: B = matched GL account names, C-N = 12 months, O = T-12 total, P = bucket label; plus a Section J raw-totals reconciliation (Total Revenue / OpEx / EBITDAR) as live SUM formulas. **Homestead result:** 44 raw lines (8 rev / 36 exp), 663 cells; Section J EBITDAR reconciles to the penny-exact as-reported NOI **$1,411,324**. The full-GL-detail / template-restructure path (direction 3) was NOT taken — the summarized approach fits the existing 50-row band and matches the template's design intent. The original "open question" (col P populate vs analyst dropdown) is resolved: writer populates col P from the label.
 
 ### [BL-0025] Move-out & preleased exposure surface
 - **Shipped in:** RR v1.18.0 + substrate v0.2.13 (2026-05-25) via `tools/migration/migrate_to_v0213.py`. Bundled `ALF_Financial_Analyzer_Only.xlsx` updated in place v0.2.12 → v0.2.13.
