@@ -4,15 +4,20 @@ A Streamlit app that turns a senior-housing rent roll AND a T12 financial statem
 
 **Live app:** <https://rrnormalizer.streamlit.app/>
 **Repo:** <https://github.com/ErikJ-Stack/rent-roll-normalizer> (public)
-**Stack:** Python · Streamlit · pandas · openpyxl · Streamlit Community Cloud (free tier)
+**Stack:** Python · Streamlit · pandas · openpyxl · xlrd (legacy `.xls`) · Streamlit Community Cloud (free tier)
 
 **Current versions:**
 
 | Stream | Version | Last updated |
 | --- | --- | --- |
-| RR Normalizer (`RR_VERSION`) | v1.17.5 | 2026-05-15 |
+| RR Normalizer (`RR_VERSION`) | v1.19.0 | 2026-05-28 |
 | T12 Normalizer (`T12_VERSION`) | v0.2.1 | 2026-05-11 |
-| Bundled Analyzer substrate | v0.2.6 | 2026-05-18 |
+| Bundled Analyzer substrate | v0.2.14 | 2026-05-25 |
+| AR & Collections module | v0.1.0 | 2026-05-23 |
+| UW Template integration (`UWT_VERSION`, Track 4) | v0.6.4 | 2026-05-28 |
+| Webapp Dashboard surface (`T5_VERSION`, Track 5) | v0.1.10 | 2026-05-24 |
+
+The repo runs five parallel tracks sharing one Analyzer/UW pipeline: **Track 1** RR Normalizer, **Track 2** T12 Normalizer + Analyzer substrate (+ the optional **AR & Collections** module), **Track 3** Analyzer optimization, **Track 4** ALF UW Template integration (registry-driven writer that populates a downstream per-deal underwriting template — see [`SPEC-UWT.md`](SPEC-UWT.md)), and **Track 5** in-browser Dashboard surface (see [`SPEC-T5.md`](SPEC-T5.md)). See [`CLAUDE.md`](CLAUDE.md) for the full track map.
 
 ---
 
@@ -48,6 +53,7 @@ At RR v1.17.4 + substrate v0.2.2, the Analyzer's `Rent Roll Input` sheet capture
 - **v1.16.0 extension** (V-AB): 2nd Person Rent $ / Move-out Date / Balance / Notes / Market PSF / Actual PSF / ACH
 - **v0.1.13 per-fee ancillary cols** (AC-AG): Meal Plan $ / Scooter Fee $ / Housekeeping $ / Laundry $ / Pet $
 - **v0.2.2 ancillary rollup** (AH): Total Ancillary $ = V + AC + AD + AE + AF + AG
+- **v0.2.14 cols** (AI-AJ): Deposit (AI — first populated at RR v1.19.0 from River Oaks's "Required Deposit") / Preleased Date (AJ — relocated from AI when Deposit took that slot; pairs with Status="Preleased" for the Rent Roll Recon Section N exposure surface added at substrate v0.2.13). `RR_Input_Data` named range widened to `$A$7:$AJ$606`.
 
 2nd Person Rent reconciles 1:1 against the T12 substrate's `2nd Person Revenue` Label (added at v0.1.5). The 5 per-fee ancillary cols (AC-AG) reconcile against the 5 finer-grained T12 Labels added at v0.2.1 (Meal / Housekeeping / Laundry Income, Scooter / Transfer Fee Revenue) — closing the per-fee attribution gap on Rent Roll Recon Section M. Notes column preserves free-form rate-negotiation / lease-anomaly context; v1.17.4 adds a parser-side rerouter that detects concession dollars buried in Notes (Homestead pattern) and moves them from `Other LOC $` to `Concession $` automatically.
 
@@ -61,14 +67,16 @@ The Analyzer's analytical depth was built out across a four-branch Track 3 roadm
 - **`UW Export` sheet** (substrate v0.2.0): values-only mirror of UW Output via `='UW Output'!{cell}` formulas with a 5-row metadata header (Property / RR period / T12 period / Substrate version / Generated timestamp). Downstream consumer copies-as-values into their template.
 - **Pre-Export Gate** on `Workbook Health` (substrate v0.2.0): four P-checks aggregating the existing V1-V8 validation rows into a single ✓/⚠ "READY FOR EXPORT" cell.
 
+Since the v0.2.0 roadmap close, the substrate added (through v0.2.14): a chart-rich **`Dashboard`** sheet (v0.2.4 → redesigned v0.2.7, with v0.2.12 blended-vs-segment formula fixes), the **`AR & Collections`** sheet (v0.2.10/v0.2.11 — optional operator AR-aging ingest, hidden until an AR file is uploaded), **Rent Roll Recon Section N** move-out/preleased exposure surface (v0.2.13), and the **Deposit slot + Preleased-Date relocation** (v0.2.14). The downstream **ALF UW Template** is populated by the Track 4 registry-driven writer (`uw_template_writer.py`), and the same Dashboard metrics render in-browser via the Track 5 webapp tab (`dashboard_ui.py`).
+
 ### What's normalized
 
 - **Apartment type** — Studio / 1BR / 2BR / Companion / Semi-Private / Other
-- **Bed status** — Occupied / Vacant / Hold / Notice / Model / Down (NTV → Notice)
-- **Payer type** — Private Pay / Medicaid / Medicare / VA Benefit / LTC Insurance / Other (fallback: Private Pay)
+- **Bed status** — Occupied / Vacant / Hold / Notice / Model / Down / Preleased (NTV → Notice; Admin/Down → Vacant)
+- **Payer type** — Private Pay / Medicaid / Medicare / Managed Care / VA Benefit / LTC Insurance / Other (fallback: Private Pay)
 - **Care level** — Level 1-5 / Level 6+ (handles word-tier vocabularies like "Basic" and acuity-tier vocabularies like "Comfort Care 1-4")
-- **Care type** — IL / AL / MC (priority chain: explicit Care Type column → apartment context → building/unit code → care level value → property default)
-- **Care buckets** — Care Level $ / Med Mgmt $ / Pharmacy $ / Other LOC $ (auto-catch — anything unrecognized flows into Other LOC $ so revenue never disappears)
+- **Care type** — IL / AL / MC (priority chain: explicit Care Type column → apartment context → building/unit code → care level value → **apt-type prefix** (v1.19.0: Yardi "Floorplan" col like IL/AL/MC/RHA) → property default). RHA → IL.
+- **Care buckets** — Care Level $ / Med Mgmt $ / Pharmacy $ / Other LOC $ (auto-catch — anything unrecognized flows into Other LOC $ so revenue never disappears). v1.19.0 adds Yardi billing codes MEDADMIN/MEDMANAGE → Med Mgmt $, COMMAPT → Other LOC $.
 
 ### Verified rent roll formats
 
@@ -78,6 +86,9 @@ The Analyzer's analytical depth was built out across a four-branch Track 3 roadm
 | Briar Glen | 79 (71 units, 8 shared) | Single-column unit, two-letter care codes, `*Vacant` resident marker, Recurring Discounts + One-Time Incentives concession sources |
 | Oaks at Beaufort | 104 (54 AL + 50 MC) | Mixed AL+MC building, `Horizons` MC wing, `Comfort Care` acuity, two parallel care-level column groups |
 | Homestead Pensacola | 176 (62 IL + 62 AL + 52 MC) | Broker-condensed self-contained format with `Unit ID` / `Cottage` / `Area` / `Category` / `BR/BA` headers |
+| River Oaks Place (SSMG / Yardi) | 86 (56 IL + 16 AL + 11 MC + 3 Comm) | Legacy binary `.xls` (xlrd); Yardi detail export — `Floorplan` col carries care type (IL/AL/MC/RHA), `Unit/Lease Status` (Admin/Down → Vacant), `Market + Addl.` / `Lease Rent` rates, `Required Deposit`, `MEDADMIN`/`MEDMANAGE`/`COMMAPT` billing codes |
+
+File formats: `.xlsx` / `.xlsm` / `.xls` (legacy binary via xlrd) for rent rolls, T12, and AR uploads.
 
 ### Verified T12 formats
 
