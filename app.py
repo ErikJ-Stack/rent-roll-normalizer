@@ -60,6 +60,7 @@ from uw_template_writer import (
     UWTemplateWriterError,
     populate_uw_template,
 )
+from uw_output_model import compute_uw_output_values
 from writer import write_output
 
 
@@ -73,8 +74,8 @@ APP_LAST_UPDATED = "2026-05-08"   # alias for RR_LAST_UPDATED
 RR_VERSION = "1.19.0"
 RR_LAST_UPDATED = "2026-05-27"
 
-UWT_VERSION = "0.5.3"             # Track 4 — UW Template integration (Phase 2.5)
-UWT_LAST_UPDATED = "2026-05-27"
+UWT_VERSION = "0.6.0"             # Track 4 — in-Python UW Output evaluator (kills cache caveat)
+UWT_LAST_UPDATED = "2026-05-28"
 
 T12_VERSION = "0.2.1"
 T12_LAST_UPDATED = "2026-05-11"
@@ -1365,18 +1366,37 @@ with top_tab_workspace:
                         f"Using UW Template: **{uw_template_source}** "
                         f"(`{uw_template_version}`)."
                     )
+
+                    # Per-deal filename: <Property>_UW_Template_<period>_<scenario>.xlsx
+                    property_name = (
+                        derive_property_name(getattr(rr_file, "name", ""))
+                        or "Property"
+                    )
+
+                    # In-Python UW Output evaluator (kills the cache caveat).
+                    # The Analyzer the app just built via openpyxl has formula
+                    # *text* but no cached values, so the writer's reads of
+                    # `UW Output!{col}{row}` would all come back blank. We
+                    # compute those values directly from the parsed RR + T12
+                    # (mirroring T12 Analytics) and hand them to the writer as
+                    # a fallback. Property name + period date are added here
+                    # too (the app already has them; their Analyzer source
+                    # cells are formula/blank on a fresh build).
+                    uw_computed = compute_uw_output_values(
+                        result,
+                        t12_parse_result,
+                        scenario=uw_template_scenario,
+                    )
+                    uw_computed.setdefault("property_name", property_name)
+                    uw_computed.setdefault("rr_period_date", period_date_input)
+
                     with _show_loading("Populating UW Template…"):
                         populated_uw, uw_report = populate_uw_template(
                             final_bytes,
                             uw_template_bytes,
                             scenario=uw_template_scenario,
                             template_version=uw_template_version,
-                        )
-
-                        # Per-deal filename: <Property>_UW_Template_<period>_<scenario>.xlsx
-                        property_name = (
-                            derive_property_name(getattr(rr_file, "name", ""))
-                            or "Property"
+                            computed_values=uw_computed,
                         )
                         # Sanitize for filename
                         safe_property = "".join(
@@ -1393,6 +1413,7 @@ with top_tab_workspace:
                         n_written = uw_report.summary.get("written", 0)
                         n_cells = uw_report.summary.get("cells_written", 0)
                         n_total = uw_report.summary.get("total_concepts", 0)
+                        n_computed = uw_report.summary.get("computed_in_python", 0)
                         n_warn = len(uw_report.warnings)
                         st.caption(
                             f"Writer populated **{n_written} of {n_total}** "
@@ -1448,44 +1469,41 @@ with top_tab_workspace:
                             key="dl_uw_template",
                         )
 
-                        # Cache-state caveat — IMPOSSIBLE-TO-MISS warning
-                        # when the t12-path comes through empty. The
-                        # populated template will have BLANK T-12 Analysis
-                        # values unless the analyst round-trips the
-                        # Analyzer through Excel first. We've had operators
-                        # hit this without realizing — promote to
-                        # st.warning + explicit step-by-step.
+                        # In-Python evaluator status. The cache caveat is now
+                        # handled: the writer's UW-Output reads on a freshly
+                        # built (openpyxl, no cached values) Analyzer fall back
+                        # to values computed directly from the parsed RR + T12.
+                        # No Excel round-trip needed. Surface a success line
+                        # when the fallback did the work; only warn if T-12
+                        # values still came through blank (e.g. no T12
+                        # uploaded, or an analyst-override Analyzer with an
+                        # unexpectedly empty UW Output).
+                        if n_computed > 0:
+                            st.success(
+                                f"✅ **{n_computed} UW Output value(s) computed "
+                                f"in-Python** (EGI, EBITDARM, EBITDA, opex line "
+                                f"items, bed counts, …) — the T-12 Analysis tab "
+                                f"is populated directly from the parsed RR + "
+                                f"T12. No Excel round-trip required."
+                            )
                         t12_no_source = [
                             r for r in uw_report.results
                             if r.outcome == "no_source" and r.path == "t12"
                         ]
-                        if t12_no_source:
-                            n_blank = len(t12_no_source)
-                            st.warning(
-                                f"⚠️ **T-12 Analysis tab will be mostly "
-                                f"BLANK** — {n_blank} of the T-12 values "
-                                f"came through as `no_source` because "
-                                f"openpyxl (Python's xlsx library) doesn't "
-                                f"compute Excel formulas. The Analyzer "
-                                f"this app just built has the formula "
-                                f"text but no cached values — and the "
-                                f"writer reads cached values.\n\n"
-                                f"**To get a fully populated UW Template:**\n"
-                                f"1. Download the Analyzer (above).\n"
-                                f"2. **Open it in Excel.** Wait for it to "
-                                f"compute (a few seconds). Save it.\n"
-                                f"3. Come back here and **upload the "
-                                f"saved-from-Excel Analyzer as "
-                                f"\"Analyzer template override\"** in the "
-                                f"sidebar's Advanced expander.\n"
-                                f"4. The page reruns. Re-download the UW "
-                                f"Template — T-12 Analysis Layer 3 will "
-                                f"now be populated with EGI, EBITDARM, "
-                                f"opex line items, etc.\n\n"
-                                f"This is a known limitation (openpyxl "
-                                f"quirk) — an in-Python formula evaluator "
-                                f"is on the roadmap to eliminate this "
-                                f"workaround entirely."
+                        if t12_no_source and not has_t12:
+                            st.info(
+                                f"ℹ️ {len(t12_no_source)} T-12 Analysis value(s) "
+                                f"are blank because no Raw T12 was uploaded. "
+                                f"Upload a T12 to populate EGI / EBITDARM / opex "
+                                f"line items."
+                            )
+                        elif t12_no_source:
+                            st.info(
+                                f"ℹ️ {len(t12_no_source)} T-12 value(s) came "
+                                f"through blank. If you uploaded an Analyzer "
+                                f"override, its `UW Output` cells may be empty — "
+                                f"the in-Python evaluator only fills gaps when "
+                                f"the parsed RR + T12 are available."
                             )
 
                 except UWTemplateWriterError as e:

@@ -120,6 +120,7 @@ class ConceptResult:
     cells_written: int = 0
     notes: str = ""
     sample_value: Any = None  # first / sample value for spot-checking
+    computed_fallback: bool = False  # value came from the in-Python evaluator
 
 
 @dataclass
@@ -155,6 +156,7 @@ class PopulateReport:
                     "outcome": r.outcome,
                     "target_address": r.target_address,
                     "cells_written": r.cells_written,
+                    "computed_fallback": r.computed_fallback,
                     "notes": r.notes,
                     "sample_value": (
                         str(r.sample_value) if r.sample_value is not None else None
@@ -356,6 +358,7 @@ def populate_uw_template(
     registry_path: str | Path | None = None,
     include_statuses: frozenset[str] | None = None,
     allow_special_keys: frozenset[str] | None = None,
+    computed_values: dict[str, Any] | None = None,
 ) -> tuple[bytes, PopulateReport]:
     """Populate the UW Template from a populated Analyzer workbook.
 
@@ -383,11 +386,21 @@ def populate_uw_template(
     allow_special_keys : frozenset[str] | None
         Concept keys to NOT special-skip even if they're in `_SPECIAL_SKIP_KEYS`.
         Default is None (honor all special-skips).
+    computed_values : dict[str, Any] | None
+        Optional `{concept_key: value}` fallback (e.g. from
+        `uw_output_model.compute_uw_output_values`). Used **only when the
+        Analyzer's cached cell read is blank** — this kills the "cache caveat"
+        for Analyzers freshly built in-memory (openpyxl doesn't evaluate
+        formulas, so `UW Output` cells have no cached values). An analyst-saved
+        Analyzer with real cached values still wins; the fallback only fills
+        gaps. Concepts filled this way are counted in
+        `report.summary['computed_in_python']` and noted per-concept.
 
     Returns
     -------
     (populated_bytes, PopulateReport)
     """
+    computed = computed_values or {}
     reg = _load_registry(registry_path)
     templates = reg.get("templates", {})
     if template_version not in templates:
@@ -504,6 +517,16 @@ def populate_uw_template(
             report.results.append(result)
             continue
 
+        # In-Python computed fallback — only when the Analyzer cell came back
+        # blank (cache caveat: freshly-built Analyzer has no cached formula
+        # values). A saved-through-Excel Analyzer keeps its cached value.
+        used_computed_fallback = False
+        if key in computed and not isinstance(value, list) and _is_blank(value):
+            cv = computed[key]
+            if not _is_blank(cv):
+                value = cv
+                used_computed_fallback = True
+
         # Decide scalar vs row-stride
         try:
             col_letter, start_row, is_stride = _parse_target_addr(target_addr)
@@ -562,6 +585,12 @@ def populate_uw_template(
             result.outcome = "written"
             result.cells_written = 1
             result.sample_value = value
+            if used_computed_fallback:
+                result.computed_fallback = True
+                result.notes = (
+                    "value computed in-Python (Analyzer cell was blank — "
+                    "cache caveat fallback)"
+                )
 
         report.results.append(result)
 
@@ -570,6 +599,9 @@ def populate_uw_template(
     report.summary = {k: len(v) for k, v in by.items()}
     report.summary["total_concepts"] = len(report.results)
     report.summary["cells_written"] = report.write_count()
+    report.summary["computed_in_python"] = sum(
+        1 for r in report.results if r.computed_fallback
+    )
 
     # ── Serialize ─────────────────────────────────────────────────────────────
     out = io.BytesIO()

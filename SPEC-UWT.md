@@ -5,7 +5,13 @@
 > **ALF UW Template** workbook as the last step of the ALF underwriting
 > pipeline.
 >
-> **Status:** Phase 3.5 (handoff infrastructure shipped — see §11). Phase 3.6
+> **Status:** Phase 3.7 — **in-Python UW Output evaluator shipped (UWT v0.6.0,
+> 2026-05-28); the cache caveat is closed.** The writer no longer depends on
+> the Analyzer having been round-tripped through Excel: a new module
+> `uw_output_model.py` computes the 62 `uw_output`-system concepts (+ 2
+> dependent `derived`) directly from the parsed RR + T12, mirroring T12
+> Analytics, and the writer accepts them as a fallback used only when the
+> Analyzer's cached cell is blank. See §12 and CHANGELOG-UWT v0.6.0. Phase 3.6
 > (v5 → v5.1 metadata cells) attempted as UWT v0.5.0 on 2026-05-26 and
 > **rolled back same-session** due to openpyxl `wb.save()` silently dropping
 > `xl/metadata.xml` (dynamic-array `XLDAPR` props the v0.4.3 Section R/S
@@ -13,14 +19,14 @@
 > add-in taskpane). Path forward: operator authors the two cells in Excel via
 > Cowork per `tools/uw_template/handoffs/2026-05-26-uwt-v5-to-v51-residual-gaps.md`.
 > See openpyxl quirk #6 in CLAUDE.md for technical detail.
-> **Current code version:** UWT v0.5.3 (registry v0.4.2 — three concepts moved `mapped → derived` to honor v5.1's new K/L/V template formulas; see CHANGELOG-UWT.md). Earlier on 2026-05-27: UWT v0.5.2 (registry v0.4.1 — 12 new
-> month-header concepts added under path `t12_raw`). Writer now
+> **Current code version:** UWT v0.6.0 (registry v0.4.2 unchanged — the
+> evaluator is a writer/app addition, no registry change). Earlier: UWT v0.5.3
+> (registry v0.4.2 — three concepts moved `mapped → derived` to honor v5.1's
+> new K/L/V template formulas; see CHANGELOG-UWT.md). UWT v0.5.2 (registry
+> v0.4.1 — 12 new month-header concepts added under path `t12_raw`). Writer
 > pastes Analyzer's T12 Input!C11:N11 (actual T-12 period months)
 > into T-12 Analysis!C122:N122; auto-cascades to row 56's monthly
-> headers via existing `=C122..=N122` formula chain. Also: cache
-> caveat surfaced loud-and-clear via `st.warning` (was `st.info`)
-> with explicit step-by-step workaround instructions; added to
-> Workspace "What the app does" expander as a known-issue callout.
+> headers via existing `=C122..=N122` formula chain.
 > **Target template version:** `v5` (`Sample Files/ALF_UW_Template_v5.xlsx`
 > — repo canonical copy mirrored from `Deals/Acquisition/_Template/ALF Templates/`).
 > v4 still supported via `template_version='v4'` for backward compat.
@@ -434,3 +440,62 @@ the *back-handoff* leg of that exchange). The two patterns coexist:
 Cowork-authored specs land here, get decided/reviewed, produce a
 back-handoff to Cowork; ClaudeCode-surfaced template needs produce a
 handoff brief that operator picks up via Cowork or directly in Excel.
+
+## 12. In-Python UW Output evaluator (`uw_output_model.py`)
+
+**The cache caveat and why it existed.** The writer reads the Analyzer with
+`data_only=True` — i.e. it reads *cached* formula values. openpyxl does not
+evaluate formulas, so an Analyzer the app just built in memory (via
+`populate_rr_input` / `populate_t12_input` / `populate_ar_collections`) has
+formula **text** but no cached values. Every `uw_output`-system concept
+(reads of `UW Output!{col}{row}`, which are themselves references into
+`T12 Analytics`) therefore resolved to `None` → `no_source`, leaving the
+populated UW Template's `T-12 Analysis` tab blank. The only workaround was a
+manual Excel round-trip (download Analyzer → open → save → re-upload as
+override → re-run).
+
+**The fix (UWT v0.6.0).** `uw_output_model.compute_uw_output_values(rr_result,
+t12_result, *, scenario)` computes those values directly in pure Python from
+the same parsed artifacts the writers consume, and the writer takes them as a
+fallback:
+
+```
+populate_uw_template(analyzer_bytes, template_bytes, *,
+                     computed_values={concept_key: value})
+```
+
+The fallback is applied **per concept, only when the Analyzer's cached cell
+read is blank**. So an analyst-saved (override) Analyzer with real cached
+values always wins; the computed values fill gaps for freshly-built Analyzers.
+`PopulateReport.summary['computed_in_python']` counts how many concepts the
+fallback filled; `ConceptResult.computed_fallback` flags each one.
+
+**Coverage.** 62 `uw_output`-system concepts + 2 dependent `derived`
+(`licensed_beds_total`, `opex_total_incl_mgmt`). The app additionally injects
+`property_name` and `rr_period_date` (both already in hand, both blank on a
+fresh Analyzer). Remaining `rent_roll`-path `no_source` cells are genuinely
+empty source columns, not cache artifacts.
+
+**Why it's faithful to Excel.** `UW Output` is a thin reference layer over
+`T12 Analytics`, which (a) sums `T12 Raw Data` per Description_Map Label and
+(b) reads `Rent Roll Recon` bed counts. The default **normalized** scenario
+(col F) equals the **T12 actual** for every line, because:
+- opex / other-revenue: `T12 Analytics F{r} = =E{r}` (col F literally copies
+  col E unless an analyst overrides it),
+- base rent / LOC: the "stabilized" formula `B20 = B6·B10·B19·12` collapses
+  algebraically to the T12 actual when `B10` (target occupancy) `= B8`
+  (actual occupancy) — and `B10`'s default formula is literally `=B8`.
+
+Verified empirically: on the Homestead fixture `E16==E20`, `E23==E27`,
+`E52==F52`, `E108==F108`. Analyst normalization is an Excel-side override
+applied *after* populate; once saved, the cached values exist and win.
+
+**Engine reuse.** The module imports Track 5 `dashboard_model`'s aggregation
+primitives (`load_description_map`, `_aggregate_t12`, the `_LABELS_*`
+constants) rather than re-implementing them — single source of truth for the
+Description_Map label vocabulary and GL-by-label grouping.
+
+**Drift guard.** `tests/test_uw_output_model.py` asserts the engine reproduces
+the Homestead fixture's cached `UW Output` to the penny (42 concepts) and that
+the writer fallback takes a fresh Analyzer's T-12 `no_source` count from 63 → 2.
+If the Analyzer's T12 Analytics formulas change shape, this test fails.

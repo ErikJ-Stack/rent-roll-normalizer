@@ -9,6 +9,43 @@ Newest at top.
 
 ---
 
+## 2026-05-28 — UWT v0.6.0 — in-Python UW Output evaluator (cache caveat CLOSED)
+
+**Track:** Track 4 (UW Template integration). Continuation of the same chat that shipped RR v1.19.0; user direction: *"go with 1"* (build the evaluator) + *"Extend dashboard_model.py pure-Python pattern"*.
+
+**Status:** **SHIPPED.** The single biggest UX friction in the UW Template populate flow is gone.
+
+### The problem (cache caveat)
+
+The writer reads the Analyzer with `data_only=True` — cached formula values. openpyxl doesn't evaluate formulas, so an Analyzer the app builds in-memory has formula *text* but no cached values. Every `uw_output`-system concept (reads of `UW Output!{col}{row}`) resolved to `None` → `no_source`, leaving the populated UW Template's `T-12 Analysis` tab blank unless the operator round-tripped the Analyzer through Excel (download → open → save → re-upload as override). 63 of the t12-path concepts came through blank this way.
+
+### What shipped
+
+- **New module `uw_output_model.py`** — `compute_uw_output_values(rr_result, t12_result, *, scenario) → {concept_key: value}`. Computes 62 `uw_output` + 2 dependent `derived` concepts directly from parsed RR + T12, reusing Track 5 `dashboard_model`'s `load_description_map`, `_aggregate_t12`, `_LABELS_*` (single source of truth for the label vocabulary).
+- **Writer** — `populate_uw_template(..., computed_values=None)`. Fallback applied **per concept only when the Analyzer cell is blank** → analyst-saved override Analyzers still win. New `ConceptResult.computed_fallback` + `summary['computed_in_python']`. Backward-compatible (existing smoke test passes, `computed_in_python: 0` on cached fixture).
+- **App** — populate flow calls the evaluator + injects `property_name`/`rr_period_date` (both blank on a fresh build); loud cache-caveat `st.warning` replaced by `st.success` + soft `st.info` for the no-T12 case. `UWT_VERSION` 0.5.3 → 0.6.0.
+- **Test `tests/test_uw_output_model.py`** (new) — engine reproduces Homestead's cached UW Output to the penny on 42 concepts; writer-fallback e2e takes a fresh Analyzer's t12 `no_source` 63 → 2, N69/N116/N118/N115 all correct.
+
+### Why it's correct (the key insight)
+
+`UW Output` is a thin reference layer over `T12 Analytics`. The default **normalized** scenario == **T12 actual** for every line because (a) opex/other-rev are `F{r}==E{r}` (col F literally copies col E), and (b) base rent/LOC's stabilized formula `B20=B6·B10·B19·12` collapses to the T12 actual when `B10` (target occupancy) `=B8` (its literal default). Verified empirically on Homestead: `E16==E20`, `E23==E27`, `E52==F52`, `E108==F108`. Analyst normalization is an Excel-side override applied *after* populate; once saved, the cached values exist and the writer prefers them.
+
+### Verification numbers
+
+- Engine vs cached fixture: EGI $7,001,956.79, EBITDARM $1,767,482.75, EBITDA $1,417,384.90, GPR $9,524,893.30 — all to the penny, 0 mismatches across 42 concepts.
+- Fresh-Analyzer writer fallback: 37 written → 98 written; t12 `no_source` 63 → 2; 61 computed in-Python.
+
+### Residual / not addressed
+
+- 7 `rent_roll`-path `no_source` (pharmacy / meal / scooter / care-level / preleased) are legitimately empty source columns for Homestead, not cache artifacts.
+- No new dependency (pure Python). Registry unchanged at v0.4.2.
+
+### Commits
+
+`feat: UWT v0.6.0 — in-Python UW Output evaluator (kills cache caveat)` — `uw_output_model.py`, `uw_template_writer.py`, `app.py`, `tests/test_uw_output_model.py`, SPEC-UWT / CHANGELOG-UWT / CLAUDE.md / journal.
+
+---
+
 ## 2026-05-27 (evening) — RR v1.19.0 — River Oaks / SSMG-Yardi format support + Deposit capture
 
 **Track:** Track 1 (RR Normalizer) — cross-track pivot from earlier Track 4 (UWT v0.5.3) work in the same chat. Resumed + shipped 2026-05-28 after a context break.

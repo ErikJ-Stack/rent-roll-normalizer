@@ -8,6 +8,88 @@ opened (none yet — Phase 0 is the seed release).
 
 ---
 
+## v0.6.0 — In-Python UW Output evaluator (kills the cache caveat) (2026-05-28)
+
+Closes the single biggest UX friction in the populate flow. Until now the
+writer read cached formula values from the Analyzer (`data_only=True`), but an
+Analyzer the app just built in-memory via openpyxl has formula **text** with no
+cached values — so every `uw_output`-system concept came through `no_source`
+and the populated UW Template's `T-12 Analysis` tab was blank unless the
+operator first round-tripped the Analyzer through Excel (download → open →
+save → re-upload as override). This release computes those values directly in
+Python, so the populate flow produces a fully-populated UW Template on the
+first pass with no Excel round-trip.
+
+User direction: *"go with 1"* (build the evaluator) + *"Extend
+dashboard_model.py pure-Python pattern"* (the engine approach, chosen over
+pulling in `formulas` / `pycel` / `xlcalculator`).
+
+### New module — `uw_output_model.py`
+
+`compute_uw_output_values(rr_result, t12_result, *, scenario='normalized') ->
+{concept_key: value}`. Computes the 62 `uw_output`-system concepts plus the 2
+dependent `derived` concepts (`licensed_beds_total`, `opex_total_incl_mgmt`)
+directly from the parsed `NormalizeResult` + `T12ParseResult`. Re-uses Track 5
+`dashboard_model`'s aggregation primitives (`load_description_map`,
+`_aggregate_t12`, the `_LABELS_*` constants) — single source of truth for the
+Description_Map label vocabulary and the GL-by-label grouping.
+
+**Why it's correct.** `UW Output` is a thin reference layer over `T12
+Analytics`, which sums `T12 Raw Data` per Description_Map Label and reads
+`Rent Roll Recon` bed counts. The **normalized** scenario (col F, the default)
+reads T12 Analytics col F for opex, and every opex line is `F{r} = =E{r}`, so
+normalized == T12 actual. For base rent / LOC the normalized figure is the
+"stabilized" value (`E20`/`E27`), but the stabilized formula
+`B20 = B6·B10·B19·12` collapses algebraically to the T12 actual when the
+target-occupancy assumption `B10 = B8` (its literal default). Verified
+empirically on the Homestead fixture: `E16==E20`, `E23==E27`, `E52==F52`,
+`E108==F108`. Analyst normalization overrides happen later in Excel; once the
+analyst saves and re-uploads, the cached values exist and the writer prefers
+them.
+
+### Writer — `populate_uw_template(..., computed_values=None)`
+
+New optional param. The fallback is applied **only when the Analyzer's cached
+cell read is blank** — a saved-through-Excel (override) Analyzer with real
+cached values still wins; the computed values only fill gaps. New
+`ConceptResult.computed_fallback` flag; new `report.summary['computed_in_python']`
+count. Fully backward-compatible — the existing smoke test (which uses the
+cached Homestead fixture) still passes with `computed_in_python: 0`.
+
+### App — `app.py`
+
+The populate flow now calls `compute_uw_output_values(result, t12_parse_result)`
+and passes it as `computed_values`. Property name (Prop Info!B4) and RR period
+date (Rent Roll Analysis!B5) — both already in the app's hands and both blank
+on a fresh Analyzer — are added to the dict too. The loud `st.warning`
+walking operators through the Excel round-trip is replaced by an `st.success`
+("N UW Output values computed in-Python … no Excel round-trip required")
+plus a soft `st.info` only for the genuine no-T12 case. `UWT_VERSION`
+`0.5.3 → 0.6.0`.
+
+### Verification
+
+- **`tests/test_uw_output_model.py`** (new, 2 layers, skip-on-missing-fixture):
+  - *engine vs cached* — the engine reproduces the Homestead fixture's cached
+    `UW Output` on 42 spot-checked concepts **to the penny** (EGI $7,001,956.79,
+    EBITDARM $1,767,482.75, EBITDA $1,417,384.90, GPR $9,524,893.30, every
+    labor + opex line item).
+  - *writer fallback e2e* — a freshly-built (no-cache) Analyzer takes the
+    T-12-path `no_source` count from **63 → 2** (61 values computed in-Python);
+    `T-12 Analysis!N69/N116/N118/N115` all carry the correct numbers.
+- Existing `tests/test_uw_template_writer.py` unchanged and still passes.
+
+### Residual / out of scope
+
+- The 2 remaining fresh-Analyzer `no_source` cells were closed by passing
+  property name + period date from the app. The 7 `rent_roll`-path
+  `no_source` (pharmacy / meal / scooter / care-level / preleased) are
+  legitimately empty source columns for properties that don't carry that data
+  — not a cache-caveat artifact.
+- No new dependency (pure Python; reuses pandas/openpyxl already present).
+
+---
+
 ## v0.5.3 — v5.1 K/L/V template-formula absorption (2026-05-27)
 
 Operator-reported 2026-05-27: *"I removed the alf uw template v5 and replace with v5.1. That's the new updated one with corrections in the rent roll analysis tab."* Operator dropped `assets/ALF_UW_Template_v5.1.xlsx`; renamed to `assets/ALF_UW_Template_v5.xlsx` per filename-consolidation policy (matches v0.5.1 precedent).
