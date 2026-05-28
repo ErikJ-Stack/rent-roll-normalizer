@@ -79,6 +79,43 @@ _SPECIAL_SKIP_KEYS: dict[str, str] = {
     ),
 }
 
+# ── T-12 Analysis Layer-3 model (v5 template) ──────────────────────────────────
+# The Layer-3 income section is a GPR→Net Rent waterfall whose TOTAL rows are
+# live template formulas (e.g. N63 =N58+N59+N60+N61+N62, N69 =N63+…+N68,
+# N85 =SUM(N71:N84)). The writer must NOT paste values over those formulas, and
+# the line items it does paste must carry the sign the additive formulas expect.
+#
+# Total-row concepts: skipped by the generic loop and handled by
+# `_finalize_t12_layer3` (which preserves/authors the col-N formula and mirrors
+# it across the monthly grid B–M).
+_T12_TOTAL_CONCEPTS: frozenset[str] = frozenset({
+    "base_rent_normalized",    # Net Rent Revenue  → N63 (formula)
+    "egi",                     # EGI               → N69 (formula)
+    "labor_total",             # Total Labor       → N85 (formula)
+    "opex_nonlabor_total",     # Total Non-Labor   → N111 (formula)
+    "opex_total_incl_mgmt",    # Total Op Ex       → N114 (formula)
+    "opex_total_excl_mgmt",    # Op Ex excl mgmt   → N115 (formula)
+    "ebitdarm",                # EBITDARM          → N116 (formula)
+    "ebitdar",                 # EBITDAR (NOI)     → N117 (authored)
+    "ebitda",                  # EBITDA            → N118 (authored)
+})
+
+# Income-waterfall contra lines: the Analyzer reports vacancy/bad-debt as
+# positive magnitudes and loss-to-lease as a signed gap, but the template's
+# additive Net Rent formula treats them as reductions. Negate on write so the
+# waterfall subtracts them (GPR + LtL + Vacancy + Concessions + BadDebt = Net
+# Rent). Concessions is already signed negative in the T12 GL, so it's excluded.
+_T12_CONTRA_KEYS: frozenset[str] = frozenset({
+    "loss_to_lease",
+    "physical_vacancy_loss",
+    "bad_debt_writeoffs_revenue",
+})
+
+# T-12 Analysis Layer-3 monthly grid spans cols B(2)..M(13); col N(14) = annual.
+_T12_MONTH_COLS = tuple(range(2, 14))  # B..M
+_T12_NET_RENT_ROW = 63
+_N_REF_RE = re.compile(r"\bN(\d+)")
+
 # Status colours mirror the generator — duplicated here so the writer can
 # tag the report with consistent labels.
 _STATUS_LABELS: dict[str, str] = {
@@ -334,6 +371,79 @@ def _write_monthly_grid(
             continue
         ws.cell(row=row, column=start_col + i).value = v
         written += 1
+    return written
+
+
+def _cell_is_formula(ws, row: int, col: int) -> bool:
+    """True if the cell holds an Excel formula (data_type 'f' or '='-string)."""
+    c = ws.cell(row=row, column=col)
+    v = c.value
+    return c.data_type == "f" or (isinstance(v, str) and v.startswith("="))
+
+
+def _mirror_n_formula(formula: str, col_letter: str) -> str:
+    """Rewrite a column-N formula to another column.
+
+    The Layer-3 total formulas only reference column N (same-column sums), e.g.
+    `=N63+N64+N65+N66+N67+N68` → (col 'B') → `=B63+B64+B65+B66+B67+B68`,
+    `=SUM(N71:N84)` → `=SUM(B71:B84)`.
+    """
+    return _N_REF_RE.sub(col_letter + r"\1", formula)
+
+
+def _finalize_t12_layer3(ws, monthly: dict[str, list]) -> int:
+    """Make the T-12 Analysis Layer-3 total rows live formulas (col N + B–M).
+
+    Runs after the generic concept loop (which writes the line items and skips
+    the total-row concepts). For each total row:
+      - col N: preserve the template's formula; author EBITDAR (N117) / EBITDA
+        (N118) where the template left them blank.
+      - cols B–M: mirror the col-N formula across the 12 month columns — except
+        Net Rent (row 63), whose monthly value is pasted directly (base rent −
+        concessions − bad debt) because the GPR waterfall feeding N63 has no
+        monthly dimension.
+
+    Returns the count of formula/value cells written.
+    """
+    from openpyxl.utils import get_column_letter
+
+    written = 0
+
+    # 1) Author the two missing P&L formulas (EBITDAR = EBITDARM − mgmt fee;
+    #    EBITDA = EBITDAR − depreciation(0)) if the template left them as values.
+    if not _cell_is_formula(ws, 117, 14):
+        ws.cell(row=117, column=14).value = "=N116-N113"
+        written += 1
+    if not _cell_is_formula(ws, 118, 14):
+        ws.cell(row=118, column=14).value = "=N117"
+        written += 1
+
+    # 2) Net Rent monthly (B63–M63): base rent − concessions − bad debt, per
+    #    month, so the monthly sum reconciles to the annual GPR-waterfall N63.
+    #    (concessions is already negative; bad debt is positive → subtract.)
+    base = monthly.get("base_rent_normalized") or [0.0] * 12
+    conc = monthly.get("concessions_specials") or [0.0] * 12
+    bd = monthly.get("bad_debt_writeoffs_revenue") or [0.0] * 12
+    for i, col in enumerate(_T12_MONTH_COLS):
+        if i >= 12:
+            break
+        ws.cell(row=_T12_NET_RENT_ROW, column=col).value = (
+            (base[i] or 0.0) + (conc[i] or 0.0) - (bd[i] or 0.0)
+        )
+        written += 1
+
+    # 3) Mirror each remaining total row's col-N formula across B–M.
+    mirror_rows = (69, 85, 111, 114, 115, 116, 117, 118)
+    for row in mirror_rows:
+        n_formula = ws.cell(row=row, column=14).value
+        if not (isinstance(n_formula, str) and n_formula.startswith("=")):
+            continue
+        for col in _T12_MONTH_COLS:
+            ws.cell(row=row, column=col).value = _mirror_n_formula(
+                n_formula, get_column_letter(col)
+            )
+            written += 1
+
     return written
 
 
@@ -713,6 +823,15 @@ def populate_uw_template(
 
         ws = wb_template[target_sheet]
 
+        # T-12 Analysis Layer-3 TOTAL rows are live template formulas, handled
+        # by `_finalize_t12_layer3` after this loop. Skip them here so the
+        # generic writer never pastes a value over the formula.
+        if key in _T12_TOTAL_CONCEPTS and target_sheet == "T-12 Analysis":
+            result.outcome = "skipped"
+            result.notes = "total row — col-N formula preserved (finalize pass)"
+            report.results.append(result)
+            continue
+
         # Resolve source
         try:
             value = _resolve_source(wb_analyzer, concept, scenario)
@@ -731,6 +850,15 @@ def populate_uw_template(
             if not _is_blank(cv):
                 value = cv
                 used_computed_fallback = True
+
+        # Income-waterfall sign convention: negate the contra lines so the
+        # template's additive Net Rent formula subtracts them.
+        if (
+            key in _T12_CONTRA_KEYS
+            and target_sheet == "T-12 Analysis"
+            and isinstance(value, (int, float))
+        ):
+            value = -value
 
         # Decide scalar vs row-stride
         try:
@@ -800,7 +928,11 @@ def populate_uw_template(
             ):
                 mvals = monthly[key]
                 if isinstance(mvals, (list, tuple)) and mvals:
-                    monthly_cells += _write_monthly_grid(ws, start_row, list(mvals))
+                    mlist = list(mvals)
+                    # Same contra-sign convention as the annual value.
+                    if key in _T12_CONTRA_KEYS:
+                        mlist = [(-m if isinstance(m, (int, float)) else m) for m in mlist]
+                    monthly_cells += _write_monthly_grid(ws, start_row, mlist)
 
             if used_computed_fallback:
                 result.computed_fallback = True
@@ -811,6 +943,17 @@ def populate_uw_template(
 
         report.results.append(result)
 
+    # ── Finalize T-12 Analysis Layer-3 totals (v5) ─────────────────────────────
+    # Make the total rows live formulas (col N preserved/authored + mirrored
+    # across the monthly grid B–M), so they recompute from the line items and
+    # tie month-to-annual. Runs after the line items are written.
+    t12_finalized = 0
+    if template_version == "v5" and "T-12 Analysis" in wb_template.sheetnames:
+        try:
+            t12_finalized = _finalize_t12_layer3(wb_template["T-12 Analysis"], monthly)
+        except Exception as e:  # never fail the populate over the finalize pass
+            report.warnings.append(f"T-12 Analysis total-formula finalize skipped ({e}).")
+
     # ── Summary ───────────────────────────────────────────────────────────────
     by = report.by_outcome()
     report.summary = {k: len(v) for k, v in by.items()}
@@ -820,6 +963,7 @@ def populate_uw_template(
         1 for r in report.results if r.computed_fallback
     )
     report.summary["monthly_cells_written"] = monthly_cells
+    report.summary["t12_totals_finalized"] = t12_finalized
 
     # ── Serialize ─────────────────────────────────────────────────────────────
     out = io.BytesIO()

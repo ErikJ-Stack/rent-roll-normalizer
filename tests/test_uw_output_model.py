@@ -58,6 +58,26 @@ def _num(x):
         return None
 
 
+def _eval_t12_n(ws) -> dict:
+    """Evaluate the T-12 Analysis col-N P&L chain (openpyxl can't compute
+    formulas, so we replicate the template's total formulas from the pasted
+    line-item values). Returns {row: value} for the total rows."""
+    def v(r):
+        return _num(ws.cell(row=r, column=14).value) or 0.0
+    N = {}
+    N[63] = sum(v(r) for r in (58, 59, 60, 61, 62))           # Net Rent
+    N[69] = N[63] + sum(v(r) for r in (64, 65, 66, 67, 68))   # EGI
+    N[85] = sum(v(r) for r in range(71, 85))                  # Total Labor
+    N[111] = sum(v(r) for r in range(87, 111))                # Total Non-Labor
+    N[113] = v(113)                                           # Mgmt Fee
+    N[114] = N[85] + N[111] + N[113]                          # Total Op Ex
+    N[115] = N[114] - N[113]                                  # Op Ex excl mgmt
+    N[116] = N[69] - N[85] - N[111]                           # EBITDARM
+    N[117] = N[116] - N[113]                                  # EBITDAR
+    N[118] = N[117]                                           # EBITDA
+    return N
+
+
 # Concept key → (UW Output column, row) on the populated fixture (col F =
 # normalized scenario, the writer default).
 _UW_OUTPUT_REF = {
@@ -168,19 +188,28 @@ def test_writer_fallback_populates() -> None:
     n_computed = rep.summary.get("computed_in_python", 0)
 
     _check(base_t12_blank > 50, f"expected baseline cache caveat (>50 blank), got {base_t12_blank}")
-    _check(n_computed >= 60, f"expected >=60 in-Python fallbacks, got {n_computed}")
+    _check(n_computed >= 45, f"expected >=45 in-Python fallbacks, got {n_computed}")
     _check(fix_t12_blank <= 2, f"expected <=2 residual t12 blanks, got {fix_t12_blank}")
 
-    # The populated template's T-12 Analysis chain carries the right numbers.
     ta = openpyxl.load_workbook(io.BytesIO(out_bytes), data_only=False)["T-12 Analysis"]
-    _check(abs(_num(ta["N69"].value) - 7001956.79) < 1.0, f"N69 EGI wrong: {ta['N69'].value}")
-    _check(abs(_num(ta["N116"].value) - 1767482.75) < 1.0, f"N116 EBITDARM wrong: {ta['N116'].value}")
-    _check(abs(_num(ta["N118"].value) - 1417384.90) < 1.0, f"N118 EBITDA wrong: {ta['N118'].value}")
-    _check(abs(_num(ta["N115"].value) - 5234474.04) < 1.0, f"N115 Total OpEx wrong: {ta['N115'].value}")
+    # Totals are now LIVE FORMULAS (not pasted values).
+    for r in (63, 69, 85, 111, 114, 115, 116, 117, 118):
+        v = ta.cell(row=r, column=14).value
+        _check(isinstance(v, str) and v.startswith("="), f"N{r} should be a formula, got {v!r}")
+    # Line items still pasted as values; income contras signed for the waterfall.
+    _check(abs(_num(ta["N71"].value) - 1184691.64) < 1.0, f"N71 Care Staff wrong: {ta['N71'].value}")
+    _check(_num(ta["N60"].value) < 0, f"N60 Vacancy should be negative contra: {ta['N60'].value}")
+    _check(_num(ta["N62"].value) < 0, f"N62 Bad Debt should be negative contra: {ta['N62'].value}")
+    # The evaluated chain ties to the Option-A model (bad debt reduces EGI).
+    N = _eval_t12_n(ta)
+    _check(abs(N[69] - 6964627.48) < 2.0, f"EGI (evaluated) wrong: {N[69]:,.2f}")
+    _check(abs(N[116] - 1767482.75) < 2.0, f"EBITDARM (evaluated) wrong: {N[116]:,.2f}")
+    _check(abs(N[118] - 1417384.90) < 2.0, f"EBITDA (evaluated) wrong: {N[118]:,.2f}")
 
     print(
         f"  ✓ fallback: baseline {base_t12_blank} blank → {fix_t12_blank} "
-        f"({n_computed} computed in-Python); N69/N116/N118/N115 all correct"
+        f"({n_computed} computed in-Python); totals are formulas; "
+        f"evaluated EGI={N[69]:,.0f} EBITDARM={N[116]:,.0f} EBITDA={N[118]:,.0f}"
     )
 
 
@@ -262,21 +291,35 @@ def test_monthly_grid_reconciles() -> None:
     )
 
     n_monthly = rep.summary.get("monthly_cells_written", 0)
-    _check(n_monthly >= 500, f"expected ~636 monthly cells, got {n_monthly}")
+    _check(n_monthly >= 400, f"expected a populated monthly grid, got {n_monthly}")
 
     ta = openpyxl.load_workbook(_io.BytesIO(out_bytes), data_only=False)["T-12 Analysis"]
 
-    def _row_sum(r):  # cols B..M = 2..13
+    def _row_sum(r):  # cols B..M = 2..13 — only numeric (skips mirror formulas)
         return sum(_num(ta.cell(row=r, column=c).value) or 0.0 for c in range(2, 14))
 
-    # EGI (69), Base/Net Rent (63), Care Staff Labor (71), Total Labor (85)
-    for r, label in [(63, "Base rent"), (69, "EGI"), (71, "Care staff"), (85, "Total Labor")]:
+    # Line-item rows: monthly values present and sum to their annual value.
+    for r, label in [(71, "Care staff"), (87, "Food cost")]:
         s = _row_sum(r)
-        n = _num(ta.cell(row=r, column=14).value)  # col N
+        n = _num(ta.cell(row=r, column=14).value)
         _check(s > 0, f"row {r} ({label}) monthly grid is blank")
         _check(abs(s - n) < 2.0, f"row {r} ({label}) monthly sum {s:,.2f} != annual {n:,.2f}")
 
-    print(f"  ✓ monthly grid: {n_monthly} cells; EGI/Base/Labor monthly sums reconcile to annual N")
+    # Net Rent monthly (row 63) is a pasted value (GPR waterfall has no monthly);
+    # it must sum to the evaluated annual N63.
+    N = _eval_t12_n(ta)
+    nr_sum = _row_sum(63)
+    _check(abs(nr_sum - N[63]) < 2.0, f"Net Rent monthly {nr_sum:,.2f} != annual {N[63]:,.2f}")
+
+    # Total rows mirror the col-N formula across B–M (cells are formulas).
+    for r in (69, 85, 111, 116):
+        b = ta.cell(row=r, column=2).value  # col B
+        _check(isinstance(b, str) and b.startswith("="), f"B{r} should mirror a formula, got {b!r}")
+
+    print(
+        f"  ✓ monthly grid: {n_monthly} value cells; line items + Net Rent tie to annual; "
+        f"total rows mirror formulas across B–M"
+    )
 
 
 def main() -> int:

@@ -182,13 +182,15 @@ def test_populated_analyzer_e2e() -> None:
     # Round-trip and spot-check a few high-confidence cells
     wb_out = openpyxl.load_workbook(io.BytesIO(populated), data_only=False)
 
-    # EGI (normalized) → T-12 Analysis!N69 (unchanged in v5)
+    # EGI (normalized) → T-12 Analysis!N69. As of UWT v0.6.3 the Layer-3 TOTAL
+    # rows are preserved as live template formulas (the writer no longer pastes
+    # values over them), so N69 is a formula string regardless of source.
     ws_t12 = wb_out["T-12 Analysis"]
     egi_cell = ws_t12["N69"].value
     print(f"  T-12 Analysis!N69 (EGI normalized) = {egi_cell!r}")
     _check(
-        egi_cell is None or isinstance(egi_cell, (int, float)),
-        f"EGI cell should be numeric or None, got {type(egi_cell).__name__}: {egi_cell!r}",
+        isinstance(egi_cell, str) and egi_cell.startswith("="),
+        f"EGI total should be a preserved formula, got {type(egi_cell).__name__}: {egi_cell!r}",
     )
 
     # v5: EBITDARM shifted from N115 (v4) to N116

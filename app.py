@@ -74,7 +74,7 @@ APP_LAST_UPDATED = "2026-05-08"   # alias for RR_LAST_UPDATED
 RR_VERSION = "1.19.0"
 RR_LAST_UPDATED = "2026-05-27"
 
-UWT_VERSION = "0.6.2"             # Track 4 — T-12 Analysis monthly grid (cols B–M) populated in-Python
+UWT_VERSION = "0.6.3"             # Track 4 — T-12 Analysis totals as live formulas + waterfall sign fix
 UWT_LAST_UPDATED = "2026-05-28"
 
 T12_VERSION = "0.2.1"

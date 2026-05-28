@@ -9,6 +9,29 @@ Newest at top.
 
 ---
 
+## 2026-05-28 — UWT v0.6.3 — T-12 Analysis totals as live formulas + waterfall sign fix
+
+**Track:** Track 4. Same chat, after v0.6.2. Operator reported math inconsistencies + two requirements (totals as formulas; raw data → Section I) with the attached `Homestead_Village_UW_Template_2026-04-24_normalized.xlsx`.
+
+**Diagnosis (grounded in the attached file + blank template):**
+1. Totals were pasted values overwriting the template's live formulas (N63/N69/N85/N111/N114/N115/N116) → didn't tie/recompute; N114 Total Op Ex = 0.
+2. Income waterfall didn't subtract losses: Vacancy/Bad Debt pasted positive while the template's additive `N63 = N58+N59+N60+N61+N62` treats them as reductions.
+
+**Decisions (AskUserQuestion):** bad debt reduces EGI (honor template N63); monthly totals mirror formulas across B–M.
+
+**Fix (`uw_template_writer.py`):**
+- Skip the 9 Layer-3 total concepts on T-12 Analysis (formulas preserved).
+- `_T12_CONTRA_KEYS` (loss_to_lease, physical_vacancy_loss, bad_debt_writeoffs_revenue) negated on write (annual + monthly).
+- `_finalize_t12_layer3`: preserve col-N formulas; author N117 (`=N116-N113`) + N118 (`=N117`); mirror each total's col-N formula across B–M; Net Rent monthly = base−conc−baddebt (GPR waterfall has no monthly).
+
+**Result (evaluated):** Net Rent $6,750,961, EGI $6,964,627, Total Non-Labor $2,136,601 (bad debt out of opex); **EBITDARM $1,767,483 / EBITDAR $1,417,385 / EBITDA $1,417,385 unchanged** (bad debt nets out at EBITDARM). Monthly ties to annual to the penny. Tests updated with an N-chain evaluator. `UWT_VERSION` 0.6.2 → 0.6.3.
+
+**Still open:** Section I (Layer 1 — Raw T-12, rows 121+) — next item this session.
+
+**Commit:** `fix: UWT v0.6.3 — T-12 Analysis totals as formulas + income-waterfall sign fix`.
+
+---
+
 ## 2026-05-28 — UWT v0.6.2 — T-12 Analysis monthly grid populated (cols B–M)
 
 **Track:** Track 4. Same chat, after v0.6.1.

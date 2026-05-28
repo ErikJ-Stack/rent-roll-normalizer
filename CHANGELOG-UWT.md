@@ -8,6 +8,34 @@ opened (none yet — Phase 0 is the seed release).
 
 ---
 
+## v0.6.3 — T-12 Analysis totals as live formulas + waterfall sign fix (2026-05-28)
+
+Operator-reported math inconsistencies on the populated UW Template's T-12 Analysis Layer 3: (1) the totals were pasted values that didn't recompute or tie to the line items; (2) the GPR→Net Rent income waterfall didn't subtract its loss lines ("$9.5M GPR minus losses ≠ $6.98M Net Rent"); (3) `Total Operating Expenses (N114) = 0`. Two operator decisions confirmed before implementing: **bad debt reduces EGI** (honor the template's N63 formula) and **monthly totals mirror formulas across B–M**.
+
+### Root cause
+
+The writer pasted computed values over the template's live total formulas (`N63 =N58+N59+N60+N61+N62`, `N69 =N63+…+N68`, `N85 =SUM(N71:N84)`, `N111`, `N114`, `N115 =N114-N113`, `N116 =N69-N85-N111`). And the income contra lines were pasted with Analyzer-convention signs (Vacancy +2,873,629, Bad Debt +37,329) while the template's *additive* Net Rent formula treats them as reductions — so the waterfall added losses instead of subtracting them.
+
+### Fix (`uw_template_writer.py`)
+
+- **Preserve template formulas.** The 9 Layer-3 total-row concepts (`base_rent_normalized`, `egi`, `labor_total`, `opex_nonlabor_total`, `opex_total_incl_mgmt`, `opex_total_excl_mgmt`, `ebitdarm`, `ebitdar`, `ebitda`) are skipped by the generic loop on T-12 Analysis so values never overwrite the formulas. Fixes the `N114 = 0` artifact.
+- **Sign the contras** (`_T12_CONTRA_KEYS`): `loss_to_lease`, `physical_vacancy_loss`, `bad_debt_writeoffs_revenue` are negated when written to T-12 Analysis (annual + monthly), so `N63 = GPR + LtL + Vacancy + Concessions + BadDebt` ties to base rent net of concessions + bad debt.
+- **`_finalize_t12_layer3`**: preserves col-N formulas, **authors the two the template left blank** (`N117 EBITDAR = N116-N113`, `N118 EBITDA = N117`), and **mirrors each total's col-N formula across the monthly grid B–M** (`=B63+B64+…`, `=SUM(B71:B84)`, …). Net Rent monthly (B63–M63) is pasted as `base − concessions − bad debt` per month (the GPR waterfall feeding N63 has no monthly dimension), and reconciles to the annual N63.
+
+### Result (Homestead, evaluated)
+
+All 9 totals are live formulas in col N + mirrored across B–M. Net Rent $6,750,961, **EGI $6,964,627** (bad debt now a revenue contra), Total Labor $3,060,543, Total Non-Labor $2,136,601 (bad debt no longer double-counted in opex). **EBITDARM $1,767,483 / EBITDAR $1,417,385 / EBITDA $1,417,385 — unchanged** (bad debt nets out of both EGI and opex at the EBITDARM line). Monthly Net Rent sums to the annual to the penny.
+
+### Verification
+
+`tests/test_uw_output_model.py` updated with an N-chain evaluator (openpyxl can't compute formulas): asserts totals are formulas, contras negative, and the evaluated chain gives EGI $6,964,627 / EBITDARM $1,767,483 / EBITDA $1,417,385; monthly line items + Net Rent tie to annual; total rows mirror formulas across B–M. `test_uw_template_writer.py` e2e updated (N69 is now a preserved formula). `UWT_VERSION` 0.6.2 → 0.6.3.
+
+### Still open
+
+Section I (Layer 1 — Raw T-12, rows 121+) remains empty — separate next item.
+
+---
+
 ## v0.6.2 — T-12 Analysis monthly grid populated (cols B–M) (2026-05-28)
 
 Operator-reported: the populated UW Template's **T-12 Analysis Layer-3 grid shows the T-12 Total column but the 12 monthly columns (Apr 2025 … Mar 2026) are all $0.** This was the original Phase-2 "monthly grid annual-only" locked default (writer wrote col N, left B–M blank) — by design, not a regression — but the operator wants the monthly trending visible.
