@@ -42,6 +42,7 @@ from __future__ import annotations
 import io
 import json
 import re
+import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -349,6 +350,179 @@ def _load_registry(path: str | Path | None) -> dict:
         return json.load(f)
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Dynamic-array repair (openpyxl quirk #6)
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# openpyxl's `wb.save()` silently drops `xl/metadata.xml` (the XLDAPR /
+# `fDynamic="1"` block) and the per-cell `cm="N"` markers that tell Excel a
+# formula is a *dynamic array* (SORT / UNIQUE / FILTER / ANCHORARRAY with
+# spill) rather than a legacy CSE array. The formula TEXT survives verbatim,
+# but without the metadata Excel reads `<f t="array" ref="Z173">=SORT(...)`
+# as a single-cell CSE array → returns only the top-left value → Section R /
+# Section S on the UW Template collapse to one row (silently wrong, no error).
+#
+# The committed blank template carries this metadata; the corruption happens
+# at writer-save time. This restores it via direct zip/XML surgery (no lxml
+# dependency — keeps the footprint flat). The writer never edits the
+# dynamic-array anchor cells, so re-applying the original `cm` markers to the
+# exact cells that carried them is faithful by construction.
+
+_METADATA_PART = "xl/metadata.xml"
+_METADATA_CT_OVERRIDE = (
+    '<Override PartName="/xl/metadata.xml" '
+    'ContentType="application/vnd.openxmlformats-officedocument.'
+    'spreadsheetml.sheetMetadata+xml"/>'
+)
+_METADATA_REL_TYPE = (
+    "http://schemas.openxmlformats.org/officeDocument/2006/"
+    "relationships/sheetMetadata"
+)
+# A worksheet part, e.g. 'xl/worksheets/sheet8.xml'.
+_WS_PART_RE = re.compile(r"^xl/worksheets/sheet\d+\.xml$")
+
+
+def _attr(el: str, name: str) -> str | None:
+    """Extract a single attribute value from an XML element string."""
+    m = re.search(rf'\b{re.escape(name)}="([^"]*)"', el)
+    return m.group(1) if m else None
+
+
+def _sheet_part_to_name(zf: zipfile.ZipFile) -> dict[str, str]:
+    """Map 'xl/worksheets/sheetN.xml' → sheet display name for a workbook zip.
+
+    Robust to attribute ordering and `/`-prefixed targets.
+    """
+    try:
+        wb = zf.read("xl/workbook.xml").decode("utf-8")
+        rels = zf.read("xl/_rels/workbook.xml.rels").decode("utf-8")
+    except KeyError:
+        return {}
+    rid_to_target: dict[str, str] = {}
+    for rel in re.findall(r"<Relationship\b[^>]*/>", rels):
+        rid, tgt = _attr(rel, "Id"), _attr(rel, "Target")
+        if rid and tgt:
+            rid_to_target[rid] = tgt
+    out: dict[str, str] = {}
+    for sh in re.findall(r"<sheet\b[^>]*/>", wb):
+        name, rid = _attr(sh, "name"), _attr(sh, "r:id")
+        if name and rid and rid in rid_to_target:
+            # Targets come in two forms: relative ("worksheets/sheet8.xml",
+            # original template) and package-absolute ("/xl/worksheets/
+            # sheet1.xml", openpyxl output). Normalize both to "xl/...".
+            tgt = rid_to_target[rid].lstrip("/")
+            if not tgt.startswith("xl/"):
+                tgt = "xl/" + tgt
+            out[tgt] = name
+    return out
+
+
+def _collect_cm_cells(sheet_xml: str) -> dict[str, str]:
+    """Return {cell_ref: cm_value} for every cell carrying a `cm=` marker."""
+    out: dict[str, str] = {}
+    for m in re.finditer(r'<c\b[^>]*\br="([A-Z]+\d+)"[^>]*\bcm="(\d+)"', sheet_xml):
+        out[m.group(1)] = m.group(2)
+    return out
+
+
+def _inject_cm(sheet_xml: str, ref_to_cm: dict[str, str]) -> tuple[str, int]:
+    """Re-add `cm="N"` to the formula cells named in ref_to_cm.
+
+    Only touches cells that (a) are named in ref_to_cm, (b) still have a
+    formula (`<f`) in this output, and (c) don't already carry a `cm=`.
+    Returns (patched_xml, count_injected).
+    """
+    n = 0
+    for ref, cmv in ref_to_cm.items():
+        # Match the cell's opening tag up to '>' followed immediately by '<f'
+        # (whitespace allowed). Captures existing attributes to preserve them.
+        pat = re.compile(
+            r'(<c\b\s+r="' + re.escape(ref) + r'")([^>]*)>(\s*<f\b)'
+        )
+        m = pat.search(sheet_xml)
+        if not m:
+            continue
+        attrs = m.group(2)
+        if "cm=" in attrs:
+            continue  # already marked — idempotent
+        replacement = f'{m.group(1)}{attrs} cm="{cmv}">{m.group(3)}'
+        sheet_xml = sheet_xml[: m.start()] + replacement + sheet_xml[m.end():]
+        n += 1
+    return sheet_xml, n
+
+
+def _restore_dynamic_arrays(output_bytes: bytes, template_bytes: bytes) -> bytes:
+    """Restore dynamic-array semantics openpyxl dropped on save.
+
+    Re-injects `xl/metadata.xml` from the original template, wires its
+    content-type Override + workbook relationship, and re-applies the per-cell
+    `cm` markers to the dynamic-array anchor cells. No-op (returns the input
+    unchanged) when the template has no `xl/metadata.xml` — e.g. v4 templates
+    or any workbook without dynamic arrays.
+    """
+    with zipfile.ZipFile(io.BytesIO(template_bytes)) as ztpl:
+        if _METADATA_PART not in ztpl.namelist():
+            return output_bytes  # nothing dynamic to restore
+        metadata_xml = ztpl.read(_METADATA_PART)
+        tpl_part_name = _sheet_part_to_name(ztpl)
+        # {sheet_name: {ref: cm}} from the original template
+        cm_by_sheet: dict[str, dict[str, str]] = {}
+        for part, name in tpl_part_name.items():
+            try:
+                xml = ztpl.read(part).decode("utf-8")
+            except KeyError:
+                continue
+            cells = _collect_cm_cells(xml)
+            if cells:
+                cm_by_sheet[name] = cells
+
+    if not cm_by_sheet and not metadata_xml:
+        return output_bytes
+
+    with zipfile.ZipFile(io.BytesIO(output_bytes)) as zout:
+        out_names = zout.namelist()
+        out_part_name = _sheet_part_to_name(zout)
+        parts: dict[str, bytes] = {n: zout.read(n) for n in out_names}
+
+    # 1) Re-apply cm markers per sheet (matched by sheet name).
+    for part, name in out_part_name.items():
+        ref_to_cm = cm_by_sheet.get(name)
+        if not ref_to_cm or part not in parts:
+            continue
+        xml = parts[part].decode("utf-8")
+        xml, _n = _inject_cm(xml, ref_to_cm)
+        parts[part] = xml.encode("utf-8")
+
+    # 2) Add metadata.xml.
+    parts[_METADATA_PART] = metadata_xml
+
+    # 3) Content-type Override for metadata.xml.
+    ct = parts.get("[Content_Types].xml", b"").decode("utf-8")
+    if ct and "/xl/metadata.xml" not in ct:
+        ct = ct.replace("</Types>", _METADATA_CT_OVERRIDE + "</Types>")
+        parts["[Content_Types].xml"] = ct.encode("utf-8")
+
+    # 4) Workbook relationship → metadata.xml (unique rId).
+    rels_part = "xl/_rels/workbook.xml.rels"
+    rels = parts.get(rels_part, b"").decode("utf-8")
+    if rels and "sheetMetadata" not in rels:
+        used = [int(x) for x in re.findall(r'Id="rId(\d+)"', rels)]
+        next_id = (max(used) + 1) if used else 1
+        rel = (
+            f'<Relationship Id="rId{next_id}" Type="{_METADATA_REL_TYPE}" '
+            f'Target="metadata.xml"/>'
+        )
+        rels = rels.replace("</Relationships>", rel + "</Relationships>")
+        parts[rels_part] = rels.encode("utf-8")
+
+    # 5) Repackage.
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zw:
+        for name, data in parts.items():
+            zw.writestr(name, data)
+    return buf.getvalue()
+
+
 def populate_uw_template(
     analyzer_bytes: bytes,
     template_bytes: bytes,
@@ -606,7 +780,25 @@ def populate_uw_template(
     # ── Serialize ─────────────────────────────────────────────────────────────
     out = io.BytesIO()
     wb_template.save(out)
-    return out.getvalue(), report
+    output_bytes = out.getvalue()
+
+    # ── Restore dynamic-array metadata openpyxl dropped on save ────────────────
+    # (openpyxl quirk #6). Without this, the template's Section R / S
+    # SORT/UNIQUE/FILTER spills demote to single-cell CSE arrays in Excel and
+    # silently collapse to one row. Faithful: re-applies the original `cm`
+    # markers to the exact anchor cells the writer never edits.
+    try:
+        repaired = _restore_dynamic_arrays(output_bytes, template_bytes)
+        output_bytes = repaired
+        report.summary["dynamic_arrays_restored"] = 1
+    except Exception as e:  # never fail the populate over a metadata repair
+        report.warnings.append(
+            f"Dynamic-array metadata repair skipped ({e}); Section R/S spills "
+            f"may need a manual re-entry in Excel."
+        )
+        report.summary["dynamic_arrays_restored"] = 0
+
+    return output_bytes, report
 
 
 # ──────────────────────────────────────────────────────────────────────────────

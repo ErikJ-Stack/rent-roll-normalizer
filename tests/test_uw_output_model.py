@@ -184,10 +184,64 @@ def test_writer_fallback_populates() -> None:
     )
 
 
+def test_dynamic_array_metadata_restored() -> None:
+    """The populated output restores xl/metadata.xml + the cm= markers that
+    openpyxl drops, so Section R / S dynamic-array spills survive (openpyxl
+    quirk #6)."""
+    if not (RR_FIXTURE.exists() and T12_FIXTURE.exists() and TEMPLATE_V5.exists()):
+        print("  ⊘ SKIP test_dynamic_array_metadata_restored — fixtures absent")
+        return
+
+    import zipfile
+    import re as _re
+    from analyzer_rr_translator import translate_for_t12
+    from analyzer_rr_writer import populate_rr_input
+    from t12_normalizer_writer import populate_t12_input
+    from uw_output_model import compute_uw_output_values
+    from uw_template_writer import populate_uw_template
+
+    rr, t12 = _parse_inputs()
+    after_rr = populate_rr_input(
+        BUNDLED_ANALYZER.read_bytes(), translate_for_t12(rr.condensed),
+        PERIOD, source_filename="h.xlsx",
+    )
+    fresh = populate_t12_input(after_rr, t12, new_descmap_entries=[], source_filename="t.xlsx")
+    vals = compute_uw_output_values(rr, t12)
+    out_bytes, rep = populate_uw_template(
+        fresh, TEMPLATE_V5.read_bytes(), template_version="v5", computed_values=vals
+    )
+
+    _check(rep.summary.get("dynamic_arrays_restored") == 1, "repair flag not set")
+    z = zipfile.ZipFile(io.BytesIO(out_bytes))
+    _check("xl/metadata.xml" in z.namelist(), "metadata.xml not restored")
+    _check(z.testzip() is None, "output zip is corrupt")
+    cm_total = sum(
+        len(_re.findall(r'cm="', z.read(n).decode("utf-8")))
+        for n in z.namelist() if _re.match(r"xl/worksheets/sheet\d+\.xml$", n)
+    )
+    _check(cm_total >= 500, f"expected ~557 cm markers restored, got {cm_total}")
+
+    # Section R driver Z173 must carry the cm marker (dynamic array, not CSE).
+    for n in z.namelist():
+        if _re.match(r"xl/worksheets/sheet\d+\.xml$", n):
+            xml = z.read(n).decode("utf-8")
+            if "UNIQUE" in xml and "FILTER" in xml:
+                m = _re.search(r'<c r="Z173"[^>]*>', xml)
+                _check(m is not None and 'cm="' in m.group(0),
+                       f"Z173 missing cm marker: {m.group(0) if m else None}")
+                break
+
+    print(f"  ✓ dynamic-array repair: metadata.xml restored, {cm_total} cm markers, Z173 marked dynamic")
+
+
 def main() -> int:
     print("=== test_uw_output_model ===")
     failures = 0
-    for fn in (test_engine_matches_cached, test_writer_fallback_populates):
+    for fn in (
+        test_engine_matches_cached,
+        test_writer_fallback_populates,
+        test_dynamic_array_metadata_restored,
+    ):
         print(f"\n--- {fn.__name__} ---")
         try:
             fn()

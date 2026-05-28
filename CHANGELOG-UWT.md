@@ -8,6 +8,34 @@ opened (none yet — Phase 0 is the seed release).
 
 ---
 
+## v0.6.1 — Dynamic-array repair: Section R/S spills survive the writer (2026-05-28)
+
+Operator-reported bug on the populated `Homestead_Village_UW_Template_2026-04-24_normalized.xlsx`: **Section R (Unit Type Pricing By Care Level, rows 170–181) displays only one row** (AL · 1 Bedroom) instead of the full Care Level × Unit Type matrix, so row 180/181 totals are understated (C180 = 14 vs ~272; J181 ≈ $943,841 vs ~10× that). No `#SPILL!`/`#VALUE!`/`#REF!` — silently wrong.
+
+### Root cause — openpyxl quirk #6, on the output this time
+
+`Rent Roll Analysis!Z173` (`=SORT(UNIQUE(FILTER($X$211:$X$610,…)))`) is the driver; `A173:Q173` lift off `Z173#`. In the committed template these are **dynamic arrays** marked by `xl/metadata.xml` (XLDAPR `fDynamic="1"`) + a `cm="1"` attribute on each anchor cell. openpyxl's `wb.save()` **drops `xl/metadata.xml` and every `cm` marker** — the formula *text* survives verbatim, but Excel then reads `<f t="array" ref="Z173">` as a **legacy CSE array scoped to one cell** → returns only the top-left value → the whole section collapses. An Excel re-save does *not* fix it (Excel already committed to the CSE interpretation); the only manual fix was re-entering every formula.
+
+### Fix — `_restore_dynamic_arrays` post-processor (`uw_template_writer.py`)
+
+After `wb.save()`, a pure `zipfile`+`re` post-processor (no new dependency) repairs the output:
+1. Re-injects `xl/metadata.xml` verbatim from the original template.
+2. Adds its content-type Override + a workbook relationship (`sheetMetadata`, unique rId).
+3. Re-applies the `cm="N"` markers to the exact anchor cells that carried them in the template — matched by **sheet name** (robust to openpyxl's rel-id renumbering and `/xl/…` absolute targets) and only on cells that still hold a formula (`<f`). Faithful by construction: the writer never edits the dynamic-array anchors.
+
+No-op when the template has no `xl/metadata.xml` (v4, or any workbook without dynamic arrays). Wrapped in try/except so a repair failure degrades to a warning, never breaks the populate. New `report.summary['dynamic_arrays_restored']` flag.
+
+### Verification
+
+- 557 `cm` markers restored (554 on Rent Roll Analysis + 3 on the second dynamic-array sheet); `Z173`/`A173`/`C173`/`Q173` all carry `cm="1"`; `xl/metadata.xml` present; output zip valid; openpyxl re-loads it; writer data intact (EGI $7,001,956.79 at N69, D211='1 Bedroom', Z173 still an ArrayFormula).
+- New `tests/test_uw_output_model.py::test_dynamic_array_metadata_restored` asserts the repair flag, metadata.xml presence, ~557 cm markers, and Z173 carrying `cm`.
+
+### Secondary issue flagged (not addressed here)
+
+The bug report notes 128/400 `X211:X610` rows resolve to `""` (fail the `E="Occupied" AND C<>"" AND D<>""` gate). Most are legitimately vacant; worth a sanity check that no *occupied* unit is missing Care Level (col C) or Unit Type (col D) — those would be silently excluded from Section R. This is a data-completeness question on the Analyzer paste, not a writer bug; left for a follow-up if it recurs on a real deal.
+
+---
+
 ## v0.6.0 — In-Python UW Output evaluator (kills the cache caveat) (2026-05-28)
 
 Closes the single biggest UX friction in the populate flow. Until now the

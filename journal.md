@@ -9,6 +9,26 @@ Newest at top.
 
 ---
 
+## 2026-05-28 — UWT v0.6.1 — dynamic-array repair (Section R/S spills survive the writer)
+
+**Track:** Track 4. Same chat as v0.6.0, immediately after.
+
+**Trigger:** Operator bug report on a populated `Homestead_Village_UW_Template_2026-04-24_normalized.xlsx`: Section R (Unit Type Pricing By Care Level, rows 170–181) shows only ONE row instead of the full Care×UnitType matrix; row 180/181 totals ~10× understated. No spill/value errors — silently wrong.
+
+**Root cause:** openpyxl quirk #6 on the OUTPUT. `wb.save()` drops `xl/metadata.xml` (XLDAPR dynamic-array props) + the per-cell `cm="1"` markers. The template's `Z173 = SORT(UNIQUE(FILTER(...)))` driver and `A173:Q173` spills demote to single-cell legacy CSE arrays → return only the top-left value → Section R collapses. An Excel re-save does NOT fix it (Excel commits to CSE on open). The formula text was always intact; only the dynamic-array marking was lost.
+
+**Fix:** `_restore_dynamic_arrays(output_bytes, template_bytes)` in `uw_template_writer.py` — pure `zipfile`+`re`, no new dependency, called after `wb.save()`. (1) re-injects `xl/metadata.xml` from the template; (2) adds its content-type Override + workbook `sheetMetadata` relationship; (3) re-applies `cm` markers to the exact anchor cells that had them, matched by sheet name (robust to openpyxl rel-id renumbering + `/xl/…` absolute targets), only on cells still holding a formula. No-op when template lacks metadata.xml (v4). try/except → degrades to a warning, never breaks populate. New `summary['dynamic_arrays_restored']`.
+
+**Mid-fix bug caught:** openpyxl writes rel targets as `/xl/worksheets/sheetN.xml` (absolute) vs the template's relative `worksheets/sheetN.xml`. First path-normalization gave `xl/xl/...` (double prefix) → 0 cm injected. Fixed to handle both forms → 557 restored.
+
+**Verified:** 557 cm markers restored (554 RR Analysis + 3 on the 2nd dynamic sheet); Z173/A173/C173/Q173 all carry `cm="1"`; metadata.xml present; zip valid; openpyxl re-loads; writer data intact (EGI $7,001,956.79 @ N69, D211='1 Bedroom', Z173 still ArrayFormula). New `tests/test_uw_output_model.py::test_dynamic_array_metadata_restored`; both UWT suites green. `UWT_VERSION` 0.6.0 → 0.6.1.
+
+**Secondary issue flagged (not fixed):** 128/400 `X211:X610` rows resolve to "" (occupied-filter gate). Most legit vacant; sanity-check that no *occupied* unit is missing Care Level (col C) / Unit Type (col D) — those silently drop from Section R. Data-completeness question, not a writer bug.
+
+**Commit:** `fix: UWT v0.6.1 — restore dynamic-array metadata on output (Section R/S spills)`.
+
+---
+
 ## 2026-05-28 — UWT v0.6.0 — in-Python UW Output evaluator (cache caveat CLOSED)
 
 **Track:** Track 4 (UW Template integration). Continuation of the same chat that shipped RR v1.19.0; user direction: *"go with 1"* (build the evaluator) + *"Extend dashboard_model.py pure-Python pattern"*.

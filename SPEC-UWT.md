@@ -11,7 +11,12 @@
 > `uw_output_model.py` computes the 62 `uw_output`-system concepts (+ 2
 > dependent `derived`) directly from the parsed RR + T12, mirroring T12
 > Analytics, and the writer accepts them as a fallback used only when the
-> Analyzer's cached cell is blank. See §12 and CHANGELOG-UWT v0.6.0. Phase 3.6
+> Analyzer's cached cell is blank. See §12 and CHANGELOG-UWT v0.6.0.
+> **UWT v0.6.1 (2026-05-28):** dynamic-array repair — the writer now restores
+> `xl/metadata.xml` + the per-cell `cm` markers openpyxl drops on save, so the
+> template's Section R / S `SORT`/`UNIQUE`/`FILTER` spills survive instead of
+> demoting to single-cell CSE arrays (which had collapsed Section R to one
+> row). See §13 and CHANGELOG-UWT v0.6.1. Phase 3.6
 > (v5 → v5.1 metadata cells) attempted as UWT v0.5.0 on 2026-05-26 and
 > **rolled back same-session** due to openpyxl `wb.save()` silently dropping
 > `xl/metadata.xml` (dynamic-array `XLDAPR` props the v0.4.3 Section R/S
@@ -499,3 +504,45 @@ Description_Map label vocabulary and GL-by-label grouping.
 the Homestead fixture's cached `UW Output` to the penny (42 concepts) and that
 the writer fallback takes a fresh Analyzer's T-12 `no_source` count from 63 → 2.
 If the Analyzer's T12 Analytics formulas change shape, this test fails.
+
+## 13. Dynamic-array repair (`_restore_dynamic_arrays`, UWT v0.6.1)
+
+**The problem.** openpyxl's `wb.save()` silently drops `xl/metadata.xml` (the
+XLDAPR `fDynamic="1"` block) and the per-cell `cm="N"` markers that tell Excel
+a formula is a *dynamic array* (`SORT`/`UNIQUE`/`FILTER`/`ANCHORARRAY` with
+spill) rather than a legacy CSE array. The formula text survives verbatim, but
+Excel reads `<f t="array" ref="Z173">=SORT(...)` with no metadata as a
+single-cell CSE array → it returns only the top-left value. On the UW Template
+this collapsed **Section R** (`Rent Roll Analysis!Z173` driver + `A173:Q173`
+spills) and Section S to one row, silently understating the row 180/181 totals
+— no `#SPILL!`/`#VALUE!` to signal it. An Excel re-save does *not* recover it.
+
+**The fix.** After `wb.save()`, `populate_uw_template` calls
+`_restore_dynamic_arrays(output_bytes, template_bytes)` — a pure
+`zipfile` + `re` post-processor (no lxml/new dependency) that:
+
+1. Re-injects `xl/metadata.xml` verbatim from the original template.
+2. Adds its content-type `Override` and a workbook `sheetMetadata`
+   relationship (unique rId).
+3. Re-applies the `cm="N"` markers to the exact anchor cells that carried them
+   in the template, matched **by sheet name** (robust to openpyxl rel-id
+   renumbering and `/xl/…` absolute-path targets) and only on cells that still
+   hold a formula (`<f`).
+
+It's faithful by construction — the writer never edits the dynamic-array
+anchor cells, so restoring the template's original `cm` set to the
+writer-untouched cells reproduces the working state. No-op when the template
+has no `xl/metadata.xml` (v4 / non-dynamic workbooks). Wrapped in try/except so
+a repair failure degrades to a warning, never breaks the populate;
+`report.summary['dynamic_arrays_restored']` flags success.
+
+**Drift guard.** `tests/test_uw_output_model.py::test_dynamic_array_metadata_restored`
+asserts the repair flag, `xl/metadata.xml` presence, ~557 `cm` markers
+restored, and `Z173` carrying `cm` in the output.
+
+**Why not the operator Excel-resave workaround.** Prior to v0.6.1 the standing
+guidance (CLAUDE.md openpyxl quirk #6) was "open the populated file in Excel +
+re-save." That recovers a *repair-clean* file but does **not** restore
+dynamic-array semantics — Excel commits to the CSE interpretation on open. The
+in-Python repair is the structural fix; the manual workaround is retired for
+the UW Template output.

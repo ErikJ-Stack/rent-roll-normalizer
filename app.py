@@ -74,7 +74,7 @@ APP_LAST_UPDATED = "2026-05-08"   # alias for RR_LAST_UPDATED
 RR_VERSION = "1.19.0"
 RR_LAST_UPDATED = "2026-05-27"
 
-UWT_VERSION = "0.6.0"             # Track 4 — in-Python UW Output evaluator (kills cache caveat)
+UWT_VERSION = "0.6.1"             # Track 4 — dynamic-array repair (Section R/S spills survive openpyxl save)
 UWT_LAST_UPDATED = "2026-05-28"
 
 T12_VERSION = "0.2.1"
