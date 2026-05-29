@@ -38,11 +38,13 @@ ROOT = Path(__file__).resolve().parent.parent
 BUNDLED_ANALYZER = ROOT / "ALF_Financial_Analyzer_Only.xlsx"
 # v4 lives in Sample Files (gitignored — working-copy reference only).
 TEMPLATE_V4 = ROOT / "Sample Files" / "ALF_UW_Template_v4.xlsx"
-# v5 is the binding template as of 2026-05-26 and lives at the committed
-# asset path so CI / cold checkouts can run the smoke test without needing
-# the gitignored Sample Files copy.
+# v5 + v6 both live at committed asset paths so CI / cold checkouts can run the
+# smoke tests without needing the gitignored Sample Files copy. v6 (T-12 income
+# restructure) is the binding default as of 2026-05-29 (UWT v0.8.0); v5 is kept
+# as an explicit-version regression.
 TEMPLATE_V5 = ROOT / "assets" / "ALF_UW_Template_v5.xlsx"
-TEMPLATE = TEMPLATE_V5  # default — v5
+TEMPLATE_V6 = ROOT / "assets" / "ALF_UW_Template_v6.xlsx"
+TEMPLATE = TEMPLATE_V5  # v5 regression tests below pin template_version="v5"
 POPULATED_ANALYZER = (
     ROOT / "Sample Files"
     / "Analyzer with 2026-04-24 Homestead Village Rent Roll v2 + March 2026 T12 2026-04-24.xlsx"
@@ -68,7 +70,7 @@ def _section(title: str) -> None:
 # ── test 1: empty-Analyzer smoke ──────────────────────────────────────────────
 
 def test_empty_analyzer_smoke() -> None:
-    _section("test_empty_analyzer_smoke (v5 default)")
+    _section("test_empty_analyzer_smoke (v5 regression — pinned)")
 
     _check(BUNDLED_ANALYZER.exists(), f"missing bundled Analyzer: {BUNDLED_ANALYZER}")
     _check(TEMPLATE.exists(), f"missing template: {TEMPLATE}")
@@ -78,7 +80,7 @@ def test_empty_analyzer_smoke() -> None:
 
     populated, report = populate_uw_template(
         analyzer_bytes, template_bytes,
-        # template_version defaults to 'v5'
+        template_version="v5",  # pinned — default is now v6
         scenario="normalized",
     )
 
@@ -164,7 +166,7 @@ def test_populated_analyzer_e2e() -> None:
 
     populated, report = populate_uw_template(
         analyzer_bytes, template_bytes,
-        # template_version defaults to 'v5'
+        template_version="v5",  # pinned — default is now v6
         scenario="normalized",
     )
 
@@ -285,11 +287,108 @@ def test_populated_analyzer_e2e() -> None:
         print(f"    {r.target_address:35s} ← {r.key:30s} ({r.cells_written} cells) sample={r.sample_value!r}")
 
 
+# ── test 3: v6 empty-Analyzer smoke (new default) ─────────────────────────────
+
+def test_empty_analyzer_smoke_v6() -> None:
+    _section("test_empty_analyzer_smoke_v6 (v6 — new default)")
+
+    _check(BUNDLED_ANALYZER.exists(), f"missing bundled Analyzer: {BUNDLED_ANALYZER}")
+    _check(TEMPLATE_V6.exists(), f"missing v6 template: {TEMPLATE_V6}")
+
+    populated, report = populate_uw_template(
+        BUNDLED_ANALYZER.read_bytes(), TEMPLATE_V6.read_bytes(),
+        # template_version omitted → exercises the new v6 default
+        scenario="normalized",
+    )
+
+    _check(report.template_version == "v6", f"expected v6 default, got {report.template_version!r}")
+    _check(isinstance(populated, bytes) and len(populated) > 0, "populated bytes empty")
+    _check(report.summary["total_concepts"] == 137, f"expected 137 concepts, got {report.summary['total_concepts']}")
+
+    wb = openpyxl.load_workbook(io.BytesIO(populated), data_only=False)
+    _check(len(wb.sheetnames) == 16, f"expected 16 sheets (v6), got {len(wb.sheetnames)}")
+    _check("T-12 Analysis" in wb.sheetnames, "T-12 Analysis missing")
+    ws = wb["T-12 Analysis"]
+
+    # v6 income layout: EGI is a preserved SUM formula at N77 (not v5's N69).
+    egi = ws["N77"].value
+    _check(
+        isinstance(egi, str) and egi.startswith("="),
+        f"v6 EGI should be a preserved formula at N77, got {egi!r}",
+    )
+    # EBITDAR (N132) + EBITDA (N133) are authored by the finalize pass
+    # (template ships N132 as literal 0 / N133 blank).
+    ebitdar = ws["N132"].value
+    _check(
+        isinstance(ebitdar, str) and ebitdar.startswith("="),
+        f"v6 EBITDAR (N132) should be authored as a formula, got {ebitdar!r}",
+    )
+    ebitda = ws["N133"].value
+    _check(
+        isinstance(ebitda, str) and ebitda.startswith("="),
+        f"v6 EBITDA (N133) should be authored as a formula, got {ebitda!r}",
+    )
+    # Monthly mirror: B77 (EGI, col B) should carry the mirrored formula.
+    b77 = ws["B77"].value
+    _check(
+        isinstance(b77, str) and b77.startswith("="),
+        f"v6 EGI monthly mirror at B77 should be a formula, got {b77!r}",
+    )
+    _check(report.summary.get("t12_totals_finalized", 0) > 0, "v6 finalize wrote nothing")
+
+    print(f"  ✓ v6 default: {report.summary['total_concepts']} concepts, {len(wb.sheetnames)} sheets")
+    print(f"  ✓ N77 (EGI)={egi!r}  N132 (EBITDAR)={ebitdar!r}  N133 (EBITDA)={ebitda!r}")
+    print(f"  ✓ B77 monthly mirror={b77!r}")
+    print(f"  ✓ outcomes: {dict(report.summary)}")
+
+
+# ── test 4: v6 populated-Analyzer end-to-end ──────────────────────────────────
+
+def test_populated_analyzer_e2e_v6() -> None:
+    _section("test_populated_analyzer_e2e_v6")
+
+    if not POPULATED_ANALYZER.exists():
+        print(f"  SKIP: populated fixture not found at {POPULATED_ANALYZER}")
+        return
+
+    populated, report = populate_uw_template(
+        POPULATED_ANALYZER.read_bytes(), TEMPLATE_V6.read_bytes(),
+        scenario="normalized",
+    )
+    _check(report.template_version == "v6", f"expected v6, got {report.template_version!r}")
+
+    wb_out = openpyxl.load_workbook(io.BytesIO(populated), data_only=False)
+    ws_t12 = wb_out["T-12 Analysis"]
+    for addr, label in (("N77", "EGI"), ("N131", "EBITDARM"), ("N132", "EBITDAR"), ("N133", "EBITDA")):
+        v = ws_t12[addr].value
+        print(f"  T-12 Analysis!{addr} ({label}) = {v!r}")
+        _check(
+            isinstance(v, str) and v.startswith("="),
+            f"v6 {label} at {addr} should be a formula, got {v!r}",
+        )
+
+    # Rent Roll Analysis is unchanged v5→v6 — first data row should populate.
+    ws_rr = wb_out["Rent Roll Analysis"]
+    _check(
+        ws_rr["D211"].value == "1 Bedroom",
+        f"D211 should = '1 Bedroom'; got {ws_rr['D211'].value!r}",
+    )
+    populated_rows = sum(1 for r in range(211, 811) if ws_rr[f"A{r}"].value is not None)
+    print(f"  Rent Roll Analysis populated rows from 211: {populated_rows}")
+    _check(populated_rows > 0, "rent roll target has no populated rows")
+    print(f"  ✓ Summary: {dict(report.summary)}")
+
+
 # ── runner ────────────────────────────────────────────────────────────────────
 
 def main() -> int:
     failures: list[tuple[str, str]] = []
-    for fn in (test_empty_analyzer_smoke, test_populated_analyzer_e2e):
+    for fn in (
+        test_empty_analyzer_smoke,
+        test_populated_analyzer_e2e,
+        test_empty_analyzer_smoke_v6,
+        test_populated_analyzer_e2e_v6,
+    ):
         try:
             fn()
         except TestFailure as e:

@@ -79,25 +79,27 @@ _SPECIAL_SKIP_KEYS: dict[str, str] = {
     ),
 }
 
-# ── T-12 Analysis Layer-3 model (v5 template) ──────────────────────────────────
-# The Layer-3 income section is a GPR→Net Rent waterfall whose TOTAL rows are
-# live template formulas (e.g. N63 =N58+N59+N60+N61+N62, N69 =N63+…+N68,
-# N85 =SUM(N71:N84)). The writer must NOT paste values over those formulas, and
-# the line items it does paste must carry the sign the additive formulas expect.
+# ── T-12 Analysis Layer-3 model (v5 / v6 templates) ────────────────────────────
+# The Layer-3 income section has TOTAL rows that are live template formulas
+# (e.g. v5 N63 =N58+…, N69 =N63+…; v6 N61 =SUM(N58:N60), N77 EGI =N61+N65+…).
+# The writer must NOT paste values over those formulas, and the line items it
+# does paste must carry the sign the additive formulas expect.
 #
-# Total-row concepts: skipped by the generic loop and handled by
-# `_finalize_t12_layer3` (which preserves/authors the col-N formula and mirrors
-# it across the monthly grid B–M).
+# Total-row concepts: skipped by the generic loop (keyed by concept, version-
+# agnostic) and handled by `_finalize_t12_layer3`, which preserves/authors the
+# col-N formula and mirrors it across the monthly grid B–M. Per-version row
+# positions live in `_T12_LAYOUT` below (v6 rebuilt INCOME so every total row
+# shifted — EGI N69→N77, EBITDARM N116→N131, etc.).
 _T12_TOTAL_CONCEPTS: frozenset[str] = frozenset({
-    "base_rent_normalized",    # Net Rent Revenue  → N63 (formula)
-    "egi",                     # EGI               → N69 (formula)
-    "labor_total",             # Total Labor       → N85 (formula)
-    "opex_nonlabor_total",     # Total Non-Labor   → N111 (formula)
-    "opex_total_incl_mgmt",    # Total Op Ex       → N114 (formula)
-    "opex_total_excl_mgmt",    # Op Ex excl mgmt   → N115 (formula)
-    "ebitdarm",                # EBITDARM          → N116 (formula)
-    "ebitdar",                 # EBITDAR (NOI)     → N117 (authored)
-    "ebitda",                  # EBITDA            → N118 (authored)
+    "base_rent_normalized",    # v5 Net Rent Revenue (formula); nulled in v6
+    "egi",                     # EGI               (v5 N69 / v6 N77)
+    "labor_total",             # Total Labor       (v5 N85 / v6 N99)
+    "opex_nonlabor_total",     # Total Non-Labor   (v5 N111 / v6 N126)
+    "opex_total_incl_mgmt",    # Total Op Ex       (v5 N114 / v6 N129)
+    "opex_total_excl_mgmt",    # Op Ex excl mgmt   (v5 N115 / v6 N130)
+    "ebitdarm",                # EBITDARM          (v5 N116 / v6 N131)
+    "ebitdar",                 # EBITDAR (NOI)     (v5 N117 / v6 N132, authored)
+    "ebitda",                  # EBITDA            (v5 N118 / v6 N133, authored)
 })
 
 # Income-waterfall contra lines: the Analyzer reports vacancy/bad-debt as
@@ -113,17 +115,42 @@ _T12_CONTRA_KEYS: frozenset[str] = frozenset({
 
 # T-12 Analysis Layer-3 monthly grid spans cols B(2)..M(13); col N(14) = annual.
 _T12_MONTH_COLS = tuple(range(2, 14))  # B..M
-_T12_NET_RENT_ROW = 63
 _N_REF_RE = re.compile(r"\bN(\d+)")
 
-# Section I (Layer 1 — Raw T-12): header at row 122; data rows 123..172;
-# cols A(1)=Acct#, B(2)=Account Name, C..N(3..14)=12 months, O(15)=T-12 Total,
-# P(16)=→ MAPPING bucket. Section J raw-totals reconciliation at 176/177/178.
-_SECTION_I_START = 123
-_SECTION_I_END = 172
-_SECTION_J_REVENUE_ROW = 176
-_SECTION_J_OPEX_ROW = 177
-_SECTION_J_EBITDAR_ROW = 178
+# Per-version T-12 Analysis Layer-3 + Section I/J row map. The finalize and
+# Section-I passes dispatch on this rather than hardcoding v5 rows.
+#
+#   net_rent_row     v5 income Net Rent (GPR waterfall) — monthly pasted
+#                    explicitly as base − concessions − bad debt. None for v6,
+#                    whose income is an actual-T12 build (no GPR-derived line).
+#   ebitdar_row/_formula, ebitda_row/_formula
+#                    rows the template leaves as a value/blank — authored here.
+#                    v5: EBITDAR = EBITDARM(N116) − mgmt(N113); EBITDA = EBITDAR.
+#                    v6: EBITDAR = EBITDARM(N131) − mgmt(N128); EBITDA = EBITDAR.
+#   mirror_rows      total rows whose col-N formula is mirrored across B–M so
+#                    monthly totals reconcile to the annual (net_rent_row is
+#                    excluded — it's pasted directly).
+#   section_i_*/j_*  Section I (Layer 1 — Raw T-12) data band + Section J
+#                    raw-totals reconciliation rows. v6 shifted these +15 (the
+#                    raw header row moved from 122 to 137).
+_T12_LAYOUT: dict[str, dict] = {
+    "v5": {
+        "net_rent_row": 63,
+        "ebitdar_row": 117, "ebitdar_formula": "=N116-N113",
+        "ebitda_row": 118,  "ebitda_formula": "=N117",
+        "mirror_rows": (69, 85, 111, 114, 115, 116, 117, 118),
+        "section_i_start": 123, "section_i_end": 172,
+        "section_j_rev": 176, "section_j_opex": 177, "section_j_ebitdar": 178,
+    },
+    "v6": {
+        "net_rent_row": None,
+        "ebitdar_row": 132, "ebitdar_formula": "=N131-N128",
+        "ebitda_row": 133,  "ebitda_formula": "=N132",
+        "mirror_rows": (61, 65, 77, 99, 126, 129, 130, 131, 132, 133),
+        "section_i_start": 138, "section_i_end": 187,
+        "section_j_rev": 191, "section_j_opex": 192, "section_j_ebitdar": 193,
+    },
+}
 
 # Status colours mirror the generator — duplicated here so the writer can
 # tag the report with consistent labels.
@@ -400,17 +427,19 @@ def _mirror_n_formula(formula: str, col_letter: str) -> str:
     return _N_REF_RE.sub(col_letter + r"\1", formula)
 
 
-def _finalize_t12_layer3(ws, monthly: dict[str, list]) -> int:
+def _finalize_t12_layer3(ws, monthly: dict[str, list], layout: dict) -> int:
     """Make the T-12 Analysis Layer-3 total rows live formulas (col N + B–M).
 
     Runs after the generic concept loop (which writes the line items and skips
-    the total-row concepts). For each total row:
-      - col N: preserve the template's formula; author EBITDAR (N117) / EBITDA
-        (N118) where the template left them blank.
+    the total-row concepts). Driven by the per-version `layout` row map. For
+    each total row:
+      - col N: preserve the template's formula; author EBITDAR / EBITDA where
+        the template left them as a value/blank.
       - cols B–M: mirror the col-N formula across the 12 month columns — except
-        Net Rent (row 63), whose monthly value is pasted directly (base rent −
-        concessions − bad debt) because the GPR waterfall feeding N63 has no
-        monthly dimension.
+        v5's Net Rent (net_rent_row), whose monthly value is pasted directly
+        (base rent − concessions − bad debt) because the GPR waterfall feeding
+        it has no monthly dimension. v6 income is an actual-T12 build with no
+        such line (net_rent_row=None), so the step is skipped.
 
     Returns the count of formula/value cells written.
     """
@@ -420,30 +449,33 @@ def _finalize_t12_layer3(ws, monthly: dict[str, list]) -> int:
 
     # 1) Author the two missing P&L formulas (EBITDAR = EBITDARM − mgmt fee;
     #    EBITDA = EBITDAR − depreciation(0)) if the template left them as values.
-    if not _cell_is_formula(ws, 117, 14):
-        ws.cell(row=117, column=14).value = "=N116-N113"
+    er, ed = layout["ebitdar_row"], layout["ebitda_row"]
+    if not _cell_is_formula(ws, er, 14):
+        ws.cell(row=er, column=14).value = layout["ebitdar_formula"]
         written += 1
-    if not _cell_is_formula(ws, 118, 14):
-        ws.cell(row=118, column=14).value = "=N117"
+    if not _cell_is_formula(ws, ed, 14):
+        ws.cell(row=ed, column=14).value = layout["ebitda_formula"]
         written += 1
 
-    # 2) Net Rent monthly (B63–M63): base rent − concessions − bad debt, per
-    #    month, so the monthly sum reconciles to the annual GPR-waterfall N63.
+    # 2) v5 Net Rent monthly: base rent − concessions − bad debt, per month, so
+    #    the monthly sum reconciles to the annual GPR-waterfall total.
     #    (concessions is already negative; bad debt is positive → subtract.)
-    base = monthly.get("base_rent_normalized") or [0.0] * 12
-    conc = monthly.get("concessions_specials") or [0.0] * 12
-    bd = monthly.get("bad_debt_writeoffs_revenue") or [0.0] * 12
-    for i, col in enumerate(_T12_MONTH_COLS):
-        if i >= 12:
-            break
-        ws.cell(row=_T12_NET_RENT_ROW, column=col).value = (
-            (base[i] or 0.0) + (conc[i] or 0.0) - (bd[i] or 0.0)
-        )
-        written += 1
+    net_rent_row = layout.get("net_rent_row")
+    if net_rent_row is not None:
+        base = monthly.get("base_rent_normalized") or [0.0] * 12
+        conc = monthly.get("concessions_specials") or [0.0] * 12
+        bd = monthly.get("bad_debt_writeoffs_revenue") or [0.0] * 12
+        for i, col in enumerate(_T12_MONTH_COLS):
+            if i >= 12:
+                break
+            ws.cell(row=net_rent_row, column=col).value = (
+                (base[i] or 0.0) + (conc[i] or 0.0) - (bd[i] or 0.0)
+            )
+            written += 1
 
-    # 3) Mirror each remaining total row's col-N formula across B–M.
-    mirror_rows = (69, 85, 111, 114, 115, 116, 117, 118)
-    for row in mirror_rows:
+    # 3) Mirror each total row's col-N formula across B–M. (Runs after step 1 so
+    #    the just-authored EBITDAR/EBITDA formulas get mirrored too.)
+    for row in layout["mirror_rows"]:
         n_formula = ws.cell(row=row, column=14).value
         if not (isinstance(n_formula, str) and n_formula.startswith("=")):
             continue
@@ -456,20 +488,27 @@ def _finalize_t12_layer3(ws, monthly: dict[str, list]) -> int:
     return written
 
 
-def _write_section_i_raw(ws, raw_lines: list) -> tuple[int, list[str]]:
+def _write_section_i_raw(ws, raw_lines: list, layout: dict) -> tuple[int, list[str]]:
     """Populate Section I (Layer 1 — Raw T-12) from the summarized raw lines.
 
-    Rebuilds the section: clears the pre-filled skeleton (rows 123–172, cols
-    A–P) and writes one row per Analyzer label —
+    Rebuilds the section: clears the pre-filled skeleton (the data band given by
+    `layout`, cols A–P) and writes one row per Analyzer label —
     B = matched GL account names, C–N = 12 monthly values, O = T-12 total,
     P = the standardized bucket (label). Authors the Section J raw-totals
     reconciliation (Total Revenue / Total OpEx / EBITDAR) as live SUM formulas
-    over the rows just written.
+    over the rows just written. Row positions come from `layout` (v6 shifted the
+    whole band +15 vs v5).
 
     Returns (cells_written, warnings).
     """
+    si_start = layout["section_i_start"]
+    si_end = layout["section_i_end"]
+    sj_rev = layout["section_j_rev"]
+    sj_opex = layout["section_j_opex"]
+    sj_ebitdar = layout["section_j_ebitdar"]
+
     warnings: list[str] = []
-    capacity = _SECTION_I_END - _SECTION_I_START + 1
+    capacity = si_end - si_start + 1
     if len(raw_lines) > capacity:
         warnings.append(
             f"Section I holds {capacity} raw lines but the T-12 has "
@@ -478,7 +517,7 @@ def _write_section_i_raw(ws, raw_lines: list) -> tuple[int, list[str]]:
         raw_lines = raw_lines[:capacity]
 
     # Clear the skeleton (A..P) across the full data band.
-    for r in range(_SECTION_I_START, _SECTION_I_END + 1):
+    for r in range(si_start, si_end + 1):
         for c in range(1, 17):
             ws.cell(row=r, column=c).value = None
 
@@ -486,7 +525,7 @@ def _write_section_i_raw(ws, raw_lines: list) -> tuple[int, list[str]]:
     rev_rows: list[int] = []
     opex_rows: list[int] = []
     for i, line in enumerate(raw_lines):
-        r = _SECTION_I_START + i
+        r = si_start + i
         ws.cell(row=r, column=2).value = " | ".join(line.get("descriptions") or []) or line["label"]
         mvals = line.get("monthly") or []
         # Section I months are cols C..N (3..14); O(15)=total, P(16)=bucket.
@@ -505,11 +544,9 @@ def _write_section_i_raw(ws, raw_lines: list) -> tuple[int, list[str]]:
             f"=SUM(O{rows[0]}:O{rows[-1]})"
         )
 
-    ws.cell(row=_SECTION_J_REVENUE_ROW, column=15).value = _sum_o(rev_rows)
-    ws.cell(row=_SECTION_J_OPEX_ROW, column=15).value = _sum_o(opex_rows)
-    ws.cell(row=_SECTION_J_EBITDAR_ROW, column=15).value = (
-        f"=O{_SECTION_J_REVENUE_ROW}-O{_SECTION_J_OPEX_ROW}"
-    )
+    ws.cell(row=sj_rev, column=15).value = _sum_o(rev_rows)
+    ws.cell(row=sj_opex, column=15).value = _sum_o(opex_rows)
+    ws.cell(row=sj_ebitdar, column=15).value = f"=O{sj_rev}-O{sj_opex}"
     written += 3
     return written, warnings
 
@@ -724,7 +761,7 @@ def populate_uw_template(
     analyzer_bytes: bytes,
     template_bytes: bytes,
     *,
-    template_version: str = "v5",
+    template_version: str = "v6",
     scenario: str = "normalized",
     registry_path: str | Path | None = None,
     include_statuses: frozenset[str] | None = None,
@@ -744,10 +781,10 @@ def populate_uw_template(
     template_bytes : bytes
         Raw bytes of the UW Template (e.g. `ALF_UW_Template_v4.xlsx`).
         Formula cells on the template side are preserved.
-    template_version : str, default 'v5'
-        Which version-keyed target to use from the registry. v4 is still
-        supported (pass `template_version='v4'`); v5 is the binding default
-        as of 2026-05-26.
+    template_version : str, default 'v6'
+        Which version-keyed target to use from the registry. v6 (T-12 income
+        restructure) is the binding default as of 2026-05-29; v5 and v4 remain
+        supported (pass `template_version='v5'` / `'v4'`).
     scenario : str, default 'normalized'
         'normalized' (UW Output col F) or 't12_actual' (col E). Controls
         which annual column the t12-path writes.
@@ -1011,22 +1048,26 @@ def populate_uw_template(
 
         report.results.append(result)
 
-    # ── Finalize T-12 Analysis Layer-3 totals (v5) ─────────────────────────────
+    # ── Finalize T-12 Analysis Layer-3 totals (v5 / v6) ────────────────────────
     # Make the total rows live formulas (col N preserved/authored + mirrored
     # across the monthly grid B–M), so they recompute from the line items and
-    # tie month-to-annual. Runs after the line items are written.
+    # tie month-to-annual. Runs after the line items are written. Row positions
+    # come from `_T12_LAYOUT` per template version (v6 rebuilt the income rows).
     t12_finalized = 0
     section_i_cells = 0
-    if template_version == "v5" and "T-12 Analysis" in wb_template.sheetnames:
+    t12_layout = _T12_LAYOUT.get(template_version)
+    if t12_layout and "T-12 Analysis" in wb_template.sheetnames:
         ws_t12 = wb_template["T-12 Analysis"]
         try:
-            t12_finalized = _finalize_t12_layer3(ws_t12, monthly)
+            t12_finalized = _finalize_t12_layer3(ws_t12, monthly, t12_layout)
         except Exception as e:  # never fail the populate over the finalize pass
             report.warnings.append(f"T-12 Analysis total-formula finalize skipped ({e}).")
         # Section I (Layer 1 — Raw T-12): rebuild from the summarized raw lines.
         if raw_t12_lines:
             try:
-                section_i_cells, si_warnings = _write_section_i_raw(ws_t12, raw_t12_lines)
+                section_i_cells, si_warnings = _write_section_i_raw(
+                    ws_t12, raw_t12_lines, t12_layout
+                )
                 report.warnings.extend(si_warnings)
             except Exception as e:
                 report.warnings.append(f"Section I (raw T-12) population skipped ({e}).")
@@ -1083,7 +1124,7 @@ if __name__ == "__main__":
         "--scenario", default="normalized",
         choices=("normalized", "t12_actual"),
     )
-    ap.add_argument("--template-version", default="v5")
+    ap.add_argument("--template-version", default="v6")
     ap.add_argument("--registry", default=None)
     args = ap.parse_args()
 

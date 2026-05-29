@@ -9,6 +9,70 @@ Newest at top.
 
 ---
 
+## 2026-05-29 — UWT v0.8.0 — default template flipped to v6
+
+**Track:** Track 4. Picks up carry-forward item #1 from the 2026-05-28 session
+("flip the default template to v6"). Operator gave the go-ahead + pointed at
+the Deals-folder v6 copy.
+
+### Not a one-line flip — two writer passes were v5-hardcoded
+
+The 2026-05-28 "what's left" framed the flip as constants + probe + smoke-test.
+On inspection it was more: `_finalize_t12_layer3` (authors EBITDAR/EBITDA,
+mirrors total formulas across the B–M monthly grid) and `_write_section_i_raw`
+(Layer 1 raw paste + Section J reconciliation) were **hardcoded to v5 row
+positions** (N63/N69/N85/N111/N116/N117/N118; Section I 123–172) and gated on
+`template_version == "v5"`. v6 rebuilt the income section (EGI N69→N77, every
+total shifted, raw band +15). A naive constant flip would have silently
+regressed v6 on (1) monthly total reconciliation, (2) EBITDAR/EBITDA authoring
+(v6 ships N132 as literal `0`, N133 blank — same gap v5 had at N117/N118), and
+(3) Section I raw population — **none caught by tests** (there was no v6 writer
+test; the journal's "verified end-to-end" was via the absorption script).
+
+Verified the v6 row map cell-by-cell against `assets/ALF_UW_Template_v6.xlsx`
+before writing code (per the repo's verify-canonical-source discipline).
+
+### What shipped
+
+- **Writer**: new `_T12_LAYOUT` per-version row map; `_finalize_t12_layer3` +
+  `_write_section_i_raw` take the layout; call site gates on
+  `_T12_LAYOUT.get(template_version)` (v5 + v6). Default `template_version`
+  `'v5'`→`'v6'` (function + CLI). v6 has no v5-style Net Rent monthly line
+  (`net_rent_row=None`); income subtotals N61/N65/N77 mirror across B–M instead.
+- **App**: bundled path → `assets/ALF_UW_Template_v6.xlsx` (the v0.7.1 repaired
+  40-part binary); `BUNDLED_UW_TEMPLATE_VERSION` → `"v6"`. `_detect_uw_template_version`
+  made two-stage (v4-vs-v5+ then v5-vs-v6 on T-12 Analysis A77/A114).
+- **Side-fix**: the detection stage-1 probe read AP210, but v5.1 moved "Care
+  Level Tier" AP→AO — so every v5/v6 upload-override misclassified as v4
+  (latent since v5.1; harmless because the bundled default uses the constant,
+  not detection — but a v6 upload override would have broken). Now probes AO210
+  with AP210 fallback.
+- **Tests**: existing two pinned to `template_version="v5"` (regression kept);
+  added `test_empty_analyzer_smoke_v6` + `test_populated_analyzer_e2e_v6`.
+
+### Verification
+
+All 4 writer tests + `test_uw_output_model` (5) + `test_dashboard_model` (27)
+green. v6 Homestead: EGI `=N61+N65+SUM(N66:N76)`@N77, EBITDARM `=N77-N99-N126`@N131,
+EBITDAR `=N131-N128`@N132 (authored), EBITDA `=N132`@N133 (authored), B77 mirror
+`=B61+B65+SUM(B66:B76)`; 176 RR rows; dynamic arrays restored. `UWT_VERSION`
+0.7.1 → 0.8.0.
+
+### ⏭ Remaining (carry-forward, lower priority)
+
+- **Operator-side:** adopt repaired `assets/ALF_UW_Template_v6.xlsx` into the
+  `Deals/.../ALF Templates/` copy (Deals copy was locked/pre-fix at flip time);
+  optionally re-add the Claude-for-Excel add-in (webextensions, not restored).
+- **Rebuild test fixtures against substrate v0.2.15** to retire the
+  known-divergence whitelists. The v6 e2e shows 21 no_source on the old fixture
+  (the 14 new by-care income concepts aren't cached in it) — a fixture artifact,
+  not a runtime gap (the app passes `computed_values`).
+- **Registry `open_questions` housekeeping** (#2 2nd-Person source, #3 monthly
+  grid — both now stale).
+- **Backlog:** BL-0027 (README) + BL-0019 (audit log) still Pending.
+
+---
+
 ## 2026-05-28 (later) — UWT v0.7.0 — v6 template absorbed (T-12 income restructure) + substrate v0.2.15
 
 Long multi-track session. The operator dropped the v6 template + a meticulous release handoff; this session absorbed it Claude-Code-side. Earlier in the same session: RR v1.19.0 was re-implemented from a stale OneDrive view (already shipped as `5fc2a06` — caught via preflight, see "verify-canonical-source"); BL-0026 marked shipped; BL-0027 README modernized; v6 pre-work banked.

@@ -8,6 +8,66 @@ opened (none yet — Phase 0 is the seed release).
 
 ---
 
+## v0.8.0 — default template flipped to v6 (T-12 income restructure) (2026-05-29)
+
+v6 is now the binding default for every populate. The flip was **not** a
+one-line constant change: the T-12 Analysis finalize + Section-I passes were
+hardcoded to v5 row positions and gated on `template_version == "v5"`, so a
+naive flip would have silently regressed v6 outputs on monthly totals,
+EBITDAR/EBITDA authoring, and Section I raw population (none caught by tests —
+there was no v6 writer test). Both passes are now version-dispatched.
+
+**Writer (`uw_template_writer.py`):**
+- New `_T12_LAYOUT` per-version row map (v5 + v6) for the Layer-3 finalize and
+  Section I/J reconciliation. v6 rows: EGI N77 (was N69), Total Labor N99 (N85),
+  Total Non-Labor N126 (N111), Total Op Ex N129 (N114), Op Ex excl mgmt N130
+  (N115), EBITDARM N131 (N116), EBITDAR N132 (N117, authored `=N131-N128`),
+  EBITDA N133 (N118, authored `=N132`); Section I band 138–187 (+15 vs v5),
+  Section J 191/192/193. v6 income is an actual-T12 build so there's no v5-style
+  Net Rent monthly special-case (`net_rent_row=None`); the income subtotals
+  N61/N65/N77 are mirrored across B–M instead.
+- `_finalize_t12_layer3(ws, monthly, layout)` and `_write_section_i_raw(ws,
+  raw_lines, layout)` take the layout map; the call site gates on
+  `_T12_LAYOUT.get(template_version)` (v5 **and** v6).
+- `populate_uw_template` default `template_version` `'v5'` → `'v6'`; CLI default
+  likewise. v5/v4 still fully supported via the explicit param.
+
+**App (`app.py`):**
+- `BUNDLED_UW_TEMPLATE_PATH` → `assets/ALF_UW_Template_v6.xlsx` (the v0.7.1
+  repaired binary — 40 parts, metadata + cm markers); `BUNDLED_UW_TEMPLATE_VERSION`
+  `"v5"` → `"v6"`.
+- `_detect_uw_template_version` now two-stage: v4-vs-v5+ on Rent Roll Analysis
+  "Care Level Tier", then v5-vs-v6 on T-12 Analysis (`A77` EGI / `A114` Auto
+  Expense). **Also fixed a pre-existing latent bug**: the stage-1 probe read
+  AP210, but the v5.1 restructure moved "Care Level Tier" AP→AO, so every v5/v6
+  upload-override was misclassifying as v4. Now probes AO210 (current) with
+  AP210 as a pre-v5.1 fallback. (Harmless until now because the bundled default
+  uses the constant, not detection — but a v6 upload override would have broken.)
+
+**Tests (`tests/test_uw_template_writer.py`):** the two existing tests are pinned
+to `template_version="v5"` (v5 regression preserved); two new v6 tests added —
+`test_empty_analyzer_smoke_v6` (new default; asserts EGI formula at N77,
+EBITDAR authored at N132, EBITDA at N133, monthly mirror at B77, 137 concepts /
+16 sheets) and `test_populated_analyzer_e2e_v6` (Homestead fixture; EGI N77 /
+EBITDARM N131 / EBITDAR N132 / EBITDA N133 all live formulas; 176 RR rows).
+All four green; `test_uw_output_model` (5) + `test_dashboard_model` (27) green.
+
+**Verified on Homestead fixture:** v6 EGI `=N61+N65+SUM(N66:N76)` at N77,
+EBITDARM `=N77-N99-N126` at N131, EBITDAR `=N131-N128` at N132, EBITDA `=N132`
+at N133; B77 monthly mirror `=B61+B65+SUM(B66:B76)`; dynamic arrays restored;
+176 rent-roll rows. `UWT_VERSION` 0.7.1 → 0.8.0.
+
+**Operator-side follow-up (outside repo):** adopt the repaired
+`assets/ALF_UW_Template_v6.xlsx` into the `Deals/.../ALF Templates/` folder copy
+(the Deals copy was locked/pre-fix at flip time). Optionally re-add the
+Claude-for-Excel add-in (webextensions, not restored). **Still queued:** rebuild
+the Homestead test fixture against substrate v0.2.15 to retire the
+known-divergence whitelists (the v6 e2e shows 21 no_source on the old fixture —
+the 14 new by-care income concepts aren't cached in it; the app passes
+`computed_values` so this is a fixture artifact, not a runtime gap).
+
+---
+
 ## v0.7.1 — v6 binary repaired: B56 headers + metadata.xml restored (2026-05-28)
 
 Fixes the two v6-template bugs flagged in v0.7.0, programmatically (no operator
