@@ -8,6 +8,39 @@ opened (none yet — Phase 0 is the seed release).
 
 ---
 
+## v0.7.1 — v6 binary repaired: B56 headers + metadata.xml restored (2026-05-28)
+
+Fixes the two v6-template bugs flagged in v0.7.0, programmatically (no operator
+Excel round-trip required). `tools/uw_template/_fix_v6_headers_and_metadata.py`:
+
+1. **B56:M56 monthly-header repoint** (openpyxl): `=C122..=N122` → `=C137..=N137`.
+   The raw month-header row moved +15 in the income restructure; the operator's
+   repointing pass missed this chain (openpyxl quirk #4). 12 cells fixed.
+2. **`xl/metadata.xml` restored** (`_restore_dynamic_arrays`, the v0.6.1
+   post-processor): the v6 binary was the pre-Excel-resave version (39 parts,
+   no metadata) → Section R/S dynamic-array spills degraded. Sourced from
+   `assets/ALF_UW_Template_v5.xlsx` (= v5.1 content; **Section R/S layout verified
+   identical to v6 cell-by-cell** before injecting — Z173/C173/Q173/A173/B173/
+   W211/X211/Y211 all match). 554 `cm` markers re-applied. v6 now 40 parts.
+
+**Verified:** B56=`=C137`, M56=`=N137`; metadata.xml present; Section R Z173 still
+an ArrayFormula; income-restructure formulas intact (EGI N77, Total Base N61);
+all 5 suites green. A v6 *populated output* now also carries metadata.xml + 554
+cm markers (the writer's `_restore_dynamic_arrays` finally has a source) — so
+Section R/S spills work on per-deal outputs too.
+
+**Not restored:** `xl/webextensions/` (the Claude-for-Excel taskpane add-in,
+carrying v5's add-in fileId GUID). Re-installable — the operator re-adds the
+add-in if they use it; not fabricated here.
+
+**Default still v5** — the binary is now correct, so the only remaining gate is
+the explicit one-line `BUNDLED_UW_TEMPLATE_VERSION` flip (held for operator
+go-ahead + a confirming open-in-Excel). The operator should also adopt this
+repaired `assets/ALF_UW_Template_v6.xlsx` back into their Deals/ folder copy.
+`UWT_VERSION` 0.7.0 → 0.7.1.
+
+---
+
 ## v0.7.0 — Template v6 absorbed: T-12 Analysis income restructure (2026-05-28)
 
 Registry/engine/substrate absorption of the operator-authored **v6 template**

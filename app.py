@@ -78,7 +78,7 @@ APP_LAST_UPDATED = "2026-05-08"   # alias for RR_LAST_UPDATED
 RR_VERSION = "1.19.0"
 RR_LAST_UPDATED = "2026-05-27"
 
-UWT_VERSION = "0.7.0"             # Track 4 — v6 template absorbed (T-12 income restructure); default still v5 pending Excel-resaved binary
+UWT_VERSION = "0.7.1"             # Track 4 — v6 binary repaired (B56 headers + metadata.xml restored); default still v5 pending operator OK to flip
 UWT_LAST_UPDATED = "2026-05-28"
 
 T12_VERSION = "0.2.1"
