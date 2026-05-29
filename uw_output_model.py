@@ -223,9 +223,15 @@ def compute_uw_output_values(
         base_rent = L("Base rent — IL") + L("Base rent — AL") + L("Base rent — MC")
         loc = L("LOC revenue — IL") + L("LOC revenue — AL") + L("LOC revenue — MC")
         other_rev = sum(L(x) for x in _LABELS_OTHER_REV)
+        # 2nd Person Revenue: $0 until the substrate v0.2.15 Description_Map
+        # re-map routes the 2nd-person descriptions to this label (before that
+        # they fold into Base rent). Included in EGI so the re-map is
+        # EGI-neutral — mirrors the Analyzer's E52/F52 EGI formula which the
+        # v0.2.15 migration amends with the same "2nd Person Revenue" term.
+        second_person = L("2nd Person Revenue")
         out["base_rent_normalized"] = base_rent
         out["loc_revenue"] = loc
-        out["egi"] = base_rent + loc + other_rev
+        out["egi"] = base_rent + loc + other_rev + second_person
 
         # ── v6 by-care + per-line income exposure (UW Template v6 restructure) ──
         # The aggregates above are unchanged; these expose the same label sums
@@ -252,7 +258,7 @@ def compute_uw_output_values(
         # re-map (no such GL lines); nonzero for properties that carry them.
         # NOTE: until v0.2.15 ships, those descriptions still map to Base Rent,
         # so base_rent_* still include them — emit anyway (0 on Homestead).
-        out["second_person_revenue"] = L("2nd Person Revenue")
+        out["second_person_revenue"] = second_person
 
         # Bad debt is written to N62 (revenue contra) via this concept; the
         # opex_bad_debt_expense → N106 copy is special-skipped by the writer.

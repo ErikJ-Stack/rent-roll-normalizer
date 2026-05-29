@@ -114,6 +114,20 @@ _AUTO_EXPENSE_DIVERGENCE = {
     "ebitda":                -1,
 }
 
+# UWT v6 / substrate v0.2.15 (2026-05-28): the 2nd-Person Description_Map
+# re-map moves the 2nd-person GL dollars out of "Base rent — *" into the
+# dedicated "2nd Person Revenue" label. On Homestead that's r127 "Second
+# Person Fee" = $32,220.49. The cached fixture pre-dates the re-map (2nd
+# person still in base rent), so base_rent_normalized drops and loss_to_lease
+# (= GPR − vacancy − base) goes less-negative by that amount. EGI is unchanged
+# (the engine + the Analyzer's amended E52/F52 both add 2nd Person back).
+# Retire by rebuilding the fixture against a v0.2.15 Analyzer.
+_REMAP_2P_AMT = 32220.49
+_REMAP_2P_DIVERGENCE = {
+    "base_rent_normalized": -1,
+    "loss_to_lease":        +1,
+}
+
 
 def _parse_inputs():
     """Mirror the app pipeline: NormalizeResult + T12ParseResult from fixtures."""
@@ -162,6 +176,18 @@ def test_engine_matches_cached() -> None:
             if abs((engine - cached) - expected) > 1.0:
                 divergence_errors.append(
                     f"{key}: gap {engine - cached:,.2f} != expected Auto-Expense gap {expected:,.2f}"
+                )
+            continue
+        if key in _REMAP_2P_DIVERGENCE:
+            # Known divergence (substrate v0.2.15): 2nd-Person re-map moved
+            # $32,220.49 out of base rent into the "2nd Person Revenue" label.
+            if engine is None or cached is None:
+                divergence_errors.append(f"{key}: unexpected None (engine={engine}, cached={cached})")
+                continue
+            expected = _REMAP_2P_DIVERGENCE[key] * _REMAP_2P_AMT
+            if abs((engine - cached) - expected) > 1.0:
+                divergence_errors.append(
+                    f"{key}: gap {engine - cached:,.2f} != expected 2P-remap gap {expected:,.2f}"
                 )
             continue
         if engine is None or cached is None:
