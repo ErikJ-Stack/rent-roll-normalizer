@@ -89,7 +89,7 @@ def test_empty_analyzer_smoke() -> None:
     # report summary keys
     summary = report.summary
     _check("total_concepts" in summary, "summary missing total_concepts")
-    _check(summary["total_concepts"] == 123, f"expected 123 concepts (registry v0.4.1+), got {summary['total_concepts']}")
+    _check(summary["total_concepts"] == 137, f"expected 137 concepts (registry v0.5.0 — v6 absorption added 14), got {summary['total_concepts']}")
     _check("cells_written" in summary, "summary missing cells_written")
 
     by = report.by_outcome()

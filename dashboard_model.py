@@ -249,11 +249,19 @@ _LABELS_NON_LABOR = (
     "Recreation & activity suppl.", "R&M fixed", "R&M variable",
     "HK & laundry supplies", "Sales, adv. & marketing", "Referral fees",
     "Utilities", "Telephone / IT", "P&C insurance (bundled)",
-    "Auto insurance", "Fire / security monitoring", "Pest elimination",
+    "Auto insurance", "Auto Expense", "Fire / security monitoring",
+    "Pest elimination",
     "Real estate taxes", "Personal property taxes", "Legal expenses",
     "Professional services", "Bad debt expense", "Permits, licenses & dues",
     "Office, admin & G&A", "Other / miscellaneous", "Lease / ground lease",
 )
+# `Auto Expense` added 2026-05-28 (UWT v6): the Description_Map already routes
+# "Auto Expenses" / "Auto and Mileage Expense" → label "Auto Expense", but it
+# was absent from this non-labor sum, so its dollars never reached
+# opex_nonlabor_total → fell out of EBITDARM. On Homestead it was exactly
+# $6,061.32 = the standardized-vs-as-reported NOI gap. Including it makes
+# standardized NOI tie to as-reported. NOTE: this drops EBITDARM/EBITDAR/EBITDA
+# by the Auto-Expense amount on every property vs the pre-v6 engine.
 
 
 def _aggregate_t12(

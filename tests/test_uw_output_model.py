@@ -100,6 +100,20 @@ _UW_OUTPUT_REF = {
     "bad_debt_writeoffs_revenue": ("F", 57),
 }
 
+# UWT v6 (2026-05-28): the engine now folds `Auto Expense` into the non-labor
+# sum (it was silently dropped pre-v6, overstating standardized NOI). The
+# cached Homestead fixture was built before this fix, so these five keys diverge
+# by exactly the Auto Expense amount. Sign = engine − cached (opex totals go UP,
+# NOI lines go DOWN). Retire by rebuilding the fixture against a v6 Analyzer.
+_AUTO_EXPENSE_AMT = 6061.32
+_AUTO_EXPENSE_DIVERGENCE = {
+    "opex_nonlabor_total":   +1,
+    "opex_total_excl_mgmt":  +1,
+    "ebitdarm":              -1,
+    "ebitdar":               -1,
+    "ebitda":                -1,
+}
+
 
 def _parse_inputs():
     """Mirror the app pipeline: NormalizeResult + T12ParseResult from fixtures."""
@@ -130,9 +144,26 @@ def test_engine_matches_cached() -> None:
     uo = openpyxl.load_workbook(POPULATED_ANALYZER, data_only=True)["UW Output"]
 
     mismatches = []
+    divergence_errors = []
     for key, (col, row) in _UW_OUTPUT_REF.items():
         engine = _num(vals.get(key))
         cached = _num(uo[f"{col}{row}"].value)
+        if key in _AUTO_EXPENSE_DIVERGENCE:
+            # Known divergence (UWT v6, 2026-05-28): the engine now includes
+            # Auto Expense ($6,061.32 on Homestead) in the non-labor sum; the
+            # cached fixture pre-dates that fix and overstates NOI by exactly
+            # that amount. Assert the gap IS the Auto Expense amount (confirms
+            # the fix, not merely "different"). Rebuild this fixture against a
+            # v6-populated Analyzer to retire this whitelist.
+            if engine is None or cached is None:
+                divergence_errors.append(f"{key}: unexpected None (engine={engine}, cached={cached})")
+                continue
+            expected = _AUTO_EXPENSE_DIVERGENCE[key] * _AUTO_EXPENSE_AMT
+            if abs((engine - cached) - expected) > 1.0:
+                divergence_errors.append(
+                    f"{key}: gap {engine - cached:,.2f} != expected Auto-Expense gap {expected:,.2f}"
+                )
+            continue
         if engine is None or cached is None:
             ok = engine is None and cached is None
         else:
@@ -141,6 +172,8 @@ def test_engine_matches_cached() -> None:
             mismatches.append(f"{key}: engine={vals.get(key)!r} cached={uo[f'{col}{row}'].value!r}")
 
     _check(not mismatches, "engine diverged from cached UW Output:\n  " + "\n  ".join(mismatches))
+    _check(not divergence_errors,
+           "Auto-Expense known-divergence check failed:\n  " + "\n  ".join(divergence_errors))
     print(f"  ✓ engine matches cached UW Output on {len(_UW_OUTPUT_REF)} concepts (to the penny)")
     # Headline spot-print
     print(f"      EGI={vals['egi']:,.2f}  EBITDARM={vals['ebitdarm']:,.2f}  EBITDA={vals['ebitda']:,.2f}")

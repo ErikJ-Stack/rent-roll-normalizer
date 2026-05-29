@@ -227,6 +227,33 @@ def compute_uw_output_values(
         out["loc_revenue"] = loc
         out["egi"] = base_rent + loc + other_rev
 
+        # ── v6 by-care + per-line income exposure (UW Template v6 restructure) ──
+        # The aggregates above are unchanged; these expose the same label sums
+        # individually so the writer can populate the v6 actual-T12 income rows
+        # (N58-N74). Subtotals (total_base_rent N61, total_loc N65) are template
+        # SUM formulas — not emitted here (writer skips `derived`).
+        out["base_rent_il"] = L("Base rent — IL")
+        out["base_rent_al"] = L("Base rent — AL")
+        out["base_rent_mc"] = L("Base rent — MC")
+        out["loc_il"] = L("LOC revenue — IL")
+        out["loc_al"] = L("LOC revenue — AL")
+        out["loc_mc"] = L("LOC revenue — MC")
+        out["rev_meal_income"] = L("Meal Income")
+        out["rev_housekeeping_income"] = L("Housekeeping Income")
+        out["rev_laundry_income"] = L("Laundry Income")
+        out["rev_scooter_fee"] = L("Scooter Fee Revenue")
+        out["rev_transfer_fee"] = L("Transfer Fee Revenue")
+        # Auto Expense — now part of _LABELS_NON_LABOR (see dashboard_model);
+        # exposed individually for the v6 Non-Labor row N114.
+        out["opex_auto_expense"] = L("Auto Expense")
+        # 2nd Person Revenue (v6 N66). Fed by the "2nd Person Revenue" label,
+        # which the substrate v0.2.15 Description_Map re-map populates (Second
+        # Persons Revenue | care + Second Person Fee). $0 on Homestead pre/post
+        # re-map (no such GL lines); nonzero for properties that carry them.
+        # NOTE: until v0.2.15 ships, those descriptions still map to Base Rent,
+        # so base_rent_* still include them — emit anyway (0 on Homestead).
+        out["second_person_revenue"] = L("2nd Person Revenue")
+
         # Bad debt is written to N62 (revenue contra) via this concept; the
         # opex_bad_debt_expense → N106 copy is special-skipped by the writer.
         out["bad_debt_writeoffs_revenue"] = L("Bad debt expense")
