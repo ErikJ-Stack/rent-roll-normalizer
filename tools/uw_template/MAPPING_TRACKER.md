@@ -1,6 +1,6 @@
 # ALF UW Template — Mapping Tracker
 
-> Generated from `tools/uw_template/registry.json` on 2026-05-28 22:21 UTC.  **Do not edit by hand** — edit `registry.json` and re-run `python tools/uw_template/build_mapping_artifacts.py`.
+> Generated from `tools/uw_template/registry.json` on 2026-05-29 02:22 UTC.  **Do not edit by hand** — edit `registry.json` and re-run `python tools/uw_template/build_mapping_artifacts.py`.
 
 - Analyzer source: `ALF_Financial_Analyzer_Only.xlsx` (substrate `v0.2.14`)
 - Primary template: `v4` → `Sample Files/ALF_UW_Template_v4.xlsx`
@@ -68,8 +68,8 @@
 
 | Concept | Source | Target (`v4`) | Status | Notes |
 |---|---|---|---|---|
-| **Base rent (net of waterfall)** <br/> `base_rent_normalized` | `UW Output!E_or_F6` | `T-12 Analysis!N63` | `mapped` | Analyzer's 'Base rent (normalized)' is conceptually the net-of-vacancy/LTL/concessions rent that flows into EGI — matches template 'Net Rent Revenue'. Annual total only (col N). |
-| **LOC / Care Services Revenue** <br/> `loc_revenue` | `UW Output!E_or_F7` | `T-12 Analysis!N64` | `mapped` |  |
+| **Base rent (net of waterfall)** <br/> `base_rent_normalized` | `UW Output!E_or_F6` | `T-12 Analysis!N63` | `mapped` | Analyzer's 'Base rent (normalized)' is conceptually the net-of-vacancy/LTL/concessions rent that flows into EGI — matches template 'Net Rent Revenue'. Annual total only (col N). · v6: target nulled — N61/N65 are template SUM formulas fed by the by-care rows (base_rent_il/al/mc, loc_il/al/mc); writer must not clobber them. Aggregate stays computed by the template. |
+| **LOC / Care Services Revenue** <br/> `loc_revenue` | `UW Output!E_or_F7` | `T-12 Analysis!N64` | `mapped` | · v6: target nulled — N61/N65 are template SUM formulas fed by the by-care rows (base_rent_il/al/mc, loc_il/al/mc); writer must not clobber them. Aggregate stays computed by the template. |
 | **Community / Move-in Fees** <br/> `community_movein_fees` | `UW Output!E_or_F8` | `T-12 Analysis!N65` | `mapped` |  |
 | **Concessions & Specials** <br/> `concessions_specials` | `UW Output!E_or_F9` | `T-12 Analysis!N61` | `mapped` | Template puts Concessions in the GPR waterfall block (row 61) — Analyzer lists it as a revenue contra-line at row 9. Sign convention: should arrive negative-signed (Analyzer convention). |
 | **Respite Care Revenue** <br/> `respite_care` | `UW Output!E_or_F10` | `T-12 Analysis!N66` | `mapped` |  |

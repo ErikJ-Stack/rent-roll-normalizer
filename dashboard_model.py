@@ -347,7 +347,12 @@ def compute_dashboard(
     loc_total = loc_il + loc_al + loc_mc  # E23
 
     other_rev = sum(totals.get(l, 0.0) for l in _LABELS_OTHER_REV)
-    egi = base_rent_total + loc_total + other_rev if t12_result else None  # F52
+    # 2nd Person Revenue: $0 until the substrate v0.2.15 Description_Map re-map
+    # routes the 2nd-person descriptions to this label (before that they fold
+    # into Base rent). Included in EGI so the re-map is EGI-neutral — mirrors
+    # the Analyzer's E52/F52 EGI formula amended by migrate_to_v0215.
+    second_person = totals.get("2nd Person Revenue", 0.0)
+    egi = base_rent_total + loc_total + other_rev + second_person if t12_result else None  # F52
 
     direct_labor = sum(totals.get(l, 0.0) for l in _LABELS_DIRECT_LABOR)
     payroll_burden = sum(totals.get(l, 0.0) for l in _LABELS_PAYROLL_BURDEN)
@@ -492,7 +497,8 @@ def compute_dashboard(
             m_base = sum(monthly.get(l, [0.0]*12)[i] for l in _LABELS_BASE_RENT)
             m_loc = sum(monthly.get(l, [0.0]*12)[i] for l in _LABELS_LOC)
             m_other = sum(monthly.get(l, [0.0]*12)[i] for l in _LABELS_OTHER_REV)
-            m_egi = m_base + m_loc + m_other
+            m_2p = monthly.get("2nd Person Revenue", [0.0]*12)[i]  # v0.2.15 re-map; see annual EGI
+            m_egi = m_base + m_loc + m_other + m_2p
             monthly_egi.append(MonthlySeries(month_label=mlbl, egi=m_egi))
 
     # ── Risk flags ─────────────────────────────────────────────────────────

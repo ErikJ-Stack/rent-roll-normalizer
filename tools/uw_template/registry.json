@@ -702,14 +702,10 @@
           "label_at": "A63",
           "target_label": "Net Rent Revenue"
         },
-        "v6": {
-          "sheet": "T-12 Analysis",
-          "address": "N61",
-          "label_at": "A61"
-        }
+        "v6": null
       },
       "status": "mapped",
-      "notes": "Analyzer's 'Base rent (normalized)' is conceptually the net-of-vacancy/LTL/concessions rent that flows into EGI \u2014 matches template 'Net Rent Revenue'. Annual total only (col N).",
+      "notes": "Analyzer's 'Base rent (normalized)' is conceptually the net-of-vacancy/LTL/concessions rent that flows into EGI \u2014 matches template 'Net Rent Revenue'. Annual total only (col N). \u00b7 v6: target nulled \u2014 N61/N65 are template SUM formulas fed by the by-care rows (base_rent_il/al/mc, loc_il/al/mc); writer must not clobber them. Aggregate stays computed by the template.",
       "path": "t12"
     },
     {
@@ -733,14 +729,11 @@
           "address": "N64",
           "label_at": "A64"
         },
-        "v6": {
-          "sheet": "T-12 Analysis",
-          "address": "N65",
-          "label_at": "A65"
-        }
+        "v6": null
       },
       "status": "mapped",
-      "path": "t12"
+      "path": "t12",
+      "notes": "\u00b7 v6: target nulled \u2014 N61/N65 are template SUM formulas fed by the by-care rows (base_rent_il/al/mc, loc_il/al/mc); writer must not clobber them. Aggregate stays computed by the template."
     },
     {
       "key": "community_movein_fees",
