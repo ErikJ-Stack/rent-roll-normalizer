@@ -8,6 +8,80 @@ opened (none yet — Phase 0 is the seed release).
 
 ---
 
+## v0.7.0 — Template v6 absorbed: T-12 Analysis income restructure (2026-05-28)
+
+Registry/engine/substrate absorption of the operator-authored **v6 template**
+(per `Deals/.../2026-05-28-uwt-v6-release-handoff.md`). v6 rebuilds the T-12
+Analysis Layer-3 INCOME block from the GPR→Net-Rent market-projection waterfall
+into a full **actual-T12 build** (Base Rent IL/AL/MC + LOC IL/AL/MC by care +
+ancillaries + contras → EGI at N77); demotes the GPR waterfall to a labeled
+DIAGNOSTIC sub-section (N80-83); and adds an **Auto Expense** non-labor row
+(N114) that closes a previously-hidden NOI overstatement.
+
+**Row map verified cell-by-cell against `assets/ALF_UW_Template_v6.xlsx`** (not
+trusted from the handoff doc) before building the registry.
+
+### Registry → 0.5.0 (`_absorb_v6.py`)
+
+`templates.v6` block (`income_model="actual_t12"`). 70 T-12 Analysis concepts
+re-targeted (income restructured; labor +14; non-labor +14 then +15 after the
+new Auto Expense row; NOI +15; `t12_raw_month_*` 122→137). 14 new concepts:
+`base_rent_il/al/mc`, `total_base_rent`, `loc_il/al/mc`, `total_loc`, 5 ancillary
+revenue lines, `opex_auto_expense`. `second_person_revenue` gap_source → mapped
+(N66). `base_rent_normalized` + `loc_revenue` v6 targets **nulled** — N61/N65 are
+template SUM formulas fed by the new by-care rows; the aggregates must not
+clobber them (`loc_revenue` was). 137 concepts total.
+
+### Engine (`uw_output_model.py` + `dashboard_model.py`)
+
+- **Auto Expense fix:** added `"Auto Expense"` to `dashboard_model._LABELS_NON_LABOR`.
+  It was routed by the Description_Map but absent from the non-labor sum, so its
+  dollars fell out of opex → standardized EBITDARM overstated. On Homestead
+  exactly **$6,061.32** = the standardized-vs-as-reported NOI gap. Now NOI ties:
+  EBITDAR $1,417,385 → **$1,411,324** (= as-reported). Changes NOI by −$6,061 on
+  every property (engine scalar); the v5 template (no Auto Expense row) is
+  unaffected.
+- Exposed 13 new keys for the v6 income rows (by-care base rent/LOC, 5 ancillary
+  revenue, `opex_auto_expense`, `second_person_revenue`).
+- **EGI now includes 2nd Person Revenue** (engine + dashboard) — see substrate
+  v0.2.15 below; keeps the re-map EGI-neutral.
+
+### Substrate v0.2.15 (`migrate_to_v0215.py`)
+
+2nd-Person Description_Map re-map: 4 rows (r127 Second Person Fee + r400/401/402
+Second Persons Revenue | care; r127 included per operator decision) `Base rent —
+*` → `2nd Person Revenue`. **Critical companion fix caught by verifying the EGI
+formula chain** (the handoff's "EGI unchanged" note missed it): the Analyzer's
+`T12 Analytics!E52/F52` did NOT sum the "2nd Person Revenue" label, so the re-map
+alone would drop 2nd-person dollars out of EGI. The migration amends E52 + F52
+with an INDEX/MATCH term for that label. On Homestead, r127 = **$32,220.49** —
+broken out of base rent, added back to EGI; EGI stays $7,001,957.
+
+### Verification
+
+All 5 suites green. `test_uw_output_model` whitelists the cached-fixture
+divergences as documented known-effects: 5 keys × $6,061 (Auto Expense) + 2 keys
+× $32,220 (2nd-person re-map). v6 populate end-to-end on Homestead: income rows +
+Auto Expense N114 + 2nd Person N66 populate; all total/subtotal formulas
+(N61/N65/N77/N99/N126/N131-133) preserved; EGI $7,001,957; NOI $1,411,324.
+
+### Default still v5 — two operator follow-ups before flipping to v6
+
+1. **v6 binary is the pre-Excel-resave version** (39 zip parts, missing
+   `xl/metadata.xml` + `xl/webextensions/`). Section R/S dynamic-array spills on
+   populated outputs are degraded until the operator opens v6 in Excel + saves +
+   re-drops (the handoff §9 step). `BUNDLED_UW_TEMPLATE_VERSION` stays `"v5"`
+   until then.
+2. **v6 template bug (v6.1 fix):** Layer-3 monthly headers `B56:M56` still
+   reference `=C122..=N122`, but the raw month-header row moved to 137 (Section I
+   shifted +15). The operator's repointing pass missed this chain (openpyxl
+   quirk #4). Cosmetic (headers blank; data cells writer-populated); should be
+   `=C137..=N137`.
+
+`UWT_VERSION` 0.6.4 → 0.7.0. Absorber + migration retained as audit trail.
+
+---
+
 ## v0.6.4 — Section I (Layer 1 — Raw T-12) populated (2026-05-28)
 
 Operator request: "the summarized Raw data should be inserted in Section I of T-12 Analysis." Section I is the Layer-1 raw-T12 paste grid (rows 122–172: `Acct # | Account Name | Apr-25…Mar-26 | T-12 Total | → MAPPING`) — previously an empty skeleton with pre-assigned bucket labels in col P. Two operator decisions confirmed: **rebuild one row per Analyzer label** and **Account Name = matched GL account names**.

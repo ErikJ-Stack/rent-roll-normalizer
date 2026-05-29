@@ -78,7 +78,7 @@ APP_LAST_UPDATED = "2026-05-08"   # alias for RR_LAST_UPDATED
 RR_VERSION = "1.19.0"
 RR_LAST_UPDATED = "2026-05-27"
 
-UWT_VERSION = "0.6.4"             # Track 4 — Section I (Layer 1 Raw T-12) populated from summarized raw lines
+UWT_VERSION = "0.7.0"             # Track 4 — v6 template absorbed (T-12 income restructure); default still v5 pending Excel-resaved binary
 UWT_LAST_UPDATED = "2026-05-28"
 
 T12_VERSION = "0.2.1"

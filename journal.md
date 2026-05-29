@@ -9,6 +9,33 @@ Newest at top.
 
 ---
 
+## 2026-05-28 (later) — UWT v0.7.0 — v6 template absorbed (T-12 income restructure) + substrate v0.2.15
+
+Long multi-track session. The operator dropped the v6 template + a meticulous release handoff; this session absorbed it Claude-Code-side. Earlier in the same session: RR v1.19.0 was re-implemented from a stale OneDrive view (already shipped as `5fc2a06` — caught via preflight, see "verify-canonical-source"); BL-0026 marked shipped; BL-0027 README modernized; v6 pre-work banked.
+
+### What shipped (5 commits, all pushed)
+
+- `9a51905` **registry → 0.5.0** (`_absorb_v6.py`): `templates.v6` + 70 retargeted T-12 Analysis concepts + 14 new. **Row map verified cell-by-cell against `assets/ALF_UW_Template_v6.xlsx`** before building — caught two template bugs (below).
+- `bf3f61a` **engine pt2**: `Auto Expense` → `_LABELS_NON_LABOR` (closes the $6,061 NOI gap — verified = $6,061.32 on Homestead; NOI ties as-reported $1,411,324); 13 new by-care/ancillary keys exposed; known-divergence whitelist.
+- `9014642` **substrate v0.2.15** (`migrate_to_v0215.py`): 2nd-Person Description_Map re-map (r127/400/401/402) **+ the E52/F52 EGI-formula companion fix**. The handoff said "EGI unchanged" but the Analyzer's EGI formula didn't sum the "2nd Person Revenue" label — verifying the formula chain caught that the re-map alone would drop $32,220 (r127 Second Person Fee) out of EGI. Migration amends E52/F52 so it's EGI-neutral.
+- `3f8e5d0` **formula-preservation + dashboard EGI**: nulled `base_rent_normalized`/`loc_revenue` v6 targets (N61/N65 are template SUM formulas — `loc_revenue` was clobbering N65); dashboard EGI now includes 2nd Person (annual + monthly).
+- `<this commit>` **version/docs**: UWT 0.6.4 → 0.7.0; CHANGELOG-UWT + journal + CLAUDE.md; v6 handoff marked Verified.
+
+### Two template bugs found (flagged to operator, default stays v5)
+
+1. **v6 binary is pre-Excel-resave** — 39 zip parts, missing `xl/metadata.xml` + `xl/webextensions/`. Section R/S spills degraded on populated outputs until the operator opens v6 in Excel + saves + re-drops (handoff §9). `BUNDLED_UW_TEMPLATE_VERSION` stays `"v5"`.
+2. **`B56:M56` monthly headers still `=C122..=N122`** — raw row moved to 137 (+15); operator's repointing missed the chain (openpyxl quirk #4). Cosmetic; v6.1 fix.
+
+### Verification
+
+All 5 test suites green. EGI ties $7,001,957 (re-map neutral); NOI ties as-reported $1,411,324 (Auto Expense captured). v6 populate verified end-to-end: income rows + Auto Expense N114 + 2nd Person N66 ($32,220) populate; all total/subtotal formulas preserved. Cached-fixture divergences whitelisted (5 keys × $6,061 Auto Expense + 2 keys × $32,220 re-map) — rebuild fixtures against v0.2.15 to retire.
+
+### Carry-forwards
+
+Operator: (a) re-drop Excel-resaved v6 binary → then flip `BUNDLED_UW_TEMPLATE_VERSION` to v6; (b) v6.1 fix B56:M56 headers. Next chat: flip default to v6 once (a) lands; rebuild test fixtures against v0.2.15 to drop the divergence whitelists.
+
+---
+
 ## 2026-05-28 — UWT v0.6.4 — Section I (Layer 1 — Raw T-12) populated
 
 **Track:** Track 4. Same chat, after v0.6.3 — the 3rd of the operator's 3 requirements.
