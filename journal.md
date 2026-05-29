@@ -30,9 +30,34 @@ Long multi-track session. The operator dropped the v6 template + a meticulous re
 
 All 5 test suites green. EGI ties $7,001,957 (re-map neutral); NOI ties as-reported $1,411,324 (Auto Expense captured). v6 populate verified end-to-end: income rows + Auto Expense N114 + 2nd Person N66 ($32,220) populate; all total/subtotal formulas preserved. Cached-fixture divergences whitelisted (5 keys × $6,061 Auto Expense + 2 keys × $32,220 re-map) — rebuild fixtures against v0.2.15 to retire.
 
-### Carry-forwards
+### Update — UWT v0.7.1 (`77a825e`, same session): v6 binary repaired
 
-Operator: (a) re-drop Excel-resaved v6 binary → then flip `BUNDLED_UW_TEMPLATE_VERSION` to v6; (b) v6.1 fix B56:M56 headers. Next chat: flip default to v6 once (a) lands; rebuild test fixtures against v0.2.15 to drop the divergence whitelists.
+After the v0.7.0 absorption, the two v6 template bugs were fixed **programmatically** (no operator Excel round-trip needed) via `tools/uw_template/_fix_v6_headers_and_metadata.py`:
+- **B56:M56** repointed `=C122..=N122` → `=C137..=N137` (raw header row moved +15).
+- **`xl/metadata.xml` + 554 `cm` markers restored** via `_restore_dynamic_arrays`, sourced from `assets/ALF_UW_Template_v5.xlsx` (v5.1 content; Section R/S layout verified identical to v6 first). v6 now 40 parts; Section R/S spills work on the template AND on populated outputs. `assets/ALF_UW_Template_v6.xlsx` is now committed (was untracked). `UWT_VERSION` 0.7.0 → 0.7.1.
+- **Not restored:** `xl/webextensions/` (Claude add-in; carries v5's fileId GUID — operator re-adds if used).
+
+### ⏭ What's left for the next session (priority order)
+
+**1. Flip the default template to v6** (the natural next step — binary is now correct, tests green):
+- `app.py`: `BUNDLED_UW_TEMPLATE_VERSION = "v5"` → `"v6"`; the `populate_uw_template` default `template_version='v5'` → `'v6'` (and the CLI default in `uw_template_writer.py`).
+- Update `_detect_uw_template_version` probe if needed (v6 distinguishing header — e.g. `T-12 Analysis!A77` == EGI, or `A114` == Auto Expense).
+- Smoke-test empty + Homestead on v6 as the default; bump `UWT_VERSION` → 0.7.2 (or 0.8.0).
+- **Held this session pending operator go-ahead** (user asked only to "fix the two things"). Confirm before flipping — every populated output becomes v6.
+
+**2. Operator-side (outside repo):**
+- Adopt the repaired `assets/ALF_UW_Template_v6.xlsx` back into the `Deals/.../ALF Templates/` folder copy (I fixed the repo's binding copy; the Deals/ copy is still pre-fix).
+- Optionally open v6 in Excel once to confirm Section R/S spills + re-add the Claude-for-Excel add-in (webextensions).
+
+**3. Rebuild test fixtures against substrate v0.2.15** to retire the known-divergence whitelists:
+- `tests/test_uw_output_model.py`: `_AUTO_EXPENSE_DIVERGENCE` (5 keys × $6,061) + `_REMAP_2P_DIVERGENCE` (2 keys × $32,220). Rebuild the populated Homestead Analyzer fixture (`Sample Files/Analyzer with 2026-04-24 Homestead…`) against v0.2.15 so cached == engine, then delete both whitelists.
+- `tests/test_dashboard_model.py`: v0.2.11 fixture; the residual $6,061 Auto Expense is within the 0.5% drift tolerance now, but rebuilding against v0.2.15 makes it exact.
+
+**4. Sanity-check the 2nd-person re-map ripple** (lower priority): the re-map moved $32,220 out of base rent. I fixed the three EGI consumers (engine, dashboard, Analyzer E52/F52). Confirm no OTHER base-rent consumers need 2nd-person awareness — e.g. the 2P reconciliation row (`T12 Analytics!r168`, BL-0004) should now show actual 2P on its T12 side (was $0); ADR/RevPOR use `base_rent_total` (correctly excludes 2nd person now); GPR/loss-to-lease diagnostics shifted (expected).
+
+**5. Registry `open_questions` cleanup** (housekeeping): #3 monthly grid (closed by v0.6.2) and #2 2nd-Person source (closed by v0.2.15 re-map) are now stale — drop them in the next registry edit.
+
+**6. Backlog — `UW-BACKLOG.md` Pending:** only **BL-0019** (persistent audit log for password gate, Track 1) remains, user-deferred since 2026-05-19. Fresh Track 1 chat.
 
 ---
 
