@@ -12,10 +12,12 @@ A Streamlit app that turns a senior-housing rent roll AND a T12 financial statem
 | --- | --- | --- |
 | RR Normalizer (`RR_VERSION`) | v1.19.0 | 2026-05-28 |
 | T12 Normalizer (`T12_VERSION`) | v0.2.1 | 2026-05-11 |
-| Bundled Analyzer substrate | v0.2.14 | 2026-05-25 |
+| Bundled Analyzer substrate | v0.2.15 | 2026-05-28 |
 | AR & Collections module | v0.1.0 | 2026-05-23 |
-| UW Template integration (`UWT_VERSION`, Track 4) | v0.6.4 | 2026-05-28 |
+| UW Template integration (`UWT_VERSION`, Track 4) | v0.8.0 | 2026-05-29 |
 | Webapp Dashboard surface (`T5_VERSION`, Track 5) | v0.1.10 | 2026-05-24 |
+
+The Track 4 UW Template default is **v6** (T-12 Analysis income block rebuilt to the Analyzer's actual-T12 categories: by-care Base Rent + LOC, ancillary income lines, contras → EGI; GPR waterfall demoted to a diagnostic sub-section; Auto Expense captured in Non-Labor). Substrate v0.2.15 re-maps `Second Persons Revenue` out of Base Rent into a dedicated `2nd Person Revenue` label.
 
 The repo runs five parallel tracks sharing one Analyzer/UW pipeline: **Track 1** RR Normalizer, **Track 2** T12 Normalizer + Analyzer substrate (+ the optional **AR & Collections** module), **Track 3** Analyzer optimization, **Track 4** ALF UW Template integration (registry-driven writer that populates a downstream per-deal underwriting template — see [`SPEC-UWT.md`](SPEC-UWT.md)), and **Track 5** in-browser Dashboard surface (see [`SPEC-T5.md`](SPEC-T5.md)). See [`CLAUDE.md`](CLAUDE.md) for the full track map.
 

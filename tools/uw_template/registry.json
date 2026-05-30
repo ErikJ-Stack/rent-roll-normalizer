@@ -4632,8 +4632,6 @@
   ],
   "open_questions": [
     "Bad Debt placement \u2014 revenue contra (template row 62) vs opex (template row 106). Need user decision before writer ships.",
-    "2nd Person Revenue \u2014 extend UW Output to expose, or have writer pull directly from Rent Roll Input!V?",
-    "Monthly grid \u2014 accept blank B-M in v0.1, or widen UW Export contract first?",
     "Date header at Rent Roll Analysis!A5 \u2014 does it expect RR period date in B5 or D5? Confirm format (yyyy-mm-dd vs Excel date).",
     "Rent Roll Analysis header rows 1-209 \u2014 the contract specifies paste anchor at row 211 (header at 210). Rows 1-209 contain diagnostic sections that read from the pasted block via formulas. Writer must not touch rows 1-210. (Confirms the existing 'derived' framing for the upper section.)",
     "AR aging row-level routing \u2014 UW Template cols N-Q expect per-resident aging buckets, but the Analyzer's `AR & Collections` tab aggregates AR by payer, not by resident-bed. Routing aging $ to specific rent-roll rows needs an upstream substrate change (resident-key join into AR & Collections) before these concepts move off `gap_source`.",

@@ -104,7 +104,13 @@ _UW_OUTPUT_REF = {
 # sum (it was silently dropped pre-v6, overstating standardized NOI). The
 # cached Homestead fixture was built before this fix, so these five keys diverge
 # by exactly the Auto Expense amount. Sign = engine − cached (opex totals go UP,
-# NOI lines go DOWN). Retire by rebuilding the fixture against a v6 Analyzer.
+# NOI lines go DOWN).
+#
+# RETIREMENT (see UW-BACKLOG BL-0028): NOT retirable by a fixture rebuild alone
+# — the Excel substrate has the SAME bug (T12 Analytics A79:A102 non-labor block
+# omits Auto Expense, though T12 Raw Data!B63 carries the label). The substrate
+# must add an Auto Expense row (v0.2.16) FIRST; then rebuild the fixture against
+# the fixed substrate so cached == engine; then delete this whitelist.
 _AUTO_EXPENSE_AMT = 6061.32
 _AUTO_EXPENSE_DIVERGENCE = {
     "opex_nonlabor_total":   +1,

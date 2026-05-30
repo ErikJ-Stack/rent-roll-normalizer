@@ -22,22 +22,14 @@ truth.
 
 ## Pending
 
-### [BL-0027] README.md modernization — current versions + Track 4 + Track 5 + AR module
-- **Track:** Documentation (cross-cutting)
-- **Target:** TBD — low-priority doc refresh; pick up whenever doc-debt becomes annoying
-- **Originally surfaced in:** chat 2026-05-26, post-Phase-2.5 commit. README versions table reads RR v1.17.5 / T12 v0.2.1 / substrate v0.2.6 (Q1-2026 state). Current shipped state: RR v1.18.1 / T12 v0.2.1 (unchanged) / substrate v0.2.14 / UWT v0.4.1 / T5 v0.1.10 / AR v0.1.0.
-- **Summary:** Targeted updates to GitHub-facing `README.md` (NOT a full rewrite — README was substantially modernized in BL-0013 / RR v1.17.5; this is the second-round refresh for everything that's shipped since):
-    - **Versions table** — bump RR, substrate, add UWT row, T5 row, AR module row.
-    - **Data-capture coverage section** — extend to substrate v0.2.14 (AI = Deposit slot reserved, AJ = Preleased Date relocated, `RR_Input_Data` widened to A7:AJ606). Note Section N exposure surface on Rent Roll Recon (v0.2.13).
-    - **Add new section: "Track 4 — ALF UW Template integration"** — describes the registry pattern, 3 paste paths (T-12 / Rent Roll / AR), v5 default template, writer module, Phase 2.5 webapp integration. Cross-ref `SPEC-UWT.md`.
-    - **Add new section: "Track 5 — Webapp Dashboard surface"** — describes the in-browser Dashboard tab, the pure-Python compute approach, the regression test. Cross-ref `SPEC-T5.md`.
-    - **Add new section: "AR & Collections module"** under Track 2 — describes optional AR upload, bucket totals + payer mix, hidden sheet, P5 pre-export gate.
-    - **Refresh "Analyzer at a glance"** — currently capped at substrate v0.2.0; bring forward through v0.2.14, including Dashboard sheet (v0.2.4 / v0.2.7), v0.2.12 blended-formula fixes, v0.2.13 Section N exposure.
-    - **Update bundled-vs-user-managed framing** — bundled `ALF_Financial_Analyzer_Only.xlsx` is now user-managed per BL-0021 (wholesale-replace 2026-05-19); future Track 3 substrate work runs migrations against the user's copy.
-- **Why deferred:** README is GitHub-facing (relevant for cold-eyes on the repo — new contributors, reviewers, the curious-public). Not operator-facing (the live Streamlit app's "What the app does" expander, refreshed 2026-05-26, is the canonical operator-facing doc). Operator UX is unaffected by README staleness. Same precedent as BL-0013 sat for weeks before close.
-- **Dependencies:** None — purely additive doc work.
-
----
+### [BL-0028] T12 Analytics missing an "Auto Expense" non-labor row (substrate)
+- **Track:** Substrate (Track 3)
+- **Target:** next substrate version (v0.2.16) — `tools/migration/migrate_to_v0216.py`
+- **Originally surfaced in:** chat 2026-05-29 (UWT v0.8.0 cleanup). The Python engine fix (UWT v0.7.0, 2026-05-28) added `"Auto Expense"` to `dashboard_model._LABELS_NON_LABOR` after confirming the label sums to **$6,061.32 on Homestead = the exact standardized-vs-as-reported NOI gap**. But the **Excel substrate has the same bug**: `T12 Raw Data!B63` carries the `Auto Expense` label (so the GL $ aggregates), yet `T12 Analytics!A79:A102` (the non-labor block feeding `E103=SUM(E79:E102)`) has **no Auto Expense line** — only `Auto insurance` (A91). So the Analyzer's own EBITDARM/EBITDAR/NOI (and the cached UW Output the test fixture reads) still **overstate NOI by the Auto Expense amount**.
+- **Why it matters:** the engine and the substrate now disagree on whether Auto Expense is in opex — the engine is correct, the substrate is not. This is exactly why `tests/test_uw_output_model.py` carries the `_AUTO_EXPENSE_DIVERGENCE` whitelist (asserts engine − cached == the Auto Expense amount). **The whitelist cannot be retired by a fixture rebuild alone** — the substrate's T12 Analytics formula must first include Auto Expense, *then* the fixture is rebuilt against the fixed substrate (cached == engine), *then* the whitelist drops.
+- **Summary (fix):** insert an `Auto Expense` row in `T12 Analytics` immediately after `Auto insurance` (A91 → new A92), with an INDEX/MATCH (or SUMIF) pull against `T12 Raw Data` matching label `"Auto Expense"` (mirror the A91 Auto-insurance row's formula). Extend the non-labor SUM `E103=SUM(E79:E102)` to cover the new row, and sweep all downstream row refs (E103/E105/E108/E110/E113 + Section-4 cap-rate refs + any cross-sheet pulls) for the +1 shift. **Heed the BL-0001 qualified-range-endpoint trap** (capture template formulas to replicate AFTER the shift sweep). Idempotent migration + verify block; apply to the bundled `ALF_Financial_Analyzer_Only.xlsx`. On Homestead this drops EBITDARM/EBITDAR/EBITDA by $6,061.32 and ties standardized NOI to as-reported $1,411,324 — matching the Python engine.
+- **Then (follow-up):** rebuild the gitignored populated Homestead Analyzer fixture against the fixed substrate (needs Excel to evaluate formulas), and delete `_AUTO_EXPENSE_DIVERGENCE` from `tests/test_uw_output_model.py`. (The separate `_REMAP_2P_DIVERGENCE` whitelist for the $32,220 2nd-person re-map retires the same way once the fixture is rebuilt against substrate v0.2.15.)
+- **Dependencies:** none to start the substrate fix; the fixture rebuild + whitelist drop depends on it landing.
 
 ### [BL-0019] Persistent audit log for password gate (external store + manual sync)
 - **Track:** RR (Track 1)
@@ -54,6 +46,12 @@ truth.
 ---
 
 ## Shipped
+
+### [BL-0027] README.md modernization — current versions + Tracks 4/5 + AR
+- **Shipped in:** 2026-05-27 (README refresh) + 2026-05-29 versions-table catch-up (UWT v0.8.0 cleanup pass).
+- **Track:** Documentation (cross-cutting)
+- **Originally surfaced in:** chat 2026-05-26 — README versions table + sections lagged behind shipped state (was RR v1.17.5 / substrate v0.2.6 framing).
+- **Summary:** Two-pass close. First pass (2026-05-27): versions table bumped (RR v1.19.0, substrate, +UWT/T5/AR rows), five-track map paragraph cross-linking SPEC-UWT.md + SPEC-T5.md, data-capture coverage extended to substrate v0.2.14 (AI Deposit / AJ Preleased / RR_Input_Data widening), normalized-vocab updates (Preleased, Admin/Down→Vacant, Managed Care, apt-type-prefix care_type + RHA→IL, Yardi billing codes), River Oaks Place added to verified rent-roll formats, .xls support noted, post-v0.2.0 Analyzer-at-a-glance paragraph (Dashboard / AR sheet / Section N / Deposit). Second pass (2026-05-29): versions table caught up to substrate v0.2.15 + UWT v0.8.0 + the v6-default note (the first pass went stale within days as v0.7.x/v0.8.0 shipped). The Project-layout migration-list section was NOT exhaustively rebuilt (still ends mid-chain) — low-value, left as-is.
 
 ### [BL-0026] Wire T-12 Raw path: Analyzer T12 → UW Template Layer 1
 - **Shipped in:** UWT v0.6.4 (2026-05-28) via `compute_t12_raw_lines` + `_write_section_i_raw` in `uw_output_model.py` / `uw_template_writer.py`. (Closed by the **aggregate-by-label** approach — direction 2 of the three the 2026-05-27 investigation laid out — rather than a raw 1:1 paste.)

@@ -1,6 +1,6 @@
 # ALF UW Template — Mapping Tracker
 
-> Generated from `tools/uw_template/registry.json` on 2026-05-29 02:22 UTC.  **Do not edit by hand** — edit `registry.json` and re-run `python tools/uw_template/build_mapping_artifacts.py`.
+> Generated from `tools/uw_template/registry.json` on 2026-05-30 05:18 UTC.  **Do not edit by hand** — edit `registry.json` and re-run `python tools/uw_template/build_mapping_artifacts.py`.
 
 - Analyzer source: `ALF_Financial_Analyzer_Only.xlsx` (substrate `v0.2.14`)
 - Primary template: `v4` → `Sample Files/ALF_UW_Template_v4.xlsx`
@@ -256,8 +256,6 @@
 ## Open questions
 
 - Bad Debt placement — revenue contra (template row 62) vs opex (template row 106). Need user decision before writer ships.
-- 2nd Person Revenue — extend UW Output to expose, or have writer pull directly from Rent Roll Input!V?
-- Monthly grid — accept blank B-M in v0.1, or widen UW Export contract first?
 - Date header at Rent Roll Analysis!A5 — does it expect RR period date in B5 or D5? Confirm format (yyyy-mm-dd vs Excel date).
 - Rent Roll Analysis header rows 1-209 — the contract specifies paste anchor at row 211 (header at 210). Rows 1-209 contain diagnostic sections that read from the pasted block via formulas. Writer must not touch rows 1-210. (Confirms the existing 'derived' framing for the upper section.)
 - AR aging row-level routing — UW Template cols N-Q expect per-resident aging buckets, but the Analyzer's `AR & Collections` tab aggregates AR by payer, not by resident-bed. Routing aging $ to specific rent-roll rows needs an upstream substrate change (resident-key join into AR & Collections) before these concepts move off `gap_source`.
