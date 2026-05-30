@@ -9,6 +9,61 @@ Newest at top.
 
 ---
 
+## 2026-05-30 — UWT v0.8.1 — v6 template Section-D income-summary repoint
+
+**Track:** Track 4. Operator dropped a populated Briar Glen UW Template output
+("the T12 tab isn't populating properly").
+
+### Diagnosis: Layer-3 data fine, Section D formulas stale
+
+The data tier was fully populated (Base Rent MC $3.75M, labor, non-labor opex,
+monthly grid, Section I raw — all correct). The bug was in the **T-12 Analysis
+Section D** diagnostic cells: `B22`/`B23`/`B24` (GPR / Net Rent / EGI) read $0
+because they still referenced the **v5** income rows `=N58`/`=N63`/`=N69`. In
+v5 those were GPR/NetRent/EGI; in v6 the operator's income restructure moved
+GPR to the diagnostic sub-block (N80), Net Rent to N83, and EGI up to N77 — so
+N58/N63/N69 in v6 are the typically-$0 "Base Rent IL" / "LOC AL" / "Meal
+Income" lines. `B25` Economic Occupancy % (B23/B22) read 0 as a consequence.
+
+**Same openpyxl-quirk-#4 partial-repoint as v0.7.1's `B56:M56` miss** — the
+operator's repoint pass fixed the EGI chain (B5/B9/B11: N69→N77) but skipped
+Section D. Confirmed by diffing the v5 template (N58/N63/N69 = GPR/NetRent/EGI
+there → the old refs were correct in v5). **Not a writer/data bug — a blank
+template formula bug.**
+
+### What shipped
+
+- **`tools/uw_template/_fix_v6_section_d_refs.py`** — repoints
+  `assets/ALF_UW_Template_v6.xlsx` `B22=N80`/`B23=N83`/`B24=N77`, with a
+  label pre-flight (asserts N80/N83/N77 carry GPR/NetRent/EGI before editing),
+  then re-restores `xl/metadata.xml` + 554 Section R/S `cm` markers from v5
+  (openpyxl strips them on save). Mirrors the v0.7.1 fix-script pattern.
+  Idempotent; zip 40 parts; sheet count 16; v0.7.1 B56:M56 fix intact.
+- **Corrected copy of the operator's output** at
+  `Downloads/Briar_Glen_UW_Template_2025-12-31_normalized_FIXED.xlsx` (in-place
+  3-cell repoint + metadata restore) — Briar Glen Section D now GPR $5,736,477
+  / Net Rent $3,754,025 / EGI $3,859,123.
+- Docs: CHANGELOG-UWT v0.8.1, handoff brief
+  `2026-05-30-uwt-v6-section-d-income-refs.md` (Verified) + tracker row,
+  `UWT_VERSION` 0.8.0 → 0.8.1.
+
+### Verification
+
+Fix-script 11 checks pass; idempotent. End-to-end populate of the fixed
+template (Homestead, v6): B22/B23/B24 → =N80/=N83/=N77 resolving to GPR
+$9,524,893 / Net Rent $6,951,136 / EGI $6,964,627; 101 concepts / 516 monthly
+cells. All 5 suites in `tests/test_uw_output_model.py` green.
+
+### Flagged, not fixed
+
+Section F rows 41/47 (RE Taxes / P&C "T-12 Actual") show $0 + "⚠ not in T-12"
+despite the actuals existing in Layer 3 (N117/N112). Those are analyst-input /
+pro-forma triangulation cells — literal `0` in v5 too, never auto-pulled. By
+design. A future revision could optionally wire `B41=N117`/`B47=N112`, but
+that's an operator design call.
+
+---
+
 ## 2026-05-30 — Substrate v0.2.16 — T12 Analytics "Auto Expense" non-labor row (BL-0028)
 
 **Track:** Track 3 (substrate). Picked the most actionable open item off

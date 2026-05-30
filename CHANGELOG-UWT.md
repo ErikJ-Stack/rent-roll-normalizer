@@ -8,6 +8,69 @@ opened (none yet — Phase 0 is the seed release).
 
 ---
 
+## v0.8.1 — v6 template Section-D income-summary repoint (2026-05-30)
+
+**Operator-reported on a populated Briar Glen output**: "the T12 tab isn't
+populating properly." Investigation found the **Layer-3 data was fully and
+correctly populated** (Base Rent, labor, non-labor opex, monthly grid, Section
+I raw — all there), but the **T-12 Analysis Section D** headline cells
+(ECONOMIC vs. PHYSICAL OCCUPANCY RECONCILIATION) read $0:
+
+| Cell | Label | Was (v5 ref) | v6 lands on | Fixed to |
+| --- | --- | --- | --- | --- |
+| `B22` | Gross Potential Rent (GPR) | `=N58` | "Base Rent — IL" ($0) | `=N80` |
+| `B23` | Net Rent Revenue (billed) | `=N63` | "LOC / Care — AL" ($0) | `=N83` |
+| `B24` | Total Revenue / EGI | `=N69` | "Meal Income" ($0) | `=N77` |
+
+(and `B25` Economic Occupancy %, which divides `B23/B22`, read 0 as a
+consequence.)
+
+**Root cause — same class as the two v6 bugs fixed in v0.7.1.** When the
+operator rebuilt the v6 income section (actual-T-12 build first; GPR waterfall
+demoted to a DIAGNOSTIC sub-block at N80-83; EGI moved up from N69 to N77), the
+openpyxl repointing pass repointed the *EGI* chain (B5/B9/B11: N69→N77) but
+missed the *Section-D income-summary* chain — leaving B22/B23/B24 on the old v5
+rows N58/N63/N69, which in v6 are the (typically $0) Base Rent IL / LOC AL /
+Meal Income lines. This is the **openpyxl-quirk-#4 partial-repoint** that also
+left `B56:M56` stale (closed in v0.7.1). **Not a writer bug** — the data tab is
+correct; the bug is in the blank template's diagnostic formulas. Confirmed by
+diffing the v5 template (where N58=GPR, N63=Net Rent, N69=EGI — so the old refs
+were correct there).
+
+**Fix** (`tools/uw_template/_fix_v6_section_d_refs.py`, mirrors the v0.7.1 fix
+pattern): repoint `assets/ALF_UW_Template_v6.xlsx` `B22=N80`, `B23=N83`,
+`B24=N77`, with a pre-flight that asserts the v6 target rows carry the expected
+labels (GPR / Net Rent / EGI) before touching anything. The openpyxl edit
+strips `xl/metadata.xml`, so it re-restores metadata + the 554 Section R/S `cm`
+markers from v5 via `_restore_dynamic_arrays` (same as v0.7.1). Idempotent;
+zip-part inventory unchanged (40 parts); sheet count 16; v0.7.1's B56:M56 fix
+and all income-restructure formulas (N77 EGI, N61 Total Base) verified still
+intact.
+
+**Verified:** fix script's 11 checks all pass. End-to-end populate of the fixed
+template against Homestead — B22/B23/B24 propagate as `=N80`/`=N83`/`=N77` and
+resolve to GPR $9,524,893 / Net Rent $6,951,136 / EGI $6,964,627 (101 concepts,
+516 monthly cells written). All 5 suites in `tests/test_uw_output_model.py`
+green. Also produced a corrected copy of the operator's reported output at
+`Downloads/Briar_Glen_UW_Template_2025-12-31_normalized_FIXED.xlsx` (in-place
+3-cell repoint + metadata restore) — Briar Glen Section D now reads GPR
+$5,736,477 / Net Rent $3,754,025 / EGI $3,859,123.
+
+**Section F note (not a bug):** rows 41/47 (RE Taxes / P&C "T-12 Actual") show
+`0` + "⚠ not in T-12 — verify with operator" even though the actuals exist in
+Layer 3 (N117 RE Taxes, N112 P&C). Those are **analyst-input / pro-forma
+triangulation cells** — literal `0` in v5 too, never auto-pulled from the T-12.
+By design; left as-is. (A future template revision could optionally wire the
+"T-12 Actual" sub-cells to `=N117`/`=N112`, but that's an operator design call,
+not a regression.)
+
+`UWT_VERSION` 0.8.0 → 0.8.1. Handoff brief filed at
+`tools/uw_template/handoffs/2026-05-30-uwt-v6-section-d-income-refs.md` and
+marked Verified (the fix was applied programmatically, matching the v0.7.1
+precedent for low-risk single-cell-formula repoints).
+
+---
+
 ## v0.8.0 — default template flipped to v6 (T-12 income restructure) (2026-05-29)
 
 v6 is now the binding default for every populate. The flip was **not** a

@@ -78,8 +78,8 @@ APP_LAST_UPDATED = "2026-05-08"   # alias for RR_LAST_UPDATED
 RR_VERSION = "1.19.0"
 RR_LAST_UPDATED = "2026-05-27"
 
-UWT_VERSION = "0.8.0"             # Track 4 — default template flipped to v6 (T-12 income restructure); finalize + Section-I passes version-dispatched
-UWT_LAST_UPDATED = "2026-05-29"
+UWT_VERSION = "0.8.1"             # Track 4 — v6 template Section-D income-summary repoint (B22/B23/B24 → N80/N83/N77; v5→v6 partial-repoint miss)
+UWT_LAST_UPDATED = "2026-05-30"
 
 T12_VERSION = "0.2.1"
 T12_LAST_UPDATED = "2026-05-11"
