@@ -77,7 +77,7 @@ The repo runs four parallel tracks. They share an Analyzer / UW pipeline but are
 | Migration scripts | `tools/migration/migrate_to_v01N.py` (one per substrate version) |
 | Verification harness | `tools/verify_t12_v020.py` (parser-side; runs all four reference fixtures) |
 | Current code version | T12 v0.2.1 |
-| Current substrate version | v0.2.14 bundled (chain through v0.2.14; bundled forward-applied v0.2.4 → v0.2.10 → v0.2.11 → v0.2.12 → v0.2.13 → v0.2.14 directly per BL-0021 — skips intermediate v0.2.5-v0.2.9 substrate features) |
+| Current substrate version | v0.2.16 bundled (chain through v0.2.16; bundled forward-applied v0.2.4 → v0.2.10 → v0.2.11 → v0.2.12 → v0.2.13 → v0.2.14 → v0.2.15 → v0.2.16 — skips intermediate v0.2.5-v0.2.9 substrate features; v0.2.16 = BL-0028 Auto Expense non-labor row) |
 | AR module code version | AR v0.1.0 (`ar_normalizer.py` + `ar_writer.py` — built against synthetic fixture, live operator sample pending) |
 
 **Module naming gotcha (updated 2026-05-15 after BL-0011 — Track 1 disambiguation now fully complete at file + function + class level).** Four modules historically shared a `t12_` prefix because the destination workbook was originally a standalone T12 intake template — the prefix meant "operates on the T12-shaped destination workbook," not "operates on T12 data." Once the bundled Analyzer flow shipped (RR v1.12.0) the prefix became misleading. The two Track 1 modules have now been renamed; the remaining `t12_*` files are the legitimate T12-data modules. All four are imported by `app.py` and serve distinct roles:

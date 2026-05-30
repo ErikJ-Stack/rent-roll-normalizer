@@ -9,6 +9,82 @@ Newest at top.
 
 ---
 
+## 2026-05-30 — Substrate v0.2.16 — T12 Analytics "Auto Expense" non-labor row (BL-0028)
+
+**Track:** Track 3 (substrate). Picked the most actionable open item off
+UW-BACKLOG — BL-0028, filed at the end of the 2026-05-29 v0.8.0 cleanup as the
+substrate companion to the UWT v0.7.0 engine fix.
+
+### The bug
+
+The Python engine (`dashboard_model._LABELS_NON_LABOR`) had folded `Auto
+Expense` into the non-labor opex sum back in UWT v0.7.0, but the **Excel
+substrate never got the same fix**. `T12 Raw Data!B63` carries the `Auto
+Expense` GL label (so the dollars aggregate), but `T12 Analytics` Section 3's
+non-labor block (`A79:A102`, summed at `E103=SUM(E79:E102)`) had no Auto
+Expense line — only `Auto insurance` (A91). The dollars fell out of opex →
+EBITDARM/EBITDAR/EBITDA (and the Dashboard / UW Output / UW Export layers that
+mirror them) overstated NOI by exactly the Auto Expense amount. Engine said one
+thing, substrate said another; engine was right.
+
+### Pre-flight made this a clean one-row insert
+
+The risk was the BL-0001 qualified-range-endpoint trap (inserting above the
+heavily-referenced EBITDA chain + cap-rate section). A blast-radius scan
+de-risked it before any code:
+- **187 cross-sheet refs** into T12 Analytics (Dashboard, UW Output ×34, AR ×1)
+  are **all single cells** — no range whose endpoint could be mis-shifted.
+- **No chart** references T12 Analytics (all 6 Dashboard charts read `Dashboard!`
+  cells) — the v0.2.9 chart-link lesson doesn't apply.
+- **No data validation** on the affected rows.
+- The **only** within-sheet range crossing row 92 is the non-labor
+  `SUM(E79:E102)` — which is exactly what we *want* to auto-extend.
+
+So inserting at row 92 (right after Auto insurance, *inside* the SUM range)
+lets the endpoint auto-extend `E102→E103` on the shift sweep, capturing both
+the new row and the shifted real rows. No manual SUM surgery, no endpoint drift.
+
+### What shipped
+
+- **`tools/migration/migrate_to_v0216.py`** — insert one row at T12 Analytics
+  92 (`A92="Auto Expense"`, E92 INDEX/MATCH on `"Auto Expense"`, `F92==E92`,
+  `G92==F92-E92`), mirroring A91; full-workbook +1 shift sweep (180 cells on the
+  bundled file). Re-uses the verbatim `shift_row_refs_in_formula` /
+  `shift_all_formulas` / `shift_merged_cells` utilities from `migrate_to_v021.py`.
+  21-check verify, idempotent (gate: `Cover!B8 == v0.2.16` AND `A92 == "Auto
+  Expense"`).
+- **Bundled `ALF_Financial_Analyzer_Only.xlsx`** migrated in place v0.2.15 →
+  v0.2.16 (16 sheets, 16 AZ4 anchors; zip-part inventory identical 39→39).
+- **`app.py`** `ANALYZER_SUBSTRATE_VERSION` → `"0.2.16"`.
+- Docs: CHANGELOG-T12.md entry, UW-BACKLOG BL-0028 → Shipped, CLAUDE.md Track 2
+  table line.
+
+### Verification
+
+No LibreOffice available, so the math was proven the repo-test way — replicate
+the formula chain in Python from the populated Homestead fixture's cached
+`T12 Raw Data` values (PRE EBITDARM $1,767,482.75 reproduced the fixture's
+cached `E108` to the penny → replication validated). Auto Expense =
+**$6,061.32**; adding it drops EBITDARM **$1,767,482.75 → $1,761,421.43**
+(−$6,061.32), EBITDAR/EBITDA **$1,417,384.90 → $1,411,323.58** (−$6,061.32) —
+and $1,411,323.58 ties to the as-reported NOI ($1,411,324), matching the
+engine. Applied the migration to the populated fixture end-to-end:
+`E104=SUM(E79:E103)` now includes the Auto Expense row at 92; EBITDA chain
+re-pointed (`E109=E52-E106`, `E111=E109-E107`, `E114=E111-E113`). All 5 suites
+in `tests/test_uw_output_model.py` green before and after the bundled migration.
+
+### Left for next session
+
+The `_AUTO_EXPENSE_DIVERGENCE` whitelist in `tests/test_uw_output_model.py`
+**stays** — it can't drop until the gitignored populated Homestead Analyzer
+fixture is rebuilt against the fixed substrate (needs Excel to evaluate the
+formulas so cached == engine). The substrate fix landing here is the
+prerequisite; the rebuild + whitelist drop is the follow-up. (Same story for
+the `_REMAP_2P_DIVERGENCE` whitelist vs a v0.2.15-rebuilt fixture.) Only
+remaining Pending backlog item: BL-0019 (persistent audit log, Track 1).
+
+---
+
 ## 2026-05-29 — UWT v0.8.0 — default template flipped to v6
 
 **Track:** Track 4. Picks up carry-forward item #1 from the 2026-05-28 session
