@@ -2,12 +2,26 @@
 
 ---
 
-**Status:** Verified (UWT v0.8.1 / 2026-05-30 — fix applied programmatically; see note below)
+**Status:** Pending operator — *interim programmatic patch applied (UWT v0.8.1 / 2026-05-30); durable template re-author is a separate operator task (see "Template-side changes required").*
 **Template version:** v6 in place (formula-only repoint; no version bump)
 **Registry version:** 0.5.0 (unchanged — no concept targets affected)
 **Triggered by:** Operator-reported on a populated Briar Glen output (2026-05-30): "the T12 tab isn't populating properly."
 **Owner (Claude Code side):** Track 4 chat
-**Owner (operator side):** adopt the repaired `assets/ALF_UW_Template_v6.xlsx` into the Deals-folder canonical copy + confirm-open in Excel
+**Owner (operator side):** author the three Section-D repoints into the **Deals-folder canonical v6 template** in Excel (so the durable source isn't a Python round-trip), then re-drop
+
+## Why this stays "Pending operator" despite the interim patch
+
+The Claude Code side unblocked the immediate problem by patching
+`assets/ALF_UW_Template_v6.xlsx` programmatically (matching the v0.7.1
+precedent) so the next populate is correct *today*. But the **canonical v6
+template lives in the operator's Deals folder**, authored in Excel — and per
+the Track 4 ownership split + openpyxl quirk #6, a Python round-trip is not the
+durable source of truth (it strips `xl/metadata.xml` / `xl/webextensions/`,
+restored here only by re-injection from v5). So the template change is tracked
+as a **separate operator task**: re-author the three Section-D cells in Excel
+on the Deals-folder copy and re-drop it. Until then, the repo's `assets/v6`
+carries the interim patch and the populate flow is correct. This row flips to
+**Verified** when the operator-authored Deals-folder v6 reflects the repoint.
 
 ## Summary
 
@@ -86,10 +100,12 @@ that's a design call, not a regression fix.
 - [x] All 5 suites in `tests/test_uw_output_model.py` green.
 - [x] Corrected copy of the operator's reported output saved at `Downloads/Briar_Glen_UW_Template_2025-12-31_normalized_FIXED.xlsx`.
 
-**Operator side:**
-- [ ] Adopt the repaired `assets/ALF_UW_Template_v6.xlsx` into the Deals-folder canonical copy.
-- [ ] Open once in Excel + save (rebuilds any add-in state; confirms Section R/S spills).
-- [ ] (Optional) decide whether Section F "T-12 Actual" sub-cells should auto-pull from N117/N112.
+**Operator side — durable template re-author (separate task, makes this Verified):**
+- [ ] In the **Deals-folder canonical v6 template**, in Excel, set `T-12 Analysis!B22 = =N80`, `B23 = =N83`, `B24 = =N77` (B25 needs no edit — it reads B22/B23).
+- [ ] Save in Excel (NOT via a Python/Sheets round-trip — preserves `xl/metadata.xml` + the Claude add-in webextensions natively).
+- [ ] Re-drop the re-authored v6 into the repo at `assets/ALF_UW_Template_v6.xlsx` (replaces the interim programmatic patch with the durable Excel-authored source).
+- [ ] Confirm Section D reads non-zero on a populated output (GPR / Net Rent / EGI).
+- [ ] (Optional, separate decision) decide whether Section F "T-12 Actual" sub-cells (B41/B47) should auto-pull from N117/N112.
 
 ## Cross-references
 
