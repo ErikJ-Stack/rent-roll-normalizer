@@ -150,6 +150,25 @@ Surfacing the Analyzer's `Dashboard` data inside the Streamlit webapp as a mobil
 
 **Known divergences from xlsx (Python correct).** Three Dashboard cells reference single-care-type cells while being labeled as blended on the Dashboard — `B6` (occupancy, pulls AL-only `F134`), `F20` (ADR, pulls MC-only `F140`), `K6` (RevPOR, pulls MC-only `F143`). Python computes structurally-correct blended values. A Track 3 substrate fix is queued (separate spawned task) to align the xlsx.
 
+### Track 4-MF — MF UW Model integration (multifamily downstream consumer)
+
+The multifamily counterpart of Track 4. Maps the MF operator intake docs to the **MF UW Model** (`MF_UW_Model_v15.xlsx`, a 23-sheet full acquisition underwriting model authored externally in Excel). Workstream began 2026-06-03. Phase 0 (this release) is inspection + mapping only — **no parser, no writer** (mirrors how ALF Track 4 started). MF has **no Analyzer substrate**, so the mapping sources directly from the raw operator exports in `MF Docs/`.
+
+| What | Where |
+| --- | --- |
+| Spec | `SPEC-MF.md` (§1 UW Model mapping) |
+| Changelog | `CHANGELOG-MF.md` |
+| Mapping registry (data) | `tools/mf_uw_template/registry.json` |
+| Artifact generator | `tools/mf_uw_template/build_mapping_artifacts.py` |
+| Mind-map / trackers | `tools/mf_uw_template/mapping_mindmap.html` · `MAPPING_TRACKER.md` · `mapping_tracker.csv` |
+| Handoff infra | `tools/mf_uw_template/HANDOFF_TRACKER.md` · `HANDOFF_TEMPLATE.md` · `handoffs/` |
+| Model reference (committed) | `assets/MF_UW_Model_v15.xlsx` |
+| Model source of truth (external) | `Deals/Acquisition/_Template/MF Templates/MF_UW_Model_v15.xlsx` |
+| Source docs (gitignored) | `MF Docs/` — Hidden Lakes RR / Sortable-RR (redIQ) / AR / T-12-NOI (PSI) |
+| Current version | MF-UWT v0.1.0 · registry v0.1.0 (mapped against `templates.v15`) |
+
+**Two intake paste paths** (the only writer targets — everything else is analyst-driven or formula-derived): (1) operator RR (+AR aging) → `Rent Roll Analysis` grid (header row 272, anchor `A273`, rows 273–1772, 37 cols A–AK); (2) operator T-12 → `T-12 Analysis` Layer 1 (anchor `A106`, rows 106–255), where col P `→ MAPPING` carries the `_StdCOA` bucket and drives every Layer-3 SUMIFS — the MF equivalent of ALF's `Description_Map`. Registry v0.1.0 = 46 concepts (19 mapped / 5 proposed / 21 gap_source / 1 derived). The 21 `gap_source` items (T-12 COA→bucket dictionary, AR Bldg-Unit join, redIQ charge-code ancillary breakouts W–AK, status taxonomy / Legal-flag) close in the future **MF parser build (P1–P2)**, not via model edits. Same handoff protocol as ALF Track 4; same openpyxl quirk #6 caveat (don't round-trip the model through openpyxl). Re-run `python tools/mf_uw_template/build_mapping_artifacts.py` after any registry edit.
+
 ---
 
 ## Cross-cutting docs
