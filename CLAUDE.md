@@ -165,7 +165,8 @@ The multifamily counterpart of Track 4. Maps the MF operator intake docs to the 
 | Model reference (committed) | `assets/MF_UW_Model_v15.xlsx` |
 | Model source of truth (external) | `Deals/Acquisition/_Template/MF Templates/MF_UW_Model_v15.xlsx` |
 | Source docs (gitignored) | `MF Docs/` — Hidden Lakes RR / Sortable-RR (redIQ) / AR / T-12-NOI (PSI) |
-| Current version | MF-UWT v0.1.0 · registry v0.1.0 (mapped against `templates.v15`) |
+| Current version | MF v0.2.1 · registry v0.1.2 (mapped against `templates.v15`) |
+| MF parser (P1–P2, building) | `mf_mappings.py` (COA classifier, loads `tools/mf_uw_template/coa_seed.csv`) + `mf_t12_normalizer.py` (`parse_mf_t12()` — general 5-format T-12 parser, 100% coverage / penny-exact reconciliation on 5 samples). **MF mode in `app.py` now has a live T-12 uploader** (`_render_mf_intake()`) → preview + paste-ready col-P CSV. Still to build: `mf_normalizer` (RR) · `mf_ar_parser` · `mf_uw_model_writer` · RR/AR uploaders. See `SPEC-MF.md` §2. |
 
 **Two intake paste paths** (the only writer targets — everything else is analyst-driven or formula-derived): (1) operator RR (+AR aging) → `Rent Roll Analysis` grid (header row 272, anchor `A273`, rows 273–1772, 37 cols A–AK); (2) operator T-12 → `T-12 Analysis` Layer 1 (anchor `A106`, rows 106–255), where col P `→ MAPPING` carries the `_StdCOA` bucket and drives every Layer-3 SUMIFS — the MF equivalent of ALF's `Description_Map`. Registry v0.1.0 = 46 concepts (19 mapped / 5 proposed / 21 gap_source / 1 derived). The 21 `gap_source` items (T-12 COA→bucket dictionary, AR Bldg-Unit join, redIQ charge-code ancillary breakouts W–AK, status taxonomy / Legal-flag) close in the future **MF parser build (P1–P2)**, not via model edits. Same handoff protocol as ALF Track 4; same openpyxl quirk #6 caveat (don't round-trip the model through openpyxl). Re-run `python tools/mf_uw_template/build_mapping_artifacts.py` after any registry edit.
 
