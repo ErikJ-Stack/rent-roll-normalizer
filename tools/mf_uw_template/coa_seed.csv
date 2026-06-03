@@ -221,24 +221,25 @@ name_regex,renter.?s insurance|insurance fee income,Renter's Insurance
 name_regex,insurance pass,Insurance Pass-Thru
 name_regex,satellite|internet income|cable.*income|cable tv comm,Reimbursement — Internet
 name_regex,reimburse|rebill|rubs,Utility Reimbursement
-name_regex,admin|community fee|amenity fee|transfer fee|set up,Admin Fees
-name_regex,keys|access card|vending|stockwell|fines|forfeit|damages|consulting|interest income|vendor rebate|misc|other income|recovery,Misc Other Income
-name_regex,make.?ready|redecorat|tub (glaz|refinish)|carpet (clean|repair)|unit clean|drywall|paint contractor|resurfac|housekeeper|blinds,Make-Ready / Turnover
+name_regex,admin|community fee|amenity fee|transfer fee|set up|risk fee,Admin Fees
+name_regex,keys|access card|vending|stockwell|fines|forfeit|damages|consulting|interest income|vendor rebate|misc|other income|recovery|dwp|credit builder|utilities corporate|laundry,Misc Other Income
+name_regex,make.?ready|redecorat|tub (glaz|refinish)|carpet (clean|repair)|unit clean|drywall|paint|resurfac|housekeeper|blinds,Make-Ready / Turnover
 name_regex,exterminat|pest,Pest Control
 name_regex,landscap,Landscaping
 name_regex,pool|amenity|club room|exercise|gym|recreation,Pool / Amenity Maintenance
 name_regex,trash|garbage|rubbish|recycl,Utilities — Trash
 name_regex,water|sewer,Utilities — Water/Sewer
 name_regex,propane|\bgas\b,Utilities — Gas
-name_regex,electric,Utilities — Electric
+name_regex,vacant unit,Utilities — Electric
+name_regex,electric|lights|lighting,Utilities — Electric
 name_regex,internet|cable,Utilities — Internet/Cable
 name_regex,"utility processing|util.{0,4}process",General & Administrative
 name_regex,management fee,Management Fee
 name_regex,real estate tax|property tax|ad valorem,Real Estate Taxes
 name_regex,"insurance|workers.{0,3}comp",Insurance
 name_regex,eviction|legal,Legal / Eviction
-name_regex,advertis|marketing|leasing|brochure|promotion|\bils\b|seo|website|referral|prospect|reputation,Leasing & Marketing
-name_regex,payroll|salar|wages|bonus|401k|burden|group insurance|benefit|simple ira|futa|suta|\bsui\b|medicare|soc sec|staffing,Payroll — On-Site
+name_regex,advertis|marketing|leasing|brochure|promotion|\bils\b|seo|website|referral|prospect|reputation|online ad|paid email|tour experience|outreach|social media,Leasing & Marketing
+name_regex,payroll|salar|wages|bonus|401k|burden|group insurance|benefit|simple ira|futa|suta|\bsui\b|medicare|soc sec|staffing|\bhealth\b,Payroll — On-Site
 name_regex,repair|maintenance|supplies|hvac|plumb|electrical|appliance|lock|window|fire|alarm|elevator|snow|janitor|cleaning|carpentry|tile|tools,Repairs & Maintenance
 name_regex,contract,Contract Services
-name_regex,dues|office|bank charge|software|accounting|background|computer|data|uniform|printer|copier|license|permit|postage|mileage|telephone|\bcell|training|seminar,General & Administrative
+name_regex,dues|office|bank|software|accounting|background|computer|data|uniform|printer|copier|license|permit|postage|mileage|telephone|\bcell|training|seminar|answering|technical support|verification|recruit|professional fee|travel|meeting|compliance|membership|association,General & Administrative
