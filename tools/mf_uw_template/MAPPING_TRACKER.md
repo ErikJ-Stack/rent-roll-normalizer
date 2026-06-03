@@ -1,6 +1,6 @@
 # MF UW Model — Mapping Tracker
 
-> Generated from `tools/mf_uw_template/registry.json` on 2026-06-03 12:49 UTC.  **Do not edit by hand** — edit `registry.json` and re-run `python tools/mf_uw_template/build_mapping_artifacts.py`.
+> Generated from `tools/mf_uw_template/registry.json` on 2026-06-03 15:35 UTC.  **Do not edit by hand** — edit `registry.json` and re-run `python tools/mf_uw_template/build_mapping_artifacts.py`.
 
 - Product line: **MF** (multifamily). No Analyzer substrate — source is the raw operator docs in `MF Docs/`.
 - Primary template: `v15` → `assets/MF_UW_Model_v15.xlsx`
@@ -159,3 +159,4 @@
 - Column U 'Status Flag': clarify semantics (analyst-input vs derived) before wiring.
 - Does the operator always provide both the basic RR and the redIQ Sortable-RR, or only one? The ancillary detail path depends on Sortable-RR.
 - Template versioning: MF_UW_Model is a full model named by 'v15'. Confirm the registry should track it as templates.v15 and how minor revisions are versioned (reuse v15 filename, like the ALF v5 policy?).
+- SECOND MF T-12 FORMAT (found 2026-06-03): the Blairstone at Governors Square T-12 (MF_FL_Tallahassee_Blairstone deal) is a QuickBooks-style NESTED P&L — 'Ordinary Income/Expense → Gross Profit → Net Ordinary Income', parent/sub-account indenting (leaf labels in col E or F under a header), 12 monthly columns in ODD columns G/I/K…AC, TOTAL in AE, no account numbers. This differs materially from Hidden Lakes' flat PSI 2-col-header export. The future mf_t12 parser must handle BOTH: (a) PSI flat (account#, name, 12 contiguous monthly cols, Total) and (b) QuickBooks nested (no acct#, indent-level parsing, odd-column months, skip 'Total *'/section-header rows). It was mapped by hand to _StdCOA on 2026-06-03 (39 leaf lines; income ties to $5,805,382.10; expense detail $2,415,119.35; paste-ready col-P CSV saved beside the source file in the deal folder). Data-quality caveats observed: cash-basis collected rent (no separate Vacancy/Concessions/Bad-Debt lines → GPR bucket = collected rent, not market); NO Real Estate Taxes and NO Management Fee lines (entity-level → pro-forma needed); a negative 'Water and Sewer Tenant' billback inside expenses (maps to Utility Reimbursement income); and a $22,128.62 total-vs-detail gap that lives only in the broker's subtotal/Total Expense rows (QuickBooks export artifact, no matching detail line). The mapping dictionary the parser builds should be seeded from both this file and _StdCOA col F.
