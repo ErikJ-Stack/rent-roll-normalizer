@@ -95,6 +95,16 @@ preserved.
    row verbatim (value + style) via `_fix_v6_rev2_rr_header_row.py` — Rent Roll Analysis
    is unchanged v5→v6 (both 47 cols) so labels map 1:1. Metadata-preserving; applied to
    canonical asset + operator's local copy. Warning now clears.
+5. **T-12 Analysis income rows 58-79 monthly grid blank** (operator-reported: "if there's
+   data it should get populated") — `compute_uw_output_monthly` emitted monthly series for
+   labor / non-labor / aggregate revenue but **not** the per-care line items (Base Rent
+   IL/AL/MC N58-60, LOC IL/AL/MC N63-65, 2nd Person N68, ancillary revenue N71-75). Those
+   rows got their annual pasted to col N but a blank B–M grid. Added all per-line income
+   keys to `compute_uw_output_monthly` (`base_rent_il/al/mc`, `loc_il/al/mc`,
+   `second_person_revenue`, `rev_meal/housekeeping/laundry/scooter/transfer`). Rule: any
+   income line with T-12 data now fills its monthly grid; `M()` returns zeros for labels
+   with no GL data so genuinely-empty lines stay 0 (no spurious values). Verified: rows
+   58-79 monthly tie to annual to the penny (660 monthly cells).
 
 **All 36 tests green** (3 stale-v6 assertions in `test_uw_template_writer.py` updated
 to rev2 rows + concept count 137→195). `UWT_VERSION` 0.8.1 → 0.9.0.

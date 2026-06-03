@@ -527,6 +527,26 @@ def compute_uw_output_monthly(
     egi = [base[i] + loc[i] + other[i] for i in range(12)]
     res["egi"] = egi
 
+    # Per-care + per-line INCOME monthly series (T-12 Analysis rows 58-76). The
+    # annual evaluator exposes these line items individually (base_rent_il/al/mc,
+    # loc_il/al/mc, 2nd Person, ancillary revenue) and the writer pastes their
+    # annual into col N; without a matching monthly series the B–M grid for those
+    # income rows stayed blank. Rule: any income line with T-12 data gets its
+    # monthly grid populated (M() returns zeros for labels with no GL data, so
+    # genuinely-empty lines stay blank — no spurious values).
+    res["base_rent_il"] = M("Base rent — IL")
+    res["base_rent_al"] = M("Base rent — AL")
+    res["base_rent_mc"] = M("Base rent — MC")
+    res["loc_il"] = M("LOC revenue — IL")
+    res["loc_al"] = M("LOC revenue — AL")
+    res["loc_mc"] = M("LOC revenue — MC")
+    res["second_person_revenue"] = M("2nd Person Revenue")
+    res["rev_meal_income"] = M("Meal Income")
+    res["rev_housekeeping_income"] = M("Housekeeping Income")
+    res["rev_laundry_income"] = M("Laundry Income")
+    res["rev_scooter_fee"] = M("Scooter Fee Revenue")
+    res["rev_transfer_fee"] = M("Transfer Fee Revenue")
+
     # Subtotals + P&L chain
     direct = Msum(_LABELS_DIRECT_LABOR)
     burden = Msum(_LABELS_PAYROLL_BURDEN)
