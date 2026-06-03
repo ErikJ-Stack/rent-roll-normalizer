@@ -472,7 +472,8 @@ def _render_mf_intake() -> None:
         except Exception as exc:  # noqa: BLE001
             st.error(f"Could not parse the rent roll: {exc}"); rr = None
         else:
-            prop_name = derive_property_name(rr_file.name)
+            # prefer the clean property name from inside the file over the filename
+            prop_name = rr.property_hint or derive_property_name(rr_file.name)
             d1, d2, d3, d4 = st.columns(4)
             d1.metric("Units", rr.unit_count)
             d2.metric("Occupied", rr.occupied)
