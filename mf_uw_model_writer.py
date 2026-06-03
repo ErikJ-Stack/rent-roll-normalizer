@@ -36,6 +36,13 @@ _RR = dict(bldg=1, unit=2, unit_type=3, sqft=4, status=5, resident=6, legal=7,
 _RR_ANCHOR = 273
 _RR_END = 1772
 _RR_COLS = 37  # A–AK
+# Per-unit ancillary breakout buckets -> Rent Roll Analysis cols W–AK.
+_ANCILLARY_COL = {
+    "mtm": 23, "application": 24, "late": 25, "utility_reimb": 26, "pet": 27,
+    "parking": 28, "amenity": 29, "admin": 30, "insurance_passthru": 31,
+    "misc": 32, "storage": 33, "package": 34, "lease_lock": 35, "valet": 36,
+    "lease_break": 37,
+}
 
 # T-12 Analysis Layer 1 (header row 105, data 106+).
 _T12_ANCHOR = 106
@@ -126,6 +133,12 @@ def populate_mf_model(model_bytes: bytes, *, t12=None, rr=None,
             _set(ws, r, _RR["ar_90_plus"], u.ar_90_plus)
             _set(ws, r, _RR["notes"], u.notes)
             report["rr_cells"] += 21
+            # per-unit ancillary breakout (W–AK), e.g. Amenity Rent -> Amenity Fees
+            for bucket, amount in (u.ancillary or {}).items():
+                col = _ANCILLARY_COL.get(bucket)
+                if col and amount:
+                    _set(ws, r, col, amount)
+                    report["rr_cells"] += 1
         report["rr_units"] = n
 
     # --- Prop Info (drives the health-check reconciliations) ---

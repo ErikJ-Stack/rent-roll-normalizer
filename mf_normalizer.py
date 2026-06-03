@@ -25,7 +25,7 @@ from dataclasses import dataclass, field
 
 import openpyxl
 
-from mf_mappings import UNMAPPED_STATUS, normalize_status
+from mf_mappings import UNMAPPED_STATUS, classify_charge_code, normalize_status
 
 # Header label -> canonical field. Matched case-insensitively on a normalized
 # (lowercased, punctuation-stripped) header string; first containing match wins.
@@ -197,8 +197,12 @@ def parse_mf_rr(source) -> MFRRResult:
     cur: MFUnit | None = None
 
     def _add_charges(u, row):
-        u.scheduled_charges += _num(g(row, "scheduled_charges"))
+        sched = _num(g(row, "scheduled_charges"))
+        u.scheduled_charges += sched
         u.actual_charges += _num(g(row, "actual_charges"))
+        bucket = classify_charge_code(g(row, "charge_code"))   # break out non-rent codes
+        if bucket and sched:
+            u.ancillary[bucket] = u.ancillary.get(bucket, 0.0) + sched
 
     for row in rows[header_row + 1:]:
         a = g(row, "bldg_unit")

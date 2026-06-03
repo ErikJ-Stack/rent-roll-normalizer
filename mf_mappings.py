@@ -130,6 +130,50 @@ _STATUS_RULES = [
 UNMAPPED_STATUS = "— UNMAPPED status —"
 
 
+# ---------------------------------------------------------------------------
+# RR charge-code -> per-unit ancillary bucket (model Rent Roll Analysis cols
+# W–AK). Recognized non-rent charge codes break out into their own column;
+# Base Rent / Subsidy Rent (core contractual rent) stay folded in the scheduled
+# total only (return None). Unrecognized codes also return None (kept in the
+# scheduled total, never force-bucketed).
+# ---------------------------------------------------------------------------
+ANCILLARY_BUCKETS = (
+    "mtm", "application", "late", "utility_reimb", "pet", "parking", "amenity",
+    "admin", "insurance_passthru", "misc", "storage", "package", "lease_lock",
+    "valet", "lease_break",
+)
+_CHARGE_RULES = [
+    (r"amenity", "amenity"),
+    (r"\bpet\b", "pet"),
+    (r"parking|carport|garage", "parking"),
+    (r"storage", "storage"),
+    (r"valet", "valet"),
+    (r"trash|rubbish", "utility_reimb"),
+    (r"util|rubs|water|sewer|electric|\bgas\b|reimburse", "utility_reimb"),
+    (r"\bnsf\b|late", "late"),
+    (r"applicat", "application"),
+    (r"month.?to.?month|\bmtm\b", "mtm"),
+    (r"admin", "admin"),
+    (r"renter.?s insurance|insurance", "insurance_passthru"),
+    (r"lease lock", "lease_lock"),
+    (r"package|locker", "package"),
+    (r"lease (break|cancel|termin)|early term", "lease_break"),
+    (r"base rent|subsidy", "__core__"),   # rent — stays in scheduled total
+]
+
+
+def classify_charge_code(code) -> str | None:
+    """Map an RR charge-code string to a W–AK ancillary bucket, or None for
+    core rent (base/subsidy) and unrecognized codes (kept in the scheduled total)."""
+    s = str(code).strip().lower() if code not in (None, "") else ""
+    if not s:
+        return None
+    for pat, bucket in _CHARGE_RULES:
+        if re.search(pat, s):
+            return None if bucket == "__core__" else bucket
+    return None
+
+
 def normalize_status(raw) -> str:
     s = str(raw).strip().lower() if raw not in (None, "") else ""
     if not s:

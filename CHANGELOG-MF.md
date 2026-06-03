@@ -7,6 +7,37 @@ and the `mf_` naming convention.
 
 ---
 
+## MF v0.4.2 — 2026-06-03 — RR charge-code breakout → per-unit ancillary columns (W–AK)
+
+Operator note on the Avana RR: "Amenity Rent, Subsidy was not captured … col L
+has different charge codes." The itemized parser (v0.4.1) **summed** all charge
+codes into one scheduled total but didn't **break them out**, so Amenity Rent
+etc. lost their identity in the model's per-unit ancillary columns.
+
+**Shipped:**
+- `mf_mappings.classify_charge_code(code)` — maps an RR charge code to a W–AK
+  ancillary bucket (amenity / pet / parking / storage / valet / utility_reimb /
+  late / application / mtm / admin / insurance_passthru / package / lease_lock /
+  lease_break). Base Rent + Subsidy Rent (core contractual rent) and
+  unrecognized codes return None → stay folded in the scheduled total only.
+- `mf_normalizer`: per-charge-code amounts accumulate into `MFUnit.ancillary`
+  (the scheduled **total is unchanged** — breakout is additive detail, not a
+  re-split).
+- `mf_uw_model_writer`: writes `MFUnit.ancillary` into Rent Roll Analysis cols
+  W–AK (`_ANCILLARY_COL` map; e.g. Amenity Rent → AC Amenity Fees).
+- `tests/test_mf_rr_ar.py`: asserts 384-11 amenity = $145 broken out + property
+  amenity ≈ $11,120.
+
+**Validation (Avana):** scheduled total still **$442,054** (= the report's
+"Total:" row); **Amenity Rent → AC**: 384-11 N=$1,929 / AC=$145; property
+amenity total **$11,120**. Subsidy Rent stays in the scheduled total (feeds GPR;
+the model has no dedicated subsidy column). Hidden Lakes regression intact
+(no charge-code column → no breakout). **Closes the W–AK ancillary gap_source
+for itemized "Operations" RRs** (no redIQ Sortable-RR needed when col L itemizes
+charges inline). A dedicated Subsidy column would be a model-side handoff.
+
+---
+
 ## MF v0.4.1 — 2026-06-03 — RR parser: itemized "charge codes" format (multi-row per unit)
 
 Operator-reported "unable to parse this RR" on an Avana Stoney Ridge rent roll
