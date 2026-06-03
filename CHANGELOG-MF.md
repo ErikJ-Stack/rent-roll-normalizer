@@ -7,6 +7,29 @@ and the `mf_` naming convention.
 
 ---
 
+## registry v0.1.1 — 2026-06-03 — Second MF T-12 format logged (QuickBooks nested P&L)
+
+A new operator T-12 (Blairstone at Governors Square, Tallahassee FL — deal
+`MF_FL_Tallahassee_Blairstone`) surfaced a **second MF T-12 format**: a
+QuickBooks-style nested P&L (parent/sub-account indenting, leaf labels in col E
+or F, 12 monthly values in odd columns G–AC, TOTAL in AE, no account numbers) —
+materially different from Hidden Lakes' flat PSI export. Mapped by hand to
+`_StdCOA` (39 leaf lines; income ties to $5,805,382.10; expense detail
+$2,415,119.35); a paste-ready col-P CSV was saved beside the source file in the
+deal folder for drop-in to the model's `T-12 Analysis` Layer 1.
+
+Logged as `open_questions` item #8 so the future `mf_t12` parser handles both
+formats. Data-quality caveats recorded: cash-basis collected rent (GPR bucket =
+collected, not market — no Vacancy/Concessions/Bad-Debt lines); no Real Estate
+Taxes or Management Fee lines (entity-level → pro-forma needed); a negative
+`Water and Sewer Tenant` billback inside expenses (→ Utility Reimbursement); and
+a $22,128.62 total-vs-detail gap living only in the broker's subtotal/Total
+rows (QuickBooks export artifact). Registry `0.1.0 → 0.1.1`; artifacts
+regenerated. No concept or target change — registry shape unchanged at 46
+concepts.
+
+---
+
 ## MF-UWT v0.1.0 — 2026-06-03 — MF Track 4 Phase 0: UW Model mapping registry
 
 **Track:** MF Track 4 (UW Model integration). Inspection + mapping only — no
