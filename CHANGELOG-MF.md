@@ -7,6 +7,23 @@ and the `mf_` naming convention.
 
 ---
 
+## MF v0.4.4 — 2026-06-03 — Refresh committed MF UW Model to operator's revised v15
+
+Operator dropped a revised `MF_UW_Model_v15.xlsx` (still v15 filename — minor
+revision; 325 KB → 385 KB, downstream/formatting changes). Refreshed the
+committed reference `assets/MF_UW_Model_v15.xlsx` via a **verbatim byte-copy**
+(no openpyxl round-trip — quirk #6).
+
+**Pre-flight diff confirmed zero writer/registry impact:** identical 23 sheets,
+and every writer-critical anchor unchanged — RR grid header (row 272, cols
+A–AK), T-12 Layer 1 (row 105 / anchor A106), Prop Info A4/A6, `_StdCOA` (56
+rows), and the key formulas (`N80`, `B58`, `I5`). So no `mf_uw_model_writer` /
+registry changes; registry stays at `templates.v15`. Writer re-validated against
+the new bytes — 10/10 assertions pass (RR grid, ancillary breakout AC, T-12
+Layer 1, formula survival, Prop Info). 48 zip parts, valid.
+
+---
+
 ## MF v0.4.3 — 2026-06-03 — Property name from the file header (not the filename)
 
 On the populated Avana model the Cover title read **"Operations) Avana Stoney
