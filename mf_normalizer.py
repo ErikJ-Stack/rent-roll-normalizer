@@ -90,6 +90,7 @@ class MFUnit:
 class MFRRResult:
     units: list[MFUnit]
     period_hint: str = ""
+    property_hint: str = ""
     warnings: list[str] = field(default_factory=list)
 
     @property
@@ -165,6 +166,21 @@ def parse_mf_rr(source) -> MFRRResult:
     if header_row is None:
         wb.close()
         raise ValueError("Could not locate the rent-roll header row.")
+
+    # property name from the header band (col A above the grid header) — the
+    # operator file carries a clean name (e.g. "Avana Stoney Ridge"); far more
+    # reliable than parsing the filename.
+    property_hint = ""
+    for i in range(header_row):
+        v = rows[i][0] if rows[i] else None
+        if isinstance(v, str):
+            s = v.strip()
+            low = s.lower()
+            if (s and not re.match(r"\d", s)
+                    and not any(k in low for k in ("rent roll", "report", "operations",
+                                                   "charge code", "unit details"))):
+                property_hint = s
+                break
 
     # 2) map columns — needle PRIORITY (map order), first column that matches wins
     hdr = [_norm(v) for v in rows[header_row]]
@@ -258,7 +274,7 @@ def parse_mf_rr(source) -> MFRRResult:
     if unknown_status:
         warnings.append(f"{unknown_status} row(s) had an unrecognized status and were skipped "
                         "(likely charge-code-summary lines).")
-    return MFRRResult(units=units, warnings=warnings)
+    return MFRRResult(units=units, property_hint=property_hint, warnings=warnings)
 
 
 if __name__ == "__main__":

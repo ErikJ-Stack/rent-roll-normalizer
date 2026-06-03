@@ -7,6 +7,22 @@ and the `mf_` naming convention.
 
 ---
 
+## MF v0.4.3 — 2026-06-03 — Property name from the file header (not the filename)
+
+On the populated Avana model the Cover title read **"Operations) Avana Stoney
+Ridge"** — `derive_property_name()` (built for ALF filenames) mangles the
+`(Operations)` in `"Rent Roll (Operations) - Avana Stoney Ridge 05.12.26.xlsx"`.
+Fix: `parse_mf_rr` now extracts a clean `property_hint` from the RR's header band
+(col A above the grid header — operator files carry a clean name like
+"Avana Stoney Ridge"); the app uses `rr.property_hint or derive_property_name(...)`
+so the Cover / Prop Info B4 / filename all show the real property. `MFRRResult`
+gains `property_hint`. Verified: Avana → "Avana Stoney Ridge", Hidden Lakes →
+"Hidden Lakes". (No change to the shared `derive_property_name`, so ALF is
+unaffected.) The rest of the populated model was already correct — 263 units,
+149 T-12 lines, EGI ~$5.0M computing.
+
+---
+
 ## MF v0.4.2 — 2026-06-03 — RR charge-code breakout → per-unit ancillary columns (W–AK)
 
 Operator note on the Avana RR: "Amenity Rent, Subsidy was not captured … col L
