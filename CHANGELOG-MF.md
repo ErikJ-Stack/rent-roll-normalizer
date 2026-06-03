@@ -7,6 +7,55 @@ and the `mf_` naming convention.
 
 ---
 
+## MF v0.2.0 — 2026-06-03 — MF parser build slice 1: T-12 normalizer + COA classifier
+
+First real `mf_*` code — the foundation of the MF intake pipeline (the full
+build, chosen by the operator, is RR + T-12 + AR → write into the MF UW Model;
+this slice ships the T-12 path end-to-end). Promotes the COA seed into a live
+classifier and a general 5-format T-12 parser.
+
+**Shipped:**
+- **`mf_mappings.py`** — MF closed vocabularies. Loads `coa_seed.csv` (single
+  source of truth) into the layered classifier `classify_t12_account(acct, name)`
+  (Yardi 5-digit account root → `70000-89999` EXCLUDED range → ordered
+  name-regex → `— UNMAPPED —`). Income/expense bucket sets + `bucket_side()`;
+  RR status taxonomy `normalize_status()`. No openpyxl dependency.
+- **`mf_t12_normalizer.py`** — `parse_mf_t12(path|bytes|file)` → `MFT12Result`.
+  **General by design** (not per-format branches): auto-detects the month-header
+  row, the monthly column set (contiguous *or* odd-spaced), the total column,
+  and account-number presence; extracts leaf GL lines (Yardi rollup-suffix
+  `-098/-099/-199/-090/-999` exclusion + valued-vs-header logic), classifies
+  each, and reconciles **by source section** (so utility-rebill contras in the
+  expense section reduce opex instead of mis-summing as negative income).
+  Emits 12-month vectors, format guess, coverage, and warnings.
+- **`tests/test_mf_t12_normalizer.py`** — 15 CI-runnable classifier unit tests +
+  5 end-to-end reconciliation cases (skip when the gitignored deal files are
+  absent).
+
+**Validation (all 5 catalogued formats, 100% leaf-coverage each):**
+| Deal | Format | Income | Expense | NOI |
+| --- | --- | --- | --- | --- |
+| Hidden Lakes | PSI flat | — | — | $98,969 ✓ |
+| Avana | Yardi | $5,346,350 ✓ | $1,807,466 ✓ | $3,538,884 ✓ |
+| Ascend | Yardi/YSI | $3,572,817 ✓ | $1,520,302 ✓ | $2,052,515 ✓ |
+| Copeland | Tzadik | $5,016,397 ✓ | $1,577,564 ✓ | $3,438,833 ✓ |
+| Blairstone | QuickBooks | $5,805,382 ✓ | $2,415,119 △ | $3,390,263 △ |
+
+△ Blairstone expense/NOI differ by exactly **$22,128.62** — the QuickBooks
+total-vs-detail artifact in the broker's own subtotal rows (no matching detail
+line). The parser's detail sum is the correct figure; surfaced as a warning.
+
+**Seed update:** `coa_seed.csv` name rules broadened (199 acct + 44 name rules)
+to close the name-only-chart tail (Online Ad, Painting, Lighting, Health, Vacant
+Units, Risk Fees, G&A admin accounts, Laundry).
+
+**Still to build (this is slice 1 of the operator's full-intake choice):**
+`mf_normalizer` (RR) → `mf_ar_parser` (AR + Bldg-Unit join) → `mf_uw_model_writer`
+(paste into the model + metadata restore) → `app.py` MF intake tab (replaces the
+Phase-0 placeholder; 3 uploaders + download populated model).
+
+---
+
 ## registry v0.1.2 — 2026-06-03 — COA → _StdCOA seed dictionary built + validated (5 T-12 formats)
 
 Three more operator T-12s (Avana Stoney Ridge VA, Ascend Brunswick Village NC,
