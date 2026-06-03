@@ -1,0 +1,244 @@
+tier,key,std_bucket
+acct_root,41000,Gross Potential Rent
+acct_root,41008,Gross Potential Rent
+acct_root,41010,Gain/Loss on Market Rent
+acct_root,41091,Concessions
+acct_root,41100,Vacancy Loss
+acct_root,41110,Employee Units
+acct_root,41115,Employee Units
+acct_root,41120,Down Units Loss
+acct_root,41121,Down Units Loss
+acct_root,41150,Write-offs / Bad Debt
+acct_root,41153,Write-offs / Bad Debt
+acct_root,41155,Write-offs / Bad Debt
+acct_root,43010,Admin Fees
+acct_root,43020,Application Fees
+acct_root,43035,Write-offs / Bad Debt
+acct_root,43055,Misc Other Income
+acct_root,43056,Misc Other Income
+acct_root,43063,Admin Fees
+acct_root,43080,Misc Other Income
+acct_root,43090,Misc Other Income
+acct_root,43105,Parking Income
+acct_root,43117,Misc Other Income
+acct_root,43125,Misc Other Income
+acct_root,43135,Late Fees
+acct_root,43145,Lease Break Fee
+acct_root,43150,Misc Other Income
+acct_root,43160,Misc Other Income
+acct_root,43170,MTM Fees
+acct_root,43180,Late Fees
+acct_root,43190,Parking Income
+acct_root,43196,Parking Income
+acct_root,43200,Pet Fees
+acct_root,43201,Pet Fees
+acct_root,43213,Misc Other Income
+acct_root,43215,Renter's Insurance
+acct_root,43225,Reimbursement — Internet
+acct_root,43235,Storage / Common Bins
+acct_root,43250,Admin Fees
+acct_root,43258,Utility Reimbursement
+acct_root,43261,Utility Reimbursement
+acct_root,43262,Utility Reimbursement
+acct_root,43264,Utility Reimbursement
+acct_root,43265,Misc Other Income
+acct_root,43267,Misc Other Income
+acct_root,43277,Admin Fees
+acct_root,43290,Misc Other Income
+acct_root,51010,Payroll — On-Site
+acct_root,51015,Payroll — On-Site
+acct_root,51017,Payroll — On-Site
+acct_root,51020,Payroll — On-Site
+acct_root,51024,Payroll — On-Site
+acct_root,51026,Payroll — On-Site
+acct_root,51030,Payroll — On-Site
+acct_root,51040,Payroll — On-Site
+acct_root,51045,Payroll — On-Site
+acct_root,51050,Payroll — On-Site
+acct_root,51055,Payroll — On-Site
+acct_root,51070,Payroll — On-Site
+acct_root,51090,Payroll — On-Site
+acct_root,51100,Payroll — On-Site
+acct_root,51110,Payroll — On-Site
+acct_root,51120,Payroll — On-Site
+acct_root,51140,Payroll — On-Site
+acct_root,51150,Payroll — On-Site
+acct_root,52010,Repairs & Maintenance
+acct_root,52015,Pest Control
+acct_root,52020,Repairs & Maintenance
+acct_root,52040,Repairs & Maintenance
+acct_root,52050,Repairs & Maintenance
+acct_root,52051,Repairs & Maintenance
+acct_root,52055,Repairs & Maintenance
+acct_root,52057,Repairs & Maintenance
+acct_root,52060,Repairs & Maintenance
+acct_root,52063,Pool / Amenity Maintenance
+acct_root,52065,Repairs & Maintenance
+acct_root,52070,Repairs & Maintenance
+acct_root,52088,Repairs & Maintenance
+acct_root,52100,Repairs & Maintenance
+acct_root,52105,Repairs & Maintenance
+acct_root,52110,Repairs & Maintenance
+acct_root,52112,Repairs & Maintenance
+acct_root,52125,Repairs & Maintenance
+acct_root,52130,Repairs & Maintenance
+acct_root,52140,Repairs & Maintenance
+acct_root,52150,Repairs & Maintenance
+acct_root,52155,Repairs & Maintenance
+acct_root,52190,Repairs & Maintenance
+acct_root,52200,Repairs & Maintenance
+acct_root,52210,Repairs & Maintenance
+acct_root,52230,Repairs & Maintenance
+acct_root,52250,Repairs & Maintenance
+acct_root,52605,Make-Ready / Turnover
+acct_root,52610,Make-Ready / Turnover
+acct_root,52620,Make-Ready / Turnover
+acct_root,52621,Make-Ready / Turnover
+acct_root,52640,Make-Ready / Turnover
+acct_root,52645,Make-Ready / Turnover
+acct_root,52650,Make-Ready / Turnover
+acct_root,52660,Make-Ready / Turnover
+acct_root,52670,Make-Ready / Turnover
+acct_root,52680,Make-Ready / Turnover
+acct_root,52685,Make-Ready / Turnover
+acct_root,52690,Make-Ready / Turnover
+acct_root,52700,Make-Ready / Turnover
+acct_root,52820,Pool / Amenity Maintenance
+acct_root,52830,Pool / Amenity Maintenance
+acct_root,52860,Pool / Amenity Maintenance
+acct_root,52880,Pool / Amenity Maintenance
+acct_root,53030,Utilities — Internet/Cable
+acct_root,53055,Contract Services
+acct_root,53060,Contract Services
+acct_root,53070,Contract Services
+acct_root,53073,Contract Services
+acct_root,53090,Contract Services
+acct_root,53100,Landscaping
+acct_root,53105,Landscaping
+acct_root,53116,Contract Services
+acct_root,53130,Contract Services
+acct_root,53131,Pool / Amenity Maintenance
+acct_root,53140,Pest Control
+acct_root,53145,Utility Reimbursement
+acct_root,53150,Pool / Amenity Maintenance
+acct_root,53165,Contract Services
+acct_root,53171,Contract Services
+acct_root,53175,Pest Control
+acct_root,53180,Utilities — Trash
+acct_root,53182,Utilities — Trash
+acct_root,53183,Utility Reimbursement
+acct_root,53185,Utility Reimbursement
+acct_root,53186,Utilities — Trash
+acct_root,54005,Leasing & Marketing
+acct_root,54007,Leasing & Marketing
+acct_root,54010,Leasing & Marketing
+acct_root,54012,Leasing & Marketing
+acct_root,54013,Leasing & Marketing
+acct_root,54025,Leasing & Marketing
+acct_root,54028,Leasing & Marketing
+acct_root,54035,Leasing & Marketing
+acct_root,54038,Leasing & Marketing
+acct_root,54040,Leasing & Marketing
+acct_root,54042,Leasing & Marketing
+acct_root,54044,Leasing & Marketing
+acct_root,54055,Leasing & Marketing
+acct_root,54090,Leasing & Marketing
+acct_root,54100,Leasing & Marketing
+acct_root,54105,Leasing & Marketing
+acct_root,54110,Leasing & Marketing
+acct_root,54122,Leasing & Marketing
+acct_root,54126,Leasing & Marketing
+acct_root,54134,Leasing & Marketing
+acct_root,58020,General & Administrative
+acct_root,58025,General & Administrative
+acct_root,58028,General & Administrative
+acct_root,58030,General & Administrative
+acct_root,58070,General & Administrative
+acct_root,58080,General & Administrative
+acct_root,58090,General & Administrative
+acct_root,58100,General & Administrative
+acct_root,58107,General & Administrative
+acct_root,58110,General & Administrative
+acct_root,58115,General & Administrative
+acct_root,58205,General & Administrative
+acct_root,58210,General & Administrative
+acct_root,58225,General & Administrative
+acct_root,58238,General & Administrative
+acct_root,58240,General & Administrative
+acct_root,58245,General & Administrative
+acct_root,58247,General & Administrative
+acct_root,58250,General & Administrative
+acct_root,58253,General & Administrative
+acct_root,58260,Legal / Eviction
+acct_root,58270,Utilities — Internet/Cable
+acct_root,58275,Legal / Eviction
+acct_root,58278,General & Administrative
+acct_root,58280,General & Administrative
+acct_root,58281,General & Administrative
+acct_root,58283,General & Administrative
+acct_root,58284,General & Administrative
+acct_root,58290,General & Administrative
+acct_root,58300,General & Administrative
+acct_root,58305,Leasing & Marketing
+acct_root,58320,General & Administrative
+acct_root,59010,Utilities — Electric
+acct_root,59020,Utilities — Electric
+acct_root,59030,Utilities — Electric
+acct_root,59040,Utilities — Electric
+acct_root,59050,Utility Reimbursement
+acct_root,59100,General & Administrative
+acct_root,59105,Utility Reimbursement
+acct_root,59110,Utilities — Water/Sewer
+acct_root,59115,Utility Reimbursement
+acct_root,61030,Management Fee
+acct_root,62010,Real Estate Taxes
+acct_root,62030,Real Estate Taxes
+acct_root,63010,Insurance
+acct_root,63020,Insurance
+acct_root,63030,Insurance
+acct_root,63035,Insurance
+acct_root,63090,Insurance
+acct_range,70000-89999,— EXCLUDED (non-OpEx) —
+name_regex,gain\s*/?\s*loss to lease,Gain/Loss on Market Rent
+name_regex,vacancy,Vacancy Loss
+name_regex,concession,Concessions
+name_regex,employee unit|courtesy officer,Employee Units
+name_regex,model|office unit|storage unit|down unit,Down Units Loss
+name_regex,bad debt|write.?off,Write-offs / Bad Debt
+name_regex,prepaid rent,Prepaid Rent Change
+name_regex,delinquen,Delinquency Change
+name_regex,market rent|base rent|subsidy|potential rent|rent - other|rental income,Gross Potential Rent
+name_regex,application fee,Application Fees
+name_regex,late fee|late charge|nsf,Late Fees
+name_regex,month.?to.?month|\bmtm\b|m2m,MTM Fees
+name_regex,lease (cancel|break|term)|early termination,Lease Break Fee
+name_regex,\bpet\b,Pet Fees
+name_regex,garage|parking|carport,Parking Income
+name_regex,storage,Storage / Common Bins
+name_regex,package|locker,Package Service / Lockers
+name_regex,valet,Valet Trash
+name_regex,renter.?s insurance|insurance fee income,Renter's Insurance
+name_regex,insurance pass,Insurance Pass-Thru
+name_regex,satellite|internet income|cable.*income|cable tv comm,Reimbursement — Internet
+name_regex,reimburse|rebill|rubs,Utility Reimbursement
+name_regex,admin|community fee|amenity fee|transfer fee|set up,Admin Fees
+name_regex,keys|access card|vending|stockwell|fines|forfeit|damages|consulting|interest income|vendor rebate|misc|other income|recovery,Misc Other Income
+name_regex,make.?ready|redecorat|tub (glaz|refinish)|carpet (clean|repair)|unit clean|drywall|paint contractor|resurfac|housekeeper|blinds,Make-Ready / Turnover
+name_regex,exterminat|pest,Pest Control
+name_regex,landscap,Landscaping
+name_regex,pool|amenity|club room|exercise|gym|recreation,Pool / Amenity Maintenance
+name_regex,trash|garbage|rubbish|recycl,Utilities — Trash
+name_regex,water|sewer,Utilities — Water/Sewer
+name_regex,propane|\bgas\b,Utilities — Gas
+name_regex,electric,Utilities — Electric
+name_regex,internet|cable,Utilities — Internet/Cable
+name_regex,"utility processing|util.{0,4}process",General & Administrative
+name_regex,management fee,Management Fee
+name_regex,real estate tax|property tax|ad valorem,Real Estate Taxes
+name_regex,"insurance|workers.{0,3}comp",Insurance
+name_regex,eviction|legal,Legal / Eviction
+name_regex,advertis|marketing|leasing|brochure|promotion|\bils\b|seo|website|referral|prospect|reputation,Leasing & Marketing
+name_regex,payroll|salar|wages|bonus|401k|burden|group insurance|benefit|simple ira|futa|suta|\bsui\b|medicare|soc sec|staffing,Payroll — On-Site
+name_regex,repair|maintenance|supplies|hvac|plumb|electrical|appliance|lock|window|fire|alarm|elevator|snow|janitor|cleaning|carpentry|tile|tools,Repairs & Maintenance
+name_regex,contract,Contract Services
+name_regex,dues|office|bank charge|software|accounting|background|computer|data|uniform|printer|copier|license|permit|postage|mileage|telephone|\bcell|training|seminar,General & Administrative

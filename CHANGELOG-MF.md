@@ -7,6 +7,40 @@ and the `mf_` naming convention.
 
 ---
 
+## registry v0.1.2 — 2026-06-03 — COA → _StdCOA seed dictionary built + validated (5 T-12 formats)
+
+Three more operator T-12s (Avana Stoney Ridge VA, Ascend Brunswick Village NC,
+Copeland Village FL) brought the catalogued MF T-12 formats to **five**: PSI
+flat, QuickBooks nested, **Yardi numbered ×2**, and Tzadik/AppFolio name-only.
+Avana + Ascend share the **identical Yardi standard chart** (41000 Market Rent,
+41100 Vacancy, 51010 Mgmt Salaries, 61030 Mgmt Fee, 62xxx Taxes, 63xxx
+Insurance, 70000–89999 below-the-line) — so one account-number dictionary covers
+every Yardi property.
+
+**Shipped:**
+- **`tools/mf_uw_template/coa_seed.csv`** — the COA → `_StdCOA` seed dictionary:
+  199 `acct_root` rules (Yardi 5-digit chart) + a `70000-89999 → — EXCLUDED —`
+  range + 43 ordered `name_regex` rules (for the no-account-number charts).
+- **`tools/mf_uw_template/_seed_validate.py`** — local validation harness
+  (per-format leaf extractors + the seed) reporting coverage. **100% of GL leaf
+  lines classified** on Avana (156), Ascend (161), Copeland (65); plus Hidden
+  Lakes (PSI via `_StdCOA` col F) and Blairstone (QuickBooks hand-map).
+- **`tools/mf_uw_template/COA-SEED.md`** — format catalog (detection signatures
+  per software), seed structure, validation results, and the caveat/anomaly log
+  (utility-rebill section reconciliation; below-NOI exclusions; entity-level
+  Mgmt-Fee/RE-Tax gaps; Copeland `Dues` $539,712.92 anomaly flagged).
+
+This is the seed `mf_mappings.py` is promoted from at the parser build's first
+slice (SPEC-MF §2.4 / §2.8 updated). Registry `0.1.1 → 0.1.2`; `open_questions`
+updated (format catalog + seed recorded; 10 items); artifacts regenerated. No
+concept/target change — still 46 concepts.
+
+The five deals become the parser's regression-fixture set. `_seed_validate.py`
+reads gitignored deal files by absolute path — a local prototype, **not** the
+production parser.
+
+---
+
 ## registry v0.1.1 — 2026-06-03 — Second MF T-12 format logged (QuickBooks nested P&L)
 
 A new operator T-12 (Blairstone at Governors Square, Tallahassee FL — deal

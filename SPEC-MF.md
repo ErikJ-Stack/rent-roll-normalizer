@@ -165,6 +165,14 @@ Approach — a layered resolver in `mf_mappings.py`:
    so the analyst classifies the tail. The model's Section J / "Unmapped lines"
    check already exists to catch this.
 
+**Seed already built** (2026-06-03): `tools/mf_uw_template/coa_seed.csv` (199
+`acct_root` rules + a `70000-89999 → EXCLUDED` range + 43 `name_regex` rules),
+validated by `tools/mf_uw_template/_seed_validate.py` at **100% leaf-coverage**
+across the Yardi (Avana, Ascend) and Tzadik (Copeland) samples, plus the PSI
+(Hidden Lakes) and QuickBooks (Blairstone) charts. The build promotes this seed
+into `mf_mappings.py`. Full format catalog, caveats, and the anomaly log live in
+[`tools/mf_uw_template/COA-SEED.md`](tools/mf_uw_template/COA-SEED.md).
+
 Two **T-12 format detectors** feed the resolver:
 - **PSI flat** (Hidden Lakes): `Account | Account Name | 12 contiguous monthly |
   Total`, header row ~7.
@@ -245,14 +253,15 @@ look at the model's formulas to decide analyst-input vs derived before wiring
 
 ### 2.8 Recommended first slice (smallest valuable increment)
 
-**`mf_t12_normalizer` + the COA dictionary**, validated against the two T-12s
-already mapped by hand (Hidden Lakes PSI + Blairstone QuickBooks) as committed
-synthetic fixtures — assert the bucket sums reproduce the hand-mapping
-($5,805,382.10 income / $2,415,119.35 expense on Blairstone; the Hidden Lakes
-figures from its file). This delivers the highest-value, highest-risk piece
-first (the bucketing intelligence) with a tight regression test, before taking
-on the RR grid + writer. Then `mf_normalizer` (RR) → `mf_ar_parser` (join) →
-`mf_uw_model_writer`.
+**`mf_t12_normalizer` + the COA dictionary** — promote the validated
+`coa_seed.csv` (§2.4) into `mf_mappings.py` and regression-test against the
+**five** T-12 samples now in hand (Hidden Lakes PSI, Blairstone QuickBooks,
+Avana + Ascend Yardi, Copeland Tzadik) as committed synthetic fixtures.
+Coverage is already 100% (classification); the new test gate is **bucket
+correctness via income/expense section reconciliation** to each file's Total
+Income / NOI. This delivers the highest-value, highest-risk piece first (the
+bucketing intelligence) before taking on the RR grid + writer. Then
+`mf_normalizer` (RR) → `mf_ar_parser` (join) → `mf_uw_model_writer`.
 
 **Rough effort:** first slice ~1 focused session; full P1–P2 + writer ~4–6
 sessions, gated on the §2.7 decisions and fixture availability.
