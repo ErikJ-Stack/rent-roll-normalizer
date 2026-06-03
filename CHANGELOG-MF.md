@@ -7,6 +7,26 @@ and the `mf_` naming convention.
 
 ---
 
+## MF v0.2.1 — 2026-06-03 — MF mode goes live: T-12 intake in the app
+
+Replaces the Phase-0 "Coming Soon" placeholder in MF mode with a **working T-12
+uploader** — MF mode is no longer a dead stop. `app.py`:
+- New `_render_mf_intake()` (replaces `_render_mf_placeholder()`): a T-12
+  `file_uploader` → `parse_mf_t12()` → metrics (detected format / GL lines /
+  coverage / period), a **reconciliation table** (computed income/expense/NOI
+  vs the statement's own totals), a **standardized-bucket** table (the col-P
+  values), parser warnings, and a **download button** for the paste-ready
+  mapping CSV (Acct# / Account Name / 12 months / → MAPPING) ready for the MF UW
+  Model's `T-12 Analysis` Layer 1 (anchor `A106`).
+- New `_mf_t12_paste_csv(res)` helper; `from mf_t12_normalizer import parse_mf_t12`.
+
+`app.py` compiles; the path is smoke-tested end-to-end (Hidden Lakes PSI → 80-row
+CSV, 100% coverage, correct 12-month headers). This is the operator-requested
+"unblock upload now" slice — RR / AR / OM uploaders and the MF UW Model writer
+land next in the same tab.
+
+---
+
 ## MF v0.2.0 — 2026-06-03 — MF parser build slice 1: T-12 normalizer + COA classifier
 
 First real `mf_*` code — the foundation of the MF intake pipeline (the full

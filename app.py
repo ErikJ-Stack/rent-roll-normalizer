@@ -53,6 +53,7 @@ from t12_normalizer_writer import (
 from analyzer_rr_translator import translate_for_t12
 from analyzer_rr_writer import AnalyzerRRCapacityError, populate_rr_input
 from ar_normalizer import parse_ar_file
+from mf_t12_normalizer import parse_mf_t12
 from ar_writer import AROutputError, populate_ar_collections
 from dashboard_model import compute_dashboard
 from dashboard_ui import render_dashboard
@@ -378,41 +379,108 @@ def _load_uw_template(uploaded_file) -> tuple[bytes, str, str]:
     )
 
 
-def _render_mf_placeholder() -> None:
-    """MF (multifamily) mode — Phase 0 placeholder.
+def _mf_t12_paste_csv(res) -> bytes:
+    """Build a paste-ready CSV for the MF UW Model's T-12 Analysis Layer 1.
 
-    The MF product line is under construction. This screen communicates the
-    planned pipeline so the mode is real (selectable, access-gated) while the
-    intake/analyzer work lands in later phases. ALF mode is fully functional;
-    MF mode renders this and stops before the ALF pipeline.
+    Columns: Acct # | Account Name (raw) | <12 month labels> | T-12 Total | → MAPPING.
+    Paste A->A, B->B, the 12 months across C-N, and the bucket into col P.
     """
-    st.title("🏢 Multifamily (MF) — Coming Soon")
+    import csv
+    import io
+
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["Acct #", "Account Name (raw)"] + res.month_labels
+               + ["T-12 Total", "→ MAPPING"])
+    for ln in res.lines:
+        w.writerow([ln.acct or "", ln.name]
+                   + [round(x, 2) for x in ln.monthly]
+                   + [round(ln.total, 2), ln.bucket])
+    return buf.getvalue().encode("utf-8-sig")
+
+
+def _render_mf_intake() -> None:
+    """MF (multifamily) mode — live T-12 intake (build slice 1).
+
+    The T-12 path is built end-to-end: upload -> auto-detect format -> classify
+    every GL line to a `_StdCOA` bucket -> reconcile -> download a paste-ready
+    mapping for the MF UW Model. RR / AR / OM and the model writer arrive next
+    (same tab).
+    """
+    st.title("\U0001F3E2 Multifamily (MF) — Intake")
     st.caption(
-        "You're in **Multifamily** mode. The MF intake pipeline is under "
-        "construction — switch to **Senior Housing (ALF)** above for the live "
-        "normalizer."
+        "MF intake is being built in slices. **T-12 is live** — upload one "
+        "below to auto-detect the format and map every line to the model's "
+        "`_StdCOA` buckets. RR / AR / OM and the MF UW Model writer arrive next."
     )
-    st.info(
-        "**MF is being built in phases.** Phase 0 (this selector + access "
-        "routing) is live now. The intake and analyzer arrive next.",
-        icon="🚧",
+
+    st.markdown("### \U0001F4C4 T-12 income statement")
+    up = st.file_uploader(
+        "Upload a T-12 (.xlsx) — PSI, Yardi, QuickBooks, or AppFolio/Tzadik formats",
+        type=["xlsx"], key="mf_t12_upload",
     )
-    st.markdown("#### Planned MF pipeline")
+    if up is not None:
+        try:
+            res = parse_mf_t12(up.getvalue())
+        except Exception as exc:  # noqa: BLE001 — surface any parse failure cleanly
+            st.error(f"Could not parse this T-12: {exc}")
+        else:
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Detected format", res.format_guess)
+            c2.metric("GL lines", len(res.lines))
+            c3.metric("Coverage", f"{res.coverage * 100:.0f}%")
+            c4.metric("Period", res.period or "—")
+
+            comp, rep = res.computed, res.reported
+            recon = []
+            for key, label, rk in [("income", "Total Income", "total_income"),
+                                   ("expense", "Total OpEx", "total_expense"),
+                                   ("noi", "NOI", "noi")]:
+                r = rep.get(rk)
+                recon.append({
+                    "Metric": label,
+                    "Computed": f"${comp[key]:,.0f}",
+                    "As-reported": f"${r:,.0f}" if r is not None else "—",
+                    "Δ": f"${comp[key] - r:,.0f}" if r is not None else "—",
+                })
+            st.markdown("**Reconciliation** (computed from mapped lines vs. the statement's own totals)")
+            st.dataframe(pd.DataFrame(recon), hide_index=True, use_container_width=True)
+
+            buckets: dict[str, float] = {}
+            for ln in res.lines:
+                buckets[ln.bucket] = buckets.get(ln.bucket, 0.0) + ln.total
+            bdf = pd.DataFrame(
+                [{"_StdCOA bucket": b, "T-12 Total": f"${v:,.0f}"}
+                 for b, v in sorted(buckets.items(), key=lambda kv: -abs(kv[1]))]
+            )
+            st.markdown("**Standardized buckets** (→ col P on the model)")
+            st.dataframe(bdf, hide_index=True, use_container_width=True)
+
+            for warn in res.warnings:
+                st.warning(warn, icon="⚠️")
+
+            st.download_button(
+                "⬇️ Download paste-ready mapping (CSV)",
+                data=_mf_t12_paste_csv(res),
+                file_name="MF_T12_StdCOA_mapping.csv",
+                mime="text/csv",
+            )
+            st.caption(
+                "Paste into the MF UW Model's **T-12 Analysis** Layer 1 (anchor "
+                "`A106`): Acct# → A, Account Name → B, the 12 months → C–N, and "
+                "**→ MAPPING → col P** (col P drives every Layer-3 SUMIFS)."
+            )
+
+    st.divider()
+    st.markdown("#### Coming next — same tab")
     st.markdown(
         """
-        1. **Login** with an ALF / MF selector *(✅ live — you're using it)*
-        2. **MF intake & mapping** of four document types →
-           - 📄 **RR** — Rent Roll (unit / floorplan / lease / rent)
-           - 📄 **T12** — Trailing-12 income statement
-           - 📄 **AR** — Aged Receivables (delinquency by unit)
-           - 📄 **OM** — Offering Memorandum (comp sets + property info)
-        3. **MF Analyzer** *(to be built)* — underwriting roll-up
-        4. **UW Template** — handoff to the downstream underwriting model
+        - \U0001F4C4 **RR** — Rent Roll → per-unit grid (`mf_normalizer`)
+        - \U0001F4C4 **AR** — Aged Receivables, joined by unit (`mf_ar_parser`)
+        - \U0001F4C4 **OM** — Offering Memorandum (comps + property info)
+        - \U0001F9EE **MF UW Model writer** — paste all four into
+          `MF_UW_Model_v15.xlsx` and download the populated workbook
         """
-    )
-    st.caption(
-        "Sample data for the first build target (property: *Hidden Lakes*) "
-        "lives in the repo's `MF Docs/` folder."
     )
 
 
@@ -464,7 +532,7 @@ else:
     )
 
 if app_mode == "MF":
-    _render_mf_placeholder()
+    _render_mf_intake()
     st.stop()
 
 # --- ALF mode (default): the existing pipeline runs below, unchanged. ---
