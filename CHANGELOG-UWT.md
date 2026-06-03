@@ -88,6 +88,13 @@ preserved.
    which `_is_blank` doesn't treat as blank → the computed-fallback never fired and B15
    read 0 on a fresh build. Both now return `None` when no source cell is numeric, so
    the RR-derived total (176 on Homestead) flows through.
+4. **Rent Roll Analysis row-210 header dropped in rev2** (found post-ship on an operator
+   populate run reporting the "A210 is blank" warning) — the rev2 authoring left row 210
+   entirely blank (v5 carries the full 47-col header Unit/Bed … Effective Conc $), so the
+   populated sheet had no column titles above the 211+ paste band. Restored v5's header
+   row verbatim (value + style) via `_fix_v6_rev2_rr_header_row.py` — Rent Roll Analysis
+   is unchanged v5→v6 (both 47 cols) so labels map 1:1. Metadata-preserving; applied to
+   canonical asset + operator's local copy. Warning now clears.
 
 **All 36 tests green** (3 stale-v6 assertions in `test_uw_template_writer.py` updated
 to rev2 rows + concept count 137→195). `UWT_VERSION` 0.8.1 → 0.9.0.
