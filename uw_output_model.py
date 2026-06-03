@@ -122,6 +122,60 @@ _CONCEPT_LABEL: Dict[str, str] = {
     "opex_lease_ground":          "Lease / ground lease",
 }
 
+# ---------------------------------------------------------------------------
+# Scenarios tab "Actuals (T-12)" col-B mapping (UW Template v6 rev2)
+# ---------------------------------------------------------------------------
+# Each Scenarios col-B expense input cell mirrors the corresponding T-12
+# Analysis value (already computed into `out`). Auto Expense + Lease/Ground
+# Lease have no Scenarios row of their own → folded into Other/Misc (B121).
+_SCN_EXPENSE_MIRROR: Dict[str, list] = {
+    "scn_exp_b81":  ["labor_care_staff"],
+    "scn_exp_b82":  ["labor_wellness"],
+    "scn_exp_b83":  ["labor_agency"],
+    "scn_exp_b84":  ["labor_activities"],
+    "scn_exp_b85":  ["labor_dining"],
+    "scn_exp_b86":  ["labor_maint_hk"],
+    "scn_exp_b87":  ["labor_admin"],
+    "scn_exp_b88":  ["labor_bonus"],
+    "scn_exp_b91":  ["labor_overtime"],
+    "scn_exp_b92":  ["labor_pto"],
+    "scn_exp_b93":  ["labor_payroll_taxes"],
+    "scn_exp_b94":  ["labor_benefits"],
+    "scn_exp_b95":  ["labor_workers_comp"],
+    "scn_exp_b96":  ["labor_401k"],
+    "scn_exp_b99":  ["opex_food_cost"],
+    "scn_exp_b100": ["opex_dining_supplies"],
+    "scn_exp_b101": ["opex_nursing_supplies"],
+    "scn_exp_b102": ["opex_recreation_supplies"],
+    "scn_exp_b103": ["opex_rm_fixed"],
+    "scn_exp_b104": ["opex_rm_variable"],
+    "scn_exp_b105": ["opex_hk_laundry"],
+    "scn_exp_b106": ["opex_marketing"],
+    "scn_exp_b107": ["opex_referral_fees"],
+    "scn_exp_b108": ["opex_utilities"],
+    "scn_exp_b109": ["opex_telephone_it"],
+    "scn_exp_b110": ["opex_pc_insurance"],
+    "scn_exp_b111": ["opex_auto_insurance"],
+    "scn_exp_b112": ["opex_fire_security"],
+    "scn_exp_b113": ["opex_pest"],
+    "scn_exp_b114": ["opex_re_taxes"],
+    "scn_exp_b115": ["opex_personal_prop_taxes"],
+    "scn_exp_b116": ["opex_legal"],
+    "scn_exp_b117": ["opex_professional_services"],
+    "scn_exp_b118": ["opex_bad_debt_expense"],
+    "scn_exp_b119": ["opex_permits_licenses"],
+    "scn_exp_b120": ["opex_office_ga"],
+    "scn_exp_b121": ["opex_misc", "opex_auto_expense", "opex_lease_ground"],
+    "scn_exp_b123": ["mgmt_fee"],
+}
+
+# Scenarios "Other Income" (B75) = T-12 Analysis N69:N76 community/ancillary rev.
+_SCN_OTHER_INCOME_KEYS: tuple = (
+    "community_movein_fees", "respite_care", "rev_meal_income",
+    "rev_housekeeping_income", "rev_laundry_income", "rev_scooter_fee",
+    "rev_transfer_fee", "other_community_revenue",
+)
+
 
 def _bed_counts(cond: pd.DataFrame) -> Dict[str, int]:
     """Licensed + occupied bed counts by care type, mirroring Rent Roll Recon
@@ -298,6 +352,53 @@ def compute_uw_output_values(
         out["ebitdarm"] = ebitdarm
         out["ebitdar"] = ebitdar
         out["ebitda"] = ebitdar  # less depreciation (0)
+
+        # ── Scenarios "Actuals (T-12)" col-B fills (UW Template v6 rev2) ───────
+        # Writer-paste values into the blue input cells — no template change.
+        # EXPENSE block: 1:1 mirror of the T-12 Analysis values just computed
+        # (Auto Expense + Lease/Ground Lease folded into Other/Misc B121 so the
+        # Scenarios Total Expenses ties to T-12 NOI).
+        for scn_key, srcs in _SCN_EXPENSE_MIRROR.items():
+            out[scn_key] = sum(float(out.get(s, 0.0) or 0.0) for s in srcs)
+
+        # INCOME block: reverse-engineer the beds×rate model inputs so the
+        # Scenarios Actuals EGI ties to the T-12 actual EGI. With rate =
+        # base_rent / occupied / 12 and vacancy% = 1 − occupied/licensed, the
+        # net-rent-after-vacancy reconstructs actual base rent per care type.
+        total_loc = out["loc_il"] + out["loc_al"] + out["loc_mc"]
+        scn_gpr = 0.0
+        for code in ("il", "al", "mc"):
+            lic = out[f"licensed_beds_{code}"]
+            occ = out[f"occupied_beds_{code}"]
+            base = out[f"base_rent_{code}"]
+            rate = (base / occ / 12) if occ else 0.0
+            out[f"scn_inc_beds_{code}"] = lic
+            out[f"scn_inc_rate_{code}"] = rate
+            out[f"scn_inc_vacancy_{code}"] = (1 - occ / lic) if lic else 0.0
+            scn_gpr += lic * rate * 12
+        out["scn_inc_loss_to_lease_pct"] = 0.0  # no separate LtL inside T-12 actual EGI
+        concessions = abs(float(out.get("concessions_specials", 0.0) or 0.0))
+        baddebt = abs(float(out.get("bad_debt_writeoffs_revenue", 0.0) or 0.0))
+        out["scn_inc_concessions_baddebt_pct"] = (
+            (concessions + baddebt) / scn_gpr if scn_gpr else 0.0
+        )
+        out["scn_inc_care_fees_pct"] = (total_loc / scn_gpr) if scn_gpr else 0.0
+        out["scn_inc_second_person_rev"] = out.get("second_person_revenue", 0.0)
+        out["scn_inc_other_income"] = sum(
+            float(out.get(k, 0.0) or 0.0) for k in _SCN_OTHER_INCOME_KEYS
+        )
+
+    # ── Prop Info auto-fill aggregates (RR-driven; v6 rev2 mapping) ───────────
+    out["rr_unit_count"] = int(len(cond))
+    if "Sq Ft" in cond.columns:
+        total_sqft = float(pd.to_numeric(cond["Sq Ft"], errors="coerce").sum())
+        if total_sqft > 0:
+            out["rr_gross_sqft"] = total_sqft
+    codes_present = [c for c in ("IL", "AL", "MC") if beds[f"licensed_{c.lower()}"] > 0]
+    if len(codes_present) == 1:
+        out["asset_class"] = codes_present[0]
+    elif codes_present:
+        out["asset_class"] = "Mix (" + "/".join(codes_present) + ")"
 
     return out
 

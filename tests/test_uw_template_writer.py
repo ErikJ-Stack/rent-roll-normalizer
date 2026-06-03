@@ -91,7 +91,7 @@ def test_empty_analyzer_smoke() -> None:
     # report summary keys
     summary = report.summary
     _check("total_concepts" in summary, "summary missing total_concepts")
-    _check(summary["total_concepts"] == 137, f"expected 137 concepts (registry v0.5.0 — v6 absorption added 14), got {summary['total_concepts']}")
+    _check(summary["total_concepts"] == 195, f"expected 195 concepts (registry v0.6.0 — v6 rev2 Prop Info+Scenarios mapping), got {summary['total_concepts']}")
     _check("cells_written" in summary, "summary missing cells_written")
 
     by = report.by_outcome()
@@ -303,42 +303,42 @@ def test_empty_analyzer_smoke_v6() -> None:
 
     _check(report.template_version == "v6", f"expected v6 default, got {report.template_version!r}")
     _check(isinstance(populated, bytes) and len(populated) > 0, "populated bytes empty")
-    _check(report.summary["total_concepts"] == 137, f"expected 137 concepts, got {report.summary['total_concepts']}")
+    _check(report.summary["total_concepts"] == 195, f"expected 195 concepts, got {report.summary['total_concepts']}")
 
     wb = openpyxl.load_workbook(io.BytesIO(populated), data_only=False)
     _check(len(wb.sheetnames) == 16, f"expected 16 sheets (v6), got {len(wb.sheetnames)}")
     _check("T-12 Analysis" in wb.sheetnames, "T-12 Analysis missing")
     ws = wb["T-12 Analysis"]
 
-    # v6 income layout: EGI is a preserved SUM formula at N77 (not v5's N69).
-    egi = ws["N77"].value
+    # v6 rev2 income layout: EGI is a preserved SUM formula at N80 (was N77).
+    egi = ws["N80"].value
     _check(
         isinstance(egi, str) and egi.startswith("="),
-        f"v6 EGI should be a preserved formula at N77, got {egi!r}",
+        f"v6 rev2 EGI should be a preserved formula at N80, got {egi!r}",
     )
-    # EBITDAR (N132) + EBITDA (N133) are authored by the finalize pass
-    # (template ships N132 as literal 0 / N133 blank).
-    ebitdar = ws["N132"].value
+    # EBITDAR (N135) + EBITDA (N136) — rev2 ships them as formulas; the finalize
+    # pass mirrors them across B–M (author step is a no-op when already a formula).
+    ebitdar = ws["N135"].value
     _check(
         isinstance(ebitdar, str) and ebitdar.startswith("="),
-        f"v6 EBITDAR (N132) should be authored as a formula, got {ebitdar!r}",
+        f"v6 rev2 EBITDAR (N135) should be a formula, got {ebitdar!r}",
     )
-    ebitda = ws["N133"].value
+    ebitda = ws["N136"].value
     _check(
         isinstance(ebitda, str) and ebitda.startswith("="),
-        f"v6 EBITDA (N133) should be authored as a formula, got {ebitda!r}",
+        f"v6 rev2 EBITDA (N136) should be a formula, got {ebitda!r}",
     )
-    # Monthly mirror: B77 (EGI, col B) should carry the mirrored formula.
-    b77 = ws["B77"].value
+    # Monthly mirror: B80 (EGI, col B) should carry the mirrored formula.
+    b80 = ws["B80"].value
     _check(
-        isinstance(b77, str) and b77.startswith("="),
-        f"v6 EGI monthly mirror at B77 should be a formula, got {b77!r}",
+        isinstance(b80, str) and b80.startswith("="),
+        f"v6 rev2 EGI monthly mirror at B80 should be a formula, got {b80!r}",
     )
     _check(report.summary.get("t12_totals_finalized", 0) > 0, "v6 finalize wrote nothing")
 
-    print(f"  ✓ v6 default: {report.summary['total_concepts']} concepts, {len(wb.sheetnames)} sheets")
-    print(f"  ✓ N77 (EGI)={egi!r}  N132 (EBITDAR)={ebitdar!r}  N133 (EBITDA)={ebitda!r}")
-    print(f"  ✓ B77 monthly mirror={b77!r}")
+    print(f"  ✓ v6 rev2 default: {report.summary['total_concepts']} concepts, {len(wb.sheetnames)} sheets")
+    print(f"  ✓ N80 (EGI)={egi!r}  N135 (EBITDAR)={ebitdar!r}  N136 (EBITDA)={ebitda!r}")
+    print(f"  ✓ B80 monthly mirror={b80!r}")
     print(f"  ✓ outcomes: {dict(report.summary)}")
 
 
@@ -359,7 +359,7 @@ def test_populated_analyzer_e2e_v6() -> None:
 
     wb_out = openpyxl.load_workbook(io.BytesIO(populated), data_only=False)
     ws_t12 = wb_out["T-12 Analysis"]
-    for addr, label in (("N77", "EGI"), ("N131", "EBITDARM"), ("N132", "EBITDAR"), ("N133", "EBITDA")):
+    for addr, label in (("N80", "EGI"), ("N134", "EBITDARM"), ("N135", "EBITDAR"), ("N136", "EBITDA")):
         v = ws_t12[addr].value
         print(f"  T-12 Analysis!{addr} ({label}) = {v!r}")
         _check(

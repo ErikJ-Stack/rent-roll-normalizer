@@ -1,6 +1,6 @@
 # ALF UW Template — Mapping Tracker
 
-> Generated from `tools/uw_template/registry.json` on 2026-05-30 05:18 UTC.  **Do not edit by hand** — edit `registry.json` and re-run `python tools/uw_template/build_mapping_artifacts.py`.
+> Generated from `tools/uw_template/registry.json` on 2026-06-03 06:16 UTC.  **Do not edit by hand** — edit `registry.json` and re-run `python tools/uw_template/build_mapping_artifacts.py`.
 
 - Analyzer source: `ALF_Financial_Analyzer_Only.xlsx` (substrate `v0.2.14`)
 - Primary template: `v4` → `Sample Files/ALF_UW_Template_v4.xlsx`
@@ -23,20 +23,20 @@
 | Status | Count |
 |---|---|
 | `mapped` | 117 |
+| `proposed` | 62 |
 | `derived` | 8 |
-| `proposed` | 4 |
 | `gap_source` | 4 |
 | `gap_target` | 2 |
 | `header_only` | 1 |
 | `substrate_ready_parser_pending` | 1 |
-| **Total concepts** | **137** |
+| **Total concepts** | **195** |
 
 ## Status rollup by path
 
 | Path | Total | mapped | gap_target | gap_source | proposed | other |
 |---|---|---|---|---|---|---|
-| **t12** | 86 | 75 | 2 | 0 | 4 | 5 |
-| **rent_roll** | 35 | 30 | 0 | 0 | 0 | 5 |
+| **t12** | 89 | 75 | 2 | 0 | 7 | 5 |
+| **rent_roll** | 38 | 30 | 0 | 0 | 3 | 5 |
 | **ar** | 4 | 0 | 0 | 4 | 0 | 0 |
 
 ## Mappings by path & category
@@ -164,7 +164,23 @@
 | **EBITDA** <br/> `ebitda` | `UW Output!E_or_F68` | `—` | `mapped` | Template has no EBITDA row in Layer 3 (only EBITDARM and EBITDAR/NOI). Either add an EBITDA row to template or drop from writer scope. · v5: Closed in v5 — N118 row added (label only, no formula). Writer populates from UW Output row 68. |
 | **NOI (separator)** <br/> `noi_separator` | `UW Output!65` | `—` | `header_only` | UW Output row 65 is a visual band — see UW-OUTPUT-HANDOFF-CONTRACT.md §4 gotcha #1. Writer must skip. |
 
+#### income (3)
+
+| Concept | Source | Target (`v4`) | Status | Notes |
+|---|---|---|---|---|
+| **Base Rent — Other Care** <br/> `base_rent_other` | `UW Output` | `—` | `proposed` | Added by operator's v6 rev2 income restructure (Other Care / actual-vacancy). Writer/evaluator support is the follow-on. |
+| **LOC / Care Services — Other Care** <br/> `loc_other` | `UW Output` | `—` | `proposed` | Added by operator's v6 rev2 income restructure (Other Care / actual-vacancy). Writer/evaluator support is the follow-on. |
+| **Less: Vacancy / Credit Loss (actual)** <br/> `vacancy_credit_loss_actual` | `UW Output` | `—` | `proposed` | Added by operator's v6 rev2 income restructure (Other Care / actual-vacancy). Writer/evaluator support is the follow-on. |
+
 ### RENT ROLL PATH · RENT ROLL INPUT → RENT ROLL ANALYSIS ROW 211+
+
+#### capacity (3)
+
+| Concept | Source | Target (`v4`) | Status | Notes |
+|---|---|---|---|---|
+| **# Units (physical rooms)** <br/> `rr_unit_count` | `rr_aggregate` | `—` | `proposed` | Auto-fill from RR unit-row count. |
+| **Gross Sq Ft** <br/> `rr_gross_sqft` | `rr_aggregate` | `—` | `proposed` | Auto-fill from RR per-unit square footage sum. |
+| **Asset Class (IL/AL/MC/Other/Mix)** <br/> `asset_class` | `derived` | `—` | `proposed` | Derived from care types present in the RR. |
 
 #### rr_identity (7)
 

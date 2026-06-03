@@ -78,8 +78,8 @@ APP_LAST_UPDATED = "2026-05-08"   # alias for RR_LAST_UPDATED
 RR_VERSION = "1.19.0"
 RR_LAST_UPDATED = "2026-05-27"
 
-UWT_VERSION = "0.8.1"             # Track 4 — v6 template Section-D income-summary repoint (B22/B23/B24 → N80/N83/N77; v5→v6 partial-repoint miss)
-UWT_LAST_UPDATED = "2026-05-30"
+UWT_VERSION = "0.9.0"             # Track 4 — v6 rev2 absorbed (operator Other-Care template): re-sync + Prop Info & Scenarios col-B mapping AND fills (registry 0.6.0); writer _T12_LAYOUT rev2 fix + Section-D repoint
+UWT_LAST_UPDATED = "2026-06-03"
 
 T12_VERSION = "0.2.1"
 T12_LAST_UPDATED = "2026-05-11"
