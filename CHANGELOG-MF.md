@@ -7,6 +7,33 @@ and the `mf_` naming convention.
 
 ---
 
+## MF v0.4.1 — 2026-06-03 — RR parser: itemized "charge codes" format (multi-row per unit)
+
+Operator-reported "unable to parse this RR" on an Avana Stoney Ridge rent roll
+in the **"Rent Roll (Operations) - Rent Related Charge Codes"** format — a
+*multi-row-per-unit* layout (unit identity on a header row; charges — Amenity
+Rent, Base Rent, … — itemized across continuation rows with a blank Bldg-Unit;
+an L-blank per-unit total row). `mf_normalizer` assumed one row per unit and
+crashed (`int.strip()` on a non-string status).
+
+**Fixes:**
+- `mf_mappings.normalize_status()` hardened to coerce non-string inputs (the crash).
+- `mf_normalizer` column mapping switched to **needle-priority** (map order wins,
+  e.g. "Unit Type" over "Floor Plan"); added `charge code` + `gpr market` headers.
+- **Block-based parsing:** rows group into per-unit blocks; in the itemized
+  format Scheduled/Actual charges are **summed across the block's charge-code
+  rows** (where the Charge Code column is populated — skipping the L-blank total
+  row); one-row formats read the header row directly. Auto-detected by presence
+  of a Charge Code column — **no regression** on the one-row format.
+- `tests/test_mf_rr_ar.py` +`test_rr_itemized_charge_codes` (skip if absent).
+
+**Validation:** Avana → **263 units** (244 occupied / 18 vacant); 384-11
+scheduled = $1,929 = Amenity $145 + Base $1,784 (the L-blank $1,929 total row
+correctly excluded). Hidden Lakes regression intact: **143 units** (66/77/9).
+(Avana uses no `**` legal prefix → legal_count 0, expected.)
+
+---
+
 ## MF v0.4.0 — 2026-06-03 — Full MF intake: writer + RR/AR app tab → populated MF UW Model
 
 Closes the operator's full-intake build: upload RR + T-12 + AR → download a

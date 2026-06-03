@@ -12,6 +12,11 @@ import pytest
 
 RR = "MF Docs/RR-Hidden-Lakes-4-16-26-xlsx.xlsx"
 AR = "MF Docs/AR-Hidden-Lakes-3-31-26-xlsx.xlsx"
+# Itemized "charge codes" RR format (multi-row per unit) — gitignored deal file.
+RR_ITEMIZED = os.path.expanduser(
+    "~/Dropbox/Erik Javellana - Deal Review/Deals under review/"
+    "MF_VA_Woodbridge_AvanaStoneyRidge/Rent Roll/"
+    "Rent Roll (Operations) - Avana Stoney Ridge 05.12.26.xlsx")
 
 
 # --- pure unit tests (no file deps) ---
@@ -39,6 +44,19 @@ def test_rr_hidden_lakes():
     assert r.occupied == 66
     assert r.vacant == 77
     assert r.legal_count == 9
+
+
+@pytest.mark.skipif(not os.path.exists(RR_ITEMIZED), reason="gitignored itemized RR absent")
+def test_rr_itemized_charge_codes():
+    """Multi-row-per-unit 'charge codes' format: identity on the header row,
+    charges itemized across continuation rows and summed into the unit."""
+    from mf_normalizer import parse_mf_rr
+    r = parse_mf_rr(RR_ITEMIZED)
+    assert r.unit_count == 263
+    assert r.occupied == 244
+    u = next(x for x in r.units if x.bldg_unit == "384-11")
+    assert abs(u.market_rent - 1902) < 0.01
+    assert abs(u.scheduled_charges - 1929) < 0.01   # Amenity 145 + Base 1784
 
 
 @pytest.mark.skipif(not (os.path.exists(RR) and os.path.exists(AR)),
