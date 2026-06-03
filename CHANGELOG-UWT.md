@@ -8,6 +8,92 @@ opened (none yet — Phase 0 is the seed release).
 
 ---
 
+## v0.9.0 — v6 rev2 absorbed (Other Care) + Prop Info & Scenarios col-B mapping (2026-06-03)
+
+**Operator goal**: "I want the raw datas to populate into this ALF UW Template …
+Fill in the Prop Info tab property details from RR. Scenarios tab T-12 Actuals
+(col B) must be filled or linked to T-12 Analysis tab and rent roll. Complete the
+mapping only." Operator supplied a `Deals/…/ALF_UW_Template_v6.xlsx`, the Homestead
+RR v2, and the March 2026 T12.
+
+**Critical finding (verify-canonical-source paid off again)**: the operator's
+Deals-folder v6 is a **newer revision** than the repo's committed
+`assets/ALF_UW_Template_v6.xlsx` that registry v0.5.0 mapped against. The operator
+had authored full **"Other Care" (4th care type)** support across Prop Info,
+Scenarios, and T-12 Analysis, plus IFERROR hardening — which **shifted ~70 v6
+targets** off their registered cells. Mapping new tabs on top of the stale base
+would have written good data into wrong cells (e.g. EGI to N77 where the new file
+has a blank row; occupied IL beds to B20 where the new file has the Total SUM).
+
+Per operator decision (AskUserQuestion), the Deals file is now **canonical v6**.
+
+**Changes (registry-only; mapping. Writer/evaluator support is the follow-on):**
+
+- **Asset replaced** — `assets/ALF_UW_Template_v6.xlsx` ← operator's Deals file.
+- **Re-sync (82 targets)** — every v6 T-12 Analysis + Prop Info target re-pointed via
+  a **validated non-uniform remap** (income +1/+2/+3: Other Care base rent N61, Other
+  Care LOC N66, and a new "Less: Vacancy/Credit Loss (actual)" N77 line were inserted;
+  Prop Info "Other Care Units" row 19 → occupied-beds +1). Remap validated **0 label
+  mismatches** across all plain-label rows; post-absorb every target lands on its
+  correct label cell. Key landings: EGI→N80, Total Labor→N102, Food Cost→N104,
+  EBITDAR/NOI→N135, Mgmt Fee→N131, Occupied Beds IL/AL/MC→B21/B22/B23.
+- **3 new T-12 Analysis income concepts** — `base_rent_other` (N61), `loc_other` (N66),
+  `vacancy_credit_loss_actual` (N77); status `proposed` (0 for IL/AL/MC-only deals).
+- **3 Prop Info auto-fill concepts** (`rr_unit_count`→B6, `rr_gross_sqft`→B11,
+  `asset_class`→B13) — the only Prop Info fields derivable from RR; the rest (address,
+  buildings, year built, market data, utilities) are genuinely manual.
+- **52 Scenarios col-B "Actuals (T-12)" concepts** (new `scenarios` path):
+  - **38 expense mirrors** — 1:1 to T-12 Analysis (labor B81-B96, non-labor B99-B121,
+    Mgmt Fee B123). `Auto Expense` (N117) + `Lease/Ground Lease` (N128) folded into
+    `Other / miscellaneous` (B121) so Total Expenses ties to T-12 NOI.
+  - **14 income derived** — beds = licensed beds; rate = base rent ÷ occupied ÷ 12;
+    vacancy % = 1 − occupied/licensed; care fees % = LOC/GPR; concessions/bad-debt %;
+    2nd Person (N68); Other Income (Σ N69:N76). Reverse-engineers the beds×rate model
+    so the Actuals column's EGI ties to T-12 actual EGI.
+
+**Mechanism (operator decision)**: writer **pastes computed values** into the blue
+input cells — **no template formula/function changes**. The cells stay manual inputs;
+the analyst can still type over them. (Live-formula-link alternative declined.)
+
+**Registry 0.5.0 → 0.6.0**: 137 → **195 concepts**. Status rollup: 117 mapped /
+62 proposed / 8 derived / 4 gap_source / 2 gap_target / 1 header_only /
+1 substrate_ready_parser_pending. New categories `scenario_expense` / `scenario_income`.
+Absorber retained as audit trail: `tools/uw_template/_absorb_v6_rev2_propinfo_scenarios.py`.
+
+**Fills implemented (same release).** `uw_output_model.compute_uw_output_values`
+extended to emit the 58 new keys — Scenarios expense mirrors (reuse the T-12
+Analysis values already computed; Auto Expense + Lease folded into Other/Misc),
+Scenarios income derived (rate = base ÷ occupied ÷ 12; vacancy % = 1 − occ/licensed;
+care-fees % = LOC ÷ GPR; concessions/bad-debt %; 2nd Person; Other Income), and
+Prop Info aggregates (#Units = RR row count; Gross Sq Ft = Σ unit sqft; Asset Class
+derived). **No writer code change for the fills** — the writer's existing
+computed-fallback path (blank Analyzer source → `computed_values[key]`) writes them.
+Verified end-to-end on Homestead RR v2 + March 2026 T12: **55 new cells populate** —
+#Units 176, Gross Sq Ft 65,982, Asset Class "Mix (IL/AL/MC)"; Scenarios Care Fees %
+ties LOC exactly, expenses mirror T-12 to the penny, subtotal formulas (B89/B122)
+preserved.
+
+**Two bugs found + fixed in the operator's rev2 file:**
+1. **Section-D regression** — `T-12 Analysis!B22/B23/B24` (GPR/Net Rent/EGI diagnostic)
+   pointed at `N58/N64/N71` (Base Rent IL / LOC AL / Meal Income). Operator-approved
+   3-cell fix → `N83/N86/N80` via `_fix_v6_rev2_section_d_refs.py` (metadata-preserving
+   per openpyxl quirk #6; restores rev2's own `metadata.xml`). Applied to **both** the
+   canonical asset and the operator's local `Deals/…/ALF Templates/` copy.
+2. **Writer `_T12_LAYOUT["v6"]` stale** — the finalize/Section-I pass still used the
+   prior-v6 rows (EBITDAR N132, Section I 138). rev2 shifted these +3 → updated to
+   EBITDAR N135 / EBITDA N136 / mirror rows (62,67,80,102,129,132–136) / Section I 141
+   / Section J 194–196. Without this the writer authored totals into wrong rows.
+3. **`_compute_derived` returned 0, not None, on a blank Analyzer** — `licensed_beds_total`
+   (Prop Info!B15) and `opex_total_incl_mgmt` summed all-blank UW Output cells to `0`,
+   which `_is_blank` doesn't treat as blank → the computed-fallback never fired and B15
+   read 0 on a fresh build. Both now return `None` when no source cell is numeric, so
+   the RR-derived total (176 on Homestead) flows through.
+
+**All 36 tests green** (3 stale-v6 assertions in `test_uw_template_writer.py` updated
+to rev2 rows + concept count 137→195). `UWT_VERSION` 0.8.1 → 0.9.0.
+
+---
+
 ## v0.8.1 — v6 template Section-D income-summary repoint (2026-05-30)
 
 **Operator-reported on a populated Briar Glen output**: "the T12 tab isn't

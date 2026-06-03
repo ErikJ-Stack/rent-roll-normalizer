@@ -142,13 +142,19 @@ _T12_LAYOUT: dict[str, dict] = {
         "section_i_start": 123, "section_i_end": 172,
         "section_j_rev": 176, "section_j_opex": 177, "section_j_ebitdar": 178,
     },
+    # v6 rev2 (operator Other-Care revision, canonical 2026-06-03): the income
+    # restructure shifted Layer-3 totals +3 and Section I/J +3 vs the prior v6.
+    # EGI N77→N80, Total Labor N99→N102, Total Non-Labor N126→N129,
+    # EBITDARM N131→N134, EBITDAR N132→N135, EBITDA N133→N136. rev2 already
+    # ships N135/N136 as formulas, so the author step is a no-op (gated on
+    # "not already a formula") — formulas kept here for consistency + mirroring.
     "v6": {
         "net_rent_row": None,
-        "ebitdar_row": 132, "ebitdar_formula": "=N131-N128",
-        "ebitda_row": 133,  "ebitda_formula": "=N132",
-        "mirror_rows": (61, 65, 77, 99, 126, 129, 130, 131, 132, 133),
-        "section_i_start": 138, "section_i_end": 187,
-        "section_j_rev": 191, "section_j_opex": 192, "section_j_ebitdar": 193,
+        "ebitdar_row": 135, "ebitdar_formula": "=N134-N131",
+        "ebitda_row": 136,  "ebitda_formula": "=N135-N128",
+        "mirror_rows": (62, 67, 80, 102, 129, 132, 133, 134, 135, 136),
+        "section_i_start": 141, "section_i_end": 190,
+        "section_j_rev": 194, "section_j_opex": 195, "section_j_ebitdar": 196,
     },
 }
 
@@ -316,21 +322,26 @@ def _compute_derived(wb_analyzer, concept: dict, scenario: str) -> Any:
     The set of derived keys is small and hard-coded.
     """
     key = concept.get("key")
+    # NB: return None (not 0) when the UW Output source cells are all blank, so
+    # the writer's computed-fallback supplies the in-Python value. A fresh
+    # openpyxl-built Analyzer has no cached UW Output values → these reads come
+    # back blank; summing them to 0 would otherwise mask the fallback (0 is not
+    # "blank"), e.g. Prop Info!B15 Licensed Total showing 0 instead of the
+    # RR-derived total.
     if key == "licensed_beds_total":
         # SUM of UW Output B70 + C70 + D70 (IL + AL + MC).
         ws = wb_analyzer["UW Output"]
-        parts = [ws[f"{c}70"].value for c in ("B", "C", "D")]
-        return sum((p or 0) for p in parts if isinstance(p, (int, float)))
+        nums = [v for v in (ws[f"{c}70"].value for c in ("B", "C", "D"))
+                if isinstance(v, (int, float))]
+        return sum(nums) if nums else None
     if key == "opex_total_incl_mgmt":
         # SUM of UW Output row 63 (Total opex excl. mgmt) + row 64 (Mgmt fee)
         # in the active scenario column.
         col = "F" if scenario == "normalized" else "E"
         ws = wb_analyzer["UW Output"]
-        a = ws[f"{col}63"].value or 0
-        b = ws[f"{col}64"].value or 0
-        return (a if isinstance(a, (int, float)) else 0) + (
-            b if isinstance(b, (int, float)) else 0
-        )
+        nums = [v for v in (ws[f"{col}63"].value, ws[f"{col}64"].value)
+                if isinstance(v, (int, float))]
+        return sum(nums) if nums else None
     if key == "second_person_revenue":
         # Source says "Computed elsewhere" — for now, return None and let
         # the writer skip. Could later sum Rent Roll Input col V × 12.
