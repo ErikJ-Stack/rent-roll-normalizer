@@ -7,6 +7,35 @@ and the `mf_` naming convention.
 
 ---
 
+## MF v0.3.0 — 2026-06-03 — MF parser slice 2: RR + AR parsers
+
+Adds the rent-roll and AR-aging parsers — the per-unit half of the intake.
+
+**Shipped:**
+- **`mf_normalizer.py`** — `parse_mf_rr(source) → MFRRResult` of `MFUnit`
+  records (the `Rent Roll Analysis` grid fields). Header-driven fuzzy column
+  mapping; unit rows identified by a recognized status (cleanly stops at the
+  Charge-Code-Summary / Future-Resident blocks that trail the grid); Bldg-Unit
+  split; legal flag from the `**` resident prefix; status normalized via
+  `mf_mappings.normalize_status`. `unit_key()` helper = the AR join key.
+- **`mf_ar_parser.py`** — `parse_mf_ar(source) → MFARResult` +
+  `join_ar_to_units(units, ar)`. Joins aging to units on a normalized Bldg-Unit
+  key with **two-way unmatched reporting** (AR rows with no unit; units with a
+  balance but no AR detail) — never silently drops (decision §2.7.3).
+- **`tests/test_mf_rr_ar.py`** — unit tests (Bldg-Unit split / join key) +
+  Hidden Lakes e2e (skip when gitignored files absent).
+
+**Validation (Hidden Lakes):** RR → **143 units** (66 occupied / 77 vacant /
+9 legal-flagged — matches the DD checklist's 143 units + 9 evictions). AR →
+**62 rows, $237,542.14 total**, joining **61/62** to units (the 1 unmatched,
+`L3`, is genuinely absent from the RR grid); aging buckets reconcile to each
+row's balance (gross of prepayments).
+
+**Next:** `mf_uw_model_writer` (paste RR/AR/T-12 into `MF_UW_Model_v15.xlsx` +
+metadata restore) → RR/AR uploaders + model download in the app tab.
+
+---
+
 ## MF v0.2.1 — 2026-06-03 — MF mode goes live: T-12 intake in the app
 
 Replaces the Phase-0 "Coming Soon" placeholder in MF mode with a **working T-12
