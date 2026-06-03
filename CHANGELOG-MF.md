@@ -7,6 +7,46 @@ and the `mf_` naming convention.
 
 ---
 
+## MF v0.4.0 — 2026-06-03 — Full MF intake: writer + RR/AR app tab → populated MF UW Model
+
+Closes the operator's full-intake build: upload RR + T-12 + AR → download a
+**populated MF UW Model**.
+
+**Shipped:**
+- **`mf_uw_model_writer.py`** — `populate_mf_model(model_bytes, *, t12, rr,
+  property_name, property_units)`. Pastes T-12 lines into `T-12 Analysis`
+  Layer 1 (A106: Acct#/Name/12 months/`O=SUM` formula/`P` bucket; month headers
+  aligned) and RR units (+joined AR) into the `Rent Roll Analysis` grid (A273,
+  cols A–T incl. the Legal boolean and AR aging Q–T); sets Prop Info B4/B6.
+  Clears prior example data; leaves every diagnostic/Layer-3 formula untouched.
+- **`app.py`** — `_render_mf_intake()` rebuilt: RR / T-12 / AR uploaders + a
+  model-override expander → per-doc summaries (RR units/occ/vac/legal; the
+  T-12 detail panel; AR rows/total + join report) → **Populate the MF UW
+  Model** → download the populated workbook. Bundled model at
+  `assets/MF_UW_Model_v15.xlsx`; `BUNDLED_MF_MODEL_PATH` constant.
+- **`tests/test_mf_uw_model_writer.py`** — CI-runnable (model is committed):
+  synthetic RR/T-12 → asserts cell placement, the Legal boolean, AR aging,
+  the `O=SUM` formula, Prop Info, and **formula survival** (EGI `=N67+N79`,
+  `I5=COUNTA(...)`, bucket SUMIFS). 17/17 assertions pass.
+
+**End-to-end (Hidden Lakes):** RR 143 units + T-12 80 lines → valid 23-sheet
+workbook (324 KB), reloads clean; `Rent Roll Analysis!I5` now counts 143,
+T-12 Layer-3 SUMIFS aggregate the pasted col-P buckets.
+
+**openpyxl-quirk finding:** the v15 model has **no `xl/metadata.xml`** and no
+dynamic-array spills (the 76 "array" hints are legacy CSE arrays, preserved by
+openpyxl) — so the defensive `_restore_dynamic_arrays` call is a no-op here.
+openpyxl does drop **cell comments, their indicators, the Claude-for-Excel
+add-in, and custom doc properties** (no data/formulas/charts — the model has
+zero charts/images) — surfaced as a report warning; open + re-save in Excel
+only to recover those annotations. (Corrects the Phase-0 note that wrongly said
+the committed model had metadata.xml.)
+
+**Still open:** OM (Offering Memorandum) intake + the redIQ Sortable-RR
+ancillary-fee breakouts (RR grid cols W–AK, best-effort per §2.7.2).
+
+---
+
 ## MF v0.3.0 — 2026-06-03 — MF parser slice 2: RR + AR parsers
 
 Adds the rent-roll and AR-aging parsers — the per-unit half of the intake.

@@ -54,6 +54,9 @@ from analyzer_rr_translator import translate_for_t12
 from analyzer_rr_writer import AnalyzerRRCapacityError, populate_rr_input
 from ar_normalizer import parse_ar_file
 from mf_t12_normalizer import parse_mf_t12
+from mf_normalizer import parse_mf_rr
+from mf_ar_parser import join_ar_to_units, parse_mf_ar
+from mf_uw_model_writer import populate_mf_model
 from ar_writer import AROutputError, populate_ar_collections
 from dashboard_model import compute_dashboard
 from dashboard_ui import render_dashboard
@@ -112,6 +115,9 @@ BUNDLED_ANALYZER_PATH = Path(__file__).parent / "ALF_Financial_Analyzer_Only.xls
 # B56 headers repointed + metadata.xml / cm markers restored).
 BUNDLED_UW_TEMPLATE_PATH = Path(__file__).parent / "assets" / "ALF_UW_Template_v6.xlsx"
 BUNDLED_UW_TEMPLATE_VERSION = "v6"
+
+# MF (multifamily) UW Model — committed reference template (Track 4-MF).
+BUNDLED_MF_MODEL_PATH = Path(__file__).parent / "assets" / "MF_UW_Model_v15.xlsx"
 
 
 # ---------------------------------------------------------------------------
@@ -399,88 +405,153 @@ def _mf_t12_paste_csv(res) -> bytes:
     return buf.getvalue().encode("utf-8-sig")
 
 
-def _render_mf_intake() -> None:
-    """MF (multifamily) mode — live T-12 intake (build slice 1).
+def _render_mf_t12_detail(res) -> None:
+    """Render the T-12 parse result: metrics, reconciliation, buckets, paste CSV."""
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Detected format", res.format_guess)
+    c2.metric("GL lines", len(res.lines))
+    c3.metric("Coverage", f"{res.coverage * 100:.0f}%")
+    c4.metric("Period", res.period or "—")
 
-    The T-12 path is built end-to-end: upload -> auto-detect format -> classify
-    every GL line to a `_StdCOA` bucket -> reconcile -> download a paste-ready
-    mapping for the MF UW Model. RR / AR / OM and the model writer arrive next
-    (same tab).
-    """
+    comp, rep = res.computed, res.reported
+    recon = []
+    for key, label, rk in [("income", "Total Income", "total_income"),
+                           ("expense", "Total OpEx", "total_expense"),
+                           ("noi", "NOI", "noi")]:
+        r = rep.get(rk)
+        recon.append({
+            "Metric": label,
+            "Computed": f"${comp[key]:,.0f}",
+            "As-reported": f"${r:,.0f}" if r is not None else "—",
+            "Δ": f"${comp[key] - r:,.0f}" if r is not None else "—",
+        })
+    st.markdown("**Reconciliation** (computed from mapped lines vs. the statement's own totals)")
+    st.dataframe(pd.DataFrame(recon), hide_index=True, use_container_width=True)
+
+    buckets: dict[str, float] = {}
+    for ln in res.lines:
+        buckets[ln.bucket] = buckets.get(ln.bucket, 0.0) + ln.total
+    bdf = pd.DataFrame(
+        [{"_StdCOA bucket": b, "T-12 Total": f"${v:,.0f}"}
+         for b, v in sorted(buckets.items(), key=lambda kv: -abs(kv[1]))]
+    )
+    st.markdown("**Standardized buckets** (→ col P on the model)")
+    st.dataframe(bdf, hide_index=True, use_container_width=True)
+    for warn in res.warnings:
+        st.warning(warn, icon="⚠️")
+    st.download_button(
+        "⬇️ T-12 paste-ready mapping (CSV)", data=_mf_t12_paste_csv(res),
+        file_name="MF_T12_StdCOA_mapping.csv", mime="text/csv", key="mf_t12_csv",
+    )
+
+
+def _render_mf_intake() -> None:
+    """MF (multifamily) mode — RR / T-12 / AR intake → populate the MF UW Model."""
     st.title("\U0001F3E2 Multifamily (MF) — Intake")
     st.caption(
-        "MF intake is being built in slices. **T-12 is live** — upload one "
-        "below to auto-detect the format and map every line to the model's "
-        "`_StdCOA` buckets. RR / AR / OM and the MF UW Model writer arrive next."
+        "Upload the operator docs below — each is auto-detected, normalized, and "
+        "mapped to the MF UW Model's `_StdCOA` buckets, then pasted into a "
+        "downloadable populated **MF UW Model**. RR / T-12 / AR are live; OM next."
     )
 
-    st.markdown("### \U0001F4C4 T-12 income statement")
-    up = st.file_uploader(
-        "Upload a T-12 (.xlsx) — PSI, Yardi, QuickBooks, or AppFolio/Tzadik formats",
-        type=["xlsx"], key="mf_t12_upload",
-    )
-    if up is not None:
+    cu1, cu2, cu3 = st.columns(3)
+    rr_file = cu1.file_uploader("\U0001F4C4 Rent Roll (.xlsx)", type=["xlsx"], key="mf_rr_up")
+    t12_file = cu2.file_uploader("\U0001F4C4 T-12 (.xlsx)", type=["xlsx"], key="mf_t12_up")
+    ar_file = cu3.file_uploader("\U0001F4C4 AR aging (.xlsx)", type=["xlsx"], key="mf_ar_up")
+    with st.expander("Advanced — override MF UW Model template"):
+        model_override = st.file_uploader("MF UW Model (.xlsx)", type=["xlsx"], key="mf_model_up")
+
+    rr = t12 = ar = None
+    prop_name = None
+
+    # --- Rent Roll ---
+    if rr_file is not None:
+        st.markdown("### \U0001F4C4 Rent Roll")
         try:
-            res = parse_mf_t12(up.getvalue())
-        except Exception as exc:  # noqa: BLE001 — surface any parse failure cleanly
-            st.error(f"Could not parse this T-12: {exc}")
+            rr = parse_mf_rr(rr_file.getvalue())
+        except Exception as exc:  # noqa: BLE001
+            st.error(f"Could not parse the rent roll: {exc}"); rr = None
         else:
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Detected format", res.format_guess)
-            c2.metric("GL lines", len(res.lines))
-            c3.metric("Coverage", f"{res.coverage * 100:.0f}%")
-            c4.metric("Period", res.period or "—")
+            prop_name = derive_property_name(rr_file.name)
+            d1, d2, d3, d4 = st.columns(4)
+            d1.metric("Units", rr.unit_count)
+            d2.metric("Occupied", rr.occupied)
+            d3.metric("Vacant", rr.vacant)
+            d4.metric("Legal / eviction", rr.legal_count)
+            for w in rr.warnings:
+                st.warning(w, icon="⚠️")
 
-            comp, rep = res.computed, res.reported
-            recon = []
-            for key, label, rk in [("income", "Total Income", "total_income"),
-                                   ("expense", "Total OpEx", "total_expense"),
-                                   ("noi", "NOI", "noi")]:
-                r = rep.get(rk)
-                recon.append({
-                    "Metric": label,
-                    "Computed": f"${comp[key]:,.0f}",
-                    "As-reported": f"${r:,.0f}" if r is not None else "—",
-                    "Δ": f"${comp[key] - r:,.0f}" if r is not None else "—",
-                })
-            st.markdown("**Reconciliation** (computed from mapped lines vs. the statement's own totals)")
-            st.dataframe(pd.DataFrame(recon), hide_index=True, use_container_width=True)
+    # --- T-12 ---
+    if t12_file is not None:
+        st.markdown("### \U0001F4C4 T-12 income statement")
+        try:
+            t12 = parse_mf_t12(t12_file.getvalue())
+        except Exception as exc:  # noqa: BLE001
+            st.error(f"Could not parse the T-12: {exc}"); t12 = None
+        else:
+            prop_name = prop_name or derive_property_name(t12_file.name)
+            _render_mf_t12_detail(t12)
 
-            buckets: dict[str, float] = {}
-            for ln in res.lines:
-                buckets[ln.bucket] = buckets.get(ln.bucket, 0.0) + ln.total
-            bdf = pd.DataFrame(
-                [{"_StdCOA bucket": b, "T-12 Total": f"${v:,.0f}"}
-                 for b, v in sorted(buckets.items(), key=lambda kv: -abs(kv[1]))]
+    # --- AR aging (joined into RR) ---
+    if ar_file is not None:
+        st.markdown("### \U0001F4C4 AR aging")
+        try:
+            ar = parse_mf_ar(ar_file.getvalue())
+        except Exception as exc:  # noqa: BLE001
+            st.error(f"Could not parse the AR aging report: {exc}"); ar = None
+        else:
+            a1, a2, a3 = st.columns(3)
+            a1.metric("AR rows", len(ar.rows))
+            a2.metric("Total AR", f"${ar.total_ar:,.0f}")
+            a3.metric("Period", ar.period_hint or "—")
+            if rr is not None:
+                rep = join_ar_to_units(rr.units, ar)
+                st.caption(f"Joined {rep.matched}/{len(ar.rows)} AR rows to units by Bldg-Unit.")
+                for w in rep.warnings:
+                    st.warning(w, icon="⚠️")
+            else:
+                st.info("Upload the Rent Roll too — AR aging joins to units by Bldg-Unit.")
+
+    # --- Populate the MF UW Model ---
+    if rr is not None or t12 is not None:
+        st.divider()
+        st.markdown("### \U0001F9EE Populate the MF UW Model")
+        try:
+            if model_override is not None:
+                model_bytes = model_override.getvalue()
+                model_src = "uploaded override"
+            else:
+                model_bytes = BUNDLED_MF_MODEL_PATH.read_bytes()
+                model_src = "bundled MF_UW_Model_v15.xlsx"
+            out, report = populate_mf_model(
+                model_bytes, t12=t12, rr=rr,
+                property_name=prop_name,
+                property_units=(rr.unit_count if rr is not None else None),
             )
-            st.markdown("**Standardized buckets** (→ col P on the model)")
-            st.dataframe(bdf, hide_index=True, use_container_width=True)
-
-            for warn in res.warnings:
-                st.warning(warn, icon="⚠️")
-
+        except Exception as exc:  # noqa: BLE001
+            st.error(f"Could not populate the MF UW Model: {exc}")
+        else:
+            st.success(
+                f"Populated **{report['rr_units']}** units + "
+                f"**{report['t12_lines']}** T-12 lines into the {model_src}."
+            )
+            for w in report["warnings"]:
+                st.caption(f"⚠️ {w}")
+            safe = (prop_name or "MF_Property").replace(" ", "_")
             st.download_button(
-                "⬇️ Download paste-ready mapping (CSV)",
-                data=_mf_t12_paste_csv(res),
-                file_name="MF_T12_StdCOA_mapping.csv",
-                mime="text/csv",
+                "⬇️ Download populated MF UW Model (.xlsx)",
+                data=out,
+                file_name=f"{safe}_MF_UW_Model_populated.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="mf_model_dl",
             )
-            st.caption(
-                "Paste into the MF UW Model's **T-12 Analysis** Layer 1 (anchor "
-                "`A106`): Acct# → A, Account Name → B, the 12 months → C–N, and "
-                "**→ MAPPING → col P** (col P drives every Layer-3 SUMIFS)."
-            )
+    else:
+        st.info("Upload a Rent Roll and/or a T-12 to populate the MF UW Model.")
 
     st.divider()
-    st.markdown("#### Coming next — same tab")
-    st.markdown(
-        """
-        - \U0001F4C4 **RR** — Rent Roll → per-unit grid (`mf_normalizer`)
-        - \U0001F4C4 **AR** — Aged Receivables, joined by unit (`mf_ar_parser`)
-        - \U0001F4C4 **OM** — Offering Memorandum (comps + property info)
-        - \U0001F9EE **MF UW Model writer** — paste all four into
-          `MF_UW_Model_v15.xlsx` and download the populated workbook
-        """
+    st.caption(
+        "Coming next: \U0001F4C4 **OM** (Offering Memorandum — comps + property "
+        "info) and the redIQ Sortable-RR ancillary-fee breakouts (cols W–AK)."
     )
 
 
