@@ -56,7 +56,11 @@ def test_rr_itemized_charge_codes():
     assert r.occupied == 244
     u = next(x for x in r.units if x.bldg_unit == "384-11")
     assert abs(u.market_rent - 1902) < 0.01
-    assert abs(u.scheduled_charges - 1929) < 0.01   # Amenity 145 + Base 1784
+    assert abs(u.scheduled_charges - 1929) < 0.01      # total = Amenity 145 + Base 1784
+    assert abs(u.ancillary.get("amenity", 0) - 145) < 0.01  # Amenity broken out
+    # property-wide: amenity breakout < scheduled total (base rent dominates)
+    amenity_total = sum(x.ancillary.get("amenity", 0) for x in r.units)
+    assert 10000 < amenity_total < 15000   # ~$11,120 amenity across the property
 
 
 @pytest.mark.skipif(not (os.path.exists(RR) and os.path.exists(AR)),
