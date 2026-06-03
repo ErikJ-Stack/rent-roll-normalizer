@@ -2,9 +2,12 @@
 MF rent-roll normalizer — parse an operator Rent Roll into per-unit records
 mapped to the MF UW Model's `Rent Roll Analysis` grid (cols A–AK, anchor A273).
 
-Slice scope (per SPEC-MF §2): the core per-unit grid from the basic operator RR
-(Yardi-CIM "Rent Roll - Cim" shape, validated on Hidden Lakes). Header-driven
-column mapping (fuzzy) so it tolerates column reordering. AR aging (cols Q–T)
+Handles two row shapes (auto-detected): (a) one-row-per-unit (Yardi-CIM "Rent
+Roll - Cim", Hidden Lakes — 143 units) and (b) the itemized "Rent Roll
+(Operations) - Rent Related Charge Codes" format (Avana — 263 units) where each
+unit's identity is on a header row and its charges (Amenity/Base/etc.) are
+itemized across continuation rows with a blank Bldg-Unit, summed into the unit.
+Header-driven column mapping (needle-priority) so it tolerates column reordering. AR aging (cols Q–T)
 is filled later by `mf_ar_parser` via a Bldg-Unit join; the W–AK ancillary
 breakouts are best-effort from the redIQ Sortable-RR (decision §2.7.2) and are
 left empty here.
@@ -26,17 +29,23 @@ from mf_mappings import UNMAPPED_STATUS, normalize_status
 
 # Header label -> canonical field. Matched case-insensitively on a normalized
 # (lowercased, punctuation-stripped) header string; first containing match wins.
+# Ordered by PRIORITY (not column order): the first needle that finds a column
+# claims the field. So "unit type" wins over "floor plan", "unit status" over a
+# bare "occupancy", etc. Matched against the normalized (lowercased,
+# punctuation-stripped) header text.
 _HEADER_MAP = [
-    ("bldg", "bldg_unit"), ("unit no", "bldg_unit"), ("unit id", "bldg_unit"),
-    ("unit type", "unit_type"), ("floor plan", "unit_type"), ("type", "unit_type"),
+    ("bldg-unit", "bldg_unit"), ("bldg", "bldg_unit"), ("unit no", "bldg_unit"),
+    ("unit id", "bldg_unit"),
+    ("unit type", "unit_type"), ("floor plan", "unit_type"),
     ("sqft", "sqft"), ("sq ft", "sqft"), ("net sf", "sqft"), ("square f", "sqft"),
-    ("unit status", "status"), ("occupancy", "status"), ("status", "status"),
+    ("unit status", "status"), ("occupancy type", "status"), ("status", "status"),
     ("resident", "resident"), ("tenant", "resident"),
+    ("charge code", "charge_code"),
     ("move in", "move_in"), ("move-in", "move_in"),
     ("lease start", "lease_start"), ("lease sign", "lease_start"),
     ("lease end", "lease_end"), ("lease exp", "lease_end"), ("expiration", "lease_end"),
     ("expected move", "exp_move_out"), ("move out", "exp_move_out"), ("move-out", "exp_move_out"),
-    ("market rent", "market_rent"),
+    ("market rent", "market_rent"), ("gpr market", "market_rent"),
     ("actual charge", "actual_charges"), ("recurring", "actual_charges"),
     ("scheduled charge", "scheduled_charges"),
     ("balance", "balance"),
@@ -157,15 +166,15 @@ def parse_mf_rr(source) -> MFRRResult:
         wb.close()
         raise ValueError("Could not locate the rent-roll header row.")
 
-    # 2) map columns by header label
+    # 2) map columns — needle PRIORITY (map order), first column that matches wins
+    hdr = [_norm(v) for v in rows[header_row]]
     col: dict[str, int] = {}
-    for c in range(maxc):
-        h = _norm(rows[header_row][c])
-        if not h:
+    for needle, fname in _HEADER_MAP:
+        if fname in col:
             continue
-        for needle, field_name in _HEADER_MAP:
-            if needle in h and field_name not in col:
-                col[field_name] = c
+        for c, h in enumerate(hdr):
+            if h and needle in h:
+                col[fname] = c
                 break
     if "bldg_unit" not in col or "status" not in col:
         wb.close()
@@ -175,22 +184,36 @@ def parse_mf_rr(source) -> MFRRResult:
         idx = col.get(fname)
         return row[idx] if idx is not None and idx < len(row) else None
 
-    # 3) walk data rows; a unit row has a recognized status. Stop at the
-    #    Charge-Code-Summary / Future-Resident blocks that follow the grid.
+    # 3) walk data rows into per-unit blocks. A header row carries a Bldg-Unit;
+    #    in the itemized "charge codes" format each unit is followed by
+    #    continuation rows (blank Bldg-Unit) holding additional charge lines.
+    #    Scheduled/Actual charges are summed across the block's charge-code rows
+    #    (avoiding the L-blank per-unit total row). Stop at the trailing
+    #    summary / future-resident blocks.
+    itemized = "charge_code" in col
     units: list[MFUnit] = []
     warnings: list[str] = []
     unknown_status = 0
+    cur: MFUnit | None = None
+
+    def _add_charges(u, row):
+        u.scheduled_charges += _num(g(row, "scheduled_charges"))
+        u.actual_charges += _num(g(row, "actual_charges"))
+
     for row in rows[header_row + 1:]:
         a = g(row, "bldg_unit")
         if a in (None, ""):
+            # continuation charge-code line for the current unit
+            if cur is not None and itemized and g(row, "charge_code") not in (None, ""):
+                _add_charges(cur, row)
             continue
         a_norm = _norm(a)
         if a_norm.startswith(("future resident", "charge code", "total ", "resident total",
-                              "ledger", "selected report")):
+                              "ledger", "selected report", "grand total")):
             break  # end of the unit grid
         status = normalize_status(g(row, "status"))
         if not status or status == UNMAPPED_STATUS:
-            # not a unit row (charge-code summary line, blank, etc.)
+            cur = None
             if g(row, "status") not in (None, ""):
                 unknown_status += 1
             continue
@@ -203,7 +226,7 @@ def parse_mf_rr(source) -> MFRRResult:
         if "vacant" in resident.lower():
             resident = ""
 
-        units.append(MFUnit(
+        cur = MFUnit(
             bldg_unit=str(a).strip(), bldg=bldg, unit=unit,
             unit_type=str(g(row, "unit_type") or "").strip(),
             sqft=(_num(g(row, "sqft")) or None),
@@ -213,11 +236,17 @@ def parse_mf_rr(source) -> MFRRResult:
             lease_end=_date(g(row, "lease_end")),
             exp_move_out=_date(g(row, "exp_move_out")),
             market_rent=_num(g(row, "market_rent")),
-            actual_charges=_num(g(row, "actual_charges")),
-            scheduled_charges=_num(g(row, "scheduled_charges")),
             balance=_num(g(row, "balance")),
             deposit=_num(g(row, "deposit")),
-        ))
+        )
+        units.append(cur)
+        if itemized:
+            # the header row itself may carry the first charge-code line
+            if g(row, "charge_code") not in (None, ""):
+                _add_charges(cur, row)
+        else:
+            cur.scheduled_charges = _num(g(row, "scheduled_charges"))
+            cur.actual_charges = _num(g(row, "actual_charges"))
     wb.close()
 
     if not units:

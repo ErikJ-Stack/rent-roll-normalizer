@@ -130,8 +130,8 @@ _STATUS_RULES = [
 UNMAPPED_STATUS = "— UNMAPPED status —"
 
 
-def normalize_status(raw: str | None) -> str:
-    s = (raw or "").strip().lower()
+def normalize_status(raw) -> str:
+    s = str(raw).strip().lower() if raw not in (None, "") else ""
     if not s:
         return ""
     for pat, val in _STATUS_RULES:
