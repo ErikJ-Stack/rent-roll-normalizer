@@ -105,6 +105,160 @@ parts and corrupts formulas — openpyxl quirk #6 in CLAUDE.md).
 
 ---
 
+## 2. MF intake parser build (P1–P2) — scope
+
+> Status: **scoped, not built** (2026-06-03). This section is the build plan
+> that closes the 21 `gap_source` items in `registry.json` v0.1.x. It is a
+> proposal — sequencing and the open decisions (§2.7) should be confirmed before
+> code starts. No `mf_*` module exists yet.
+
+### 2.1 Goal & shape
+
+Turn the raw operator intake docs (RR, redIQ Sortable-RR, AR aging, T-12) into
+normalized records and paste them into the MF UW Model's two intake grids
+(`Rent Roll Analysis!A273+`, `T-12 Analysis!A106+` incl. col-P `_StdCOA`
+mapping). MF has **no Analyzer substrate** — unlike ALF (RR/T12 → Analyzer → UW
+Template), the MF parser feeds the model **directly**. The model's own Layer-3
+SUMIFS + diagnostic dashboards do the analytics; the parser's job is clean
+normalized paste + correct bucketing.
+
+The work maps onto CLAUDE.md's MF phasing as **P1 (RR normalizer)** + **P2 (T-12
++ AR intake)**, with a thin **Track 4-MF writer** that pastes into the model
+(the MF analogue of `uw_template_writer.py`).
+
+### 2.2 Modules (new, `mf_` prefix at repo root per the naming convention)
+
+| Module | Role | Mirrors (ALF) |
+| --- | --- | --- |
+| `mf_mappings.py` | Closed vocabularies: status taxonomy, charge-code → ancillary bucket, **COA → `_StdCOA` dictionary**. | `mappings.py` |
+| `mf_normalizer.py` | Parse operator RR (Yardi-CIM) **and** redIQ Sortable-RR → per-unit `MFUnit` records (the 37 grid fields incl. W–AK ancillaries). | `normalizer.py` |
+| `mf_ar_parser.py` | Parse AR aging → per-unit aging buckets; **join to RR on Bldg-Unit**. | `ar_normalizer.py` |
+| `mf_t12_normalizer.py` | Parse **both** T-12 formats (PSI flat + QuickBooks nested) → GL lines + `_StdCOA` bucket per line. | `t12_normalizer.py` |
+| `mf_uw_model_writer.py` | Paste normalized RR/AR/T-12 into the model's two grids (+ col P); restore `xl/metadata.xml` after save. | `uw_template_writer.py` |
+
+*(A standalone normalized MF workbook — the CLAUDE.md "P1 → standalone MF
+workbook" idea — is **dropped** per decision §2.7.5: MF's value is the model
+itself, which already surfaces every diagnostic, so a standalone output would
+duplicate it with no consumer. Parse → write into the model directly.)*
+
+### 2.3 Data contracts (dataclasses)
+
+- **`MFUnit`** — 37 fields matching `Rent Roll Analysis` cols A–AK: identity
+  (bldg, unit, type, sf, resident), status + legal flag, 4 dates, 4 rate cols,
+  balance + deposit, 4 AR-aging buckets (filled by the join), status-flag,
+  notes, and 15 ancillary breakouts.
+- **`MFT12Line`** — `{acct, name_raw, monthly[12], total, std_bucket,
+  source_section}`.
+- **`MFARRow`** — `{bldg_unit, resident, aging[0_30,31_60,61_90,90_plus],
+  balance, prepayments, last_note}`.
+
+### 2.4 The COA → `_StdCOA` dictionary (the crux)
+
+This is the intelligence layer (`t12_mapping` concept) and the riskiest piece.
+Approach — a layered resolver in `mf_mappings.py`:
+
+1. **Exact account-number** match → bucket. Seed from `_StdCOA` col F (it lists
+   PSI account numbers per bucket: 4210→GPR, 4305→Vacancy, 5161→Pest, …).
+2. **Name-regex** fallback (for charts without numbers, e.g. the Blairstone
+   QuickBooks file) → bucket. Seed from the two T-12s already mapped by hand.
+3. **Unmatched** → `— UNMAPPED —` (the `_StdCOA` control bucket), surfaced loudly
+   so the analyst classifies the tail. The model's Section J / "Unmapped lines"
+   check already exists to catch this.
+
+Two **T-12 format detectors** feed the resolver:
+- **PSI flat** (Hidden Lakes): `Account | Account Name | 12 contiguous monthly |
+  Total`, header row ~7.
+- **QuickBooks nested** (Blairstone): no account #, parent/sub-account
+  indenting (leaf in col E/F under a header), **12 monthly in odd columns
+  G–AC**, TOTAL in AE; skip `Total *` subtotals + section headers; flag the
+  total-vs-detail gap (the $22K Blairstone artifact).
+
+### 2.5 What each gap_source needs (21 items → module that closes it)
+
+| gap_source group | Count | Closed by |
+| --- | --- | --- |
+| T-12 col-P `_StdCOA` mapping (`t12_mapping`) | 1 | `mf_t12_normalizer` + `mf_mappings` COA dictionary |
+| AR aging Q–T (`rr_ar_0_30…90_plus`) | 4 | `mf_ar_parser` (Bldg-Unit join) |
+| Ancillary breakouts W–AK (`rr_anc_*`) | 15 | `mf_normalizer` reading redIQ Sortable-RR `Source Data` charge codes + `mf_mappings` charge-code map |
+| Status Flag (col U) | 1 | clarify semantics first (§2.7); likely derived in `mf_normalizer` |
+
+The 5 `proposed` items (status taxonomy, Legal flag, Notes, period dates) also
+firm up to `mapped` inside `mf_normalizer` once their rules are locked.
+
+### 2.6 Hard parts / risks
+
+- **COA coverage tail.** Every new operator brings unseen account names. The
+  `— UNMAPPED —` catch + a loud per-deal unmapped report is the mitigation —
+  never silently drop or mis-bucket. Two T-12 formats in hand is a good seed but
+  not exhaustive.
+- **redIQ `Source Data` charge codes.** The W–AK ancillary detail only exists in
+  the Sortable-RR `Code1..Code10` grid; the basic RR lacks it. Per decision
+  §2.7.2 this is **best-effort** — parsed when the Sortable-RR is provided, blank
+  otherwise; the build is not gated on it.
+- **openpyxl quirk #6 on write.** The model is dynamic-array-heavy. The writer
+  must paste **only** into the plain grid cells (rows 273+, 106+) — never the
+  formula/dashboard rows — and **restore `xl/metadata.xml` + `cm` markers after
+  save**, reusing the proven `_restore_dynamic_arrays` pattern from
+  `uw_template_writer.py`. Validate zip-part inventory pre/post.
+- **AR period mismatch** (RR Apr 2026 vs AR Mar 2026) and Bldg-Unit key-format
+  drift across docs.
+- **QuickBooks total-vs-detail gaps** (the Blairstone $22,128.62) — reconcile
+  and report, don't force.
+- **No committed fixtures** (`MF Docs/` is gitignored, real financials). Test
+  strategy must mirror ALF: synthetic fixtures committed under `tests/fixtures/`,
+  real operator files local-only.
+
+### 2.7 Decisions (resolved 2026-06-03)
+
+The load-bearing decisions (carried from `registry.json` `open_questions`) are
+resolved as follows. These are the design constraints the build follows; the
+corresponding registry questions close when the parser ships and moves the
+concept statuses off `gap_source`.
+
+1. **COA → `_StdCOA` dictionary lives in `mf_mappings.py`** (code), not a model
+   lookup tab. Keeps it versioned, unit-testable, and reusable across deals;
+   mirrors ALF's `Description_Map`/`mappings.py`. Seeded from `_StdCOA` col F +
+   the two hand-mapped T-12s.
+2. **W–AK ancillary breakouts are best-effort, not core.** Parse them from the
+   redIQ Sortable-RR `Source Data` charge-code grid **when that file is
+   provided**; leave the columns blank otherwise. The basic operator RR is the
+   only guaranteed input — the build is not gated on the Sortable-RR. (The
+   model's other-income totals still reconcile from the T-12 regardless.)
+3. **AR↔RR join on a normalized Bldg-Unit key** (uppercase, strip
+   whitespace/punctuation). Accept the period mismatch (AR aging is point-in-time
+   vs RR current) but **warn if the two as-of dates differ by > 45 days**.
+   Report unmatched rows in **both** directions (AR row with no RR unit; RR unit
+   with a balance but no AR detail) — never silently drop or fabricate.
+4. **Status taxonomy is a near-identity map** in `mf_mappings.py`. The operator
+   strings observed (`Occupied No Notice`, `Vacant Unrented Ready`/`Not Ready`,
+   `Down`, …) already align with the model's COUNTIF wildcards — normalize
+   casing/whitespace, map the handful that differ, and route unknowns to a loud
+   `— UNMAPPED status —` report rather than guessing.
+5. **No standalone normalized workbook — go straight to the writer.** MF's
+   deliverable is the populated UW Model; a standalone normalized RR workbook
+   (the ALF pattern) would duplicate the model's own diagnostics with no
+   consumer. See §2.2.
+
+Remaining genuinely-open item: **col-U "Status Flag" semantics** — still needs a
+look at the model's formulas to decide analyst-input vs derived before wiring
+(low stakes; deferred to the writer step).
+
+### 2.8 Recommended first slice (smallest valuable increment)
+
+**`mf_t12_normalizer` + the COA dictionary**, validated against the two T-12s
+already mapped by hand (Hidden Lakes PSI + Blairstone QuickBooks) as committed
+synthetic fixtures — assert the bucket sums reproduce the hand-mapping
+($5,805,382.10 income / $2,415,119.35 expense on Blairstone; the Hidden Lakes
+figures from its file). This delivers the highest-value, highest-risk piece
+first (the bucketing intelligence) with a tight regression test, before taking
+on the RR grid + writer. Then `mf_normalizer` (RR) → `mf_ar_parser` (join) →
+`mf_uw_model_writer`.
+
+**Rough effort:** first slice ~1 focused session; full P1–P2 + writer ~4–6
+sessions, gated on the §2.7 decisions and fixture availability.
+
+---
+
 ## Versioning
 
 - **MF-UWT** (MF UW Model mapping registry/code) — `vX.Y.Z`, current **v0.1.0**.
