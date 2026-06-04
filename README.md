@@ -2,6 +2,8 @@
 
 A Streamlit app that turns a senior-housing rent roll AND a T12 financial statement (any operator format) into a populated underwriting workbook (the "Analyzer"). Two parallel pipelines write into the same destination workbook; the Analyzer's analytical sheets reconcile both feeds and roll up to UW Output.
 
+The app opens with an **ALF / MF mode selector**. **ALF** (senior housing) is the original product described above. **MF** (multifamily / conventional apartments) is a second product line with its own RR / T-12 / AR intake that populates a downstream MF underwriting model directly (no Analyzer substrate) — see [`SPEC-MF.md`](SPEC-MF.md).
+
 **Live app:** <https://rrnormalizer.streamlit.app/>
 **Repo:** <https://github.com/ErikJ-Stack/rent-roll-normalizer> (public)
 **Stack:** Python · Streamlit · pandas · openpyxl · xlrd (legacy `.xls`) · Streamlit Community Cloud (free tier)
@@ -10,16 +12,17 @@ A Streamlit app that turns a senior-housing rent roll AND a T12 financial statem
 
 | Stream | Version | Last updated |
 | --- | --- | --- |
-| RR Normalizer (`RR_VERSION`) | v1.19.0 | 2026-05-28 |
+| RR Normalizer (`RR_VERSION`) | v1.19.0 | 2026-05-27 |
 | T12 Normalizer (`T12_VERSION`) | v0.2.1 | 2026-05-11 |
-| Bundled Analyzer substrate | v0.2.15 | 2026-05-28 |
+| Bundled Analyzer substrate | v0.2.16 | 2026-05-30 |
 | AR & Collections module | v0.1.0 | 2026-05-23 |
-| UW Template integration (`UWT_VERSION`, Track 4) | v0.8.0 | 2026-05-29 |
+| UW Template integration (`UWT_VERSION`, Track 4) | v0.9.0 | 2026-06-03 |
 | Webapp Dashboard surface (`T5_VERSION`, Track 5) | v0.1.10 | 2026-05-24 |
+| MF intake + UW Model (Track 4-MF) | v0.4.4 · registry v0.1.3 | 2026-06-03 |
 
 The Track 4 UW Template default is **v6** (T-12 Analysis income block rebuilt to the Analyzer's actual-T12 categories: by-care Base Rent + LOC, ancillary income lines, contras → EGI; GPR waterfall demoted to a diagnostic sub-section; Auto Expense captured in Non-Labor). Substrate v0.2.15 re-maps `Second Persons Revenue` out of Base Rent into a dedicated `2nd Person Revenue` label.
 
-The repo runs five parallel tracks sharing one Analyzer/UW pipeline: **Track 1** RR Normalizer, **Track 2** T12 Normalizer + Analyzer substrate (+ the optional **AR & Collections** module), **Track 3** Analyzer optimization, **Track 4** ALF UW Template integration (registry-driven writer that populates a downstream per-deal underwriting template — see [`SPEC-UWT.md`](SPEC-UWT.md)), and **Track 5** in-browser Dashboard surface (see [`SPEC-T5.md`](SPEC-T5.md)). See [`CLAUDE.md`](CLAUDE.md) for the full track map.
+The **ALF** product line runs five parallel tracks sharing one Analyzer/UW pipeline: **Track 1** RR Normalizer, **Track 2** T12 Normalizer + Analyzer substrate (+ the optional **AR & Collections** module), **Track 3** Analyzer optimization, **Track 4** ALF UW Template integration (registry-driven writer that populates a downstream per-deal underwriting template — see [`SPEC-UWT.md`](SPEC-UWT.md)), and **Track 5** in-browser Dashboard surface (see [`SPEC-T5.md`](SPEC-T5.md)). The **MF** product line adds **Track 4-MF** — a parallel RR / T-12 / AR intake that populates the downstream MF UW Model (see [`SPEC-MF.md`](SPEC-MF.md)); MF code lives at the repo root under the `mf_` prefix and shares none of ALF's care/payer/acuity data model. See [`CLAUDE.md`](CLAUDE.md) for the full track map and the `mf_` naming convention.
 
 ---
 
@@ -96,6 +99,17 @@ File formats: `.xlsx` / `.xlsm` / `.xls` (legacy binary via xlrd) for rent rolls
 
 Yardi general-format · MRI general-format · Broker Financial Summary (Homestead-style with `Historical Performance` banner). Salem · Briar Glen · Homestead Pensacola · March 2026 (Homestead) reference fixtures.
 
+### MF (multifamily) mode
+
+Selecting **MF** at login switches to the multifamily intake pipeline. It is structurally independent of ALF — units / floorplans / leases instead of beds / care / payer, and **no Analyzer substrate**: the operator's RR (+ optional AR aging) and T-12 are parsed and pasted directly into a downstream **MF UW Model** (`assets/MF_UW_Model_v15.xlsx`, a 23-sheet acquisition model authored externally in Excel), with all of the model's diagnostic and Layer-3 formulas preserved.
+
+- **RR** (`mf_normalizer.py`) → `MFUnit` rows; itemized "charge-code" formats break out into per-unit ancillary columns (W–AK). Verified on Hidden Lakes (143 units) and Avana Stoney Ridge (263 units).
+- **T-12** (`mf_t12_normalizer.py`) → a general 5-format parser; col `_StdCOA` carries the standardized bucket that drives every Layer-3 SUMIFS (the MF equivalent of ALF's `Description_Map`).
+- **AR** (`mf_ar_parser.py`) → joined to units on Bldg-Unit with a two-way unmatched report.
+- **Writer** (`mf_uw_model_writer.py`) pastes into `Rent Roll Analysis!A273` + `T-12 Analysis!A106` and emits the populated model for download.
+
+Property name is taken from the RR header band when present (falling back to the filename). Mapping is registry-driven (`tools/mf_uw_template/registry.json`, `templates.v15`), mirroring the ALF Track 4 pattern. Still open per [`SPEC-MF.md`](SPEC-MF.md) §2: OM / comps extraction. See [`CHANGELOG-MF.md`](CHANGELOG-MF.md) for the release history.
+
 ---
 
 ## Project layout
@@ -117,31 +131,32 @@ rent_roll_app/
 ├── analyzer_rr_writer.py               # Writes the translated RR into the Analyzer's Rent Roll Input sheet (Track 1; renamed from t12_writer.py on 2026-05-10)
 ├── property_name.py                    # Cross-track helper: derives property name from filename for both writers
 │
-├── ALF_Financial_Analyzer_Only.xlsx    # Bundled Analyzer template (substrate v0.2.6)
+├── mf_normalizer.py                    # MF RR parser → MFUnit rows (+ charge-code ancillary breakout W–AK)
+├── mf_mappings.py                      # MF COA classifier (loads tools/mf_uw_template/coa_seed.csv)
+├── mf_t12_normalizer.py                # MF T-12 parser (general 5-format) → _StdCOA-bucketed lines
+├── mf_ar_parser.py                     # MF AR aging parser + Bldg-Unit join to units
+├── mf_uw_model_writer.py               # Writes parsed MF RR/T-12/AR into the MF UW Model
+│
+├── uw_template_writer.py               # Track 4: registry-driven ALF UW Template writer
+├── uw_output_model.py                  # Track 4: in-Python UW Output evaluator (no Excel round-trip)
+├── dashboard_model.py / dashboard_ui.py# Track 5: webapp Dashboard compute + Streamlit renderer
+├── ar_normalizer.py / ar_writer.py     # AR & Collections module (optional operator AR-aging intake)
+│
+├── ALF_Financial_Analyzer_Only.xlsx    # Bundled ALF Analyzer template (substrate v0.2.16)
+├── assets/
+│   ├── ALF_UW_Template_v5.xlsx         # Track 4 ALF UW Template reference (v6 default; v5/v4 supported)
+│   └── MF_UW_Model_v15.xlsx            # Track 4-MF UW Model reference
 ├── mapping_template.xlsx               # Editable RR mapping override template (optional sidebar upload)
 │
 ├── tools/
 │   ├── verify_t12_v020.py              # T12 parser-side verification harness (4 reference fixtures)
-│   └── migration/
+│   ├── uw_template/                    # Track 4: ALF UW Template mapping registry, artifact generator, handoffs
+│   ├── mf_uw_template/                 # Track 4-MF: MF UW Model mapping registry + coa_seed.csv + handoffs
+│   └── migration/                      # One idempotent migrate_to_vXYZ.py per substrate version
 │       ├── migrate_analyzer.py         # General Analyzer migration entry point
-│       ├── migrate_to_v015.py          # Substrate v0.1.4 → v0.1.5 migration
-│       ├── migrate_to_v016.py          # Substrate v0.1.5 → v0.1.6 migration
-│       ├── migrate_to_v017.py          # Substrate v0.1.6 → v0.1.7 migration
-│       ├── migrate_to_v018.py          # Substrate v0.1.7 → v0.1.8 migration (Branch 3 analytics)
-│       ├── migrate_to_v019.py          # Substrate v0.1.8 → v0.1.9 migration (RR_Calc _xludf fix + B2 rewrite)
-│       ├── migrate_to_v0110.py         # Substrate v0.1.9 → v0.1.10 migration (RR v1.16.0 column extension)
-│       ├── migrate_to_v0111.py         # Substrate v0.1.10 → v0.1.11 migration (chart catAx axPos fix)
-│       ├── migrate_to_v0112.py         # Substrate v0.1.11 → v0.1.12 migration (Rent Roll Recon Section M)
-│       ├── migrate_to_v0113.py         # Substrate v0.1.12 → v0.1.13 migration (RR Input AC-AG + Section M2/M4 INDIRECT rewrite)
-│       ├── migrate_to_v0114.py         # Substrate v0.1.13 → v0.1.14 migration (T12 Analytics 2P recon + Workbook Health AR + Section K PSF)
-│       ├── migrate_to_v0115.py         # Substrate v0.1.14 → v0.1.15 migration (V5 chart empty-state UX + acuity formula blanking)
-│       ├── migrate_to_v020.py          # Substrate v0.1.15 → v0.2.0 flagship migration (UW Export sheet + Pre-Export Gate + Workbook Map extension)
-│       ├── migrate_to_v021.py          # Substrate v0.2.0 → v0.2.1 migration (5 new ancillary Labels: Meal/HK/Laundry/Scooter/Transfer Income — BL-0001)
-│       ├── migrate_to_v022.py          # Substrate v0.2.1 → v0.2.2 migration (Rent Roll Input V-AH formatting + T split + new Total Ancillary col AH + U rewrite)
-│       ├── migrate_to_v023.py          # Substrate v0.2.2 → v0.2.3 migration (Rent Roll Recon row 16 GPR realignment — BL-0015)
-│       ├── migrate_to_v024.py          # Substrate v0.2.3 → v0.2.4 migration (new Investment Dashboard sheet at workbook front)
-│       ├── migrate_to_v025.py          # Substrate v0.2.4 → v0.2.5 migration (Rent Roll Recon Section M6 — negative residual check vs T12 Concessions — BL-0012)
-│       ├── migrate_to_v026.py          # Substrate v0.2.5 → v0.2.6 migration (AH4 fill + 144-cell "intentionally blank" sweep — BL-0016 + BL-0017)
+│       ├── migrate_to_v015.py … migrate_to_v0216.py
+│       │                               #   chain v0.1.5 → v0.2.16 (analytics, UW Export, Dashboard,
+│       │                               #   AR & Collections, exposure surface, Auto Expense — see CHANGELOG-T12.md)
 │       └── verify_e2e.py               # End-to-end Analyzer verification
 │
 ├── CLAUDE.md                           # Onboarding doc for any Claude session — read first
@@ -230,7 +245,9 @@ When making a code change in a chat, add an entry to the relevant `CHANGELOG-*.m
 | `CLAUDE.md` | Onboarding for any Claude (chat or Claude Code) session — read first |
 | `SPEC-RR.md` | Track 1 source of truth: RR parser, writer, sidebar, period-date detection |
 | `SPEC-T12.md` | Track 2 source of truth: T12 format registry, writer, Description_Map lookup, UNMATCHED matcher |
-| `CHANGELOG-RR.md` / `CHANGELOG-T12.md` | Per-release notes, newest at top |
+| `SPEC-UWT.md` / `SPEC-T5.md` | Track 4 ALF UW Template integration · Track 5 webapp Dashboard surface |
+| `SPEC-MF.md` | MF product line: RR / T-12 / AR intake + MF UW Model mapping |
+| `CHANGELOG-RR.md` / `CHANGELOG-T12.md` / `CHANGELOG-MF.md` | Per-release notes, newest at top |
 | `UW-BACKLOG.md` | Forward-looking change list — `BL-NNNN` items, Pending → Shipped |
 | `OPTIMIZATION-DECISIONS.md` | Track 3 (Analyzer-only) decisions and roadmap |
 | `journal.md` | Per-chat session log — read the top entry before starting a new chat |
