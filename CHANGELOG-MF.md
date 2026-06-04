@@ -7,6 +7,19 @@ and the `mf_` naming convention.
 
 ---
 
+## registry v0.1.3 — 2026-06-03 — Prune stale open-questions after the parser build
+
+Housekeeping: the registry's `open_questions` listed 10 items, but the MF parser
+build (v0.2.0–v0.4.4) had already closed most. Pruned 10 → 5: kept the genuinely
+open work (**OM intake**, the low-priority **redIQ Sortable-RR ancillary path**,
+**Column U Status Flag**) plus two consolidated traceability/reference entries
+(what the build resolved — COA dictionary / AR join / status taxonomy / W-AK
+breakout / template versioning / subsidy-in-GPR; and the 5-T-12-format +
+2-RR-shape catalog). `registry_version` 0.1.2 → 0.1.3; artifacts regenerated;
+no concept/target change (still 46).
+
+---
+
 ## MF v0.4.4 — 2026-06-03 — Refresh committed MF UW Model to operator's revised v15
 
 Operator dropped a revised `MF_UW_Model_v15.xlsx` (still v15 filename — minor
