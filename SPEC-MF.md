@@ -268,11 +268,60 @@ sessions, gated on the §2.7 decisions and fixture availability.
 
 ---
 
+## 3. MF OM intake (P3 — shipped, MF v0.5.0)
+
+The 4th operator doc type: a broker **Offering Memorandum** PDF → the model's
+`Prop Info` and `Rental Comps` tabs. Unlike RR/T-12/AR (deterministic parsers
+over a canonical per-format shape), OMs are glossy marketing PDFs whose layouts
+differ wildly by broker, so OM extraction defaults to an **LLM engine**.
+
+### 3.1 Modules
+
+- **`mf_om_extractor.py`** — `parse_mf_om(source, *, engine="llm"|"basic",
+  api_key=None, model=DEFAULT_MODEL) -> MFOMResult`. `extract_pdf_text()` (PyMuPDF)
+  pulls the OM text; the LLM engine sends it to Claude with a structured-output
+  tool schema and maps the JSON onto `MFPropInfo` / `MFMarketData` /
+  `MFRentComp` / `MFProForma`. The basic engine is a no-API labelled-facts scan.
+- **`mf_uw_model_writer.populate_mf_model(..., om=)`** — writes Prop Info col B
+  (`_PROP` row map) + Rental Comps rows 8–22 (`_COMP` col map).
+
+### 3.2 Two write targets
+
+1. **Prop Info** (`B5:B47`) — property physical details + market/demographic
+   block. RR-authoritative cells (B4 name, B6 units) are not overridden by the OM.
+2. **Rental Comps** (`Q8:AD22`, 15 comps max) — one row per comp property using
+   its blended line. `Z`/`AA` (eff-rent, $/SF) and the SUBJECT row 7 are template
+   formulas — never written.
+
+### 3.3 Decisions
+
+- **AI extraction is primary, selectable.** Engine is a caller/UI choice; Basic
+  exists for no-API runs (property details only).
+- **Maximal scope, but pro-forma is read-only.** Property + market + comps +
+  broker pro-forma are all extracted; the **pro-forma is captured but NOT
+  written** — UW reconciles economics from the T-12, not broker projections.
+- **Market/demographics overlap the AI Market Research tool** (Prop Info A2). The
+  OM wins when it states a value; otherwise those cells stay for that tool.
+
+### 3.4 Validated formats
+
+MMG (Blairstone), IPA (Avana), CBRE (Ascend) — three different comp-table
+layouts, all handled by the LLM engine. Samples live in `MF Docs/OM/` (gitignored).
+
+### 3.5 Follow-ups
+
+- Live LLM-path accuracy needs a per-OM analyst spot-check (the writer is
+  verified; extraction quality scales with the model).
+- If a future OM is image-only/scanned, an OCR pre-pass is needed (the extractor
+  raises a clear error when a PDF yields almost no text).
+
+---
+
 ## Versioning
 
-- **MF-UWT** (MF UW Model mapping registry/code) — `vX.Y.Z`, current **v0.1.0**.
+- **MF** product line — `vX.Y.Z`, current **v0.5.0** (OM intake shipped).
 - Registry `registry_version` tracks the registry data separately; currently
-  `0.1.0`, mapped against model `templates.v15`.
+  `0.2.0`, mapped against model `templates.v15`.
 
 ## Further reading
 

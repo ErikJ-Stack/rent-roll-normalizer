@@ -28,6 +28,7 @@ Analyzer with both RR and T12 data, when both required uploads are present.
 from __future__ import annotations
 
 import datetime as dt
+import os
 from pathlib import Path
 
 import openpyxl
@@ -56,6 +57,7 @@ from ar_normalizer import parse_ar_file
 from mf_t12_normalizer import parse_mf_t12
 from mf_normalizer import parse_mf_rr
 from mf_ar_parser import join_ar_to_units, parse_mf_ar
+from mf_om_extractor import MFOMExtractorError, parse_mf_om
 from mf_uw_model_writer import populate_mf_model
 from ar_writer import AROutputError, populate_ar_collections
 from dashboard_model import compute_dashboard
@@ -451,17 +453,36 @@ def _render_mf_intake() -> None:
     st.caption(
         "Upload the operator docs below — each is auto-detected, normalized, and "
         "mapped to the MF UW Model's `_StdCOA` buckets, then pasted into a "
-        "downloadable populated **MF UW Model**. RR / T-12 / AR are live; OM next."
+        "downloadable populated **MF UW Model**. RR / T-12 / AR / OM are live."
     )
 
     cu1, cu2, cu3 = st.columns(3)
     rr_file = cu1.file_uploader("\U0001F4C4 Rent Roll (.xlsx)", type=["xlsx"], key="mf_rr_up")
     t12_file = cu2.file_uploader("\U0001F4C4 T-12 (.xlsx)", type=["xlsx"], key="mf_t12_up")
     ar_file = cu3.file_uploader("\U0001F4C4 AR aging (.xlsx)", type=["xlsx"], key="mf_ar_up")
+
+    # --- OM (Offering Memorandum PDF) → Prop Info + Rental Comps ---
+    om_file = st.file_uploader(
+        "\U0001F4D5 Offering Memorandum (.pdf) — property facts, market data & rent comps",
+        type=["pdf"], key="mf_om_up")
+    oc1, oc2 = st.columns([1, 2])
+    om_engine = oc1.radio(
+        "OM extraction engine", ["AI (Claude)", "Basic (no API)"],
+        key="mf_om_engine", horizontal=False,
+        help="AI reads the whole OM with Claude (needs an API key); Basic does a "
+             "no-API labelled-facts scan (property details only, no comps/market).")
+    _secret_key = st.secrets.get("ANTHROPIC_API_KEY", "") if hasattr(st, "secrets") else ""
+    om_api_key = _secret_key or os.environ.get("ANTHROPIC_API_KEY", "")
+    if om_engine.startswith("AI") and not om_api_key:
+        om_api_key = oc2.text_input(
+            "Anthropic API key", type="password", key="mf_om_key",
+            help="Used only for this extraction; not stored. Or add ANTHROPIC_API_KEY "
+                 "to Streamlit secrets. Switch to Basic to skip.")
+
     with st.expander("Advanced — override MF UW Model template"):
         model_override = st.file_uploader("MF UW Model (.xlsx)", type=["xlsx"], key="mf_model_up")
 
-    rr = t12 = ar = None
+    rr = t12 = ar = om = None
     prop_name = None
 
     # --- Rent Roll ---
@@ -513,8 +534,43 @@ def _render_mf_intake() -> None:
             else:
                 st.info("Upload the Rent Roll too — AR aging joins to units by Bldg-Unit.")
 
+    # --- OM (Offering Memorandum) ---
+    if om_file is not None:
+        st.markdown("### \U0001F4D5 Offering Memorandum")
+        engine = "llm" if om_engine.startswith("AI") else "basic"
+        with st.spinner(f"Extracting OM ({engine})…"):
+            try:
+                om = parse_mf_om(om_file.getvalue(), engine=engine,
+                                 api_key=om_api_key or None)
+            except MFOMExtractorError as exc:
+                st.error(f"OM extraction failed: {exc}"); om = None
+            except Exception as exc:  # noqa: BLE001
+                st.error(f"Could not read the OM: {exc}"); om = None
+        if om is not None:
+            pi = om.prop_info
+            prop_name = prop_name or pi.property_name or derive_property_name(om_file.name)
+            o1, o2, o3, o4 = st.columns(4)
+            o1.metric("Units (OM)", pi.units_total or "—")
+            o2.metric("Year built", pi.year_built or "—")
+            o3.metric("Rent comps", len(om.comps))
+            o4.metric("Engine", om.engine.upper())
+            with st.expander("OM extraction detail"):
+                st.write({"property": pi.property_name, "address": pi.address,
+                          "county": pi.county, "acres": pi.lot_acres,
+                          "buildings": pi.num_buildings, "stories": pi.num_stories,
+                          "class": pi.building_class, "unit_mix": len(pi.unit_mix),
+                          "market": om.market.city_market})
+                if om.comps:
+                    st.dataframe(pd.DataFrame(
+                        [{"Comp": c.name, "Yr": c.year_built, "Units": c.units,
+                          "Avg SF": c.avg_sf, "Asking": c.asking_rent,
+                          "Occ": c.occupancy} for c in om.comps]),
+                        hide_index=True, use_container_width=True)
+            for w in om.warnings:
+                st.caption(f"⚠️ {w}")
+
     # --- Populate the MF UW Model ---
-    if rr is not None or t12 is not None:
+    if rr is not None or t12 is not None or om is not None:
         st.divider()
         st.markdown("### \U0001F9EE Populate the MF UW Model")
         try:
@@ -525,7 +581,7 @@ def _render_mf_intake() -> None:
                 model_bytes = BUNDLED_MF_MODEL_PATH.read_bytes()
                 model_src = "bundled MF_UW_Model_v15.xlsx"
             out, report = populate_mf_model(
-                model_bytes, t12=t12, rr=rr,
+                model_bytes, t12=t12, rr=rr, om=om,
                 property_name=prop_name,
                 property_units=(rr.unit_count if rr is not None else None),
             )
@@ -534,7 +590,9 @@ def _render_mf_intake() -> None:
         else:
             st.success(
                 f"Populated **{report['rr_units']}** units + "
-                f"**{report['t12_lines']}** T-12 lines into the {model_src}."
+                f"**{report['t12_lines']}** T-12 lines + "
+                f"**{report['om_prop_cells']}** Prop Info fields + "
+                f"**{report['om_comps']}** rent comps into the {model_src}."
             )
             for w in report["warnings"]:
                 st.caption(f"⚠️ {w}")

@@ -1,6 +1,6 @@
 {
   "schema": "mf-uw-mapping/v1",
-  "registry_version": "0.1.3",
+  "registry_version": "0.2.0",
   "product_line": "MF",
   "generated_phase": "MF Track 4 — Phase 0. Inspection + mapping registry only (no writer). Maps the MF operator intake docs (rent roll, T-12, AR aging) to the two paste targets in MF_UW_Model_v15.xlsx: (1) Rent Roll Analysis grid rows 273+, and (2) T-12 Analysis Layer 1 rows 106+. No mf_* parser code exists yet — the source side is the raw operator exports in MF Docs/ (Hidden Lakes: redIQ / PSI / Yardi-CIM). Concepts the future parser must supply but no doc currently exposes cleanly are flagged gap_source.",
   "source_docs": {
@@ -13,10 +13,20 @@
       "data_start_row": 8,
       "period": "Apr 2026 (as-of 4/16/2026)",
       "columns": {
-        "A": "Bldg-Unit", "B": "Unit Type", "C": "SQFT", "D": "Unit Status",
-        "E": "Resident", "F": "Move-In", "G": "Lease Start", "H": "Lease End",
-        "I": "Expected Move-Out", "J": "Market Rent", "K": "Actual Charges",
-        "L": "Scheduled Charges", "M": "Balance", "N": "Deposit Held"
+        "A": "Bldg-Unit",
+        "B": "Unit Type",
+        "C": "SQFT",
+        "D": "Unit Status",
+        "E": "Resident",
+        "F": "Move-In",
+        "G": "Lease Start",
+        "H": "Lease End",
+        "I": "Expected Move-Out",
+        "J": "Market Rent",
+        "K": "Actual Charges",
+        "L": "Scheduled Charges",
+        "M": "Balance",
+        "N": "Deposit Held"
       }
     },
     "rent_roll_sortable": {
@@ -37,9 +47,16 @@
       "period": "Mar 2026",
       "join_key": "Bldg-Unit (col A) — joins to the RR grid",
       "columns": {
-        "A": "Bldg-Unit", "B": "Resident", "C": "Lease Status",
-        "D": "Unallocated Charges / Credits", "E": "0-30 Days", "F": "31-60 Days",
-        "G": "61-90 Days", "H": "90+ Days", "I": "Pre-Payments", "J": "Balance",
+        "A": "Bldg-Unit",
+        "B": "Resident",
+        "C": "Lease Status",
+        "D": "Unallocated Charges / Credits",
+        "E": "0-30 Days",
+        "F": "31-60 Days",
+        "G": "61-90 Days",
+        "H": "90+ Days",
+        "I": "Pre-Payments",
+        "J": "Balance",
         "K": "Last Delinquency Note"
       }
     },
@@ -51,9 +68,13 @@
       "data_start_row": 8,
       "period": "Apr 2025 - Mar 2026",
       "columns": {
-        "A": "Account", "B": "Account Name",
-        "C-N": "Apr 2025 .. Mar 2026 (12 months)", "O": "Total",
-        "Q": "GL Account Type", "R": "Property", "S": "Segment"
+        "A": "Account",
+        "B": "Account Name",
+        "C-N": "Apr 2025 .. Mar 2026 (12 months)",
+        "O": "Total",
+        "Q": "GL Account Type",
+        "R": "Property",
+        "S": "Segment"
       }
     }
   },
@@ -77,17 +98,43 @@
         "capacity_units": 1500,
         "diagnostic_rows": "1-271 (formula-derived from the paste grid; writer must not overwrite). Summary anchors: I5=COUNTA units, G5=Prop Info units, N5=Total AR, Q5=legal count, T5=occupied count.",
         "columns": {
-          "A": "Bldg", "B": "Unit #", "C": "Type", "D": "SF", "E": "Status",
-          "F": "Resident", "G": "Legal", "H": "Move-In", "I": "Lease Start",
-          "J": "Lease End", "K": "Exp Move-Out", "L": "Mkt Rent", "M": "Actual Chgs",
-          "N": "Sched Chgs", "O": "Balance", "P": "Deposit", "Q": "0-30 Days",
-          "R": "31-60", "S": "61-90", "T": "90+", "U": "Status Flag", "V": "Notes",
-          "W": "MTM Fees", "X": "Application Fees", "Y": "Late Fees",
-          "Z": "Utility Reimbursement", "AA": "Pet Fees", "AB": "Parking Income",
-          "AC": "Amenity Fees", "AD": "Admin Fees", "AE": "Insurance Pass-Thru",
-          "AF": "Misc Other Income", "AG": "Storage / Common Bins",
-          "AH": "Package Service / Lockers", "AI": "Lease Lock Fee",
-          "AJ": "Valet Trash", "AK": "Lease Break Fee"
+          "A": "Bldg",
+          "B": "Unit #",
+          "C": "Type",
+          "D": "SF",
+          "E": "Status",
+          "F": "Resident",
+          "G": "Legal",
+          "H": "Move-In",
+          "I": "Lease Start",
+          "J": "Lease End",
+          "K": "Exp Move-Out",
+          "L": "Mkt Rent",
+          "M": "Actual Chgs",
+          "N": "Sched Chgs",
+          "O": "Balance",
+          "P": "Deposit",
+          "Q": "0-30 Days",
+          "R": "31-60",
+          "S": "61-90",
+          "T": "90+",
+          "U": "Status Flag",
+          "V": "Notes",
+          "W": "MTM Fees",
+          "X": "Application Fees",
+          "Y": "Late Fees",
+          "Z": "Utility Reimbursement",
+          "AA": "Pet Fees",
+          "AB": "Parking Income",
+          "AC": "Amenity Fees",
+          "AD": "Admin Fees",
+          "AE": "Insurance Pass-Thru",
+          "AF": "Misc Other Income",
+          "AG": "Storage / Common Bins",
+          "AH": "Package Service / Lockers",
+          "AI": "Lease Lock Fee",
+          "AJ": "Valet Trash",
+          "AK": "Lease Break Fee"
         }
       },
       "t12_layer1": {
@@ -97,7 +144,8 @@
         "data_start_row": 106,
         "data_end_row": 255,
         "columns": {
-          "A": "Acct #", "B": "Account Name (raw)",
+          "A": "Acct #",
+          "B": "Account Name (raw)",
           "C-N": "12 monthly columns (Apr-25 .. Mar-26)",
           "O": "T-12 Total (template formula =SUM(C:N))",
           "P": "→ MAPPING (_StdCOA bucket; drives all Layer-3 SUMIFS)"
@@ -110,24 +158,57 @@
   "std_coa_buckets": {
     "note": "_StdCOA sheet is the MF bucket master list — the equivalent of ALF's Description_Map closed vocabulary. The Layer-3 aggregation and the T-12 Analysis col-P mapping both key on these exact strings. _StdCOA col F lists the PSI source account numbers each bucket maps from (e.g. 4210->GPR, 4305->Vacancy, 5161->Pest Control), which a future MF COA-mapping dictionary will use.",
     "income": [
-      "Gross Potential Rent", "Gain/Loss on Market Rent", "Vacancy Loss",
-      "Down Units Loss", "Employee Units", "Concessions", "Delinquency Change",
-      "Write-offs / Bad Debt", "Prepaid Rent Change", "MTM Fees",
-      "Application Fees", "Late Fees", "Utility Reimbursement", "Pet Fees",
-      "Parking Income", "Amenity Fees", "Admin Fees", "Insurance Pass-Thru",
-      "Misc Other Income", "Renter's Insurance", "Reimbursement — Internet",
-      "Storage / Common Bins", "Package Service / Lockers", "Lease Lock Fee",
-      "Valet Trash", "Lease Break Fee"
+      "Gross Potential Rent",
+      "Gain/Loss on Market Rent",
+      "Vacancy Loss",
+      "Down Units Loss",
+      "Employee Units",
+      "Concessions",
+      "Delinquency Change",
+      "Write-offs / Bad Debt",
+      "Prepaid Rent Change",
+      "MTM Fees",
+      "Application Fees",
+      "Late Fees",
+      "Utility Reimbursement",
+      "Pet Fees",
+      "Parking Income",
+      "Amenity Fees",
+      "Admin Fees",
+      "Insurance Pass-Thru",
+      "Misc Other Income",
+      "Renter's Insurance",
+      "Reimbursement — Internet",
+      "Storage / Common Bins",
+      "Package Service / Lockers",
+      "Lease Lock Fee",
+      "Valet Trash",
+      "Lease Break Fee"
     ],
     "expense": [
-      "Repairs & Maintenance", "Contract Services", "Landscaping", "Pest Control",
-      "Pool / Amenity Maintenance", "Make-Ready / Turnover", "Payroll — On-Site",
-      "Leasing & Marketing", "General & Administrative", "Legal / Eviction",
-      "Insurance", "Real Estate Taxes", "Utilities — Electric",
-      "Utilities — Gas", "Utilities — Water/Sewer", "Utilities — Trash",
-      "Utilities — Internet/Cable", "Management Fee"
+      "Repairs & Maintenance",
+      "Contract Services",
+      "Landscaping",
+      "Pest Control",
+      "Pool / Amenity Maintenance",
+      "Make-Ready / Turnover",
+      "Payroll — On-Site",
+      "Leasing & Marketing",
+      "General & Administrative",
+      "Legal / Eviction",
+      "Insurance",
+      "Real Estate Taxes",
+      "Utilities — Electric",
+      "Utilities — Gas",
+      "Utilities — Water/Sewer",
+      "Utilities — Trash",
+      "Utilities — Internet/Cable",
+      "Management Fee"
     ],
-    "control": ["— UNMAPPED —", "— EXCLUDED (non-OpEx) —"]
+    "control": [
+      "— UNMAPPED —",
+      "— EXCLUDED (non-OpEx) —"
+    ]
   },
   "status_legend": {
     "mapped": "1:1 mapping confirmed by header/label match + semantic review of the operator doc vs the template column.",
@@ -149,7 +230,10 @@
     "metadata": "Property name, unit count, period dates.",
     "t12_raw": "Raw T-12 paste block (Layer 1): account #, name, monthly columns.",
     "t12_mapping": "The _StdCOA bucket assignment per raw T-12 line (col P) — the intelligence layer.",
-    "t12_derived": "Template-computed totals / aggregations; writer must not overwrite."
+    "t12_derived": "Template-computed totals / aggregations; writer must not overwrite.",
+    "om_prop": "OM property physical details → Prop Info col B.",
+    "om_market": "OM market / demographic data → Prop Info col B (overlaps the AI Market Research tool).",
+    "om_comp": "OM submarket rent comparable → Rental Comps rows 8–22."
   },
   "concepts": [
     {
@@ -157,8 +241,20 @@
       "label": "Property Name",
       "category": "metadata",
       "path": "metadata",
-      "source": {"system": "mf_rr", "sheet": "Hidden Lakes", "address": "A3", "label": "Property name in RR header block (also in AR/T12 headers)"},
-      "targets": {"v15": {"sheet": "Prop Info", "address": "B4", "label_at": "A4", "target_label": "Property Name"}},
+      "source": {
+        "system": "mf_rr",
+        "sheet": "Hidden Lakes",
+        "address": "A3",
+        "label": "Property name in RR header block (also in AR/T12 headers)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B4",
+          "label_at": "A4",
+          "target_label": "Property Name"
+        }
+      },
       "status": "mapped",
       "notes": "Drives Cover!B5, every sheet title (=IF('Prop Info'!B4=\"\"...)), and the Rent Roll Analysis / T-12 Analysis health checks. Present in all four operator doc header blocks."
     },
@@ -167,8 +263,18 @@
       "label": "Total Units",
       "category": "metadata",
       "path": "metadata",
-      "source": {"system": "derived", "note": "Count of RR data rows (143 for Hidden Lakes). Also stated in Sortable-RR Sheet2!DealUnits and the RR title ('143 units')."},
-      "targets": {"v15": {"sheet": "Prop Info", "address": "B6", "label_at": "A6", "target_label": "# Units"}},
+      "source": {
+        "system": "derived",
+        "note": "Count of RR data rows (143 for Hidden Lakes). Also stated in Sortable-RR Sheet2!DealUnits and the RR title ('143 units')."
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B6",
+          "label_at": "A6",
+          "target_label": "# Units"
+        }
+      },
       "status": "mapped",
       "notes": "Prop Info!B6 is the denominator for occupancy %, PUPM, and the Rent Roll Analysis G5 reconciliation (RR count I5 must equal B6)."
     },
@@ -177,8 +283,20 @@
       "label": "Rent Roll period / as-of date",
       "category": "metadata",
       "path": "metadata",
-      "source": {"system": "mf_rr", "sheet": "Hidden Lakes", "address": "A4", "label": "'Apr 2026' (as-of 4/16/2026)"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "A5", "label_at": "A5", "target_label": "Date:"}},
+      "source": {
+        "system": "mf_rr",
+        "sheet": "Hidden Lakes",
+        "address": "A4",
+        "label": "'Apr 2026' (as-of 4/16/2026)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "A5",
+          "label_at": "A5",
+          "target_label": "Date:"
+        }
+      },
       "status": "proposed",
       "notes": "RR Analysis A5 'Date:' label cell. Exact target cell for the value (vs label) to be confirmed when the writer is built."
     },
@@ -187,19 +305,43 @@
       "label": "T-12 period range",
       "category": "metadata",
       "path": "metadata",
-      "source": {"system": "mf_t12", "sheet": "Hidden Lakes", "address": "A5", "label": "'Apr 2025 - Mar 2026'"},
-      "targets": {"v15": {"sheet": "T-12 Analysis", "address": "C105", "label_at": "C105", "target_label": "monthly header start"}},
+      "source": {
+        "system": "mf_t12",
+        "sheet": "Hidden Lakes",
+        "address": "A5",
+        "label": "'Apr 2025 - Mar 2026'"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "T-12 Analysis",
+          "address": "C105",
+          "label_at": "C105",
+          "target_label": "monthly header start"
+        }
+      },
       "status": "proposed",
       "notes": "Drives the 12 monthly column headers on T-12 Analysis Layer 1 (C105:N105). The T-12 monthly columns and period must align with the operator's actual months."
     },
-
     {
       "key": "rr_bldg",
       "label": "Building",
       "category": "rr_identity",
       "path": "rent_roll",
-      "source": {"system": "mf_rr", "sheet": "Hidden Lakes", "column": "A", "label": "Bldg-Unit (split on '-')"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "A273+", "label_at": "A272", "target_label": "Bldg", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_rr",
+        "sheet": "Hidden Lakes",
+        "column": "A",
+        "label": "Bldg-Unit (split on '-')"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "A273+",
+          "label_at": "A272",
+          "target_label": "Bldg",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "mapped",
       "notes": "Source 'Bldg-Unit' (e.g. 'A1') splits: building prefix -> A, unit -> B. Hidden Lakes uses single-letter building + unit number."
     },
@@ -208,8 +350,21 @@
       "label": "Unit #",
       "category": "rr_identity",
       "path": "rent_roll",
-      "source": {"system": "mf_rr", "sheet": "Hidden Lakes", "column": "A", "label": "Bldg-Unit (split on '-')"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "B273+", "label_at": "B272", "target_label": "Unit #", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_rr",
+        "sheet": "Hidden Lakes",
+        "column": "A",
+        "label": "Bldg-Unit (split on '-')"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "B273+",
+          "label_at": "B272",
+          "target_label": "Unit #",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "mapped",
       "notes": "Unit portion of 'Bldg-Unit'."
     },
@@ -218,8 +373,21 @@
       "label": "Unit Type",
       "category": "rr_identity",
       "path": "rent_roll",
-      "source": {"system": "mf_rr", "sheet": "Hidden Lakes", "column": "B", "label": "Unit Type (e.g. '1x1', '2x2')"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "C273+", "label_at": "C272", "target_label": "Type", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_rr",
+        "sheet": "Hidden Lakes",
+        "column": "B",
+        "label": "Unit Type (e.g. '1x1', '2x2')"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "C273+",
+          "label_at": "C272",
+          "target_label": "Type",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "mapped",
       "notes": "MF floorplan code (bed x bath). Feeds the floor-plan rollups in Recapture & Upside / Rental Comps."
     },
@@ -228,8 +396,21 @@
       "label": "Square Feet",
       "category": "rr_identity",
       "path": "rent_roll",
-      "source": {"system": "mf_rr", "sheet": "Hidden Lakes", "column": "C", "label": "SQFT"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "D273+", "label_at": "D272", "target_label": "SF", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_rr",
+        "sheet": "Hidden Lakes",
+        "column": "C",
+        "label": "SQFT"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "D273+",
+          "label_at": "D272",
+          "target_label": "SF",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "mapped",
       "notes": ""
     },
@@ -238,8 +419,21 @@
       "label": "Unit Status",
       "category": "rr_status",
       "path": "rent_roll",
-      "source": {"system": "mf_rr", "sheet": "Hidden Lakes", "column": "D", "label": "Unit Status"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "E273+", "label_at": "E272", "target_label": "Status", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_rr",
+        "sheet": "Hidden Lakes",
+        "column": "D",
+        "label": "Unit Status"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "E273+",
+          "label_at": "E272",
+          "target_label": "Status",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "proposed",
       "notes": "Template's status taxonomy is matched by COUNTIF wildcards: 'Occupied*', 'Vacant Unrented Ready', 'Vacant Unrented Not Ready', 'Down*', 'Vacant*Leased*'/'Vacant Rented*', 'Model'/'Employee'/'Office', 'Occupied No Notice'. Operator 'Unit Status' values (e.g. 'Occupied No Notice', 'Vacant Unrented Not Ready') already align closely; a future normalizer should confirm/standardize the closed vocab. proposed until the status-string map is locked."
     },
@@ -248,8 +442,21 @@
       "label": "Resident",
       "category": "rr_identity",
       "path": "rent_roll",
-      "source": {"system": "mf_rr", "sheet": "Hidden Lakes", "column": "E", "label": "Resident"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "F273+", "label_at": "F272", "target_label": "Resident", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_rr",
+        "sheet": "Hidden Lakes",
+        "column": "E",
+        "label": "Resident"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "F273+",
+          "label_at": "F272",
+          "target_label": "Resident",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "mapped",
       "notes": "Vacant units show '-- Vacant --'. The '**' prefix convention drives the Legal flag (see rr_legal)."
     },
@@ -258,8 +465,19 @@
       "label": "Legal / Eviction flag",
       "category": "rr_status",
       "path": "rent_roll",
-      "source": {"system": "derived", "note": "Boolean TRUE if the source Resident name starts with '**' (operator's legal/eviction mark). Per template row 270 note."},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "G273+", "label_at": "G272", "target_label": "Legal", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "derived",
+        "note": "Boolean TRUE if the source Resident name starts with '**' (operator's legal/eviction mark). Per template row 270 note."
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "G273+",
+          "label_at": "G272",
+          "target_label": "Legal",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "proposed",
       "notes": "Template col G is a boolean used by Section C (legal/eviction cohort), Q5 legal count, and B113/D113 (units flagged + AR exposure). Derive from the '**' name prefix; the Eviction Status Report / bankruptcy disclosures in the DD checklist may refine. 9 active evictions + 1 bankruptcy known on Hidden Lakes."
     },
@@ -268,8 +486,21 @@
       "label": "Move-In Date",
       "category": "rr_dates",
       "path": "rent_roll",
-      "source": {"system": "mf_rr", "sheet": "Hidden Lakes", "column": "F", "label": "Move-In"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "H273+", "label_at": "H272", "target_label": "Move-In", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_rr",
+        "sheet": "Hidden Lakes",
+        "column": "F",
+        "label": "Move-In"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "H273+",
+          "label_at": "H272",
+          "target_label": "Move-In",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "mapped",
       "notes": "Drives the Resident Tenure Cohort analysis (Section G uses TODAY()-H)."
     },
@@ -278,8 +509,21 @@
       "label": "Lease Start",
       "category": "rr_dates",
       "path": "rent_roll",
-      "source": {"system": "mf_rr", "sheet": "Hidden Lakes", "column": "G", "label": "Lease Start"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "I273+", "label_at": "I272", "target_label": "Lease Start", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_rr",
+        "sheet": "Hidden Lakes",
+        "column": "G",
+        "label": "Lease Start"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "I273+",
+          "label_at": "I272",
+          "target_label": "Lease Start",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "mapped",
       "notes": ""
     },
@@ -288,8 +532,21 @@
       "label": "Lease End",
       "category": "rr_dates",
       "path": "rent_roll",
-      "source": {"system": "mf_rr", "sheet": "Hidden Lakes", "column": "H", "label": "Lease End"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "J273+", "label_at": "J272", "target_label": "Lease End", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_rr",
+        "sheet": "Hidden Lakes",
+        "column": "H",
+        "label": "Lease End"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "J273+",
+          "label_at": "J272",
+          "target_label": "Lease End",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "mapped",
       "notes": "Drives the Lease Expiration Schedule (Section E, 24-month forward buckets keyed on col J)."
     },
@@ -298,8 +555,21 @@
       "label": "Expected Move-Out",
       "category": "rr_dates",
       "path": "rent_roll",
-      "source": {"system": "mf_rr", "sheet": "Hidden Lakes", "column": "I", "label": "Expected Move-Out"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "K273+", "label_at": "K272", "target_label": "Exp Move-Out", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_rr",
+        "sheet": "Hidden Lakes",
+        "column": "I",
+        "label": "Expected Move-Out"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "K273+",
+          "label_at": "K272",
+          "target_label": "Exp Move-Out",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "mapped",
       "notes": "Notice-to-vacate / scheduled move-out. Mostly blank in the source unless a move-out is scheduled."
     },
@@ -308,8 +578,21 @@
       "label": "Market Rent",
       "category": "rr_rates",
       "path": "rent_roll",
-      "source": {"system": "mf_rr", "sheet": "Hidden Lakes", "column": "J", "label": "Market Rent"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "L273+", "label_at": "L272", "target_label": "Mkt Rent", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_rr",
+        "sheet": "Hidden Lakes",
+        "column": "J",
+        "label": "Market Rent"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "L273+",
+          "label_at": "L272",
+          "target_label": "Mkt Rent",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "mapped",
       "notes": "Drives Market GPR (Section D B26), loss-to-lease, and vacancy loss."
     },
@@ -318,8 +601,21 @@
       "label": "Actual Charges",
       "category": "rr_rates",
       "path": "rent_roll",
-      "source": {"system": "mf_rr", "sheet": "Hidden Lakes", "column": "K", "label": "Actual Charges"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "M273+", "label_at": "M272", "target_label": "Actual Chgs", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_rr",
+        "sheet": "Hidden Lakes",
+        "column": "K",
+        "label": "Actual Charges"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "M273+",
+          "label_at": "M272",
+          "target_label": "Actual Chgs",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "mapped",
       "notes": "Total billed charges incl. ancillaries. Cross-check against Sched Chgs + the W-AK breakouts."
     },
@@ -328,8 +624,21 @@
       "label": "Scheduled Charges",
       "category": "rr_rates",
       "path": "rent_roll",
-      "source": {"system": "mf_rr", "sheet": "Hidden Lakes", "column": "L", "label": "Scheduled Charges"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "N273+", "label_at": "N272", "target_label": "Sched Chgs", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_rr",
+        "sheet": "Hidden Lakes",
+        "column": "L",
+        "label": "Scheduled Charges"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "N273+",
+          "label_at": "N272",
+          "target_label": "Sched Chgs",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "mapped",
       "notes": "Contractual base rent on occupied units. Drives Scheduled GPR (Section D B27) and avg-sched-per-unit metrics."
     },
@@ -338,8 +647,21 @@
       "label": "Balance (AR)",
       "category": "rr_ar",
       "path": "rent_roll",
-      "source": {"system": "mf_rr", "sheet": "Hidden Lakes", "column": "M", "label": "Balance"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "O273+", "label_at": "O272", "target_label": "Balance", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_rr",
+        "sheet": "Hidden Lakes",
+        "column": "M",
+        "label": "Balance"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "O273+",
+          "label_at": "O272",
+          "target_label": "Balance",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "mapped",
       "notes": "Total AR balance per unit. Drives N5 Total AR, the delinquency tiers (<500 / >=500), and Top-10 delinquent list. Also present (and should reconcile) in the AR doc col J."
     },
@@ -348,8 +670,21 @@
       "label": "Deposit Held",
       "category": "rr_rates",
       "path": "rent_roll",
-      "source": {"system": "mf_rr", "sheet": "Hidden Lakes", "column": "N", "label": "Deposit Held"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "P273+", "label_at": "P272", "target_label": "Deposit", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_rr",
+        "sheet": "Hidden Lakes",
+        "column": "N",
+        "label": "Deposit Held"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "P273+",
+          "label_at": "P272",
+          "target_label": "Deposit",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "mapped",
       "notes": "Security deposit. Feeds Net Exposure (Balance - Deposit) on the Top-10 delinquent table."
     },
@@ -358,8 +693,22 @@
       "label": "AR Aging — 0-30 Days",
       "category": "rr_ar",
       "path": "rent_roll",
-      "source": {"system": "mf_ar", "sheet": "Hidden Lakes", "column": "E", "label": "0-30 Days", "join": "Bldg-Unit"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "Q273+", "label_at": "Q272", "target_label": "0-30 Days", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_ar",
+        "sheet": "Hidden Lakes",
+        "column": "E",
+        "label": "0-30 Days",
+        "join": "Bldg-Unit"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "Q273+",
+          "label_at": "Q272",
+          "target_label": "0-30 Days",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "gap_source",
       "notes": "Aging lives in a SEPARATE AR doc and must be joined to the RR grid on Bldg-Unit. Template note (A88) says 'paste from separate aging report into cols Q-T'. Requires the resident-key join the future mf_ar parser will own. The AR doc is dated Mar 2026 vs RR Apr 2026 — period-mismatch caveat."
     },
@@ -368,8 +717,22 @@
       "label": "AR Aging — 31-60 Days",
       "category": "rr_ar",
       "path": "rent_roll",
-      "source": {"system": "mf_ar", "sheet": "Hidden Lakes", "column": "F", "label": "31-60 Days", "join": "Bldg-Unit"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "R273+", "label_at": "R272", "target_label": "31-60", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_ar",
+        "sheet": "Hidden Lakes",
+        "column": "F",
+        "label": "31-60 Days",
+        "join": "Bldg-Unit"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "R273+",
+          "label_at": "R272",
+          "target_label": "31-60",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "gap_source",
       "notes": "See rr_ar_0_30 — same AR-join gap."
     },
@@ -378,8 +741,22 @@
       "label": "AR Aging — 61-90 Days",
       "category": "rr_ar",
       "path": "rent_roll",
-      "source": {"system": "mf_ar", "sheet": "Hidden Lakes", "column": "G", "label": "61-90 Days", "join": "Bldg-Unit"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "S273+", "label_at": "S272", "target_label": "61-90", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_ar",
+        "sheet": "Hidden Lakes",
+        "column": "G",
+        "label": "61-90 Days",
+        "join": "Bldg-Unit"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "S273+",
+          "label_at": "S272",
+          "target_label": "61-90",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "gap_source",
       "notes": "See rr_ar_0_30 — same AR-join gap."
     },
@@ -388,8 +765,22 @@
       "label": "AR Aging — 90+ Days",
       "category": "rr_ar",
       "path": "rent_roll",
-      "source": {"system": "mf_ar", "sheet": "Hidden Lakes", "column": "H", "label": "90+ Days", "join": "Bldg-Unit"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "T273+", "label_at": "T272", "target_label": "90+", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_ar",
+        "sheet": "Hidden Lakes",
+        "column": "H",
+        "label": "90+ Days",
+        "join": "Bldg-Unit"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "T273+",
+          "label_at": "T272",
+          "target_label": "90+",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "gap_source",
       "notes": "See rr_ar_0_30 — same AR-join gap. Drives D94 aging-ties reconciliation: SUM(Q:T) must equal col-O Total AR."
     },
@@ -398,8 +789,19 @@
       "label": "Status Flag",
       "category": "rr_other",
       "path": "rent_roll",
-      "source": {"system": "gap", "note": "No direct operator source. Likely a derived/computed cell (e.g. exception marker). Purpose to be confirmed against template formulas in a future pass."},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "U273+", "label_at": "U272", "target_label": "Status Flag", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "gap",
+        "note": "No direct operator source. Likely a derived/computed cell (e.g. exception marker). Purpose to be confirmed against template formulas in a future pass."
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "U273+",
+          "label_at": "U272",
+          "target_label": "Status Flag",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "gap_source",
       "notes": "Column U semantics unconfirmed; not in the operator RR. Defer until the writer pass clarifies whether it is analyst-input or derived."
     },
@@ -408,19 +810,44 @@
       "label": "Notes",
       "category": "rr_other",
       "path": "rent_roll",
-      "source": {"system": "mf_ar", "sheet": "Hidden Lakes", "column": "K", "label": "Last Delinquency Note (from AR doc) — or free-form RR notes"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "V273+", "label_at": "V272", "target_label": "Notes", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_ar",
+        "sheet": "Hidden Lakes",
+        "column": "K",
+        "label": "Last Delinquency Note (from AR doc) — or free-form RR notes"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "V273+",
+          "label_at": "V272",
+          "target_label": "Notes",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "proposed",
       "notes": "Best source is the AR doc's 'Last Delinquency Note' (joined on Bldg-Unit). Optional / informational column."
     },
-
     {
       "key": "rr_anc_mtm_fees",
       "label": "MTM Fees (per unit)",
       "category": "rr_ancillary",
       "path": "rent_roll",
-      "source": {"system": "mf_rr_sortable", "sheet": "Source Data", "label": "Charge code (redIQ Source Data)", "bucket": "MTM Fees"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "W273+", "label_at": "W272", "target_label": "MTM Fees", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_rr_sortable",
+        "sheet": "Source Data",
+        "label": "Charge code (redIQ Source Data)",
+        "bucket": "MTM Fees"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "W273+",
+          "label_at": "W272",
+          "target_label": "MTM Fees",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "gap_source",
       "notes": "Per-unit other-income breakout mirroring _StdCOA. Not in the basic RR doc; only the Sortable-RR 'Source Data' charge-code grid carries per-fee detail. Future mf_ parser must map charge codes -> buckets."
     },
@@ -429,8 +856,21 @@
       "label": "Application Fees (per unit)",
       "category": "rr_ancillary",
       "path": "rent_roll",
-      "source": {"system": "mf_rr_sortable", "sheet": "Source Data", "label": "Charge code", "bucket": "Application Fees"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "X273+", "label_at": "X272", "target_label": "Application Fees", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_rr_sortable",
+        "sheet": "Source Data",
+        "label": "Charge code",
+        "bucket": "Application Fees"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "X273+",
+          "label_at": "X272",
+          "target_label": "Application Fees",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "gap_source",
       "notes": "See rr_anc_mtm_fees — ancillary breakout gap."
     },
@@ -439,8 +879,21 @@
       "label": "Late Fees (per unit)",
       "category": "rr_ancillary",
       "path": "rent_roll",
-      "source": {"system": "mf_rr_sortable", "sheet": "Source Data", "label": "Charge code", "bucket": "Late Fees"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "Y273+", "label_at": "Y272", "target_label": "Late Fees", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_rr_sortable",
+        "sheet": "Source Data",
+        "label": "Charge code",
+        "bucket": "Late Fees"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "Y273+",
+          "label_at": "Y272",
+          "target_label": "Late Fees",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "gap_source",
       "notes": "See rr_anc_mtm_fees — ancillary breakout gap."
     },
@@ -449,8 +902,21 @@
       "label": "Utility Reimbursement (per unit)",
       "category": "rr_ancillary",
       "path": "rent_roll",
-      "source": {"system": "mf_rr_sortable", "sheet": "Source Data", "label": "Charge code", "bucket": "Utility Reimbursement"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "Z273+", "label_at": "Z272", "target_label": "Utility Reimbursement", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_rr_sortable",
+        "sheet": "Source Data",
+        "label": "Charge code",
+        "bucket": "Utility Reimbursement"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "Z273+",
+          "label_at": "Z272",
+          "target_label": "Utility Reimbursement",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "gap_source",
       "notes": "RUBS / utility billbacks. See rr_anc_mtm_fees — ancillary breakout gap."
     },
@@ -459,8 +925,21 @@
       "label": "Pet Fees (per unit)",
       "category": "rr_ancillary",
       "path": "rent_roll",
-      "source": {"system": "mf_rr_sortable", "sheet": "Source Data", "label": "Charge code", "bucket": "Pet Fees"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "AA273+", "label_at": "AA272", "target_label": "Pet Fees", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_rr_sortable",
+        "sheet": "Source Data",
+        "label": "Charge code",
+        "bucket": "Pet Fees"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AA273+",
+          "label_at": "AA272",
+          "target_label": "Pet Fees",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "gap_source",
       "notes": "See rr_anc_mtm_fees — ancillary breakout gap."
     },
@@ -469,8 +948,21 @@
       "label": "Parking Income (per unit)",
       "category": "rr_ancillary",
       "path": "rent_roll",
-      "source": {"system": "mf_rr_sortable", "sheet": "Source Data", "label": "Charge code", "bucket": "Parking Income"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "AB273+", "label_at": "AB272", "target_label": "Parking Income", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_rr_sortable",
+        "sheet": "Source Data",
+        "label": "Charge code",
+        "bucket": "Parking Income"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AB273+",
+          "label_at": "AB272",
+          "target_label": "Parking Income",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "gap_source",
       "notes": "See rr_anc_mtm_fees — ancillary breakout gap."
     },
@@ -479,8 +971,21 @@
       "label": "Amenity Fees (per unit)",
       "category": "rr_ancillary",
       "path": "rent_roll",
-      "source": {"system": "mf_rr_sortable", "sheet": "Source Data", "label": "Charge code", "bucket": "Amenity Fees"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "AC273+", "label_at": "AC272", "target_label": "Amenity Fees", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_rr_sortable",
+        "sheet": "Source Data",
+        "label": "Charge code",
+        "bucket": "Amenity Fees"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AC273+",
+          "label_at": "AC272",
+          "target_label": "Amenity Fees",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "gap_source",
       "notes": "See rr_anc_mtm_fees — ancillary breakout gap."
     },
@@ -489,8 +994,21 @@
       "label": "Admin Fees (per unit)",
       "category": "rr_ancillary",
       "path": "rent_roll",
-      "source": {"system": "mf_rr_sortable", "sheet": "Source Data", "label": "Charge code", "bucket": "Admin Fees"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "AD273+", "label_at": "AD272", "target_label": "Admin Fees", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_rr_sortable",
+        "sheet": "Source Data",
+        "label": "Charge code",
+        "bucket": "Admin Fees"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AD273+",
+          "label_at": "AD272",
+          "target_label": "Admin Fees",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "gap_source",
       "notes": "See rr_anc_mtm_fees — ancillary breakout gap."
     },
@@ -499,8 +1017,21 @@
       "label": "Insurance Pass-Thru (per unit)",
       "category": "rr_ancillary",
       "path": "rent_roll",
-      "source": {"system": "mf_rr_sortable", "sheet": "Source Data", "label": "Charge code", "bucket": "Insurance Pass-Thru"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "AE273+", "label_at": "AE272", "target_label": "Insurance Pass-Thru", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_rr_sortable",
+        "sheet": "Source Data",
+        "label": "Charge code",
+        "bucket": "Insurance Pass-Thru"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AE273+",
+          "label_at": "AE272",
+          "target_label": "Insurance Pass-Thru",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "gap_source",
       "notes": "See rr_anc_mtm_fees — ancillary breakout gap."
     },
@@ -509,8 +1040,21 @@
       "label": "Misc Other Income (per unit)",
       "category": "rr_ancillary",
       "path": "rent_roll",
-      "source": {"system": "mf_rr_sortable", "sheet": "Source Data", "label": "Charge code", "bucket": "Misc Other Income"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "AF273+", "label_at": "AF272", "target_label": "Misc Other Income", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_rr_sortable",
+        "sheet": "Source Data",
+        "label": "Charge code",
+        "bucket": "Misc Other Income"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AF273+",
+          "label_at": "AF272",
+          "target_label": "Misc Other Income",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "gap_source",
       "notes": "Catch-all other income. See rr_anc_mtm_fees — ancillary breakout gap."
     },
@@ -519,8 +1063,21 @@
       "label": "Storage / Common Bins (per unit)",
       "category": "rr_ancillary",
       "path": "rent_roll",
-      "source": {"system": "mf_rr_sortable", "sheet": "Source Data", "label": "Charge code", "bucket": "Storage / Common Bins"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "AG273+", "label_at": "AG272", "target_label": "Storage / Common Bins", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_rr_sortable",
+        "sheet": "Source Data",
+        "label": "Charge code",
+        "bucket": "Storage / Common Bins"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AG273+",
+          "label_at": "AG272",
+          "target_label": "Storage / Common Bins",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "gap_source",
       "notes": "See rr_anc_mtm_fees — ancillary breakout gap."
     },
@@ -529,8 +1086,21 @@
       "label": "Package Service / Lockers (per unit)",
       "category": "rr_ancillary",
       "path": "rent_roll",
-      "source": {"system": "mf_rr_sortable", "sheet": "Source Data", "label": "Charge code", "bucket": "Package Service / Lockers"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "AH273+", "label_at": "AH272", "target_label": "Package Service / Lockers", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_rr_sortable",
+        "sheet": "Source Data",
+        "label": "Charge code",
+        "bucket": "Package Service / Lockers"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AH273+",
+          "label_at": "AH272",
+          "target_label": "Package Service / Lockers",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "gap_source",
       "notes": "See rr_anc_mtm_fees — ancillary breakout gap."
     },
@@ -539,8 +1109,21 @@
       "label": "Lease Lock Fee (per unit)",
       "category": "rr_ancillary",
       "path": "rent_roll",
-      "source": {"system": "mf_rr_sortable", "sheet": "Source Data", "label": "Charge code", "bucket": "Lease Lock Fee"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "AI273+", "label_at": "AI272", "target_label": "Lease Lock Fee", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_rr_sortable",
+        "sheet": "Source Data",
+        "label": "Charge code",
+        "bucket": "Lease Lock Fee"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AI273+",
+          "label_at": "AI272",
+          "target_label": "Lease Lock Fee",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "gap_source",
       "notes": "See rr_anc_mtm_fees — ancillary breakout gap."
     },
@@ -549,8 +1132,21 @@
       "label": "Valet Trash (per unit)",
       "category": "rr_ancillary",
       "path": "rent_roll",
-      "source": {"system": "mf_rr_sortable", "sheet": "Source Data", "label": "Charge code", "bucket": "Valet Trash"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "AJ273+", "label_at": "AJ272", "target_label": "Valet Trash", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_rr_sortable",
+        "sheet": "Source Data",
+        "label": "Charge code",
+        "bucket": "Valet Trash"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AJ273+",
+          "label_at": "AJ272",
+          "target_label": "Valet Trash",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "gap_source",
       "notes": "See rr_anc_mtm_fees — ancillary breakout gap."
     },
@@ -559,19 +1155,44 @@
       "label": "Lease Break Fee (per unit)",
       "category": "rr_ancillary",
       "path": "rent_roll",
-      "source": {"system": "mf_rr_sortable", "sheet": "Source Data", "label": "Charge code", "bucket": "Lease Break Fee"},
-      "targets": {"v15": {"sheet": "Rent Roll Analysis", "address": "AK273+", "label_at": "AK272", "target_label": "Lease Break Fee", "paste_anchor": "Rent Roll Analysis!A273"}},
+      "source": {
+        "system": "mf_rr_sortable",
+        "sheet": "Source Data",
+        "label": "Charge code",
+        "bucket": "Lease Break Fee"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AK273+",
+          "label_at": "AK272",
+          "target_label": "Lease Break Fee",
+          "paste_anchor": "Rent Roll Analysis!A273"
+        }
+      },
       "status": "gap_source",
       "notes": "See rr_anc_mtm_fees — ancillary breakout gap."
     },
-
     {
       "key": "t12_acct",
       "label": "Account #",
       "category": "t12_raw",
       "path": "t12",
-      "source": {"system": "mf_t12", "sheet": "Hidden Lakes", "column": "A", "label": "Account"},
-      "targets": {"v15": {"sheet": "T-12 Analysis", "address": "A106+", "label_at": "A105", "target_label": "Acct #", "paste_anchor": "T-12 Analysis!A106"}},
+      "source": {
+        "system": "mf_t12",
+        "sheet": "Hidden Lakes",
+        "column": "A",
+        "label": "Account"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "T-12 Analysis",
+          "address": "A106+",
+          "label_at": "A105",
+          "target_label": "Acct #",
+          "paste_anchor": "T-12 Analysis!A106"
+        }
+      },
       "status": "mapped",
       "notes": "PSI account number. Direct paste into Layer 1 col A. 101 GL lines on Hidden Lakes."
     },
@@ -580,8 +1201,21 @@
       "label": "Account Name (raw)",
       "category": "t12_raw",
       "path": "t12",
-      "source": {"system": "mf_t12", "sheet": "Hidden Lakes", "column": "B", "label": "Account Name"},
-      "targets": {"v15": {"sheet": "T-12 Analysis", "address": "B106+", "label_at": "B105", "target_label": "Account Name (raw)", "paste_anchor": "T-12 Analysis!A106"}},
+      "source": {
+        "system": "mf_t12",
+        "sheet": "Hidden Lakes",
+        "column": "B",
+        "label": "Account Name"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "T-12 Analysis",
+          "address": "B106+",
+          "label_at": "B105",
+          "target_label": "Account Name (raw)",
+          "paste_anchor": "T-12 Analysis!A106"
+        }
+      },
       "status": "mapped",
       "notes": "Raw PSI account name. Direct paste into Layer 1 col B."
     },
@@ -590,8 +1224,21 @@
       "label": "12 monthly columns (Apr-25..Mar-26)",
       "category": "t12_raw",
       "path": "t12",
-      "source": {"system": "mf_t12", "sheet": "Hidden Lakes", "address": "C:N", "label": "12 monthly columns Apr 2025 .. Mar 2026"},
-      "targets": {"v15": {"sheet": "T-12 Analysis", "address": "C106:N255", "label_at": "C105", "target_label": "monthly block (12 cols)", "paste_anchor": "T-12 Analysis!A106"}},
+      "source": {
+        "system": "mf_t12",
+        "sheet": "Hidden Lakes",
+        "address": "C:N",
+        "label": "12 monthly columns Apr 2025 .. Mar 2026"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "T-12 Analysis",
+          "address": "C106:N255",
+          "label_at": "C105",
+          "target_label": "monthly block (12 cols)",
+          "paste_anchor": "T-12 Analysis!A106"
+        }
+      },
       "status": "mapped",
       "notes": "Direct 12-month paste block. Source period (Apr 2025-Mar 2026) aligns with the template's month headers. Layer 1 col O re-derives T-12 Total via =SUM(C:N); Layer 3 SUMIFS aggregate by bucket."
     },
@@ -600,8 +1247,18 @@
       "label": "T-12 Total (per line)",
       "category": "t12_derived",
       "path": "t12",
-      "source": {"system": "derived", "note": "Template formula =SUM(C{r}:N{r}) on Layer 1 col O. Writer must NOT paste the operator's 'Total' (col O on the source) over it."},
-      "targets": {"v15": {"sheet": "T-12 Analysis", "address": "O106+", "label_at": "O105", "target_label": "T-12 Total"}},
+      "source": {
+        "system": "derived",
+        "note": "Template formula =SUM(C{r}:N{r}) on Layer 1 col O. Writer must NOT paste the operator's 'Total' (col O on the source) over it."
+      },
+      "targets": {
+        "v15": {
+          "sheet": "T-12 Analysis",
+          "address": "O106+",
+          "label_at": "O105",
+          "target_label": "T-12 Total"
+        }
+      },
       "status": "derived",
       "notes": "Self-derives from the pasted monthly block. The operator T-12 has its own Total in col O; the template recomputes to stay internally consistent."
     },
@@ -610,18 +1267,997 @@
       "label": "→ MAPPING (_StdCOA bucket per line)",
       "category": "t12_mapping",
       "path": "t12",
-      "source": {"system": "gap", "note": "No operator column supplies the bucket directly. The PSI 'GL Account Type' (source col Q) is coarse; precise bucketing needs a PSI-account -> _StdCOA dictionary keyed on account number/name. _StdCOA col F lists the source account numbers per bucket as the seed for that dictionary."},
-      "targets": {"v15": {"sheet": "T-12 Analysis", "address": "P106+", "label_at": "P105", "target_label": "→ MAPPING", "paste_anchor": "T-12 Analysis!A106"}},
+      "source": {
+        "system": "gap",
+        "note": "No operator column supplies the bucket directly. The PSI 'GL Account Type' (source col Q) is coarse; precise bucketing needs a PSI-account -> _StdCOA dictionary keyed on account number/name. _StdCOA col F lists the source account numbers per bucket as the seed for that dictionary."
+      },
+      "targets": {
+        "v15": {
+          "sheet": "T-12 Analysis",
+          "address": "P106+",
+          "label_at": "P105",
+          "target_label": "→ MAPPING",
+          "paste_anchor": "T-12 Analysis!A106"
+        }
+      },
       "status": "gap_source",
       "notes": "THE intelligence layer of the T-12 path — the MF equivalent of ALF's Description_Map. Every Layer-3 SUMIFS keys on this string. A future mf_t12 normalizer must classify each raw line into a _StdCOA bucket. Pre-filled example mappings exist on rows 106-185 for Hidden Lakes (analyst-authored), demonstrating the target vocabulary."
+    },
+    {
+      "key": "om_address",
+      "label": "Location / Address",
+      "category": "om_prop",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "address",
+        "label": "Extracted from the Offering Memorandum (address)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B5",
+          "label_at": "A5",
+          "target_label": "Location / Address"
+        }
+      },
+      "status": "mapped",
+      "notes": "Populated by mf_om_extractor (LLM engine) → mf_uw_model_writer._write_prop_info. Manual-input cell; OM fills it."
+    },
+    {
+      "key": "om_num_buildings",
+      "label": "# Buildings",
+      "category": "om_prop",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "num_buildings",
+        "label": "Extracted from the Offering Memorandum (num_buildings)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B7",
+          "label_at": "A7",
+          "target_label": "# Buildings"
+        }
+      },
+      "status": "mapped",
+      "notes": "Populated by mf_om_extractor (LLM engine) → mf_uw_model_writer._write_prop_info. Manual-input cell; OM fills it."
+    },
+    {
+      "key": "om_num_stories",
+      "label": "Height (stories)",
+      "category": "om_prop",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "num_stories",
+        "label": "Extracted from the Offering Memorandum (num_stories)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B8",
+          "label_at": "A8",
+          "target_label": "Height (stories)"
+        }
+      },
+      "status": "mapped",
+      "notes": "Populated by mf_om_extractor (LLM engine) → mf_uw_model_writer._write_prop_info. Manual-input cell; OM fills it."
+    },
+    {
+      "key": "om_year_built",
+      "label": "Year Built",
+      "category": "om_prop",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "year_built",
+        "label": "Extracted from the Offering Memorandum (year_built)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B9",
+          "label_at": "A9",
+          "target_label": "Year Built"
+        }
+      },
+      "status": "mapped",
+      "notes": "Populated by mf_om_extractor (LLM engine) → mf_uw_model_writer._write_prop_info. Manual-input cell; OM fills it."
+    },
+    {
+      "key": "om_lot_acres",
+      "label": "Lot Size (acres)",
+      "category": "om_prop",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "lot_acres",
+        "label": "Extracted from the Offering Memorandum (lot_acres)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B10",
+          "label_at": "A10",
+          "target_label": "Lot Size (acres)"
+        }
+      },
+      "status": "mapped",
+      "notes": "Populated by mf_om_extractor (LLM engine) → mf_uw_model_writer._write_prop_info. Manual-input cell; OM fills it."
+    },
+    {
+      "key": "om_gross_sqft",
+      "label": "Gross Sq Ft",
+      "category": "om_prop",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "gross_sqft",
+        "label": "Extracted from the Offering Memorandum (gross_sqft)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B11",
+          "label_at": "A11",
+          "target_label": "Gross Sq Ft"
+        }
+      },
+      "status": "mapped",
+      "notes": "Populated by mf_om_extractor (LLM engine) → mf_uw_model_writer._write_prop_info. Manual-input cell; OM fills it."
+    },
+    {
+      "key": "om_parking_spaces",
+      "label": "Parking Spaces",
+      "category": "om_prop",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "parking_spaces",
+        "label": "Extracted from the Offering Memorandum (parking_spaces)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B12",
+          "label_at": "A12",
+          "target_label": "Parking Spaces"
+        }
+      },
+      "status": "mapped",
+      "notes": "Populated by mf_om_extractor (LLM engine) → mf_uw_model_writer._write_prop_info. Manual-input cell; OM fills it."
+    },
+    {
+      "key": "om_building_class",
+      "label": "Building Class (A/B/C)",
+      "category": "om_prop",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "building_class",
+        "label": "Extracted from the Offering Memorandum (building_class)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B13",
+          "label_at": "A13",
+          "target_label": "Building Class (A/B/C)"
+        }
+      },
+      "status": "mapped",
+      "notes": "Populated by mf_om_extractor (LLM engine) → mf_uw_model_writer._write_prop_info. Manual-input cell; OM fills it."
+    },
+    {
+      "key": "om_amenity_tier",
+      "label": "Amenity Tier",
+      "category": "om_prop",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "amenity_tier",
+        "label": "Extracted from the Offering Memorandum (amenity_tier)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B14",
+          "label_at": "A14",
+          "target_label": "Amenity Tier (Standard / Mid / Luxury)"
+        }
+      },
+      "status": "mapped",
+      "notes": "Populated by mf_om_extractor (LLM engine) → mf_uw_model_writer._write_prop_info. Manual-input cell; OM fills it."
+    },
+    {
+      "key": "om_total_rentable_sf",
+      "label": "Total Rentable SF",
+      "category": "om_prop",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "total_rentable_sf",
+        "label": "Extracted from the Offering Memorandum (total_rentable_sf)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B15",
+          "label_at": "A15",
+          "target_label": "Total Rentable SF"
+        }
+      },
+      "status": "mapped",
+      "notes": "Populated by mf_om_extractor (LLM engine) → mf_uw_model_writer._write_prop_info. Manual-input cell; OM fills it."
+    },
+    {
+      "key": "om_studio_units",
+      "label": "Studio Units",
+      "category": "om_prop",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "studio_units",
+        "label": "Extracted from the Offering Memorandum (studio_units)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B16",
+          "label_at": "A16",
+          "target_label": "Studio Units"
+        }
+      },
+      "status": "mapped",
+      "notes": "Populated by mf_om_extractor (LLM engine) → mf_uw_model_writer._write_prop_info. Manual-input cell; OM fills it."
+    },
+    {
+      "key": "om_1br_units",
+      "label": "1BR Units",
+      "category": "om_prop",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "br1_units",
+        "label": "Extracted from the Offering Memorandum (br1_units)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B17",
+          "label_at": "A17",
+          "target_label": "1BR Units"
+        }
+      },
+      "status": "mapped",
+      "notes": "Populated by mf_om_extractor (LLM engine) → mf_uw_model_writer._write_prop_info. Manual-input cell; OM fills it."
+    },
+    {
+      "key": "om_2br_units",
+      "label": "2BR Units",
+      "category": "om_prop",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "br2_units",
+        "label": "Extracted from the Offering Memorandum (br2_units)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B18",
+          "label_at": "A18",
+          "target_label": "2BR Units"
+        }
+      },
+      "status": "mapped",
+      "notes": "Populated by mf_om_extractor (LLM engine) → mf_uw_model_writer._write_prop_info. Manual-input cell; OM fills it."
+    },
+    {
+      "key": "om_3br_units",
+      "label": "3BR Units",
+      "category": "om_prop",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "br3_units",
+        "label": "Extracted from the Offering Memorandum (br3_units)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B31",
+          "label_at": "A31",
+          "target_label": "3BR Units"
+        }
+      },
+      "status": "mapped",
+      "notes": "Populated by mf_om_extractor (LLM engine) → mf_uw_model_writer._write_prop_info. Manual-input cell; OM fills it."
+    },
+    {
+      "key": "om_city_market",
+      "label": "City / Market",
+      "category": "om_market",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "city_market",
+        "label": "Extracted from the Offering Memorandum (city_market)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B20",
+          "label_at": "A20",
+          "target_label": "City / Market"
+        }
+      },
+      "status": "mapped",
+      "notes": "Populated by mf_om_extractor (LLM engine) → mf_uw_model_writer._write_prop_info. Manual-input cell; OM fills it."
+    },
+    {
+      "key": "om_msa_name",
+      "label": "MSA Name",
+      "category": "om_market",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "msa_name",
+        "label": "Extracted from the Offering Memorandum (msa_name)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B21",
+          "label_at": "A21",
+          "target_label": "MSA Name"
+        }
+      },
+      "status": "mapped",
+      "notes": "Populated by mf_om_extractor (LLM engine) → mf_uw_model_writer._write_prop_info. Manual-input cell; OM fills it."
+    },
+    {
+      "key": "om_msa_population",
+      "label": "MSA Population",
+      "category": "om_market",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "msa_population",
+        "label": "Extracted from the Offering Memorandum (msa_population)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B22",
+          "label_at": "A22",
+          "target_label": "MSA Population"
+        }
+      },
+      "status": "mapped",
+      "notes": "Populated by mf_om_extractor (LLM engine) → mf_uw_model_writer._write_prop_info. Manual-input cell; OM fills it."
+    },
+    {
+      "key": "om_city_population",
+      "label": "City Population",
+      "category": "om_market",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "city_population",
+        "label": "Extracted from the Offering Memorandum (city_population)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B23",
+          "label_at": "A23",
+          "target_label": "City Population"
+        }
+      },
+      "status": "mapped",
+      "notes": "Populated by mf_om_extractor (LLM engine) → mf_uw_model_writer._write_prop_info. Manual-input cell; OM fills it."
+    },
+    {
+      "key": "om_population_growth",
+      "label": "Population Growth Rate",
+      "category": "om_market",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "population_growth_rate",
+        "label": "Extracted from the Offering Memorandum (population_growth_rate)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B24",
+          "label_at": "A24",
+          "target_label": "Population Growth Rate"
+        }
+      },
+      "status": "mapped",
+      "notes": "Populated by mf_om_extractor (LLM engine) → mf_uw_model_writer._write_prop_info. Manual-input cell; OM fills it."
+    },
+    {
+      "key": "om_avg_household_income",
+      "label": "Avg Household Income",
+      "category": "om_market",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "avg_household_income",
+        "label": "Extracted from the Offering Memorandum (avg_household_income)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B27",
+          "label_at": "A27",
+          "target_label": "Avg Household Income"
+        }
+      },
+      "status": "mapped",
+      "notes": "Populated by mf_om_extractor (LLM engine) → mf_uw_model_writer._write_prop_info. Manual-input cell; OM fills it."
+    },
+    {
+      "key": "om_median_income",
+      "label": "Median Income",
+      "category": "om_market",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "median_income",
+        "label": "Extracted from the Offering Memorandum (median_income)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B28",
+          "label_at": "A28",
+          "target_label": "Median Income"
+        }
+      },
+      "status": "mapped",
+      "notes": "Populated by mf_om_extractor (LLM engine) → mf_uw_model_writer._write_prop_info. Manual-input cell; OM fills it."
+    },
+    {
+      "key": "om_school_rating",
+      "label": "School District Rating",
+      "category": "om_market",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "school_rating",
+        "label": "Extracted from the Offering Memorandum (school_rating)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B29",
+          "label_at": "A29",
+          "target_label": "School District Rating (1-10)"
+        }
+      },
+      "status": "mapped",
+      "notes": "Populated by mf_om_extractor (LLM engine) → mf_uw_model_writer._write_prop_info. Manual-input cell; OM fills it."
+    },
+    {
+      "key": "om_blended_rent",
+      "label": "Blended Avg Monthly Rent",
+      "category": "om_market",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "(unit_mix weighted)",
+        "label": "Extracted from the Offering Memorandum ((unit_mix weighted))"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B32",
+          "label_at": "A32",
+          "target_label": "Blended Avg Monthly Rent"
+        }
+      },
+      "status": "mapped",
+      "notes": "Populated by mf_om_extractor (LLM engine) → mf_uw_model_writer._write_prop_info. Manual-input cell; OM fills it."
+    },
+    {
+      "key": "om_avg_unit_sf",
+      "label": "Avg Unit SF",
+      "category": "om_market",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "avg_unit_sf",
+        "label": "Extracted from the Offering Memorandum (avg_unit_sf)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B33",
+          "label_at": "A33",
+          "target_label": "Avg Unit SF"
+        }
+      },
+      "status": "mapped",
+      "notes": "Populated by mf_om_extractor (LLM engine) → mf_uw_model_writer._write_prop_info. Manual-input cell; OM fills it."
+    },
+    {
+      "key": "om_market_vacancy",
+      "label": "Market Vacancy Rate",
+      "category": "om_market",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "market_vacancy_rate",
+        "label": "Extracted from the Offering Memorandum (market_vacancy_rate)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B34",
+          "label_at": "A34",
+          "target_label": "Market Vacancy Rate"
+        }
+      },
+      "status": "mapped",
+      "notes": "Populated by mf_om_extractor (LLM engine) → mf_uw_model_writer._write_prop_info. Manual-input cell; OM fills it."
+    },
+    {
+      "key": "om_market_rent_growth",
+      "label": "Market Rent Growth",
+      "category": "om_market",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "market_rent_growth",
+        "label": "Extracted from the Offering Memorandum (market_rent_growth)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B35",
+          "label_at": "A35",
+          "target_label": "Market Rent Growth (Annual)"
+        }
+      },
+      "status": "mapped",
+      "notes": "Populated by mf_om_extractor (LLM engine) → mf_uw_model_writer._write_prop_info. Manual-input cell; OM fills it."
+    },
+    {
+      "key": "om_new_supply",
+      "label": "New Supply (Units U/C)",
+      "category": "om_market",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "new_supply_units",
+        "label": "Extracted from the Offering Memorandum (new_supply_units)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B36",
+          "label_at": "A36",
+          "target_label": "New Supply — Units Under Construction"
+        }
+      },
+      "status": "mapped",
+      "notes": "Populated by mf_om_extractor (LLM engine) → mf_uw_model_writer._write_prop_info. Manual-input cell; OM fills it."
+    },
+    {
+      "key": "om_renter_pct",
+      "label": "Renter Household %",
+      "category": "om_market",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "renter_pct",
+        "label": "Extracted from the Offering Memorandum (renter_pct)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B37",
+          "label_at": "A37",
+          "target_label": "Renter Household % of Population"
+        }
+      },
+      "status": "mapped",
+      "notes": "Populated by mf_om_extractor (LLM engine) → mf_uw_model_writer._write_prop_info. Manual-input cell; OM fills it."
+    },
+    {
+      "key": "om_electric_meter",
+      "label": "Electric Meter",
+      "category": "om_prop",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "electric_meter",
+        "label": "Extracted from the Offering Memorandum (electric_meter)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B39",
+          "label_at": "A39",
+          "target_label": "Electric Meter"
+        }
+      },
+      "status": "mapped",
+      "notes": "Populated by mf_om_extractor (LLM engine) → mf_uw_model_writer._write_prop_info. Manual-input cell; OM fills it."
+    },
+    {
+      "key": "om_water_meter",
+      "label": "Water Meter",
+      "category": "om_prop",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "water_meter",
+        "label": "Extracted from the Offering Memorandum (water_meter)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B40",
+          "label_at": "A40",
+          "target_label": "Water Meter"
+        }
+      },
+      "status": "mapped",
+      "notes": "Populated by mf_om_extractor (LLM engine) → mf_uw_model_writer._write_prop_info. Manual-input cell; OM fills it."
+    },
+    {
+      "key": "om_gas",
+      "label": "Gas",
+      "category": "om_prop",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "gas",
+        "label": "Extracted from the Offering Memorandum (gas)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B41",
+          "label_at": "A41",
+          "target_label": "Gas"
+        }
+      },
+      "status": "mapped",
+      "notes": "Populated by mf_om_extractor (LLM engine) → mf_uw_model_writer._write_prop_info. Manual-input cell; OM fills it."
+    },
+    {
+      "key": "om_trash",
+      "label": "Trash",
+      "category": "om_prop",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "trash",
+        "label": "Extracted from the Offering Memorandum (trash)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B42",
+          "label_at": "A42",
+          "target_label": "Trash"
+        }
+      },
+      "status": "mapped",
+      "notes": "Populated by mf_om_extractor (LLM engine) → mf_uw_model_writer._write_prop_info. Manual-input cell; OM fills it."
+    },
+    {
+      "key": "om_value_add_thesis",
+      "label": "Value-Add Thesis",
+      "category": "om_prop",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "value_add_thesis",
+        "label": "Extracted from the Offering Memorandum (value_add_thesis)"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Prop Info",
+          "address": "B47",
+          "label_at": "A47",
+          "target_label": "Value-Add Thesis"
+        }
+      },
+      "status": "mapped",
+      "notes": "Populated by mf_om_extractor (LLM engine) → mf_uw_model_writer._write_prop_info. Manual-input cell; OM fills it."
+    },
+    {
+      "key": "om_comp_distance",
+      "label": "Comp Distance (mi)",
+      "category": "om_comp",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "distance_mi",
+        "label": "Rent comparable distance_mi from the OM comp set"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rental Comps",
+          "address": "Q8+",
+          "label_at": "Q6",
+          "target_label": "Comp Distance (mi)"
+        }
+      },
+      "status": "mapped",
+      "notes": "Row-stride: one comp per row 8–22 (15 max). Z/AA (eff-rent, $/SF) and the SUBJECT row 7 are template formulas, never written."
+    },
+    {
+      "key": "om_comp_name",
+      "label": "Comp Property",
+      "category": "om_comp",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "name",
+        "label": "Rent comparable name from the OM comp set"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rental Comps",
+          "address": "R8+",
+          "label_at": "R6",
+          "target_label": "Comp Property"
+        }
+      },
+      "status": "mapped",
+      "notes": "Row-stride: one comp per row 8–22 (15 max). Z/AA (eff-rent, $/SF) and the SUBJECT row 7 are template formulas, never written."
+    },
+    {
+      "key": "om_comp_class",
+      "label": "Comp Class (A/B/C)",
+      "category": "om_comp",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "building_class",
+        "label": "Rent comparable building_class from the OM comp set"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rental Comps",
+          "address": "S8+",
+          "label_at": "S6",
+          "target_label": "Comp Class (A/B/C)"
+        }
+      },
+      "status": "mapped",
+      "notes": "Row-stride: one comp per row 8–22 (15 max). Z/AA (eff-rent, $/SF) and the SUBJECT row 7 are template formulas, never written."
+    },
+    {
+      "key": "om_comp_vintage",
+      "label": "Comp Vintage",
+      "category": "om_comp",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "year_built",
+        "label": "Rent comparable year_built from the OM comp set"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rental Comps",
+          "address": "T8+",
+          "label_at": "T6",
+          "target_label": "Comp Vintage"
+        }
+      },
+      "status": "mapped",
+      "notes": "Row-stride: one comp per row 8–22 (15 max). Z/AA (eff-rent, $/SF) and the SUBJECT row 7 are template formulas, never written."
+    },
+    {
+      "key": "om_comp_units",
+      "label": "Comp # Units",
+      "category": "om_comp",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "units",
+        "label": "Rent comparable units from the OM comp set"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rental Comps",
+          "address": "U8+",
+          "label_at": "U6",
+          "target_label": "Comp # Units"
+        }
+      },
+      "status": "mapped",
+      "notes": "Row-stride: one comp per row 8–22 (15 max). Z/AA (eff-rent, $/SF) and the SUBJECT row 7 are template formulas, never written."
+    },
+    {
+      "key": "om_comp_unit_type",
+      "label": "Comp Unit Type",
+      "category": "om_comp",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "unit_type",
+        "label": "Rent comparable unit_type from the OM comp set"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rental Comps",
+          "address": "V8+",
+          "label_at": "V6",
+          "target_label": "Comp Unit Type"
+        }
+      },
+      "status": "mapped",
+      "notes": "Row-stride: one comp per row 8–22 (15 max). Z/AA (eff-rent, $/SF) and the SUBJECT row 7 are template formulas, never written."
+    },
+    {
+      "key": "om_comp_avg_sf",
+      "label": "Comp Avg SF",
+      "category": "om_comp",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "avg_sf",
+        "label": "Rent comparable avg_sf from the OM comp set"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rental Comps",
+          "address": "W8+",
+          "label_at": "W6",
+          "target_label": "Comp Avg SF"
+        }
+      },
+      "status": "mapped",
+      "notes": "Row-stride: one comp per row 8–22 (15 max). Z/AA (eff-rent, $/SF) and the SUBJECT row 7 are template formulas, never written."
+    },
+    {
+      "key": "om_comp_asking_rent",
+      "label": "Comp Asking Rent /mo",
+      "category": "om_comp",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "asking_rent",
+        "label": "Rent comparable asking_rent from the OM comp set"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rental Comps",
+          "address": "X8+",
+          "label_at": "X6",
+          "target_label": "Comp Asking Rent /mo"
+        }
+      },
+      "status": "mapped",
+      "notes": "Row-stride: one comp per row 8–22 (15 max). Z/AA (eff-rent, $/SF) and the SUBJECT row 7 are template formulas, never written."
+    },
+    {
+      "key": "om_comp_concession",
+      "label": "Comp Concession (wks)",
+      "category": "om_comp",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "concession_weeks",
+        "label": "Rent comparable concession_weeks from the OM comp set"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rental Comps",
+          "address": "Y8+",
+          "label_at": "Y6",
+          "target_label": "Comp Concession (wks)"
+        }
+      },
+      "status": "mapped",
+      "notes": "Row-stride: one comp per row 8–22 (15 max). Z/AA (eff-rent, $/SF) and the SUBJECT row 7 are template formulas, never written."
+    },
+    {
+      "key": "om_comp_occupancy",
+      "label": "Comp Occupancy %",
+      "category": "om_comp",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "occupancy",
+        "label": "Rent comparable occupancy from the OM comp set"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rental Comps",
+          "address": "AB8+",
+          "label_at": "AB6",
+          "target_label": "Comp Occupancy %"
+        }
+      },
+      "status": "mapped",
+      "notes": "Row-stride: one comp per row 8–22 (15 max). Z/AA (eff-rent, $/SF) and the SUBJECT row 7 are template formulas, never written."
+    },
+    {
+      "key": "om_comp_comment",
+      "label": "Comp Comment",
+      "category": "om_comp",
+      "path": "om",
+      "source": {
+        "system": "mf_om",
+        "sheet": "OM (PDF)",
+        "address": "comment",
+        "label": "Rent comparable comment from the OM comp set"
+      },
+      "targets": {
+        "v15": {
+          "sheet": "Rental Comps",
+          "address": "AD8+",
+          "label_at": "AD6",
+          "target_label": "Comp Comment"
+        }
+      },
+      "status": "mapped",
+      "notes": "Row-stride: one comp per row 8–22 (15 max). Z/AA (eff-rent, $/SF) and the SUBJECT row 7 are template formulas, never written."
     }
   ],
   "intake_targets_unmapped": [
     {
       "sheet": "Prop Info",
-      "rows_range": "rows 5-47 (except B4/B6 which are mapped)",
+      "rows_range": "rows 25-26, 43-46 (renter-age pop, other notes)",
       "kind": "manual",
-      "notes": "Property physical details (buildings, year built, sq ft, parking, class), market data (MSA pop, income, vacancy, rent growth, supply), utility metering, value-add thesis. Per the Data Refresh sheet, market fields can auto-populate via Power Query (Census ACS / FRED) or a separate AI Market Research tool. Not part of the intake pipeline."
+      "notes": "Residual manual / AI-Market-Research cells: renter-age population (B25/B26) and the free-text 'Other notes' block (B43-B46). The rest of Prop Info is now OM-mapped (path=om)."
     },
     {
       "sheet": "T-12 Analysis",
@@ -642,7 +2278,7 @@
     }
   ],
   "open_questions": [
-    "OM (Offering Memorandum) intake — NOT BUILT. The 4th operator doc type (comps + property info -> Prop Info / Rental Comps). The main remaining MF intake build; needs a sample OM doc (none in MF Docs/ yet).",
+    "RESOLVED by the OM intake build (MF v0.5.0, mf_om_extractor + writer): OM property details + market block → Prop Info, rent comps → Rental Comps. Extraction defaults to an LLM engine (Claude structured output); a basic no-API labelled-facts engine is the fallback. Three OM formats validated (MMG/Blairstone, IPA/Avana, CBRE/Ascend). Remaining OM follow-ups: (a) demographics overlap the AI Market Research tool — OM wins when present; (b) broker pro-forma captured but intentionally NOT written (UW trusts the T-12).",
     "redIQ Sortable-RR ancillary path — LOW PRIORITY. Itemized 'Operations' RRs now break out W-AK inline from col L (MF v0.4.2), so the Sortable-RR 'Source Data' charge-code path is only needed if an operator provides ONLY a non-itemized basic RR plus a separate Sortable-RR. Build if/when such a case appears.",
     "Column U 'Status Flag' (Rent Roll Analysis) — semantics still unconfirmed (analyst-input vs derived); deferred to whenever it matters (SPEC-MF §2.7).",
     "RESOLVED by the parser build (MF v0.2.0-v0.4.4, 2026-06-03), retained for traceability: (a) T-12 COA->_StdCOA dictionary -> coa_seed.csv + mf_mappings.classify_t12_account (5 formats, 100% coverage, penny-exact reconciliation); (b) AR Bldg-Unit join + period handling -> mf_ar_parser.join_ar_to_units (49/49 on Avana, >45-day warning, two-way unmatched report); (c) status taxonomy -> mf_mappings.normalize_status; (d) W-AK ancillary breakout for itemized RRs -> mf_mappings.classify_charge_code + writer; (e) template versioning -> reuse the v15 filename, refresh the committed asset via verbatim byte-copy after an anchor pre-flight diff (MF v0.4.4); (f) Subsidy Rent stays folded in scheduled charges -> GPR (operator-confirmed, no dedicated column).",

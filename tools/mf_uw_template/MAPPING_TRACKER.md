@@ -1,6 +1,6 @@
 # MF UW Model — Mapping Tracker
 
-> Generated from `tools/mf_uw_template/registry.json` on 2026-06-04 12:27 UTC.  **Do not edit by hand** — edit `registry.json` and re-run `python tools/mf_uw_template/build_mapping_artifacts.py`.
+> Generated from `tools/mf_uw_template/registry.json` on 2026-06-04 23:09 UTC.  **Do not edit by hand** — edit `registry.json` and re-run `python tools/mf_uw_template/build_mapping_artifacts.py`.
 
 - Product line: **MF** (multifamily). No Analyzer substrate — source is the raw operator docs in `MF Docs/`.
 - Primary template: `v15` → `assets/MF_UW_Model_v15.xlsx`
@@ -20,11 +20,11 @@
 
 | Status | Count |
 |---|---|
+| `mapped` | 63 |
 | `gap_source` | 21 |
-| `mapped` | 19 |
 | `proposed` | 5 |
 | `derived` | 1 |
-| **Total concepts** | **46** |
+| **Total concepts** | **90** |
 
 ## Status rollup by path
 
@@ -145,14 +145,14 @@
 
 ## Unmapped template surface (writer does NOT populate)
 
-- **`Prop Info`** (manual) — rows 5-47 (except B4/B6 which are mapped): Property physical details (buildings, year built, sq ft, parking, class), market data (MSA pop, income, vacancy, rent growth, supply), utility metering, value-add thesis. Per the Data Refresh sheet, market fields can auto-populate via Power Query (Census ACS / FRED) or a separate AI Market Research tool. Not part of the intake pipeline.
+- **`Prop Info`** (manual) — rows 25-26, 43-46 (renter-age pop, other notes): Residual manual / AI-Market-Research cells: renter-age population (B25/B26) and the free-text 'Other notes' block (B43-B46). The rest of Prop Info is now OM-mapped (path=om).
 - **`T-12 Analysis`** (derived) — rows 1-101 + 257-262: Layer 1 (rows 105-255) is the paste target. Rows 1-54 are diagnostics (reconciliation, T-3/T-12 trend, econ-vs-physical occupancy, bad-debt layering, tax/insurance accrual checks). Rows 56-101 are Layer 3 standardized aggregation (SUMIFS by col-P bucket). Rows 257-262 are raw totals reconciliation. Writer must not overwrite any of these.
 - **`Rent Roll Analysis`** (derived) — rows 1-271: The grid (rows 272 header + 273-1772 data) is the paste target. Rows 1-271 are diagnostic dashboards computed from the grid: health check (row 5), unit status taxonomy (C), GPR reconciliation (D), lease expiration schedule (E), days-vacant tracker (F), tenure cohort (G), AR aging summary (H), top-10 delinquent (I). Writer must not overwrite.
 - **`Scenarios / Acquisition Costs / P&L / Loans / Waterfall / Exit / XIRR / Sensitivity / LP Return / Portfolio Rollup / Recapture & Upside / Capex / Payroll / Rental Comps / Lease-Up & Capital Call`** (manual) — —: Downstream underwriting model sheets (assumptions, debt, returns, sensitivity). Equivalent to the ALF downstream UW workbook — consume the analysis layers, not intake targets. Analyst-driven; out of scope for the intake mapping.
 
 ## Open questions
 
-- OM (Offering Memorandum) intake — NOT BUILT. The 4th operator doc type (comps + property info -> Prop Info / Rental Comps). The main remaining MF intake build; needs a sample OM doc (none in MF Docs/ yet).
+- RESOLVED by the OM intake build (MF v0.5.0, mf_om_extractor + writer): OM property details + market block → Prop Info, rent comps → Rental Comps. Extraction defaults to an LLM engine (Claude structured output); a basic no-API labelled-facts engine is the fallback. Three OM formats validated (MMG/Blairstone, IPA/Avana, CBRE/Ascend). Remaining OM follow-ups: (a) demographics overlap the AI Market Research tool — OM wins when present; (b) broker pro-forma captured but intentionally NOT written (UW trusts the T-12).
 - redIQ Sortable-RR ancillary path — LOW PRIORITY. Itemized 'Operations' RRs now break out W-AK inline from col L (MF v0.4.2), so the Sortable-RR 'Source Data' charge-code path is only needed if an operator provides ONLY a non-itemized basic RR plus a separate Sortable-RR. Build if/when such a case appears.
 - Column U 'Status Flag' (Rent Roll Analysis) — semantics still unconfirmed (analyst-input vs derived); deferred to whenever it matters (SPEC-MF §2.7).
 - RESOLVED by the parser build (MF v0.2.0-v0.4.4, 2026-06-03), retained for traceability: (a) T-12 COA->_StdCOA dictionary -> coa_seed.csv + mf_mappings.classify_t12_account (5 formats, 100% coverage, penny-exact reconciliation); (b) AR Bldg-Unit join + period handling -> mf_ar_parser.join_ar_to_units (49/49 on Avana, >45-day warning, two-way unmatched report); (c) status taxonomy -> mf_mappings.normalize_status; (d) W-AK ancillary breakout for itemized RRs -> mf_mappings.classify_charge_code + writer; (e) template versioning -> reuse the v15 filename, refresh the committed asset via verbatim byte-copy after an anchor pre-flight diff (MF v0.4.4); (f) Subsidy Rent stays folded in scheduled charges -> GPR (operator-confirmed, no dedicated column).

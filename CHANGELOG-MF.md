@@ -7,6 +7,56 @@ and the `mf_` naming convention.
 
 ---
 
+## MF v0.5.0 — 2026-06-04 — OM (Offering Memorandum) intake ships (Track 4-MF P3)
+
+Closes the last big MF intake gap: the 4th operator doc type. A broker OM PDF now
+extracts into the MF UW Model's **Prop Info** (property details + market block)
+and **Rental Comps** (submarket comp set). This was the "OM intake — NOT BUILT"
+open-question.
+
+**New `mf_om_extractor.py`** — `parse_mf_om(source, *, engine="llm"|"basic",
+api_key=None) -> MFOMResult`. PyMuPDF (`pymupdf`) extracts the OM text. Two
+selectable engines:
+- **LLM (default)** — hands the OM text to Claude with a structured-output tool
+  schema (maximal scope: property facts, market/demographics, rent comps,
+  broker pro-forma) and maps the validated JSON onto typed dataclasses
+  (`MFPropInfo` / `MFMarketData` / `MFRentComp` / `MFProForma` / `MFOMResult`).
+  Robust across the wildly different broker layouts (verified against three
+  real OMs: MMG/Blairstone, IPA/Avana, CBRE/Ascend — each lays comps out
+  differently). Needs the `anthropic` SDK + an API key (passed in or
+  `ANTHROPIC_API_KEY`).
+- **Basic (no-API fallback)** — deterministic labelled `label`/`value` scan with
+  plausibility guards. Reliably gets the labelled PROPERTY DETAILS block
+  (Blairstone: 7/8 fields; units+year+county on all three) but not the
+  free-form comp/market tables. Why two engines: OMs are glossy marketing PDFs
+  where deterministic parsing is genuinely brittle, so AI extraction is primary
+  — but the operator can pick Basic to skip the API.
+
+**Writer** (`mf_uw_model_writer.populate_mf_model(..., om=MFOMResult)`) — writes
+Prop Info `B5:B47` (details + market) and Rental Comps `Q8:AD22` (15 comps max).
+RR-derived units/name take precedence (the rent roll is authoritative). The
+template's `Z`/`AA` (eff-rent, $/SF) formulas + the SUBJECT row 7 are preserved.
+Bedroom counts derive from the OM unit-mix when not stated explicitly; occupancy
+is written as a fraction (96% → 0.96). The broker **pro-forma is captured but
+intentionally NOT written** — UW trusts the T-12, not the broker's projections.
+
+**App** (`_render_mf_intake`) — OM PDF uploader + an extraction-engine radio
+(AI / Basic) + an API-key field (or Streamlit secrets); summary metrics + a
+comp-table preview; `om=` flows into the populate call.
+
+**Registry → v0.2.0** — +44 OM concepts (33 Prop Info, 11 Rental Comps) mapped
+to `templates.v15`; the Prop Info manual-input note narrowed to the residual
+AI-Market-Research cells; OM open-question retired. 46 → **90 concepts** (63
+mapped / 5 proposed / 21 gap_source / 1 derived). `tools/mf_uw_template/_add_om_concepts.py`
+(idempotent) + artifacts regenerated.
+
+**Tests** — `tests/test_mf_om_extractor.py` (9): coercers, the LLM JSON→dataclass
+mapping, writer integration (cells + formula preservation, RR-override), and the
+basic engine on the three real OMs (skipped when `MF Docs/OM/` fixtures absent).
+All 36 MF tests green. `requirements.txt` += `pymupdf`, `anthropic`.
+
+---
+
 ## registry v0.1.3 — 2026-06-03 — Prune stale open-questions after the parser build
 
 Housekeeping: the registry's `open_questions` listed 10 items, but the MF parser

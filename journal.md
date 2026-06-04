@@ -9,6 +9,59 @@ Newest at top.
 
 ---
 
+## 2026-06-04 — MF v0.5.0 — OM (Offering Memorandum) intake ships (Track 4-MF P3)
+
+**Track:** Track 4-MF. User said "we were working on MF om intake — check local
+files." It wasn't: an exhaustive sweep (working tree, stash, all worktrees,
+`git fetch --all`, `--diff-filter=A` across all refs) confirmed OM intake had
+**never been committed anywhere** — genuinely greenfield. User then supplied
+three real OM PDFs and said "use these." (Lesson reinforced: the work that
+"already existed" was never in git — this session commits it so it's findable.)
+
+### What shipped
+
+- **`mf_om_extractor.py`** — `parse_mf_om(source, engine="llm"|"basic",
+  api_key=) -> MFOMResult`. PyMuPDF text extraction (no OCR needed — all 3 OMs
+  are text-based, ~1300+ chars/page). **LLM engine (default):** OM text →
+  Claude structured-output tool schema (maximal scope: property facts, market,
+  comps, pro-forma) → typed dataclasses. **Basic engine (no-API fallback):**
+  deterministic `label\nvalue` scan with plausibility guards (rejects a year
+  grabbed as a unit count). Engine is a UI/caller selection per user decision
+  ("use Claude API but make this a selection/option").
+- **`mf_uw_model_writer.populate_mf_model(..., om=)`** — writes Prop Info
+  `B5:B47` (details + market) + Rental Comps `Q8:AD22` (15 comps). RR units/name
+  win; `Z`/`AA` eff-rent/$-per-SF formulas + SUBJECT row 7 preserved; bedroom
+  counts derive from unit-mix; occupancy → fraction. **Broker pro-forma captured
+  but intentionally NOT written** (UW trusts the T-12).
+- **`app.py` `_render_mf_intake`** — OM PDF uploader + AI/Basic engine radio +
+  API-key field (or `st.secrets`/env); summary metrics + comp-table preview;
+  `om=` into populate. `requirements.txt` += `pymupdf`, `anthropic`.
+- **Registry → v0.2.0** via `tools/mf_uw_template/_add_om_concepts.py`
+  (idempotent): +44 OM concepts (46→90; 63 mapped). OM open-question retired.
+- **Docs:** SPEC-MF §3, CHANGELOG-MF MF v0.5.0, CLAUDE.md Track 4-MF row.
+
+### Verification
+
+`tests/test_mf_om_extractor.py` (9) — coercers, LLM JSON→dataclass mapping
+(synthetic Ascend-shaped payload), writer integration (cells + formula
+preservation + RR-override), basic engine on the 3 real OMs. **36/36 MF tests
+green.** Basic engine on real OMs: Blairstone 376u/1988/32.18ac/42bldg/692pk/Leon;
+Avana 264u/1985/Prince William; Ascend 334u/2024.
+
+### Not verified / follow-up
+
+- **LLM path not run live** — no `anthropic` SDK / API key in this env. The
+  schema, prompt, JSON→dataclass mapping, and writer are verified via a synthetic
+  payload; live extraction quality needs an analyst spot-check with a key.
+- Image-only/scanned OMs would need an OCR pre-pass (extractor raises a clear
+  error on near-empty text).
+
+### Commit
+
+(committed on branch `mf-om-intake` — see PR.)
+
+---
+
 ## 2026-05-30 — UWT v0.8.1 — v6 template Section-D income-summary repoint
 
 **Track:** Track 4. Operator dropped a populated Briar Glen UW Template output
