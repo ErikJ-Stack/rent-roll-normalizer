@@ -100,39 +100,12 @@ _UW_OUTPUT_REF = {
     "bad_debt_writeoffs_revenue": ("F", 57),
 }
 
-# UWT v6 (2026-05-28): the engine now folds `Auto Expense` into the non-labor
-# sum (it was silently dropped pre-v6, overstating standardized NOI). The
-# cached Homestead fixture was built before this fix, so these five keys diverge
-# by exactly the Auto Expense amount. Sign = engine − cached (opex totals go UP,
-# NOI lines go DOWN).
-#
-# RETIREMENT (see UW-BACKLOG BL-0028): NOT retirable by a fixture rebuild alone
-# — the Excel substrate has the SAME bug (T12 Analytics A79:A102 non-labor block
-# omits Auto Expense, though T12 Raw Data!B63 carries the label). The substrate
-# must add an Auto Expense row (v0.2.16) FIRST; then rebuild the fixture against
-# the fixed substrate so cached == engine; then delete this whitelist.
-_AUTO_EXPENSE_AMT = 6061.32
-_AUTO_EXPENSE_DIVERGENCE = {
-    "opex_nonlabor_total":   +1,
-    "opex_total_excl_mgmt":  +1,
-    "ebitdarm":              -1,
-    "ebitdar":               -1,
-    "ebitda":                -1,
-}
-
-# UWT v6 / substrate v0.2.15 (2026-05-28): the 2nd-Person Description_Map
-# re-map moves the 2nd-person GL dollars out of "Base rent — *" into the
-# dedicated "2nd Person Revenue" label. On Homestead that's r127 "Second
-# Person Fee" = $32,220.49. The cached fixture pre-dates the re-map (2nd
-# person still in base rent), so base_rent_normalized drops and loss_to_lease
-# (= GPR − vacancy − base) goes less-negative by that amount. EGI is unchanged
-# (the engine + the Analyzer's amended E52/F52 both add 2nd Person back).
-# Retire by rebuilding the fixture against a v0.2.15 Analyzer.
-_REMAP_2P_AMT = 32220.49
-_REMAP_2P_DIVERGENCE = {
-    "base_rent_normalized": -1,
-    "loss_to_lease":        +1,
-}
+# Whitelists retired 2026-06-05: the Homestead fixture was rebuilt against a
+# v0.2.16 Analyzer (Auto Expense non-labor row, BL-0028) round-tripped through
+# Excel, so cached == engine to the penny on every concept. The former
+# _AUTO_EXPENSE_DIVERGENCE (UWT v6 Auto Expense, $6,061.32) and _REMAP_2P_DIVERGENCE
+# (substrate v0.2.15 2nd-Person re-map, $32,220.49) divergence checks are gone —
+# the regression is now a flat penny-match.
 
 
 def _parse_inputs():
@@ -164,38 +137,9 @@ def test_engine_matches_cached() -> None:
     uo = openpyxl.load_workbook(POPULATED_ANALYZER, data_only=True)["UW Output"]
 
     mismatches = []
-    divergence_errors = []
     for key, (col, row) in _UW_OUTPUT_REF.items():
         engine = _num(vals.get(key))
         cached = _num(uo[f"{col}{row}"].value)
-        if key in _AUTO_EXPENSE_DIVERGENCE:
-            # Known divergence (UWT v6, 2026-05-28): the engine now includes
-            # Auto Expense ($6,061.32 on Homestead) in the non-labor sum; the
-            # cached fixture pre-dates that fix and overstates NOI by exactly
-            # that amount. Assert the gap IS the Auto Expense amount (confirms
-            # the fix, not merely "different"). Rebuild this fixture against a
-            # v6-populated Analyzer to retire this whitelist.
-            if engine is None or cached is None:
-                divergence_errors.append(f"{key}: unexpected None (engine={engine}, cached={cached})")
-                continue
-            expected = _AUTO_EXPENSE_DIVERGENCE[key] * _AUTO_EXPENSE_AMT
-            if abs((engine - cached) - expected) > 1.0:
-                divergence_errors.append(
-                    f"{key}: gap {engine - cached:,.2f} != expected Auto-Expense gap {expected:,.2f}"
-                )
-            continue
-        if key in _REMAP_2P_DIVERGENCE:
-            # Known divergence (substrate v0.2.15): 2nd-Person re-map moved
-            # $32,220.49 out of base rent into the "2nd Person Revenue" label.
-            if engine is None or cached is None:
-                divergence_errors.append(f"{key}: unexpected None (engine={engine}, cached={cached})")
-                continue
-            expected = _REMAP_2P_DIVERGENCE[key] * _REMAP_2P_AMT
-            if abs((engine - cached) - expected) > 1.0:
-                divergence_errors.append(
-                    f"{key}: gap {engine - cached:,.2f} != expected 2P-remap gap {expected:,.2f}"
-                )
-            continue
         if engine is None or cached is None:
             ok = engine is None and cached is None
         else:
@@ -204,8 +148,6 @@ def test_engine_matches_cached() -> None:
             mismatches.append(f"{key}: engine={vals.get(key)!r} cached={uo[f'{col}{row}'].value!r}")
 
     _check(not mismatches, "engine diverged from cached UW Output:\n  " + "\n  ".join(mismatches))
-    _check(not divergence_errors,
-           "Auto-Expense known-divergence check failed:\n  " + "\n  ".join(divergence_errors))
     print(f"  ✓ engine matches cached UW Output on {len(_UW_OUTPUT_REF)} concepts (to the penny)")
     # Headline spot-print
     print(f"      EGI={vals['egi']:,.2f}  EBITDARM={vals['ebitdarm']:,.2f}  EBITDA={vals['ebitda']:,.2f}")
