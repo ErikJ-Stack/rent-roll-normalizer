@@ -190,14 +190,21 @@ def _write_rental_comps(rc, comps) -> int:
 
 def populate_mf_model(model_bytes: bytes, *, t12=None, rr=None, om=None,
                       property_name: str | None = None,
-                      property_units: int | None = None):
+                      property_units: int | None = None,
+                      progress=None):
     """Populate the MF UW Model. Returns (xlsx_bytes, report_dict).
 
     om: an mf_om_extractor.MFOMResult — writes the Prop Info details/market
         block and the Rental Comps comp set. RR-derived units/name take
         precedence over OM where they overlap (the rent roll is authoritative).
+    progress: optional callable(frac: float in 0..1) invoked at build
+        milestones (load / T-12 / RR / OM / save) so a caller can drive a
+        determinate progress UI. The openpyxl load and save are single opaque
+        calls, so the fraction steps between milestones rather than streaming.
     """
+    _p = progress if callable(progress) else (lambda *_a, **_k: None)
     wb = openpyxl.load_workbook(io.BytesIO(model_bytes), data_only=False)
+    _p(0.15)   # model loaded (one of the two slow openpyxl calls)
     report = {"t12_lines": 0, "t12_cells": 0, "rr_units": 0, "rr_cells": 0,
               "om_prop_cells": 0, "om_comps": 0, "warnings": []}
 
@@ -224,6 +231,7 @@ def populate_mf_model(model_bytes: bytes, *, t12=None, rr=None, om=None,
             _set(ws, r, 16, ln.bucket)                   # P = → MAPPING
             report["t12_cells"] += 16
         report["t12_lines"] = n
+    _p(0.45)   # T-12 Layer 1 written
 
     # --- Rent Roll Analysis grid ---
     if rr is not None:
@@ -266,6 +274,7 @@ def populate_mf_model(model_bytes: bytes, *, t12=None, rr=None, om=None,
                     _set(ws, r, col, amount)
                     report["rr_cells"] += 1
         report["rr_units"] = n
+    _p(0.80)   # Rent Roll grid written
 
     # --- Prop Info: OM details + market block ---
     if om is not None:
@@ -287,11 +296,13 @@ def populate_mf_model(model_bytes: bytes, *, t12=None, rr=None, om=None,
             rr.unit_count if rr is not None else None)
         if units is not None:
             pi.cell(6, 2).value = units          # B6 # Units
+    _p(0.90)   # all sheets written; saving next (the other slow openpyxl call)
 
     buf = io.BytesIO()
     wb.save(buf)
     out = buf.getvalue()
     out = _restore_dynamic_arrays(out, model_bytes)   # no-op on v15 (no metadata.xml)
+    _p(1.0)    # workbook saved
     report["warnings"].append(
         "Cell comments, the Claude-for-Excel add-in, and custom doc properties "
         "are dropped by the Excel writer (no data/formulas/charts affected) — "

@@ -39,6 +39,28 @@ The inset clip (`19.0, 100.1, 297.8, 378.9`) sits just inside the navy backgroun
 
 ## Changes
 
+### 2026-06-05 — MF loading overlay shows a determinate % (1→100)
+
+The MF loading overlay now shows a **gold percentage + a progress bar** instead
+of just an indeterminate spinner. The % is *real pipeline progress* — weighted
+across the uploaded docs (parse RR / T-12 / AR / OM) plus the slow model build —
+so it reflects how much of the whole job is left, not a timer. The spinner still
+spins alongside the number.
+
+- `branding.py`: `.t5-overlay-pct` (big gold number) + `.t5-overlay-bar` /
+  `.t5-overlay-bar-fill` (the fill `width` transitions, so the bar slides
+  smoothly between discrete server updates).
+- `app.py`: `_render_overlay_pct(pct, label)` + a `_PipelineProgress` controller
+  that weights each stage and drives the overlay; the build stage is weighted
+  heaviest (it's the real wait).
+- `mf_uw_model_writer.populate_mf_model(..., progress=cb)`: optional callback
+  fired at real build milestones (load 15% → T-12 45% → RR 80% → OM 90% →
+  saved 100%) so the number counts up *during* the build. **Honest limit:** the
+  openpyxl load and save are single opaque calls, so the % steps between
+  milestones rather than streaming continuously; the fast file-parses just tick
+  the bar forward as each completes. No output/logic change (default `progress`
+  is a no-op).
+
 ### 2026-06-05 — MF area gets the full-page loading overlay (parity with ALF)
 
 The MF intake flow (`_render_mf_intake`) now shows the same `.t5-overlay`

@@ -485,11 +485,28 @@ def _render_mf_intake() -> None:
     rr = t12 = ar = om = None
     prop_name = None
 
+    # Determinate progress plan — one stage per uploaded doc + the (slow) model
+    # build, weighted so the % reflects how much of the whole job is left. The
+    # build reports real sub-progress; the parses just tick the bar forward.
+    _engine_ai = om_engine.startswith("AI")
+    _plan = []
+    if rr_file is not None:
+        _plan.append((1.0, "Parsing rent roll…"))
+    if t12_file is not None:
+        _plan.append((1.0, "Parsing T-12…"))
+    if ar_file is not None:
+        _plan.append((1.0, "Parsing AR aging…"))
+    if om_file is not None:
+        _plan.append((2.0 if _engine_ai else 1.0, "Extracting OM…"))
+    if rr_file is not None or t12_file is not None or om_file is not None:
+        _plan.append((3.0, "Building MF UW Model…"))
+    pp = _PipelineProgress(_plan)
+
     # --- Rent Roll ---
     if rr_file is not None:
         st.markdown("### \U0001F4C4 Rent Roll")
         try:
-            with _show_loading("Parsing rent roll…"):
+            with pp.stage():
                 rr = parse_mf_rr(rr_file.getvalue())
         except Exception as exc:  # noqa: BLE001
             st.error(f"Could not parse the rent roll: {exc}"); rr = None
@@ -508,7 +525,7 @@ def _render_mf_intake() -> None:
     if t12_file is not None:
         st.markdown("### \U0001F4C4 T-12 income statement")
         try:
-            with _show_loading("Parsing T-12…"):
+            with pp.stage():
                 t12 = parse_mf_t12(t12_file.getvalue())
         except Exception as exc:  # noqa: BLE001
             st.error(f"Could not parse the T-12: {exc}"); t12 = None
@@ -520,7 +537,7 @@ def _render_mf_intake() -> None:
     if ar_file is not None:
         st.markdown("### \U0001F4C4 AR aging")
         try:
-            with _show_loading("Parsing AR aging…"):
+            with pp.stage():
                 ar = parse_mf_ar(ar_file.getvalue())
         except Exception as exc:  # noqa: BLE001
             st.error(f"Could not parse the AR aging report: {exc}"); ar = None
@@ -541,7 +558,7 @@ def _render_mf_intake() -> None:
     if om_file is not None:
         st.markdown("### \U0001F4D5 Offering Memorandum")
         engine = "llm" if om_engine.startswith("AI") else "basic"
-        with _show_loading(f"Extracting OM ({engine})…"):
+        with pp.stage():
             try:
                 om = parse_mf_om(om_file.getvalue(), engine=engine,
                                  api_key=om_api_key or None)
@@ -583,11 +600,12 @@ def _render_mf_intake() -> None:
             else:
                 model_bytes = BUNDLED_MF_MODEL_PATH.read_bytes()
                 model_src = "bundled MF_UW_Model_v15.xlsx"
-            with _show_loading("Building MF UW Model…"):
+            with pp.stage() as sub:
                 out, report = populate_mf_model(
                     model_bytes, t12=t12, rr=rr, om=om,
                     property_name=prop_name,
                     property_units=(rr.unit_count if rr is not None else None),
+                    progress=sub,
                 )
         except Exception as exc:  # noqa: BLE001
             st.error(f"Could not populate the MF UW Model: {exc}")
@@ -665,6 +683,60 @@ def _show_loading(label: str):
         yield
     finally:
         _overlay_slot.empty()
+
+
+def _render_overlay_pct(pct: float, label: str) -> None:
+    """Determinate overlay: spinner + a gold % readout + a progress bar."""
+    pct = max(1, min(100, int(round(pct))))
+    _overlay_slot.markdown(
+        f"""
+        <div class="t5-overlay" role="status" aria-live="polite">
+            <div class="t5-overlay-ring"></div>
+            <div class="t5-overlay-pct">{pct}%</div>
+            <div class="t5-overlay-bar"><div class="t5-overlay-bar-fill" style="width:{pct}%"></div></div>
+            <div class="t5-overlay-label">{label}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+class _PipelineProgress:
+    """Determinate progress across a sequence of pipeline stages.
+
+    `stages` is an ordered list of (weight, label). The displayed % is the
+    weighted fraction of stages completed plus any sub-progress within the
+    current stage — so it genuinely reflects how much of the *whole job* is
+    left, not a timer. Fast stages (file parses) just tick the bar forward as
+    each completes; a slow stage (the model build) can report sub-progress via
+    the callback yielded by `stage()`. The overlay clears after each stage so
+    that stage's results render, then reappears (at a higher %) for the next.
+    """
+
+    def __init__(self, stages):
+        self._stages = list(stages)
+        self._total = sum(w for w, _ in self._stages) or 1
+        self._before = 0.0   # weight completed before the current stage
+        self._i = -1
+
+    @contextlib.contextmanager
+    def stage(self):
+        self._i += 1
+        _, label = self._stages[self._i]
+        self._show(label, 0.0)
+        try:
+            yield self._sub          # pass to slow stages for sub-progress
+        finally:
+            self._before += self._stages[self._i][0]
+            _overlay_slot.empty()
+
+    def _sub(self, frac: float, label=None) -> None:
+        _, lbl = self._stages[self._i]
+        self._show(label or lbl, max(0.0, min(1.0, frac)))
+
+    def _show(self, label: str, frac: float) -> None:
+        w = self._stages[self._i][0]
+        _render_overlay_pct((self._before + frac * w) / self._total * 100, label)
 
 # No logo on the post-login app — logos live only on the white landing page.
 # The mode selector is the first element inside.

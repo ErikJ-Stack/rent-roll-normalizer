@@ -267,6 +267,34 @@ def inject_brand_css() -> None:
             font-family: Georgia, 'Times New Roman', serif;
             text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
         }}
+
+        /* Determinate variant (MF pipeline): big gold % + a thin progress bar
+           below the spinner. The bar width transitions so it slides smoothly
+           between discrete server-driven updates. */
+        .t5-overlay-pct {{
+            color: {GOLD};
+            font-size: 2.6rem;
+            font-weight: 700;
+            font-family: Georgia, 'Times New Roman', serif;
+            letter-spacing: 0.02em;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+            margin-top: -0.4rem;
+        }}
+        .t5-overlay-bar {{
+            width: min(360px, 70vw);
+            height: 8px;
+            background: rgba(255, 255, 255, 0.14);
+            border-radius: 999px;
+            overflow: hidden;
+            margin-top: -0.6rem;
+        }}
+        .t5-overlay-bar-fill {{
+            height: 100%;
+            background: {GOLD};
+            border-radius: 999px;
+            transition: width 0.35s ease;
+            box-shadow: 0 0 12px rgba(190, 143, 63, 0.5);
+        }}
         </style>
         """,
         unsafe_allow_html=True,
