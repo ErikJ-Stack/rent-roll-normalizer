@@ -28,6 +28,7 @@ Analyzer with both RR and T12 data, when both required uploads are present.
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import os
 from pathlib import Path
 
@@ -447,6 +448,224 @@ def _render_mf_t12_detail(res) -> None:
     )
 
 
+def _mf_file_token(f) -> str:
+    """Stable per-upload token for cache keying. Streamlit's UploadedFile carries
+    a `file_id` that persists across reruns (e.g. a download-button click) and
+    changes only when a new file is chosen — far cheaper than hashing the bytes."""
+    if f is None:
+        return "none"
+    fid = getattr(f, "file_id", None)
+    if fid:
+        return f"id:{fid}"
+    return "h:" + hashlib.sha256(f.getvalue()).hexdigest()
+
+
+def _mf_sig(rr_file, t12_file, ar_file, om_file, model_override, engine_ai, om_api_key) -> str | None:
+    """Signature of all MF inputs. None when nothing is uploaded. Changing any
+    file (or the OM engine/key) changes the signature → triggers a recompute."""
+    tokens = [_mf_file_token(f) for f in
+              (rr_file, t12_file, ar_file, model_override)]
+    om_tok = _mf_file_token(om_file)
+    if all(t == "none" for t in tokens) and om_tok == "none":
+        return None
+    extra = ""
+    if om_file is not None:                       # OM result depends on engine/key
+        extra = f"|{engine_ai}|{(om_api_key or '')[:8]}"
+    return "|".join(tokens) + f"|{om_tok}{extra}"
+
+
+def _compute_mf(rr_file, t12_file, ar_file, om_file, model_override,
+                engine_ai, om_api_key, sig) -> dict:
+    """Parse every uploaded MF doc + build the populated model, under the
+    determinate progress overlay. Returns a result bundle (parsed objects,
+    output bytes, report, per-step errors) so the caller can cache it and the
+    renderer can redraw without re-parsing. This is the ONLY place the heavy
+    work runs — a cache hit skips it entirely (no re-parse, no overlay)."""
+    res = {"sig": sig, "rr": None, "rr_err": None, "t12": None, "t12_err": None,
+           "ar": None, "ar_err": None, "ar_join": None, "om": None, "om_err": None,
+           "out": None, "report": None, "build_err": None, "model_src": None,
+           "prop_name": None}
+
+    plan = []
+    if rr_file is not None:
+        plan.append((1.0, "Parsing rent roll…"))
+    if t12_file is not None:
+        plan.append((1.0, "Parsing T-12…"))
+    if ar_file is not None:
+        plan.append((1.0, "Parsing AR aging…"))
+    if om_file is not None:
+        plan.append((2.0 if engine_ai else 1.0, "Extracting OM…"))
+    if rr_file is not None or t12_file is not None or om_file is not None:
+        plan.append((3.0, "Building MF UW Model…"))
+    pp = _PipelineProgress(plan)
+
+    prop_name = None
+    if rr_file is not None:
+        try:
+            with pp.stage():
+                rr = parse_mf_rr(rr_file.getvalue())
+            res["rr"] = rr
+            prop_name = rr.property_hint or derive_property_name(rr_file.name)
+        except Exception as exc:  # noqa: BLE001
+            res["rr_err"] = str(exc)
+
+    if t12_file is not None:
+        try:
+            with pp.stage():
+                t12 = parse_mf_t12(t12_file.getvalue())
+            res["t12"] = t12
+            prop_name = prop_name or derive_property_name(t12_file.name)
+        except Exception as exc:  # noqa: BLE001
+            res["t12_err"] = str(exc)
+
+    if ar_file is not None:
+        try:
+            with pp.stage():
+                ar = parse_mf_ar(ar_file.getvalue())
+            res["ar"] = ar
+            if res["rr"] is not None:
+                res["ar_join"] = join_ar_to_units(res["rr"].units, ar)
+        except Exception as exc:  # noqa: BLE001
+            res["ar_err"] = str(exc)
+
+    if om_file is not None:
+        engine = "llm" if engine_ai else "basic"
+        with pp.stage():
+            try:
+                om = parse_mf_om(om_file.getvalue(), engine=engine,
+                                 api_key=om_api_key or None)
+                res["om"] = om
+                prop_name = (prop_name or om.prop_info.property_name
+                             or derive_property_name(om_file.name))
+            except MFOMExtractorError as exc:
+                res["om_err"] = f"OM extraction failed: {exc}"
+            except Exception as exc:  # noqa: BLE001
+                res["om_err"] = f"Could not read the OM: {exc}"
+
+    res["prop_name"] = prop_name
+    if res["rr"] is not None or res["t12"] is not None or res["om"] is not None:
+        try:
+            if model_override is not None:
+                model_bytes = model_override.getvalue()
+                res["model_src"] = "uploaded override"
+            else:
+                model_bytes = BUNDLED_MF_MODEL_PATH.read_bytes()
+                res["model_src"] = "bundled MF_UW_Model_v15.xlsx"
+            with pp.stage() as sub:
+                out, report = populate_mf_model(
+                    model_bytes, t12=res["t12"], rr=res["rr"], om=res["om"],
+                    property_name=prop_name,
+                    property_units=(res["rr"].unit_count if res["rr"] is not None else None),
+                    progress=sub,
+                )
+            res["out"], res["report"] = out, report
+        except Exception as exc:  # noqa: BLE001
+            res["build_err"] = str(exc)
+    return res
+
+
+def _render_mf_result(res: dict) -> None:
+    """Draw the MF results from a (possibly cached) result bundle. Cheap — no
+    parsing — so it's safe to re-run on every Streamlit rerun (e.g. a download)."""
+    # --- Rent Roll ---
+    if res["rr_err"]:
+        st.markdown("### \U0001F4C4 Rent Roll")
+        st.error(f"Could not parse the rent roll: {res['rr_err']}")
+    elif res["rr"] is not None:
+        st.markdown("### \U0001F4C4 Rent Roll")
+        rr = res["rr"]
+        d1, d2, d3, d4 = st.columns(4)
+        d1.metric("Units", rr.unit_count)
+        d2.metric("Occupied", rr.occupied)
+        d3.metric("Vacant", rr.vacant)
+        d4.metric("Legal / eviction", rr.legal_count)
+        for w in rr.warnings:
+            st.warning(w, icon="⚠️")
+
+    # --- T-12 ---
+    if res["t12_err"]:
+        st.markdown("### \U0001F4C4 T-12 income statement")
+        st.error(f"Could not parse the T-12: {res['t12_err']}")
+    elif res["t12"] is not None:
+        st.markdown("### \U0001F4C4 T-12 income statement")
+        _render_mf_t12_detail(res["t12"])
+
+    # --- AR aging ---
+    if res["ar_err"]:
+        st.markdown("### \U0001F4C4 AR aging")
+        st.error(f"Could not parse the AR aging report: {res['ar_err']}")
+    elif res["ar"] is not None:
+        st.markdown("### \U0001F4C4 AR aging")
+        ar = res["ar"]
+        a1, a2, a3 = st.columns(3)
+        a1.metric("AR rows", len(ar.rows))
+        a2.metric("Total AR", f"${ar.total_ar:,.0f}")
+        a3.metric("Period", ar.period_hint or "—")
+        rep = res["ar_join"]
+        if rep is not None:
+            st.caption(f"Joined {rep.matched}/{len(ar.rows)} AR rows to units by Bldg-Unit.")
+            for w in rep.warnings:
+                st.warning(w, icon="⚠️")
+        else:
+            st.info("Upload the Rent Roll too — AR aging joins to units by Bldg-Unit.")
+
+    # --- OM ---
+    if res["om_err"]:
+        st.markdown("### \U0001F4D5 Offering Memorandum")
+        st.error(res["om_err"])
+    elif res["om"] is not None:
+        st.markdown("### \U0001F4D5 Offering Memorandum")
+        om = res["om"]
+        pi = om.prop_info
+        o1, o2, o3, o4 = st.columns(4)
+        o1.metric("Units (OM)", pi.units_total or "—")
+        o2.metric("Year built", pi.year_built or "—")
+        o3.metric("Rent comps", len(om.comps))
+        o4.metric("Engine", om.engine.upper())
+        with st.expander("OM extraction detail"):
+            st.write({"property": pi.property_name, "address": pi.address,
+                      "county": pi.county, "acres": pi.lot_acres,
+                      "buildings": pi.num_buildings, "stories": pi.num_stories,
+                      "class": pi.building_class, "unit_mix": len(pi.unit_mix),
+                      "market": om.market.city_market})
+            if om.comps:
+                st.dataframe(pd.DataFrame(
+                    [{"Comp": c.name, "Yr": c.year_built, "Units": c.units,
+                      "Avg SF": c.avg_sf, "Asking": c.asking_rent,
+                      "Occ": c.occupancy} for c in om.comps]),
+                    hide_index=True, use_container_width=True)
+        for w in om.warnings:
+            st.caption(f"⚠️ {w}")
+
+    # --- Populated MF UW Model ---
+    if res["build_err"]:
+        st.divider()
+        st.markdown("### \U0001F9EE Populate the MF UW Model")
+        st.error(f"Could not populate the MF UW Model: {res['build_err']}")
+    elif res["out"] is not None:
+        st.divider()
+        st.markdown("### \U0001F9EE Populate the MF UW Model")
+        report = res["report"]
+        st.success(
+            f"Populated **{report['rr_units']}** units + "
+            f"**{report['t12_lines']}** T-12 lines + "
+            f"**{report['om_prop_cells']}** Prop Info fields + "
+            f"**{report['om_comps']}** rent comps into the {res['model_src']}."
+        )
+        for w in report["warnings"]:
+            st.caption(f"⚠️ {w}")
+        safe = (res["prop_name"] or "MF_Property").replace(" ", "_")
+        st.download_button(
+            "⬇️ Download populated MF UW Model (.xlsx)",
+            data=res["out"],
+            file_name=f"{safe}_MF_UW_Model_populated.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            key="mf_model_dl",
+        )
+    else:
+        st.info("Upload a Rent Roll and/or a T-12 to populate the MF UW Model.")
+
+
 def _render_mf_intake() -> None:
     """MF (multifamily) mode — RR / T-12 / AR intake → populate the MF UW Model."""
     st.title("\U0001F3E2 Multifamily (MF) — Intake")
@@ -482,152 +701,29 @@ def _render_mf_intake() -> None:
     with st.expander("Advanced — override MF UW Model template"):
         model_override = st.file_uploader("MF UW Model (.xlsx)", type=["xlsx"], key="mf_model_up")
 
-    rr = t12 = ar = om = None
-    prop_name = None
-
-    # Determinate progress plan — one stage per uploaded doc + the (slow) model
-    # build, weighted so the % reflects how much of the whole job is left. The
-    # build reports real sub-progress; the parses just tick the bar forward.
+    # Compute once per distinct set of uploads, then cache in session_state.
+    # A Streamlit rerun (e.g. clicking the download button, or toggling any
+    # unrelated widget) reuses the cached result instead of re-parsing — so the
+    # overlay only appears on a genuine recompute. The signature changes only
+    # when an uploaded file (or the OM engine/key) changes.
     _engine_ai = om_engine.startswith("AI")
-    _plan = []
-    if rr_file is not None:
-        _plan.append((1.0, "Parsing rent roll…"))
-    if t12_file is not None:
-        _plan.append((1.0, "Parsing T-12…"))
-    if ar_file is not None:
-        _plan.append((1.0, "Parsing AR aging…"))
-    if om_file is not None:
-        _plan.append((2.0 if _engine_ai else 1.0, "Extracting OM…"))
-    if rr_file is not None or t12_file is not None or om_file is not None:
-        _plan.append((3.0, "Building MF UW Model…"))
-    pp = _PipelineProgress(_plan)
-
-    # --- Rent Roll ---
-    if rr_file is not None:
-        st.markdown("### \U0001F4C4 Rent Roll")
-        try:
-            with pp.stage():
-                rr = parse_mf_rr(rr_file.getvalue())
-        except Exception as exc:  # noqa: BLE001
-            st.error(f"Could not parse the rent roll: {exc}"); rr = None
-        else:
-            # prefer the clean property name from inside the file over the filename
-            prop_name = rr.property_hint or derive_property_name(rr_file.name)
-            d1, d2, d3, d4 = st.columns(4)
-            d1.metric("Units", rr.unit_count)
-            d2.metric("Occupied", rr.occupied)
-            d3.metric("Vacant", rr.vacant)
-            d4.metric("Legal / eviction", rr.legal_count)
-            for w in rr.warnings:
-                st.warning(w, icon="⚠️")
-
-    # --- T-12 ---
-    if t12_file is not None:
-        st.markdown("### \U0001F4C4 T-12 income statement")
-        try:
-            with pp.stage():
-                t12 = parse_mf_t12(t12_file.getvalue())
-        except Exception as exc:  # noqa: BLE001
-            st.error(f"Could not parse the T-12: {exc}"); t12 = None
-        else:
-            prop_name = prop_name or derive_property_name(t12_file.name)
-            _render_mf_t12_detail(t12)
-
-    # --- AR aging (joined into RR) ---
-    if ar_file is not None:
-        st.markdown("### \U0001F4C4 AR aging")
-        try:
-            with pp.stage():
-                ar = parse_mf_ar(ar_file.getvalue())
-        except Exception as exc:  # noqa: BLE001
-            st.error(f"Could not parse the AR aging report: {exc}"); ar = None
-        else:
-            a1, a2, a3 = st.columns(3)
-            a1.metric("AR rows", len(ar.rows))
-            a2.metric("Total AR", f"${ar.total_ar:,.0f}")
-            a3.metric("Period", ar.period_hint or "—")
-            if rr is not None:
-                rep = join_ar_to_units(rr.units, ar)
-                st.caption(f"Joined {rep.matched}/{len(ar.rows)} AR rows to units by Bldg-Unit.")
-                for w in rep.warnings:
-                    st.warning(w, icon="⚠️")
-            else:
-                st.info("Upload the Rent Roll too — AR aging joins to units by Bldg-Unit.")
-
-    # --- OM (Offering Memorandum) ---
-    if om_file is not None:
-        st.markdown("### \U0001F4D5 Offering Memorandum")
-        engine = "llm" if om_engine.startswith("AI") else "basic"
-        with pp.stage():
-            try:
-                om = parse_mf_om(om_file.getvalue(), engine=engine,
-                                 api_key=om_api_key or None)
-            except MFOMExtractorError as exc:
-                st.error(f"OM extraction failed: {exc}"); om = None
-            except Exception as exc:  # noqa: BLE001
-                st.error(f"Could not read the OM: {exc}"); om = None
-        if om is not None:
-            pi = om.prop_info
-            prop_name = prop_name or pi.property_name or derive_property_name(om_file.name)
-            o1, o2, o3, o4 = st.columns(4)
-            o1.metric("Units (OM)", pi.units_total or "—")
-            o2.metric("Year built", pi.year_built or "—")
-            o3.metric("Rent comps", len(om.comps))
-            o4.metric("Engine", om.engine.upper())
-            with st.expander("OM extraction detail"):
-                st.write({"property": pi.property_name, "address": pi.address,
-                          "county": pi.county, "acres": pi.lot_acres,
-                          "buildings": pi.num_buildings, "stories": pi.num_stories,
-                          "class": pi.building_class, "unit_mix": len(pi.unit_mix),
-                          "market": om.market.city_market})
-                if om.comps:
-                    st.dataframe(pd.DataFrame(
-                        [{"Comp": c.name, "Yr": c.year_built, "Units": c.units,
-                          "Avg SF": c.avg_sf, "Asking": c.asking_rent,
-                          "Occ": c.occupancy} for c in om.comps]),
-                        hide_index=True, use_container_width=True)
-            for w in om.warnings:
-                st.caption(f"⚠️ {w}")
-
-    # --- Populate the MF UW Model ---
-    if rr is not None or t12 is not None or om is not None:
-        st.divider()
-        st.markdown("### \U0001F9EE Populate the MF UW Model")
-        try:
-            if model_override is not None:
-                model_bytes = model_override.getvalue()
-                model_src = "uploaded override"
-            else:
-                model_bytes = BUNDLED_MF_MODEL_PATH.read_bytes()
-                model_src = "bundled MF_UW_Model_v15.xlsx"
-            with pp.stage() as sub:
-                out, report = populate_mf_model(
-                    model_bytes, t12=t12, rr=rr, om=om,
-                    property_name=prop_name,
-                    property_units=(rr.unit_count if rr is not None else None),
-                    progress=sub,
-                )
-        except Exception as exc:  # noqa: BLE001
-            st.error(f"Could not populate the MF UW Model: {exc}")
-        else:
-            st.success(
-                f"Populated **{report['rr_units']}** units + "
-                f"**{report['t12_lines']}** T-12 lines + "
-                f"**{report['om_prop_cells']}** Prop Info fields + "
-                f"**{report['om_comps']}** rent comps into the {model_src}."
-            )
-            for w in report["warnings"]:
-                st.caption(f"⚠️ {w}")
-            safe = (prop_name or "MF_Property").replace(" ", "_")
-            st.download_button(
-                "⬇️ Download populated MF UW Model (.xlsx)",
-                data=out,
-                file_name=f"{safe}_MF_UW_Model_populated.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                key="mf_model_dl",
-            )
+    sig = _mf_sig(rr_file, t12_file, ar_file, om_file, model_override,
+                  _engine_ai, om_api_key)
+    if sig is None:
+        res = None
     else:
+        cached = st.session_state.get("mf_result")
+        if cached is not None and cached.get("sig") == sig:
+            res = cached                      # reuse — no re-parse, no overlay
+        else:
+            res = _compute_mf(rr_file, t12_file, ar_file, om_file, model_override,
+                              _engine_ai, om_api_key, sig)
+            st.session_state["mf_result"] = res
+
+    if res is None:
         st.info("Upload a Rent Roll and/or a T-12 to populate the MF UW Model.")
+    else:
+        _render_mf_result(res)
 
     st.divider()
     st.caption(
