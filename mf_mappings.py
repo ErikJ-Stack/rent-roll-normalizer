@@ -117,6 +117,7 @@ def classify_t12_account(acct=None, name: str | None = None) -> str:
 _STATUS_RULES = [
     (r"occupied.*no notice|occupied.*current", "Occupied No Notice"),
     (r"occupied.*notice|notice", "Occupied On Notice"),
+    (r"\bntv\b|occupied.*ntv", "Occupied On Notice"),  # OneSite "Occupied-NTV(L)"
     (r"occupied", "Occupied No Notice"),
     (r"vacant.*not ready|vacant.*unrented.*not", "Vacant Unrented Not Ready"),
     (r"vacant.*ready|vacant.*unrented", "Vacant Unrented Ready"),
@@ -125,6 +126,10 @@ _STATUS_RULES = [
     (r"model", "Model"),
     (r"employee", "Employee"),
     (r"office", "Office"),
+    # OneSite future-lease rows that surface as a unit's only row (rare — they
+    # are normally merged into their unit's primary row by the caller).
+    (r"applicant|pending resident", "Vacant Leased"),
+    (r"pending renewal", "Occupied No Notice"),
     (r"vacant", "Vacant Unrented Ready"),
 ]
 UNMAPPED_STATUS = "— UNMAPPED status —"

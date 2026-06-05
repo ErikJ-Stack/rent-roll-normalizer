@@ -17,6 +17,14 @@ RR_ITEMIZED = os.path.expanduser(
     "~/Dropbox/Erik Javellana - Deal Review/Deals under review/"
     "MF_VA_Woodbridge_AvanaStoneyRidge/Rent Roll/"
     "Rent Roll (Operations) - Avana Stoney Ridge 05.12.26.xlsx")
+# RealPage OneSite "RENT ROLL DETAIL" legacy-.xls export — gitignored deal file.
+RR_ONESITE = os.path.expanduser(
+    "~/Dropbox/Erik Javellana - Deal Review/Deals under review/"
+    "MF_NC_Leland_AscendBrunswickVillage/Rent Rolls/"
+    "Ascend Brunswick Village - Rent Roll (2026.05.28).xls")
+# Committed synthetic OneSite .xls fixture (CI-runnable).
+ONESITE_FIXTURE = os.path.join(os.path.dirname(__file__),
+                               "fixtures", "mf", "onesite_synthetic.xls")
 
 
 # --- pure unit tests (no file deps) ---
@@ -44,6 +52,57 @@ def test_rr_hidden_lakes():
     assert r.occupied == 66
     assert r.vacant == 77
     assert r.legal_count == 9
+
+
+# --- RealPage OneSite format + legacy .xls (committed synthetic fixture) ---
+def test_onesite_synthetic_xls():
+    """OneSite 'RENT ROLL DETAIL' .xls: units repeat across lease rows (deduped
+    to one record), horizontal per-code charges broken out to W–AK, pre-leased
+    vacant units carry the committed applicant rent, and the legacy .xls reader
+    converts date cells. Trailing 'Future Residents' block stops the walk."""
+    from mf_normalizer import parse_mf_rr
+    import datetime as dt
+    r = parse_mf_rr(ONESITE_FIXTURE)
+    assert r.unit_count == 6          # 6 physical units from 8 lease rows
+    assert r.occupied == 3            # A-101, A-102, A-106 (NTV still Occupied*)
+    assert r.vacant == 2              # A-103 (leased), A-104
+    assert r.period_hint == "04/30/2026"
+    by = {u.bldg_unit: u for u in r.units}
+    assert "999-999" not in by        # trailing summary row not parsed
+
+    a101 = by["A-101"]
+    assert a101.status == "Occupied No Notice"
+    assert a101.market_rent == 1500 and a101.scheduled_charges == 1400
+    assert a101.actual_charges == 1400 and a101.deposit == 500
+    assert a101.ancillary == {"utility_reimb": 70.0, "pet": 30.0}  # internet+trash, petrent
+    assert a101.move_in == dt.datetime(2025, 4, 25)               # .xls date round-trip
+
+    a102 = by["A-102"]                # Pending-renewal secondary deduped away
+    assert a102.scheduled_charges == 1500 and a102.actual_charges == 1500
+    assert a102.ancillary == {"parking": 75.0, "storage": 25.0}
+
+    a103 = by["A-103"]               # Vacant-Leased -> committed rent from applicant
+    assert a103.status == "Vacant Leased"
+    assert a103.actual_charges == 0 and a103.scheduled_charges == 1650
+    assert a103.ancillary == {}      # no realized fee income while vacant
+
+    assert by["A-105"].status == "Down"
+    assert by["A-106"].status == "Occupied On Notice"
+
+
+@pytest.mark.skipif(not os.path.exists(RR_ONESITE), reason="gitignored OneSite .xls absent")
+def test_rr_onesite_ascend():
+    """Live RealPage OneSite .xls (Ascend Brunswick): 334 physical units deduped
+    from 396 lease rows."""
+    from mf_normalizer import parse_mf_rr
+    r = parse_mf_rr(RR_ONESITE)
+    assert r.unit_count == 334
+    assert r.occupied == 251         # 221 no-notice + 30 NTV(L)
+    assert r.vacant == 81            # 54 unrented + 27 pre-leased
+    u = next(x for x in r.units if x.bldg_unit == "101-101")
+    assert abs(u.market_rent - 2125) < 0.01
+    assert abs(u.scheduled_charges - 1865) < 0.01
+    assert abs(u.ancillary.get("utility_reimb", 0) - 85) < 0.01  # internet+trash+pest
 
 
 @pytest.mark.skipif(not os.path.exists(RR_ITEMIZED), reason="gitignored itemized RR absent")

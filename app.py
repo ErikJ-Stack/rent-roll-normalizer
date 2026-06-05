@@ -457,7 +457,7 @@ def _render_mf_intake() -> None:
     )
 
     cu1, cu2, cu3 = st.columns(3)
-    rr_file = cu1.file_uploader("\U0001F4C4 Rent Roll (.xlsx)", type=["xlsx"], key="mf_rr_up")
+    rr_file = cu1.file_uploader("\U0001F4C4 Rent Roll (.xlsx/.xls)", type=["xlsx", "xlsm", "xls"], key="mf_rr_up")
     t12_file = cu2.file_uploader("\U0001F4C4 T-12 (.xlsx)", type=["xlsx"], key="mf_t12_up")
     ar_file = cu3.file_uploader("\U0001F4C4 AR aging (.xlsx)", type=["xlsx"], key="mf_ar_up")
 

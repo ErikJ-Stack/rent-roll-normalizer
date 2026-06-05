@@ -131,7 +131,7 @@ The work maps onto CLAUDE.md's MF phasing as **P1 (RR normalizer)** + **P2 (T-12
 | Module | Role | Mirrors (ALF) |
 | --- | --- | --- |
 | `mf_mappings.py` | Closed vocabularies: status taxonomy, charge-code → ancillary bucket, **COA → `_StdCOA` dictionary**. | `mappings.py` |
-| `mf_normalizer.py` | Parse operator RR (Yardi-CIM) **and** redIQ Sortable-RR → per-unit `MFUnit` records (the 37 grid fields incl. W–AK ancillaries). | `normalizer.py` |
+| `mf_normalizer.py` | Parse operator RR — three auto-detected shapes: Yardi-CIM one-row-per-unit, redIQ/itemized charge-code (multi-row), and RealPage **OneSite** "RENT ROLL DETAIL" (units repeat across lease rows + horizontal per-code charges; deduped to one record/unit). Reads .xlsx/.xlsm (openpyxl) **and legacy .xls** (xlrd, OLE2-sniffed). → per-unit `MFUnit` records (the 37 grid fields incl. W–AK ancillaries). | `normalizer.py` |
 | `mf_ar_parser.py` | Parse AR aging → per-unit aging buckets; **join to RR on Bldg-Unit**. | `ar_normalizer.py` |
 | `mf_t12_normalizer.py` | Parse **both** T-12 formats (PSI flat + QuickBooks nested) → GL lines + `_StdCOA` bucket per line. | `t12_normalizer.py` |
 | `mf_uw_model_writer.py` | Paste normalized RR/AR/T-12 into the model's two grids (+ col P); restore `xl/metadata.xml` after save. | `uw_template_writer.py` |
@@ -319,7 +319,8 @@ layouts, all handled by the LLM engine. Samples live in `MF Docs/OM/` (gitignore
 
 ## Versioning
 
-- **MF** product line — `vX.Y.Z`, current **v0.5.0** (OM intake shipped).
+- **MF** product line — `vX.Y.Z`, current **v0.5.1** (RR: RealPage OneSite format
+  + legacy .xls support; OM intake shipped at v0.5.0).
 - Registry `registry_version` tracks the registry data separately; currently
   `0.2.0`, mapped against model `templates.v15`.
 

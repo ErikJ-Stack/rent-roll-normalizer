@@ -2,15 +2,23 @@
 MF rent-roll normalizer — parse an operator Rent Roll into per-unit records
 mapped to the MF UW Model's `Rent Roll Analysis` grid (cols A–AK, anchor A273).
 
-Handles two row shapes (auto-detected): (a) one-row-per-unit (Yardi-CIM "Rent
-Roll - Cim", Hidden Lakes — 143 units) and (b) the itemized "Rent Roll
+Handles three row shapes (auto-detected): (a) one-row-per-unit (Yardi-CIM "Rent
+Roll - Cim", Hidden Lakes — 143 units); (b) the itemized "Rent Roll
 (Operations) - Rent Related Charge Codes" format (Avana — 263 units) where each
 unit's identity is on a header row and its charges (Amenity/Base/etc.) are
-itemized across continuation rows with a blank Bldg-Unit, summed into the unit.
+itemized across continuation rows with a blank Bldg-Unit, summed into the unit;
+and (c) the RealPage **OneSite "RENT ROLL DETAIL"** export (Ascend Brunswick —
+334 units) where a unit repeats across multiple lease rows (current resident +
+a future Applicant / Pending-renewal row) and charges are spread *horizontally*
+across per-code columns (RENT / INTERNET / TRASH / …). OneSite lease rows are
+deduped to one record per physical unit.
 Header-driven column mapping (needle-priority) so it tolerates column reordering. AR aging (cols Q–T)
 is filled later by `mf_ar_parser` via a Bldg-Unit join; the W–AK ancillary
 breakouts are best-effort from the redIQ Sortable-RR (decision §2.7.2) and are
-left empty here.
+left empty here (the OneSite path fills them from its per-code columns).
+
+File formats: .xlsx / .xlsm (openpyxl) and legacy .xls (xlrd — OneSite/RealPage
+and older Yardi exports), auto-detected by OLE2 magic bytes.
 
 Public API:
     parse_mf_rr(source) -> MFRRResult
@@ -143,17 +151,88 @@ def _split_bldg_unit(raw: str) -> tuple[str, str]:
     return "", s
 
 
-def _load_ws(source):
+_OLE2_MAGIC = b"\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1"  # legacy .xls (OLE2 compound doc)
+
+
+def _to_bytes_and_name(source) -> tuple[bytes, str]:
+    """Normalize any accepted source to (raw bytes, name hint)."""
+    name = str(getattr(source, "name", "") or "")
     if isinstance(source, (bytes, bytearray)):
-        source = io.BytesIO(source)
-    wb = openpyxl.load_workbook(source, data_only=True, read_only=True)
-    return wb, wb.worksheets[0]
+        return bytes(source), name
+    if hasattr(source, "read"):                # file-like (e.g. Streamlit upload)
+        data = source.read()
+        try:
+            source.seek(0)
+        except Exception:
+            pass
+        return data, name
+    name = str(source)                         # path-like
+    with open(source, "rb") as fh:
+        return fh.read(), name
+
+
+def _read_grid(source) -> list[tuple]:
+    """Read the first worksheet into a list of value-tuples. Supports .xlsx/.xlsm
+    (openpyxl) and legacy .xls (xlrd), detected by OLE2 magic bytes so a
+    mislabeled extension still routes correctly. .xls date cells are converted
+    back to datetimes (xlrd hands them out as serials)."""
+    data, name = _to_bytes_and_name(source)
+    is_xls = data[:8] == _OLE2_MAGIC or (
+        name.lower().endswith(".xls")
+        and not name.lower().endswith((".xlsx", ".xlsm")))
+    if is_xls:
+        import xlrd  # legacy .xls only; pinned in requirements.txt
+        book = xlrd.open_workbook(file_contents=data)
+        sh = book.sheet_by_index(0)
+        dm = book.datemode
+        rows: list[tuple] = []
+        for r in range(sh.nrows):
+            row = []
+            for c in range(sh.ncols):
+                cell = sh.cell(r, c)
+                v = cell.value
+                if cell.ctype == 3:            # XL_CELL_DATE -> datetime
+                    try:
+                        v = _dt.datetime(*xlrd.xldate_as_tuple(v, dm))
+                    except Exception:
+                        pass
+                elif cell.ctype == 0 or v == "":   # empty / blank
+                    v = None
+                row.append(v)
+            rows.append(tuple(row))
+        return rows
+    wb = openpyxl.load_workbook(io.BytesIO(data), data_only=True, read_only=True)
+    try:
+        return list(wb.worksheets[0].iter_rows(values_only=True))
+    finally:
+        wb.close()
+
+
+def _header_band_property(rows, header_row) -> str:
+    """Property name from the header band (col A above the grid header) — the
+    operator file carries a clean name (e.g. "Avana Stoney Ridge"); far more
+    reliable than parsing the filename."""
+    for i in range(header_row):
+        v = rows[i][0] if rows[i] else None
+        if isinstance(v, str):
+            s = v.strip()
+            low = s.lower()
+            if (s and not re.match(r"\d", s)
+                    and not any(k in low for k in ("rent roll", "report", "operations",
+                                                   "charge code", "unit details",
+                                                   "onesite", "parameters", "as of"))):
+                return s
+    return ""
 
 
 def parse_mf_rr(source) -> MFRRResult:
-    wb, ws = _load_ws(source)
-    rows = list(ws.iter_rows(values_only=True))
-    maxc = ws.max_column
+    rows = _read_grid(source)
+    maxc = max((len(r) for r in rows), default=0)
+
+    # RealPage OneSite "RENT ROLL DETAIL" is a distinct shape (units repeat
+    # across lease rows, charges spread horizontally) — route to its own parser.
+    if _is_onesite(rows):
+        return _parse_onesite(rows)
 
     # 1) header row = first row containing a Bldg-Unit-style label + a rent label
     header_row = None
@@ -164,23 +243,9 @@ def parse_mf_rr(source) -> MFRRResult:
             header_row = i
             break
     if header_row is None:
-        wb.close()
         raise ValueError("Could not locate the rent-roll header row.")
 
-    # property name from the header band (col A above the grid header) — the
-    # operator file carries a clean name (e.g. "Avana Stoney Ridge"); far more
-    # reliable than parsing the filename.
-    property_hint = ""
-    for i in range(header_row):
-        v = rows[i][0] if rows[i] else None
-        if isinstance(v, str):
-            s = v.strip()
-            low = s.lower()
-            if (s and not re.match(r"\d", s)
-                    and not any(k in low for k in ("rent roll", "report", "operations",
-                                                   "charge code", "unit details"))):
-                property_hint = s
-                break
+    property_hint = _header_band_property(rows, header_row)
 
     # 2) map columns — needle PRIORITY (map order), first column that matches wins
     hdr = [_norm(v) for v in rows[header_row]]
@@ -193,7 +258,6 @@ def parse_mf_rr(source) -> MFRRResult:
                 col[fname] = c
                 break
     if "bldg_unit" not in col or "status" not in col:
-        wb.close()
         raise ValueError(f"Rent-roll header missing Bldg-Unit/Status (found {sorted(col)}).")
 
     def g(row, fname):
@@ -267,7 +331,6 @@ def parse_mf_rr(source) -> MFRRResult:
         else:
             cur.scheduled_charges = _num(g(row, "scheduled_charges"))
             cur.actual_charges = _num(g(row, "actual_charges"))
-    wb.close()
 
     if not units:
         warnings.append("No unit rows parsed — check the rent-roll layout.")
@@ -275,6 +338,204 @@ def parse_mf_rr(source) -> MFRRResult:
         warnings.append(f"{unknown_status} row(s) had an unrecognized status and were skipped "
                         "(likely charge-code-summary lines).")
     return MFRRResult(units=units, property_hint=property_hint, warnings=warnings)
+
+
+# ---------------------------------------------------------------------------
+# RealPage OneSite "RENT ROLL DETAIL" parser
+# ---------------------------------------------------------------------------
+# OneSite column header -> field. Bare "unit" (no "no"/"id") is the Bldg-Unit
+# identifier here. Each field claims at most one column (used-set), so "lease
+# rent" takes col "Lease Rent" before bare "rent" can — order matters below.
+_ONESITE_COLS = [
+    ("unitlease status", "status"), ("status", "status"),
+    ("floorplan", "unit_type"), ("floor plan", "unit_type"),
+    ("unit designation", "_skip"),          # claim before bare "unit" needle
+    ("unit", "bldg_unit"),
+    ("sqft", "sqft"), ("sq ft", "sqft"),
+    ("name", "resident"),
+    ("movein", "move_in"), ("move in", "move_in"),
+    ("moveout", "exp_move_out"), ("move out", "exp_move_out"),
+    ("lease start", "lease_start"),
+    ("lease end", "lease_end"),
+    ("market", "market_rent"),              # "Market + Addl."
+    ("dep on hand", "deposit"),
+    ("balance", "balance"),
+    ("lease rent", "scheduled_charges"),    # base contracted rent (Scheduled GPR)
+    ("rent", "actual_charges"),             # actual base rent billed (col "RENT")
+    ("total billing", "_total"),
+]
+
+# OneSite recurring-charge column header -> W–AK ancillary bucket. Columns not
+# listed (RENT = base rent; CONC/UP, CONC/CO, EMPDISC = concessions/discounts)
+# are NOT bucketed as ancillary income.
+_ONESITE_CHARGE_BUCKETS = {
+    "internet": "utility_reimb", "cable": "utility_reimb", "satellite": "utility_reimb",
+    "trash": "utility_reimb", "pest": "utility_reimb", "water": "utility_reimb",
+    "sewer": "utility_reimb", "package": "package", "petrent": "pet", "pet rent": "pet",
+    "garage": "parking", "carport": "parking", "parking": "parking",
+    "storage": "storage", "commfee": "admin", "amenity": "amenity", "valet": "valet",
+}
+
+
+def _is_onesite(rows) -> bool:
+    """RealPage OneSite signature: a 'Total Billing' or 'Unit/Lease Status' header."""
+    for row in rows[:15]:
+        joined = " | ".join(_norm(c) for c in row)
+        if "total billing" in joined or "unitlease status" in joined:
+            return True
+    return False
+
+
+def _is_secondary(status) -> bool:
+    """A future-lease row (Applicant / Pending …) — not the unit's primary state."""
+    s = str(status or "").lower()
+    return "applicant" in s or "pending" in s
+
+
+def _is_committed_secondary(status) -> bool:
+    """An Applicant / Pending-resident row that carries a committed (pre-leased)
+    rent — distinct from 'Pending renewal' (a renewal of the current lease)."""
+    s = str(status or "").lower()
+    return "applicant" in s or "pending resident" in s
+
+
+def _onesite_period(rows, header_row) -> str:
+    """Pull the 'As of Date: mm/dd/yyyy' stamp from the header band, if present."""
+    for i in range(header_row):
+        v = rows[i][0] if rows[i] else None
+        if isinstance(v, str):
+            m = re.search(r"as of[^0-9]*(\d{1,2}/\d{1,2}/\d{2,4})", v, re.IGNORECASE)
+            if m:
+                return m.group(1)
+    return ""
+
+
+def _parse_onesite(rows) -> MFRRResult:
+    header_row = None
+    for i, row in enumerate(rows[:15]):
+        joined = " | ".join(_norm(c) for c in row)
+        if "unitlease status" in joined or ("unit" in joined and "total billing" in joined):
+            header_row = i
+            break
+    if header_row is None:
+        raise ValueError("Could not locate the OneSite rent-roll header row.")
+
+    hdr = [_norm(v) for v in rows[header_row]]
+    col: dict[str, int] = {}
+    used: set[int] = set()
+    for needle, fname in _ONESITE_COLS:
+        if fname in col:
+            continue
+        for c, h in enumerate(hdr):
+            if c in used or not h:
+                continue
+            if needle in h:
+                col[fname] = c
+                used.add(c)
+                break
+    if "bldg_unit" not in col or "status" not in col:
+        raise ValueError(f"OneSite header missing Unit/Status (found {sorted(col)}).")
+
+    charge_cols: list[tuple[int, str]] = []
+    for c, h in enumerate(hdr):
+        for key, bucket in _ONESITE_CHARGE_BUCKETS.items():
+            if key in h:
+                charge_cols.append((c, bucket))
+                break
+
+    property_hint = _header_band_property(rows, header_row)
+    period_hint = _onesite_period(rows, header_row)
+
+    def g(row, fname):
+        idx = col.get(fname)
+        return row[idx] if idx is not None and idx < len(row) else None
+
+    # group the lease rows by physical unit, preserving first-seen order
+    groups: dict[str, list] = {}
+    order: list[str] = []
+    for row in rows[header_row + 1:]:
+        a = g(row, "bldg_unit")
+        if a in (None, ""):
+            continue
+        a_norm = _norm(a)
+        if a_norm.startswith(("future resident", "total ", "grand total", "summary",
+                              "selected report", "report ", "ledger")):
+            break  # end of the unit grid
+        key = str(a).strip()
+        if key not in groups:
+            groups[key] = []
+            order.append(key)
+        groups[key].append(row)
+
+    units: list[MFUnit] = []
+    warnings: list[str] = []
+    unknown = 0
+    for raw_unit in order:
+        lease_rows = groups[raw_unit]
+        # primary = first unit-state row (not an Applicant/Pending future lease)
+        prim = next((r for r in lease_rows if not _is_secondary(g(r, "status"))),
+                    lease_rows[0])
+        sec = next((r for r in lease_rows if _is_committed_secondary(g(r, "status"))),
+                   None)
+        status = normalize_status(g(prim, "status"))
+        if not status or status == UNMAPPED_STATUS:
+            if g(prim, "status") not in (None, ""):
+                unknown += 1
+            continue
+
+        bldg, unit = _split_bldg_unit(raw_unit)
+        resident = str(g(prim, "resident") or "").strip()
+        legal = resident.startswith("**")
+        if legal:
+            resident = resident.lstrip("*").strip()
+        if "vacant" in resident.lower():
+            resident = ""
+
+        occupied = status.startswith("Occupied")
+        # Charge source: occupied -> the current lease (primary row). Vacant but
+        # pre-leased -> the committed Applicant row (secondary): scheduled = its
+        # lease rent, actual = 0 (not billing yet). Plain vacant/down -> nothing.
+        if occupied:
+            crow = prim
+            actual = _num(g(prim, "actual_charges"))
+            sched = _num(g(prim, "scheduled_charges"))
+        elif sec is not None:
+            crow = sec
+            actual = 0.0
+            sched = _num(g(sec, "scheduled_charges"))
+        else:
+            crow = None
+            actual = sched = 0.0
+
+        u = MFUnit(
+            bldg_unit=raw_unit, bldg=bldg, unit=unit,
+            unit_type=str(g(prim, "unit_type") or "").strip(),
+            sqft=(_num(g(prim, "sqft")) or None),
+            status=status, resident=resident, legal=legal,
+            move_in=_date(g(prim, "move_in")),
+            lease_start=_date(g(prim, "lease_start")),
+            lease_end=_date(g(prim, "lease_end")),
+            exp_move_out=_date(g(prim, "exp_move_out")),
+            market_rent=_num(g(prim, "market_rent")),
+            actual_charges=actual, scheduled_charges=sched,
+            balance=_num(g(prim, "balance")),
+            deposit=_num(g(prim, "deposit")),
+        )
+        # Ancillary income only for occupied units (currently realized); a vacant
+        # pre-leased unit isn't generating fee income yet.
+        if occupied and crow is not None:
+            for c, bucket in charge_cols:
+                amt = _num(crow[c]) if c < len(crow) else 0.0
+                if amt > 0:
+                    u.ancillary[bucket] = u.ancillary.get(bucket, 0.0) + amt
+        units.append(u)
+
+    if not units:
+        warnings.append("No OneSite unit rows parsed — check the rent-roll layout.")
+    if unknown:
+        warnings.append(f"{unknown} OneSite row(s) had an unrecognized status and were skipped.")
+    return MFRRResult(units=units, period_hint=period_hint,
+                      property_hint=property_hint, warnings=warnings)
 
 
 if __name__ == "__main__":
