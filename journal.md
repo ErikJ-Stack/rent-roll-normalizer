@@ -9,6 +9,67 @@ Newest at top.
 
 ---
 
+## 2026-06-05 — Retire UW Output divergence whitelists + interim B56 repoint (Track 4 / test)
+
+**Track:** Track 4 (UWT) + test-fixture maintenance. Started as a state-review
+("what's open?") that surfaced three loose threads; the user then supplied the
+v0.2.16 Homestead Analyzer to close the first one. Shipped as **PR #58** (merged
+to main, `e318f31`).
+
+**1. Retired both UW Output divergence whitelists (closes the BL-0028 test
+follow-up).** `tests/test_uw_output_model.py` carried `_AUTO_EXPENSE_DIVERGENCE`
+(UWT v6 Auto Expense, $6,061.32) and `_REMAP_2P_DIVERGENCE` (substrate v0.2.15
+2nd-Person re-map, $32,220.49) — pinned gaps that existed only because the cached
+Homestead fixture predated those fixes. The user dropped a **v0.2.16** Analyzer
+(Auto Expense non-labor row at T12 Analytics 92), but it was a fresh app-built
+file with **no cached formula values** (every `data_only` read = None). Drove
+**Excel via PowerShell COM** (`New-Object Excel.Application` → `CalculateFullRebuild`
+→ `SaveAs` 51) to recalc + save a computed copy into the gitignored
+`Sample Files/Analyzer with … .xlsx` (Dropbox original untouched). With cached
+values present, engine == cached **to the penny on all 42 concepts** — both
+whitelists + their divergence-check branches deleted; the regression is now a flat
+penny-match. EGI $7,001,956.79, EBITDARM $1,761,421.43, EBITDA/NOI $1,411,323.58.
+All 5 suites green. (This is the canonical fixture-rebuild procedure for future
+substrate bumps: COM-recalc the app-built Analyzer before it can serve as the
+cached fixture.)
+
+**2. Found + fixed a cosmetic v6 rev2 B56 mispoint.** State review caught
+`T-12 Analysis!B56:M56` (Layer-3 monthly header row) pointing at `=C125..=N125`
+(row 125 = "Permits, Licenses & Dues" expense, value 0) instead of the rev2
+Layer-1 raw month-header row at **140** (`C140:N140 = Apr-25 … Mar-26`). **Same
+openpyxl-quirk-#4 partial-repoint class as v0.7.1's B56 fix** (`=C122`→`=C137`):
+v0.7.1 fixed the rev1 instance, but the v6 rev2 "Other Care" restructure shifted
+the raw grid +15 rows and the rev2 absorber missed B56:M56. Filed handoff
+`handoffs/2026-06-05-uwt-v6-rev2-b56-monthly-header-repoint.md` + tracker row, then
+applied the **interim programmatic patch** `_fix_v6_rev2_b56_monthly_headers.py`
+(mirrors the rev2 Section-D fix): repoints the 12 cells to `=C140..=N140` on the
+committed `assets/ALF_UW_Template_v6.xlsx`, restoring the file's own
+`xl/metadata.xml` via `_restore_dynamic_arrays` (faithful — N56="T-12 Total"
+untouched, no dynamic-array anchor edited). Idempotent, pre-flight gated on row
+140. UWT writer suite green (v6 rev2 default — 195 concepts,
+`dynamic_arrays_restored: 1`). **Cosmetic only** — no SUMIFS/total depends on
+B56:M56; populated outputs were already numerically correct. Handoff stays
+**Pending operator** for the durable Deals-folder Excel re-author (the Windows
+session couldn't reach the macOS Deals path).
+
+**Merge side effect (benign).** The PR branch was cut from `mf-cache-result`
+rather than `main`, so merging #58 carried the stacked MF PRs **#54–#57** (OM
+intake v0.5.0, OneSite/.xls v0.5.1, loading overlay, progress %, cache result)
+into `main` as well. All four had `base=main` and are now correctly MERGED — the
+intended destination, just delivered via #58's merge. main == origin/main; tests
+green.
+
+**Commits (PR #58):** `1409c7a` (whitelist retirement + B56 handoff) · `e53a64c`
+(interim B56 repoint patch).
+
+**Still open after this session:** (a) durable B56 re-author in the operator's
+Deals-folder v6 (handoff Pending operator); (b) MF redIQ Sortable-RR ancillary
+breakouts W–AK (SPEC-MF §2.5, best-effort); (c) BL-0019 persistent audit log
+(unchanged); (d) SPEC-MF §2 still says "scoped, not built" — stale, the parser
+shipped (one-line doc fix).
+
+---
+
 ## 2026-06-05 — MF v0.5.1 — RR: RealPage OneSite format + legacy .xls support (Track 4-MF P1)
 
 **Track:** Track 4-MF (MF RR intake). User dropped two Ascend Brunswick Village
