@@ -7,6 +7,115 @@ and the `mf_` naming convention.
 
 ---
 
+## MF v0.5.1 — 2026-06-05 — RR: RealPage OneSite format + legacy .xls support
+
+Closes a rent-roll intake gap surfaced by the **Ascend Brunswick Village** deal
+(MF_NC_Leland): the operator RR is a RealPage **OneSite "RENT ROLL DETAIL"**
+export saved as a legacy **.xls** — a shape the MF normalizer didn't read (it was
+openpyxl-only) nor recognize (it was validated against the redIQ/Hidden-Lakes
+layout). `parse_mf_rr` now auto-detects and handles it as a third format.
+
+**`mf_normalizer.py`:**
+- **Legacy .xls reading.** New `_read_grid(source)` reads the first worksheet
+  into value-tuples via openpyxl (.xlsx/.xlsm) **or xlrd (.xls)**, auto-detected
+  by OLE2 magic bytes (robust to a mislabeled extension); .xls date serials are
+  converted back to `datetime`. Replaces `_load_ws`. (`xlrd>=2.0.1` was already
+  in `requirements.txt` for the ALF River Oaks .xls path.)
+- **OneSite parser** (`_parse_onesite`, routed by `_is_onesite`). OneSite repeats
+  a unit across lease rows (current resident + a future **Applicant** /
+  **Pending-renewal** row) and spreads charges *horizontally* across per-code
+  columns (`RENT / INTERNET / TRASH / PACKAGE / PEST / COMMFEE / PETRENT /
+  GARAGE / STORAGE / CONC·* / EMPDISC / Total Billing`). Lease rows are **deduped
+  to one record per physical unit** from the primary unit-state row. Charge
+  mapping to the model's `Rent Roll Analysis` grid:
+  - `L Mkt Rent` ← *Market + Addl.*; `N Sched Chgs` ← base contracted rent
+    (*Lease Rent*); `M Actual Chgs` ← actual base rent billed (*RENT*). Base rent
+    only — so the Layer-3 `Scheduled GPR` (`=ΣN×12`) isn't inflated by fees.
+  - Recurring fee columns → the **W–AK** ancillary breakout (INTERNET/TRASH/PEST
+    → Utility Reimb, PACKAGE → Package, PETRENT → Pet, GARAGE → Parking, STORAGE
+    → Storage, COMMFEE → Admin); concessions (`CONC/*`, `EMPDISC`) are not
+    bucketed as income.
+  - **Pre-leased vacant units** (Vacant-Leased + Applicant) take their committed
+    rent from the applicant row into `N` (so the model's "Vacant — Leased /
+    Pre-leased" row reflects committed rent) while `M` stays 0 (not billing yet).
+  - `As of Date:` stamp captured into `MFRRResult.period_hint`.
+
+**`mf_mappings.py`:** `_STATUS_RULES` gains `Occupied-NTV(L)` → *Occupied On
+Notice*, plus `Applicant`/`Pending resident` → *Vacant Leased* and `Pending
+renewal` → *Occupied No Notice* fallbacks (only reached if such a row is a unit's
+only row — normally merged away by the dedup).
+
+**`app.py`:** MF Rent Roll uploader now accepts `.xls`/`.xlsm` (T-12/AR remain
+`.xlsx` — those parsers are still openpyxl-only).
+
+**Tests** (`tests/test_mf_rr_ar.py`): new `test_onesite_synthetic_xls` against a
+committed synthetic OneSite `.xls` fixture (`tests/fixtures/mf/onesite_synthetic.xls`,
+authored by `_build_onesite_synthetic.py` — needs `xlwt` only to regenerate) —
+covers dedup, the committed-rent merge, ancillary bucketing, the .xls date
+round-trip, and the trailing-summary break. Plus `test_rr_onesite_ascend`
+(skip-if-absent) asserting the live deal: **334 units** deduped from 396 lease
+rows (251 occupied / 81 vacant). Full MF suite green.
+
+**Verified on the deal (Ascend Brunswick, OneSite .xls + Yardi .xlsx T-12):**
+populated MF UW Model with 334 RR units (7,489 cells) + 150 T-12 lines.
+Headline: Market GPR $6.94M, Scheduled GPR $5.22M, ancillary ~$402K/yr, 75.1%
+physical occupancy; T-12 NOI $2.05M. **T-12 truncation note** — the model's
+Layer-1 grid holds 150 rows and the T-12 has 161 leaf lines, so the writer's
+"extra truncated" warning fires; the 11 dropped lines (151–161) are *all*
+EXCLUDED below-the-line items (Capital/Renovation, Startup, 6× Lease-Up, Prior
+Year, Amortization = $81,566) that never feed the NOI SUMIFS — **NOI/OpEx are
+unaffected**. Extending Layer-1 capacity is a model-side (handoff) follow-up.
+
+## MF v0.5.0 — 2026-06-04 — OM (Offering Memorandum) intake ships (Track 4-MF P3)
+
+Closes the last big MF intake gap: the 4th operator doc type. A broker OM PDF now
+extracts into the MF UW Model's **Prop Info** (property details + market block)
+and **Rental Comps** (submarket comp set). This was the "OM intake — NOT BUILT"
+open-question.
+
+**New `mf_om_extractor.py`** — `parse_mf_om(source, *, engine="llm"|"basic",
+api_key=None) -> MFOMResult`. PyMuPDF (`pymupdf`) extracts the OM text. Two
+selectable engines:
+- **LLM (default)** — hands the OM text to Claude with a structured-output tool
+  schema (maximal scope: property facts, market/demographics, rent comps,
+  broker pro-forma) and maps the validated JSON onto typed dataclasses
+  (`MFPropInfo` / `MFMarketData` / `MFRentComp` / `MFProForma` / `MFOMResult`).
+  Robust across the wildly different broker layouts (verified against three
+  real OMs: MMG/Blairstone, IPA/Avana, CBRE/Ascend — each lays comps out
+  differently). Needs the `anthropic` SDK + an API key (passed in or
+  `ANTHROPIC_API_KEY`).
+- **Basic (no-API fallback)** — deterministic labelled `label`/`value` scan with
+  plausibility guards. Reliably gets the labelled PROPERTY DETAILS block
+  (Blairstone: 7/8 fields; units+year+county on all three) but not the
+  free-form comp/market tables. Why two engines: OMs are glossy marketing PDFs
+  where deterministic parsing is genuinely brittle, so AI extraction is primary
+  — but the operator can pick Basic to skip the API.
+
+**Writer** (`mf_uw_model_writer.populate_mf_model(..., om=MFOMResult)`) — writes
+Prop Info `B5:B47` (details + market) and Rental Comps `Q8:AD22` (15 comps max).
+RR-derived units/name take precedence (the rent roll is authoritative). The
+template's `Z`/`AA` (eff-rent, $/SF) formulas + the SUBJECT row 7 are preserved.
+Bedroom counts derive from the OM unit-mix when not stated explicitly; occupancy
+is written as a fraction (96% → 0.96). The broker **pro-forma is captured but
+intentionally NOT written** — UW trusts the T-12, not the broker's projections.
+
+**App** (`_render_mf_intake`) — OM PDF uploader + an extraction-engine radio
+(AI / Basic) + an API-key field (or Streamlit secrets); summary metrics + a
+comp-table preview; `om=` flows into the populate call.
+
+**Registry → v0.2.0** — +44 OM concepts (33 Prop Info, 11 Rental Comps) mapped
+to `templates.v15`; the Prop Info manual-input note narrowed to the residual
+AI-Market-Research cells; OM open-question retired. 46 → **90 concepts** (63
+mapped / 5 proposed / 21 gap_source / 1 derived). `tools/mf_uw_template/_add_om_concepts.py`
+(idempotent) + artifacts regenerated.
+
+**Tests** — `tests/test_mf_om_extractor.py` (9): coercers, the LLM JSON→dataclass
+mapping, writer integration (cells + formula preservation, RR-override), and the
+basic engine on the three real OMs (skipped when `MF Docs/OM/` fixtures absent).
+All 36 MF tests green. `requirements.txt` += `pymupdf`, `anthropic`.
+
+---
+
 ## registry v0.1.3 — 2026-06-03 — Prune stale open-questions after the parser build
 
 Housekeeping: the registry's `open_questions` listed 10 items, but the MF parser

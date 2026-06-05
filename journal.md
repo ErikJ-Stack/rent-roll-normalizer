@@ -9,6 +9,109 @@ Newest at top.
 
 ---
 
+## 2026-06-05 — MF v0.5.1 — RR: RealPage OneSite format + legacy .xls support (Track 4-MF P1)
+
+**Track:** Track 4-MF (MF RR intake). User dropped two Ascend Brunswick Village
+(MF_NC_Leland) deal files — a rent roll `.xls` + a T-12 `.xlsx` — with two
+warnings showing (T-12 "161 lines; Layer 1 holds 150 — extra truncated" + the
+standard Excel-writer-drops-annotations note). No explicit instruction; the
+implied task = populate the MF UW Model for the deal.
+
+**Two findings on investigation:**
+1. **T-12 truncation is harmless to NOI.** The Yardi-numbered T-12 parses cleanly
+   (161 leaf GL lines, all correctly classified, NOI $2,052,515). The model's
+   Layer-1 grid holds 150 rows; the 11 truncated lines (151–161) are *all*
+   EXCLUDED below-the-line items — Capital/Renovation, Startup Costs, 6× Lease-Up
+   costs, Prior-Year Expenses, Amortization ($81,566) — that never feed the NOI
+   SUMIFS. NOI/OpEx complete; only the audit trail of those non-operating lines
+   is lost. (Extending Layer-1 capacity is a model-side handoff follow-up.)
+2. **The RR was unsupported.** It's a genuine legacy **.xls (OLE2)** that
+   `mf_normalizer` couldn't read (openpyxl-only), AND a RealPage **OneSite "RENT
+   ROLL DETAIL"** layout the parser didn't recognize (validated against
+   redIQ/Hidden-Lakes). Asked the user (AskUserQuestion) → **"Add OneSite + .xls
+   support"**.
+
+**Shipped (MF v0.5.1):**
+- `mf_normalizer.py`: `_read_grid()` (openpyxl + xlrd, OLE2-sniffed, .xls dates
+  converted) replacing `_load_ws`; `_parse_onesite()` / `_is_onesite()` — dedup
+  units across lease rows (current + Applicant/Pending), base rent → N (so
+  Scheduled GPR isn't fee-inflated), horizontal fee cols → W–AK, pre-leased
+  vacants take committed rent from the applicant row into N (M=0), `As of Date:`
+  → `period_hint`. Mapping driven by the model's Layer-3 (B26 Market GPR=ΣL×12,
+  B27 Scheduled GPR=ΣN×12, status table sums N incl. a Vacant-Leased/Pre-leased
+  row → confirmed N = base contracted rent).
+- `mf_mappings.py`: `_STATUS_RULES` += NTV→On Notice, Applicant/Pending fallbacks.
+- `app.py`: MF RR uploader accepts .xls/.xlsm.
+- Tests: `test_onesite_synthetic_xls` (committed synthetic fixture
+  `tests/fixtures/mf/onesite_synthetic.xls` + `_build_onesite_synthetic.py`,
+  xlwt authoring-only) + `test_rr_onesite_ascend` (skip-if-absent, 334 units).
+  Full MF suite green (27 prior + 2 new).
+- Docs: CHANGELOG-MF v0.5.1, SPEC-MF §2.2 + version, CLAUDE.md.
+
+**Verified on the deal:** populated MF UW Model — 334 RR units (7,489 cells) +
+150 T-12 lines. Market GPR $6.94M, Scheduled GPR $5.22M, ancillary ~$402K/yr,
+75.1% physical occupancy, T-12 NOI $2.05M. Output written to the deal's UW/ folder.
+
+**Carry-forward:** T-12/AR MF parsers are still openpyxl-only (.xlsx). Layer-1
+T-12 capacity (150 rows) is tight for large Yardi charts of accounts — a model
+handoff could extend it, though current truncation is NOI-safe. Not committed yet
+(awaiting user go-ahead).
+
+---
+
+## 2026-06-04 — MF v0.5.0 — OM (Offering Memorandum) intake ships (Track 4-MF P3)
+
+**Track:** Track 4-MF. User said "we were working on MF om intake — check local
+files." It wasn't: an exhaustive sweep (working tree, stash, all worktrees,
+`git fetch --all`, `--diff-filter=A` across all refs) confirmed OM intake had
+**never been committed anywhere** — genuinely greenfield. User then supplied
+three real OM PDFs and said "use these." (Lesson reinforced: the work that
+"already existed" was never in git — this session commits it so it's findable.)
+
+### What shipped
+
+- **`mf_om_extractor.py`** — `parse_mf_om(source, engine="llm"|"basic",
+  api_key=) -> MFOMResult`. PyMuPDF text extraction (no OCR needed — all 3 OMs
+  are text-based, ~1300+ chars/page). **LLM engine (default):** OM text →
+  Claude structured-output tool schema (maximal scope: property facts, market,
+  comps, pro-forma) → typed dataclasses. **Basic engine (no-API fallback):**
+  deterministic `label\nvalue` scan with plausibility guards (rejects a year
+  grabbed as a unit count). Engine is a UI/caller selection per user decision
+  ("use Claude API but make this a selection/option").
+- **`mf_uw_model_writer.populate_mf_model(..., om=)`** — writes Prop Info
+  `B5:B47` (details + market) + Rental Comps `Q8:AD22` (15 comps). RR units/name
+  win; `Z`/`AA` eff-rent/$-per-SF formulas + SUBJECT row 7 preserved; bedroom
+  counts derive from unit-mix; occupancy → fraction. **Broker pro-forma captured
+  but intentionally NOT written** (UW trusts the T-12).
+- **`app.py` `_render_mf_intake`** — OM PDF uploader + AI/Basic engine radio +
+  API-key field (or `st.secrets`/env); summary metrics + comp-table preview;
+  `om=` into populate. `requirements.txt` += `pymupdf`, `anthropic`.
+- **Registry → v0.2.0** via `tools/mf_uw_template/_add_om_concepts.py`
+  (idempotent): +44 OM concepts (46→90; 63 mapped). OM open-question retired.
+- **Docs:** SPEC-MF §3, CHANGELOG-MF MF v0.5.0, CLAUDE.md Track 4-MF row.
+
+### Verification
+
+`tests/test_mf_om_extractor.py` (9) — coercers, LLM JSON→dataclass mapping
+(synthetic Ascend-shaped payload), writer integration (cells + formula
+preservation + RR-override), basic engine on the 3 real OMs. **36/36 MF tests
+green.** Basic engine on real OMs: Blairstone 376u/1988/32.18ac/42bldg/692pk/Leon;
+Avana 264u/1985/Prince William; Ascend 334u/2024.
+
+### Not verified / follow-up
+
+- **LLM path not run live** — no `anthropic` SDK / API key in this env. The
+  schema, prompt, JSON→dataclass mapping, and writer are verified via a synthetic
+  payload; live extraction quality needs an analyst spot-check with a key.
+- Image-only/scanned OMs would need an OCR pre-pass (extractor raises a clear
+  error on near-empty text).
+
+### Commit
+
+(committed on branch `mf-om-intake` — see PR.)
+
+---
+
 ## 2026-05-30 — UWT v0.8.1 — v6 template Section-D income-summary repoint
 
 **Track:** Track 4. Operator dropped a populated Briar Glen UW Template output

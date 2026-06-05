@@ -2,3 +2,5 @@ streamlit>=1.36
 pandas>=2.1
 openpyxl>=3.1
 xlrd>=2.0.1
+pymupdf>=1.24          # MF OM extraction — PDF text (mf_om_extractor)
+anthropic>=0.40        # MF OM extraction — LLM engine (optional; Basic engine needs neither)
