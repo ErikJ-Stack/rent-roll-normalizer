@@ -489,7 +489,8 @@ def _render_mf_intake() -> None:
     if rr_file is not None:
         st.markdown("### \U0001F4C4 Rent Roll")
         try:
-            rr = parse_mf_rr(rr_file.getvalue())
+            with _show_loading("Parsing rent roll…"):
+                rr = parse_mf_rr(rr_file.getvalue())
         except Exception as exc:  # noqa: BLE001
             st.error(f"Could not parse the rent roll: {exc}"); rr = None
         else:
@@ -507,7 +508,8 @@ def _render_mf_intake() -> None:
     if t12_file is not None:
         st.markdown("### \U0001F4C4 T-12 income statement")
         try:
-            t12 = parse_mf_t12(t12_file.getvalue())
+            with _show_loading("Parsing T-12…"):
+                t12 = parse_mf_t12(t12_file.getvalue())
         except Exception as exc:  # noqa: BLE001
             st.error(f"Could not parse the T-12: {exc}"); t12 = None
         else:
@@ -518,7 +520,8 @@ def _render_mf_intake() -> None:
     if ar_file is not None:
         st.markdown("### \U0001F4C4 AR aging")
         try:
-            ar = parse_mf_ar(ar_file.getvalue())
+            with _show_loading("Parsing AR aging…"):
+                ar = parse_mf_ar(ar_file.getvalue())
         except Exception as exc:  # noqa: BLE001
             st.error(f"Could not parse the AR aging report: {exc}"); ar = None
         else:
@@ -538,7 +541,7 @@ def _render_mf_intake() -> None:
     if om_file is not None:
         st.markdown("### \U0001F4D5 Offering Memorandum")
         engine = "llm" if om_engine.startswith("AI") else "basic"
-        with st.spinner(f"Extracting OM ({engine})…"):
+        with _show_loading(f"Extracting OM ({engine})…"):
             try:
                 om = parse_mf_om(om_file.getvalue(), engine=engine,
                                  api_key=om_api_key or None)
@@ -580,11 +583,12 @@ def _render_mf_intake() -> None:
             else:
                 model_bytes = BUNDLED_MF_MODEL_PATH.read_bytes()
                 model_src = "bundled MF_UW_Model_v15.xlsx"
-            out, report = populate_mf_model(
-                model_bytes, t12=t12, rr=rr, om=om,
-                property_name=prop_name,
-                property_units=(rr.unit_count if rr is not None else None),
-            )
+            with _show_loading("Building MF UW Model…"):
+                out, report = populate_mf_model(
+                    model_bytes, t12=t12, rr=rr, om=om,
+                    property_name=prop_name,
+                    property_units=(rr.unit_count if rr is not None else None),
+                )
         except Exception as exc:  # noqa: BLE001
             st.error(f"Could not populate the MF UW Model: {exc}")
         else:
@@ -630,6 +634,37 @@ username = require_login()
 
 # Now authenticated — apply brand styling for the post-login navy app.
 inject_brand_css()
+
+# ---------------------------------------------------------------------------
+# Loading overlay slot (Track 5 v0.1.8 — shared by ALF + MF)
+# ---------------------------------------------------------------------------
+# Created here, ABOVE the mode dispatch and the top-level tabs, so the overlay's
+# DOM is never inside an inactive/hidden container (Streamlit uses display:none
+# on inactive tabs, which kills position:fixed descendants). The slot captures a
+# DeltaGenerator bound to this DOM position; later _show_loading(...) calls from
+# either mode or tab still render at this module-level position. CSS for
+# `.t5-overlay` lives in `branding.inject_brand_css()` (injected just above).
+import contextlib  # local import to keep the heavy imports at the top of the file
+
+_overlay_slot = st.empty()
+
+
+@contextlib.contextmanager
+def _show_loading(label: str):
+    """Full-page loading overlay context manager (visible across modes/tabs)."""
+    _overlay_slot.markdown(
+        f"""
+        <div class="t5-overlay" role="status" aria-live="polite">
+            <div class="t5-overlay-ring"></div>
+            <div class="t5-overlay-label">{label}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    try:
+        yield
+    finally:
+        _overlay_slot.empty()
 
 # No logo on the post-login app — logos live only on the white landing page.
 # The mode selector is the first element inside.
@@ -925,43 +960,6 @@ with st.sidebar:
         f"RR v{RR_VERSION} · T12 v{T12_VERSION} · AR v{AR_VERSION} "
         f"· T5 v{T5_VERSION} · UWT v{UWT_VERSION}"
     )
-
-# ---------------------------------------------------------------------------
-# Module-level loading overlay slot (Track 5 v0.1.8)
-# ---------------------------------------------------------------------------
-# Created here, ABOVE the top-level tabs, so the overlay's DOM is never
-# inside an inactive tab (Streamlit uses display:none on inactive tabs,
-# which kills all descendants including position:fixed ones). The slot
-# captures a DeltaGenerator bound to this DOM position; later calls to
-# _show_loading(...) from inside either tab still render at this
-# module-level position.
-import contextlib  # local import to keep the heavy imports at the top of the file
-
-_overlay_slot = st.empty()
-
-
-@contextlib.contextmanager
-def _show_loading(label: str):
-    """Full-page loading overlay context manager.
-
-    Renders a custom HTML overlay into the module-level `_overlay_slot`
-    so the spinner is visible across tabs. CSS for `.t5-overlay` lives
-    in `branding.inject_brand_css()`.
-    """
-    _overlay_slot.markdown(
-        f"""
-        <div class="t5-overlay" role="status" aria-live="polite">
-            <div class="t5-overlay-ring"></div>
-            <div class="t5-overlay-label">{label}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    try:
-        yield
-    finally:
-        _overlay_slot.empty()
-
 
 # ---------------------------------------------------------------------------
 # Top-level switch tabs — Dashboard (clean slate) vs Workspace (everything else)

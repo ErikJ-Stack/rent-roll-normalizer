@@ -39,6 +39,21 @@ The inset clip (`19.0, 100.1, 297.8, 378.9`) sits just inside the navy backgroun
 
 ## Changes
 
+### 2026-06-05 — MF area gets the full-page loading overlay (parity with ALF)
+
+The MF intake flow (`_render_mf_intake`) now shows the same `.t5-overlay`
+full-page loading spinner the ALF flow uses, instead of only a small `st.spinner`
+on OM extraction. Wrapped each heavy step: parsing the Rent Roll, T-12, and AR
+aging; OM extraction; and building the populated MF UW Model — each shows a
+labelled overlay ("Parsing rent roll…", "Building MF UW Model…", etc.).
+
+Implementation: the shared `_show_loading()` context manager + its `_overlay_slot`
+(previously defined just above the ALF Dashboard/Workspace tabs, so MF — which
+`st.stop()`s before that point — couldn't reach it) were **moved up to right
+after `inject_brand_css()`**, above the ALF/MF mode dispatch. Both modes now
+share one definition; ALF behavior is unchanged. No version-counter move (UX
+polish only; parsing/writer logic untouched).
+
 ### 2026-05-22 — White landing page; trimmed Fortis logo; logos login-only
 
 Refined the dual-logo treatment from earlier today: the **login/landing page is now white** with both logos, and the logos are **removed from the post-login app** (which keeps the navy dark theme).
