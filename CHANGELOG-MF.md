@@ -7,6 +7,25 @@ and the `mf_` naming convention.
 
 ---
 
+## MF app UX — 2026-06-05 (post-v0.5.1, `app.py` only — no parser/model change)
+
+App-mode UX improvements to MF intake (parser, model, and registry untouched):
+
+- **Result caching — no re-parse on download.** Clicking the download button (or
+  toggling any unrelated widget) triggers a full Streamlit rerun, which used to
+  re-parse every uploaded doc and rebuild the model. The MF flow now computes
+  once per distinct set of uploads and caches the result in `st.session_state`,
+  keyed by a signature of the uploaded files (`UploadedFile.file_id`) plus the OM
+  engine/key. A rerun with unchanged inputs reuses the cached result — so the
+  download is instant and the loading overlay only appears on a genuine
+  recompute. `_render_mf_intake` was split into `_compute_mf` (heavy, cached) +
+  `_render_mf_result` (cheap, every rerun).
+- **Determinate progress overlay (1→100%).** The MF loading overlay shows a real
+  weighted-pipeline percentage + bar (parse RR/T-12/AR/OM + the slow build),
+  with `populate_mf_model(..., progress=cb)` reporting build milestones (load 15%
+  → T-12 45% → RR 80% → OM 90% → saved 100%). See COSMETIC-CHANGES.md.
+- **Full-page loading overlay parity with ALF** (earlier the same day).
+
 ## MF v0.5.1 — 2026-06-05 — RR: RealPage OneSite format + legacy .xls support
 
 Closes a rent-roll intake gap surfaced by the **Ascend Brunswick Village** deal
