@@ -70,15 +70,24 @@ not a writer paste target or a `uw_output` concept). `registry.json` stays at
       renders month labels on a populated Homestead output.
 - [ ] Mark this handoff **Verified** in HANDOFF_TRACKER.md.
 
-## Interim programmatic patch (optional, mirrors v0.7.1 / v0.8.1)
+## Interim programmatic patch — APPLIED 2026-06-05
 
-Precedent (v0.7.1 `_fix_v6_headers_and_metadata.py`, v0.8.1 Section-D,
-rev2 Section-D fix) is that Claude Code may apply this formula-only repoint
-programmatically **with `xl/metadata.xml` + `cm`-marker restore** as an interim
-patch, then this handoff drives the durable Excel re-author so the Deals-folder
-source doesn't drift again. The fix is a 12-cell reference bump (125 → 140); the
-metadata restore re-injects the dynamic-array part openpyxl drops on save (see
-`uw_template_writer._restore_dynamic_arrays`). Not yet applied as of this brief.
+Mirrors v0.7.1 `_fix_v6_headers_and_metadata.py` / the rev2 Section-D fix:
+`tools/uw_template/_fix_v6_rev2_b56_monthly_headers.py` repoints the 12 cells
+`B56:M56` from `=C125..=N125` to `=C140..=N140` on the committed canonical asset
+`assets/ALF_UW_Template_v6.xlsx`, with `xl/metadata.xml` restored from the file's
+own pre-edit bytes (faithful — only B56:M56 edited, never a dynamic-array anchor;
+`N56="T-12 Total"` untouched). Idempotent; pre-flight aborts unless row 140
+carries the raw month-header (`A140="Acct #"`, `C140="Apr-25"`). Verified:
+B56=`=C140`, M56=`=N140`, sheet count 16, metadata.xml present; UWT writer suite
+green (v6 rev2 default — 195 concepts, `dynamic_arrays_restored: 1`).
+
+**Still Pending operator:** the committed asset is now correct, but the
+operator's **Deals-folder** v6 copy is unchanged. The durable fix is the operator
+re-authoring `B56:M56 = =C140..=N140` in Excel and re-dropping, so the canonical
+source doesn't drift back on the next rev. This handoff flips to **Verified**
+once that lands. (The Windows session here couldn't reach the macOS Deals path;
+the script intentionally patches the committed asset only.)
 
 ## Cross-references
 
