@@ -198,6 +198,14 @@ acct_root,63020,Insurance
 acct_root,63030,Insurance
 acct_root,63035,Insurance
 acct_root,63090,Insurance
+acct_root,41094,Concessions
+acct_root,43082,Misc Other Income
+acct_root,43130,Misc Other Income
+acct_root,52025,Contract Services
+acct_root,54045,Leasing & Marketing
+acct_root,54070,Leasing & Marketing
+acct_root,54080,Leasing & Marketing
+acct_root,54130,Leasing & Marketing
 acct_range,70000-89999,— EXCLUDED (non-OpEx) —
 name_regex,gain\s*/?\s*loss to lease,Gain/Loss on Market Rent
 name_regex,vacancy,Vacancy Loss

@@ -7,6 +7,55 @@ and the `mf_` naming convention.
 
 ---
 
+## MF v0.5.2 — 2026-06-06 — T-12: Yardi numeric-date headers + combined-acct cells (Verona at Silver Hill)
+
+A new operator deal — **Verona at Silver Hill** (Suitland, MD; 214 units; Yardi
+"Trailing Twelve Months - Detail") — surfaced two T-12 format wrinkles that made
+`parse_mf_t12()` abort or return zero lines. Both fixed in `mf_t12_normalizer.py`
+(surgical, no change to the format-detection or reconciliation contract):
+
+1. **Numeric date-string headers.** The "Month Ending" header row renders the 12
+   periods as **text** `MM/DD/YYYY` (e.g. `03/25/2025`), not Excel date objects
+   and not the `Mar 2025` style `_MONTH_RE` matched — so `_is_month()` returned
+   False for all 12, no header row was found, and parsing raised
+   `"Could not locate a monthly header row"`. Added `_NUMDATE_RE`
+   (`MM/DD/YYYY`, `M/D/YY`, `-`/`.` separators) with a 1–12 month guard to
+   `_is_month()`, and `_month_label()` now converts those strings to the
+   canonical `"%b %Y"` label (`03/25/2025` → `Mar 2025`). Low false-positive risk
+   (financial data cells are plain numbers; header detection only scans the first
+   20 rows for the row with the *most* date-like cells).
+
+2. **Combined `"ACCT - Name"` col-A cells.** This export puts the account number
+   and the name in **one** cell (`"41000 - Market Rent"`). The per-line acct
+   detector skips cells containing letters, so `acct` stayed `None` and the
+   `has_acct and acct is None → skip` guard dropped **every** leaf (0 lines).
+   Added a leading-account extraction (`^\s*(\d{4,5}(-\d{1,3})?)\s*-\s+\S`) that
+   pulls the embedded account number into `acct` — a no-op when the name has no
+   acct prefix, so the separate-cell formats are unaffected. (The `clean`-name
+   step already stripped these prefixes; it just never set `acct`.)
+
+**COA seed (+8 rules, `tools/mf_uw_template/coa_seed.csv`).** The deal had 8
+lines the dictionary didn't cover (−$48,523 total); added `acct_root` entries so
+coverage hit **100%**: `41094`→Concessions, `43082`/`43130`→Misc Other Income,
+`52025`→Contract Services, `54045`/`54070`/`54080`/`54130`→Leasing & Marketing.
+These are standard Yardi Voyager account numbers, so they generalize to other
+Yardi operators.
+
+**Verified.** Verona detailed T-12 now parses 158 lines, **100% coverage**, NOI
+reconciles to the as-reported summary to the dollar ($2,067,877 reported vs
+$2,067,878 computed — $1 source-rounding). The human-rollup summary file
+(`…T12 Sum. Feb 2026.xlsx`, single annual column, no monthly grid) remains
+unparseable by design — the detailed monthly file is the deal-flow input.
+
+**Tests** (`tests/test_mf_t12_normalizer.py`): +8 classifier unit rows for the
+new COA accounts (always-run); a new **committed synthetic fixture**
+(`tests/fixtures/mf/yardi_numdate_synthetic.xlsx` + `_build_*` authoring script)
+exercising the numeric-date + combined-acct path without shipping real
+financials; and the Verona file added as a skip-if-absent reconciliation case.
+All MF suites green (30 T-12 + 18 RR/AR/model/OM = 48).
+
+---
+
 ## MF app UX — 2026-06-05 (post-v0.5.1, `app.py` only — no parser/model change)
 
 App-mode UX improvements to MF intake (parser, model, and registry untouched):

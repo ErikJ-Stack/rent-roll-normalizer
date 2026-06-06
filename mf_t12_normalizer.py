@@ -2,12 +2,21 @@
 MF T-12 normalizer — parse any of the known operator T-12 formats into
 standardized GL lines bucketed to `_StdCOA`.
 
-General by design (not 5 brittle per-format branches): it auto-detects the
+General by design (not N brittle per-format branches): it auto-detects the
 month-header row, the monthly column set (contiguous OR odd-spaced), the total
 column, and whether account numbers are present — then extracts leaf GL lines,
 strips subtotals/headers, and classifies each via `mf_mappings`. Validated
-against all 5 catalogued formats (PSI flat, QuickBooks nested, Yardi numbered,
-Yardi/YSI, Tzadik name-only) — see `tools/mf_uw_template/COA-SEED.md`.
+against the catalogued formats (PSI flat, QuickBooks nested, Yardi numbered,
+Yardi/YSI, Tzadik name-only, and the Verona/Yardi "Trailing Twelve Months -
+Detail" variant) — see `tools/mf_uw_template/COA-SEED.md`.
+
+Two header/cell wrinkles handled (MF v0.5.2, Verona at Silver Hill):
+  - **numeric date-string headers** — "Month Ending" rows that render the period
+    as text "MM/DD/YYYY" rather than Excel dates or "Mar 2025" (see `_NUMDATE_RE`,
+    `_is_month`, `_month_label`).
+  - **combined "ACCT - Name" col-A cells** — account number and name in one cell
+    ("41000 - Market Rent"); the leading account number is split out so
+    acct-bearing-chart logic works (see the `am`-match in `parse_mf_t12`).
 
 Public API:
     parse_mf_t12(source) -> MFT12Result
@@ -27,6 +36,14 @@ from mf_mappings import (CONTROL_BUCKETS, EXCLUDED, bucket_side,
 
 _MONTH = r"(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)"
 _MONTH_RE = re.compile(rf"^\s*{_MONTH}[a-z]*[\s\-/.,]*\d{{2,4}}\s*$", re.IGNORECASE)
+# Numeric date-string headers, e.g. Yardi "Month Ending" rows that render the
+# period as text "MM/DD/YYYY" (also M/D/YY, MM-DD-YYYY, MM.DD.YYYY). Financial
+# data cells are plain numbers (no separators), so false-positive risk is low —
+# and header detection only scans the first 20 rows for the row with the MOST
+# date-like cells.
+_NUMDATE_RE = re.compile(r"^\s*(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})\s*$")
+_MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+               "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 _ACCT_RE = re.compile(r"^\s*\d{4,5}(-\d{1,3})?\b")
 _TOTAL_RE = re.compile(r"^\s*total\b", re.IGNORECASE)
 # Section/group HEADER words — skipped only when the row carries no value (a true
@@ -85,13 +102,30 @@ class MFT12Result:
 def _is_month(v) -> bool:
     if isinstance(v, (_dt.datetime, _dt.date)):
         return True
-    return bool(v) and isinstance(v, str) and bool(_MONTH_RE.match(v))
+    if not (v and isinstance(v, str)):
+        return False
+    if _MONTH_RE.match(v):
+        return True
+    m = _NUMDATE_RE.match(v)
+    if m:
+        mm = int(m.group(1))
+        return 1 <= mm <= 12          # guard: real month in the first field
+    return False
 
 
 def _month_label(v) -> str:
     if isinstance(v, (_dt.datetime, _dt.date)):
         return v.strftime("%b %Y")
-    return str(v).strip()
+    s = str(v).strip()
+    m = _NUMDATE_RE.match(s)
+    if m:
+        mm = int(m.group(1))
+        yy = int(m.group(3))
+        if yy < 100:
+            yy += 2000
+        if 1 <= mm <= 12:
+            return f"{_MONTH_ABBR[mm - 1]} {yy}"
+    return s
 
 
 def _num(v) -> float | None:
@@ -180,6 +214,15 @@ def parse_mf_t12(source) -> MFT12Result:
             name = acct
         if not name:
             continue
+        # Combined "ACCT - Name" cell (e.g. Yardi "41000 - Market Rent"): the
+        # column loop can't split it (the cell has letters, so the acct-only
+        # branch is skipped), leaving acct=None. Pull the leading account number
+        # out of the name so acct-bearing-chart logic + Yardi rollup-suffix +
+        # section-by-leading-digit all work. No-op when name has no acct prefix.
+        if acct is None:
+            am = re.match(r"^\s*(\d{4,5}(?:-\d{1,3})?)\s*-\s+\S", name)
+            if am:
+                acct = am.group(1)
         tot = _num(ws.cell(rr, total_col).value)
         monthly = [(_num(ws.cell(rr, c).value) or 0.0) for c in month_cols]
         if tot is None:

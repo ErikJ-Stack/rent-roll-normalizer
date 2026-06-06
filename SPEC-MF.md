@@ -113,7 +113,7 @@ parts and corrupts formulas — openpyxl quirk #6 in CLAUDE.md).
 > v0.1.x; it is retained as the design-of-record now that the `mf_*` modules
 > exist (`mf_mappings.py`, `mf_normalizer.py`, `mf_ar_parser.py`,
 > `mf_t12_normalizer.py`, `mf_uw_model_writer.py`, `mf_om_extractor.py`). Current
-> MF code version: **v0.5.1**. Remaining best-effort / open items live in §2.5
+> MF code version: **v0.5.2**. Remaining best-effort / open items live in §2.5
 > (redIQ W–AK ancillary breakouts) and §2.7 (col-U status-flag semantics); see
 > CHANGELOG-MF.md for what shipped per version.
 
@@ -324,8 +324,9 @@ layouts, all handled by the LLM engine. Samples live in `MF Docs/OM/` (gitignore
 
 ## Versioning
 
-- **MF** product line — `vX.Y.Z`, current **v0.5.1** (RR: RealPage OneSite format
-  + legacy .xls support; OM intake shipped at v0.5.0).
+- **MF** product line — `vX.Y.Z`, current **v0.5.2** (T-12: Yardi numeric
+  date-string headers `MM/DD/YYYY` + combined `"ACCT - Name"` cells, +8 COA seed
+  rules — Verona at Silver Hill; v0.5.1 RR OneSite + .xls; OM intake at v0.5.0).
 - Registry `registry_version` tracks the registry data separately; currently
   `0.2.0`, mapped against model `templates.v15`.
 
