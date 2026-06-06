@@ -107,10 +107,15 @@ parts and corrupts formulas — openpyxl quirk #6 in CLAUDE.md).
 
 ## 2. MF intake parser build (P1–P2) — scope
 
-> Status: **scoped, not built** (2026-06-03). This section is the build plan
-> that closes the 21 `gap_source` items in `registry.json` v0.1.x. It is a
-> proposal — sequencing and the open decisions (§2.7) should be confirmed before
-> code starts. No `mf_*` module exists yet.
+> Status: **built** (P1–P2 shipped; P3 OM intake shipped 2026-06-04). This
+> section was the original build plan (authored 2026-06-03 as a "scoped, not
+> built" proposal) that closed the 21 `gap_source` items in `registry.json`
+> v0.1.x; it is retained as the design-of-record now that the `mf_*` modules
+> exist (`mf_mappings.py`, `mf_normalizer.py`, `mf_ar_parser.py`,
+> `mf_t12_normalizer.py`, `mf_uw_model_writer.py`, `mf_om_extractor.py`). Current
+> MF code version: **v0.5.1**. Remaining best-effort / open items live in §2.5
+> (redIQ W–AK ancillary breakouts) and §2.7 (col-U status-flag semantics); see
+> CHANGELOG-MF.md for what shipped per version.
 
 ### 2.1 Goal & shape
 
