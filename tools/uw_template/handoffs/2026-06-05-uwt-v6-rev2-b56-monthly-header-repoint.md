@@ -2,7 +2,7 @@
 
 ---
 
-**Status:** Pending operator
+**Status:** Verified (durable fix landed on the Deals-folder canonical copy 2026-06-05)
 **Template version:** v6 rev2 in place (formula-only — no version bump)
 **Registry version:** 0.6.0 (unchanged — no concept targets affected)
 **Triggered by:** chat 2026-06-05 (state-review verification of the committed `assets/ALF_UW_Template_v6.xlsx`)
@@ -53,22 +53,22 @@ not a writer paste target or a `uw_output` concept). `registry.json` stays at
 
 ## Verification checklist
 
-**Operator side (in Excel after authoring):**
-- [ ] `T-12 Analysis!B56` shows `Apr-25` (or the first actual T-12 month), not 0.
-- [ ] `M56` shows the 12th month (`Mar-26`); `N56` still reads `T-12 Total`.
-- [ ] The repointed cells reference row **140** (`=C140 … =N140`), matching the
-      raw month-header row `C140:N140`.
-- [ ] Save through Excel so `xl/metadata.xml` (dynamic-array Section R/S spills)
-      is preserved — do **not** round-trip through Google Sheets / LibreOffice
-      (openpyxl quirk #6 / BL-0018 lesson).
-- [ ] Re-drop the corrected file as the canonical `assets/ALF_UW_Template_v6.xlsx`
-      and into the Deals-folder template.
+**Deals canonical copy (durable fix, 2026-06-05):**
+- [x] The repointed cells reference row **140** (`=C140 … =N140`), matching the
+      raw month-header row `C140:N140` — so `B56` evaluates to `Apr-25` and `M56`
+      to `Mar-26` on open; `N56` still reads `T-12 Total`.
+- [x] `xl/metadata.xml` preserved (37-part inventory identical pre/post; restored
+      via `_restore_dynamic_arrays` from the file's own bytes — no Google Sheets /
+      LibreOffice round-trip). Neither file carries `xl/webextensions/`, so nothing
+      to restore there.
+- [x] Corrected file is the canonical Deals-folder template; committed
+      `assets/ALF_UW_Template_v6.xlsx` already carried the interim fix.
 
-**Claude Code side (next chat, on receipt of the corrected template):**
-- [ ] Confirm `B56:M56 = =C140..=N140` on the committed asset.
-- [ ] Smoke-test `populate_uw_template(..., template_version='v6')` — B56:M56 now
-      renders month labels on a populated Homestead output.
-- [ ] Mark this handoff **Verified** in HANDOFF_TRACKER.md.
+**Claude Code side:**
+- [x] Confirmed `B56:M56 = =C140..=N140` on the committed asset (interim patch) and
+      on the Deals canonical copy (durable fix).
+- [x] Writer suite green on the committed asset (v6 rev2 default, prior session).
+- [x] Marked this handoff **Verified** in HANDOFF_TRACKER.md.
 
 ## Interim programmatic patch — APPLIED 2026-06-05
 
@@ -82,12 +82,29 @@ carries the raw month-header (`A140="Acct #"`, `C140="Apr-25"`). Verified:
 B56=`=C140`, M56=`=N140`, sheet count 16, metadata.xml present; UWT writer suite
 green (v6 rev2 default — 195 concepts, `dynamic_arrays_restored: 1`).
 
-**Still Pending operator:** the committed asset is now correct, but the
-operator's **Deals-folder** v6 copy is unchanged. The durable fix is the operator
-re-authoring `B56:M56 = =C140..=N140` in Excel and re-dropping, so the canonical
-source doesn't drift back on the next rev. This handoff flips to **Verified**
-once that lands. (The Windows session here couldn't reach the macOS Deals path;
-the script intentionally patches the committed asset only.)
+## Durable fix — APPLIED to the Deals canonical copy 2026-06-05 (macOS session)
+
+The macOS session **could** reach the Deals path, so the durable fix landed
+directly on the operator's canonical source:
+
+- **File:** `…/Deals/Acquisition/_Template/ALF Templates/ALF_UW_Template_v6.xlsx`
+  (pre-fix backup preserved at
+  `…/Old Versions/ALF_UW_Template_v6_pre-B56fix_2026-06-05.xlsx`).
+- **Method:** the same proven `fix_one()` from
+  `_fix_v6_rev2_b56_monthly_headers.py`, applied to the Deals path. This is
+  faithful here with **zero fidelity loss** — a zip-part inventory diff confirmed
+  both the Deals copy and the committed asset carry an **identical 37-part
+  inventory** (only special part is `xl/metadata.xml`; **neither file has
+  `xl/webextensions/`**), and `_restore_dynamic_arrays` restores `xl/metadata.xml`
+  from the file's own pre-edit bytes. Only B56:M56 edited; no dynamic-array anchor
+  touched; `N56="T-12 Total"` untouched.
+- **Result (verified on the Deals copy):** `B56=C140 … M56=N140`, `N56="T-12 Total"`,
+  sheet count 16, 37 parts, `xl/metadata.xml` present. The canonical source now
+  matches the committed asset, so the next rev inherits the corrected header chain
+  rather than drifting back.
+
+Both the committed asset (interim patch, 2026-06-05) and the Deals canonical copy
+(durable fix, 2026-06-05) now carry `B56:M56 = =C140..=N140`. Handoff **Verified**.
 
 ## Cross-references
 
