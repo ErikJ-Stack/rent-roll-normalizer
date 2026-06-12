@@ -117,11 +117,11 @@ Wiring the Analyzer's `UW Output` / `UW Export` surface into the downstream **AL
 | Handoff tracker (index) | `tools/uw_template/HANDOFF_TRACKER.md` |
 | Handoff brief template | `tools/uw_template/HANDOFF_TEMPLATE.md` |
 | Per-handoff briefs | `tools/uw_template/handoffs/YYYY-MM-DD-<slug>.md` |
-| Template source file | `assets/ALF_UW_Template_v5.xlsx` (committed blank reference, binding from 2026-05-26). v4 retained for backward compat at `Sample Files/ALF_UW_Template_v4.xlsx` (gitignored — working-copy reference only). |
-| Current code version | UWT v0.8.0 (default template flipped to v6 — T-12 income restructure; `_finalize_t12_layer3` + `_write_section_i_raw` version-dispatched via `_T12_LAYOUT`) |
+| Template source file | `assets/ALF_UW_Template_v8.xlsx` (committed blank reference, binding from 2026-06-12; self-stamps "Template Version 9.0" — registry keys on the filename). v6/v5 retained at `assets/` for override; v4 at `Sample Files/` (gitignored). |
+| Current code version | UWT v0.10.0 (v8 absorbed: RR paste grid re-anchored header 213 / data 214+ — writer derives anchor from registry templates block; new derived NER col AV; registry 0.7.0, 196 concepts) |
 | Evaluator module | `uw_output_model.py` — `compute_uw_output_values()` → annual `{concept_key: value}` + `compute_uw_output_monthly()` → `{concept_key: [12 floats]}`; reuses `dashboard_model` aggregation; passed to writer as `computed_values=` / `computed_monthly=` |
 | Dynamic-array repair | `uw_template_writer._restore_dynamic_arrays(output_bytes, template_bytes)` — pure zipfile+re; restores metadata.xml + per-cell `cm` markers post-save (openpyxl quirk #6) |
-| Mapped against template | `v6` default (v5/v4 still supported via `template_version='v5'`/`'v4'`) |
+| Mapped against template | `v8` default (v6/v5/v4 still supported via `template_version=`) |
 | Mapped against substrate | v0.2.14 — unchanged; v5 didn't move the substrate, only template-side rows/cols. Deposit slot reserved at `Rent Roll Input!AI` (clear-only, no parser support yet); Preleased Date at AJ; `RR_Input_Data` widened to `$A$7:$AJ$606`. |
 | Paste paths | (1) UW Output → T-12 Analysis · (2) Rent Roll Input rows 7+ → Rent Roll Analysis rows 211+ · (3) AR & Collections → Rent Roll Analysis cols N–Q (gap_source, gated on resident-key join) |
 | Authoritative handoff doc | `Deals/Acquisition/_Template/ALF Templates/Documentation & Maps/2026-05-25-UW-OUTPUT-HANDOFF-CONTRACT.md` (external — maintained outside repo) |

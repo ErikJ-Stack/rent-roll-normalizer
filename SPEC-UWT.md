@@ -5,6 +5,16 @@
 > **ALF UW Template** workbook as the last step of the ALF underwriting
 > pipeline.
 >
+> **UWT v0.10.0 (2026-06-12) — CURRENT:** operator template **v8** absorbed
+> (registry 0.7.0, 196 concepts; bundled default `assets/ALF_UW_Template_v8.xlsx`).
+> Rent Roll Analysis paste grid re-anchored to **header 213 / data 214–613**
+> (all RR aggregates read `$214:$613` — the v6-era 211 anchor was stale and
+> dropped the first beds from every diagnostic); 39 rent_roll targets now
+> `…214+`; writer derives the anchor from the registry templates block. New
+> derived NER col AV (`rr_ner_amort`). T-12 Analysis layout unchanged vs v6
+> rev2. See CHANGELOG-UWT v0.10.0. Status notes below this line predate v0.7+
+> and are retained as history — CHANGELOG-UWT.md is the live record.
+>
 > **Status:** Phase 3.7 — **in-Python UW Output evaluator shipped (UWT v0.6.0,
 > 2026-05-28); the cache caveat is closed.** The writer no longer depends on
 > the Analyzer having been round-tripped through Excel: a new module

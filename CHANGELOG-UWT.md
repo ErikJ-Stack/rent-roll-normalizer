@@ -8,6 +8,82 @@ opened (none yet — Phase 0 is the seed release).
 
 ---
 
+## v0.10.0 — operator template v8 absorbed; RR paste grid re-anchored 211→214 (2026-06-12)
+
+**Operator goal**: "use this as the new updated version template for ALF UW
+template" — `Deals/Acquisition/_Template/ALF Templates/ALF_UW_Template_v8.xlsx`
+(2026-06-11, self-stamped `Cover!A3 = "Template Version 9.0 — IRR-hurdle
+waterfall"`; the registry keys on the v8 FILENAME per convention). No handoff
+brief existed, so the delta was discovered by full binary diff against the
+committed v6 (1,112 true cell diffs after ArrayFormula-text normalization).
+
+**Verification highlights (cell-by-cell against both binaries):**
+
+- **All 188 registry v6 targets are IDENTICAL in v8** — T-12 Analysis,
+  Scenarios, and Prop Info targets did not move. `_T12_LAYOUT` anchor rows
+  (EGI N80, EBITDARM N134, EBITDAR N135, EBITDA N136, Section I 141–190,
+  Section J 194–196, B56 monthly headers) all verified unchanged → the v8
+  layout entry is a copy of v6's.
+- **Zip health**: v8 is an Excel-native save — `xl/metadata.xml` (dynamic
+  arrays) + `xl/webextensions/` intact; only `calcChain.xml` absent (Excel
+  rebuilds). 16 sheets, same names.
+
+**The substantive change — paste-grid re-anchor (fixes a live v6 bug):**
+every Rent Roll Analysis aggregate (rows 1–209, Section R, the new v8 blocks)
+reads rows **$214:$613** — and inspection showed this was ALREADY true in the
+committed v6 rev2: the operator's real grid header is row **213**, data
+**214+**. The writer's v6-era anchor (211, with the v0.9.0 fix #4 header
+restored at 210) meant beds #1–2 (rows 211–212) fell outside every diagnostic
+and bed #3 overwrote the operator's 213 header row. v8 absorption re-anchors:
+**39 rent_roll targets `…211+` → `…214+`**, `templates.v8` block pins anchor
+A214 / header 213 / data end 613, and the writer now derives
+`rr_paste_start` + the header-preflight row from the registry templates block
+instead of hardcoding 211/210. (v4–v6 blocks still resolve 211/210 — pinned
+regression tests unchanged.)
+
+**New in v8 (template-side, no writer involvement):**
+
+- **Col AV "NER $/mo (amort)"** — net effective rent, concessions amortized
+  over the `AC174` term input (default 12 mo); template fill-down
+  AV214:AV613. Registered as new **derived** concept `rr_ner_amort` (writer
+  skips). Headers carried at both AV210 and AV213.
+- **NET EFFECTIVE / CONCESSIONS block** (AB175:AD191) + **RECENT MOVE-INS —
+  LAST 10** (AF175:AN186 w/ AP/AQ helper arrays) on Rent Roll Analysis.
+- **AT (Conc Source) + AU (Effective Conc $) are now template formulas**
+  (IFS auto-classification / amortized-implied) — were analyst-input in
+  v5/v6. Neither is a writer target; e2e asserts they survive the populate.
+- T-12 Analysis row-9 **T-3/T-1 annualized diagnostics** (C9:G9); Section I
+  skeleton mapping labels reordered (writer clears/rewrites Section I).
+- Scenarios col-F CHOOSE refactor (`$B$4:$E$4` MATCH), col-G ratio fixes,
+  B141:E141 basis upgrade w/ Acquisition Costs linkage; **Waterfall rebuilt
+  as IRR-hurdle** (121×16). All analyst-side.
+
+**Registry 0.6.0 → 0.7.0**: 195 → **196 concepts** (`_absorb_v8.py`, retained
+as audit trail; idempotent). 39 re-anchored / 149 inherited / 1 new. Artifacts
+regenerated.
+
+**Writer/app**: `_T12_LAYOUT["v8"]`; default `template_version` v6 → v8 (fn +
+CLI); bundled template → `assets/ALF_UW_Template_v8.xlsx` (v6 retained for
+override); `_detect_uw_template_version` gains a v8 stage (AV210/AV213 "NER")
+**and fixes a latent v6 bug** — the old probe read A77/A114 (pre-rev2 rows),
+so uploaded v6 rev2 files mis-detected as v5; now probes A80/A117 first.
+
+**Tests**: 2 new (v8 smoke + v8 e2e — asserts paste at 214, header A213 and
+spacers 211–212 untouched, AP/AT/AV template formulas preserved, NER fill-down
+intact); v5/v6 tests pinned to their versions; concept count 195 → 196. **All
+6 writer tests + UW output model suite green.** Homestead e2e on v8: 89
+written / 2,301 cells / 176 rows from 214 / `dynamic_arrays_restored: 1`.
+
+**Template quirk flagged to operator (template-side fix, not writer-side):**
+K/L/V/W fill-downs only cover rows 214–389 (176 data rows — a working-file
+artifact); deals **>176 beds** lose Total LOC / Total Sched / PSF formulas on
+the overflow rows until the columns are filled down to 613. AA/AB cover 345
+rows. Recorded in `templates.v8.template_quirks`.
+
+`UWT_VERSION` 0.9.1 → 0.10.0.
+
+---
+
 ## v0.9.1 — adopt operator's durable Excel-native v6 binary (2026-06-08)
 
 **Operator goal**: "update and use this ALF Template as the most current

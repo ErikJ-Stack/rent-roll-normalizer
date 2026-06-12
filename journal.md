@@ -9,6 +9,63 @@ Newest at top.
 
 ---
 
+## 2026-06-12 — Track 4: UWT v0.10.0 — operator template v8 absorbed; paste grid re-anchored 211→214 (+ same session: cockpit UI redesign, cross-track)
+
+**Scope.** Operator: "use this as the new updated version template for ALF UW
+template" (`Deals/…/ALF Templates/ALF_UW_Template_v8.xlsx`, 2026-06-11,
+self-stamped "Template Version 9.0" — registry keys on the filename). No
+handoff brief existed; the delta was discovered by full binary diff vs the
+committed v6 (1,112 true cell diffs after ArrayFormula-text normalization —
+the naive diff shows 1,641 because openpyxl ArrayFormula objects compare by
+repr; normalize on `.text`).
+
+**The headline finding — stale paste anchor was a live v6 bug.** Every Rent
+Roll Analysis aggregate reads rows **$214:$613**, in v8 AND in the committed
+v6 rev2: the operator's true grid is header row **213**, data **214+**. The
+writer's hardcoded 211 anchor (plus the v0.9.0 "restore header at 210" fix,
+which had treated the missing 210 header as the bug rather than as evidence
+the grid had moved) meant beds #1–2 fell outside every diagnostic and bed #3
+overwrote the operator's header. Fixed via the v8 absorption: registry
+re-anchors 39 rent_roll targets to `…214+`; the writer now derives
+`rr_paste_start` + header-preflight row from the registry templates block
+(v4–v6 keep 211/210; v8 → 214/213).
+
+**Shipped (UWT 0.9.1 → 0.10.0, registry 0.6.0 → 0.7.0, 196 concepts):**
+`tools/uw_template/_absorb_v8.py` (idempotent; templates.v8 block + 39
+re-anchored / 149 inherited targets + new derived `rr_ner_amort` AV214+);
+bundled template → `assets/ALF_UW_Template_v8.xlsx` (checksum-verbatim copy;
+v6 retained for override); `_T12_LAYOUT["v8"]` = v6 rows (all anchor rows
+verified cell-identical — EGI N80 / EBITDARM N134 / EBITDAR N135 / EBITDA
+N136 / Section I 141 / Section J 194–196); writer default + CLI → v8;
+`_detect_uw_template_version` gains a v8 stage (AV210/AV213 "NER") and fixes
+a latent bug (v6 probes read pre-rev2 rows A77/A114 → uploaded rev2 files
+mis-detected as v5; now A80/A117 first). Tests: +2 (v8 smoke / v8 e2e —
+paste at 214, header A213 + spacers 211–212 untouched, AP/AT/AV template
+formulas survive); v5/v6 tests pinned; **all 6 writer tests + UW output model
+suite green** (Homestead e2e: 89 written / 2,301 cells / 176 rows from 214 /
+dynamic arrays restored).
+
+**v8 template content (no writer involvement):** NER $/mo (amort) col AV
+(amortizes concessions over the AC174 term input, occupied rows only) + NET
+EFFECTIVE / CONCESSIONS and RECENT MOVE-INS blocks (rows 174–191); AT/AU now
+template formulas (were analyst-input); T-3/T-1 diagnostics at T-12 Analysis
+row 9; Scenarios col-F CHOOSE refactor; Waterfall rebuilt as IRR-hurdle.
+
+**Carry-forwards:** (1) **Template quirk for operator** — K/L/V/W fill-downs
+only cover rows 214–389 (176 data rows); deals >176 beds lose Total LOC /
+Total Sched / PSF on overflow rows until filled down to 613 (AA/AB cover 345
+rows). Recorded in `templates.v8.template_quirks`. (2) The duplicate legacy
+header at row 210 is cosmetic — harmless; operator may delete in a future
+pass.
+
+**Also this session (cross-track, operator-directed):** the cockpit UI
+redesign shipped — see COSMETIC-CHANGES.md 2026-06-12 entries (graphite/teal
+terminal theme + command bar + live ledger + cockpit login + light/dark
+toggle) — and the prior session's uncommitted UWT v0.9.1 work was committed
+(`df08e16`).
+
+---
+
 ## 2026-06-08 — Adopt operator's durable Excel-native v6 template binary (Track 4)
 
 **Track:** Track 4 (UWT). Operator: "update and use this ALF Template as the most

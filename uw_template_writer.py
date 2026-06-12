@@ -156,6 +156,19 @@ _T12_LAYOUT: dict[str, dict] = {
         "section_i_start": 141, "section_i_end": 190,
         "section_j_rev": 194, "section_j_opex": 195, "section_j_ebitdar": 196,
     },
+    # v8 (operator template 2026-06-11, absorbed 2026-06-12): T-12 Analysis
+    # layout verified cell-identical to v6 rev2 (all anchor rows checked
+    # against the binary) — same entry. v8's changes live on Rent Roll
+    # Analysis (paste grid re-anchored to header 213 / data 214+, new NER
+    # col AV) and analyst-side sheets (Waterfall, Scenarios col F).
+    "v8": {
+        "net_rent_row": None,
+        "ebitdar_row": 135, "ebitdar_formula": "=N134-N131",
+        "ebitda_row": 136,  "ebitda_formula": "=N135-N128",
+        "mirror_rows": (62, 67, 80, 102, 129, 132, 133, 134, 135, 136),
+        "section_i_start": 141, "section_i_end": 190,
+        "section_j_rev": 194, "section_j_opex": 195, "section_j_ebitdar": 196,
+    },
 }
 
 # Status colours mirror the generator — duplicated here so the writer can
@@ -772,7 +785,7 @@ def populate_uw_template(
     analyzer_bytes: bytes,
     template_bytes: bytes,
     *,
-    template_version: str = "v6",
+    template_version: str = "v8",
     scenario: str = "normalized",
     registry_path: str | Path | None = None,
     include_statuses: frozenset[str] | None = None,
@@ -869,25 +882,31 @@ def populate_uw_template(
         or tv.get("data_end_row")
         or 610
     )
-    rr_paste_start = 211  # contract anchor — fixed across template versions
+    # Paste anchor comes from the registry templates block — v8 re-anchored
+    # the grid to A214 (header 213; every RR Analysis aggregate reads
+    # $214:$613), v4-v6 use A211. Fallback 211 when the block doesn't pin it.
+    rr_paste_start = 211
+    _anchor_m = re.search(r"!\$?[A-Z]+\$?(\d+)$", tv.get("rent_roll_paste_anchor") or "")
+    if _anchor_m:
+        rr_paste_start = int(_anchor_m.group(1))
+    rr_header_row = tv.get("rent_roll_header_row") or (rr_paste_start - 1)
     rr_max_rows = rr_data_end_row - rr_paste_start + 1
 
-    # Pre-flight: confirm Rent Roll Analysis header at row 210 if rent_roll
-    # concepts will be written. The contract specifies paste at A211+ with
-    # a header at row 210 — older / working-copy templates may not have
-    # the header row, in which case the writer still writes (per the
+    # Pre-flight: confirm the Rent Roll Analysis header row (version-specific)
+    # if rent_roll concepts will be written — older / working-copy templates
+    # may not have it, in which case the writer still writes (per the
     # registry's paste anchor) but flags a warning.
     rr_concepts = [c for c in reg.get("concepts", []) if c.get("path") == "rent_roll"]
     if rr_concepts and "Rent Roll Analysis" in wb_template.sheetnames:
         ra = wb_template["Rent Roll Analysis"]
-        # Look at row 210 col A — should be "Unit/Bed" or similar per contract
-        hdr = ra["A210"].value
+        hdr = ra[f"A{rr_header_row}"].value
         if not hdr:
             report.warnings.append(
-                "Rent Roll Analysis!A210 is blank — the contract specifies "
-                "a header row at 210 with paste anchor at 211. Writing to "
-                "row 211+ anyway; the template may be a working copy that "
-                "predates the contract's row layout."
+                f"Rent Roll Analysis!A{rr_header_row} is blank — this template "
+                f"version expects a header row at {rr_header_row} with paste "
+                f"anchor at row {rr_paste_start}. Writing to row "
+                f"{rr_paste_start}+ anyway; the template may be a working copy "
+                "that predates the registry's row layout."
             )
 
     # ── Iterate concepts ──────────────────────────────────────────────────────
@@ -1135,7 +1154,7 @@ if __name__ == "__main__":
         "--scenario", default="normalized",
         choices=("normalized", "t12_actual"),
     )
-    ap.add_argument("--template-version", default="v6")
+    ap.add_argument("--template-version", default="v8")
     ap.add_argument("--registry", default=None)
     args = ap.parse_args()
 

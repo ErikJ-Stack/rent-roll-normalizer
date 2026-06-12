@@ -85,8 +85,8 @@ APP_LAST_UPDATED = "2026-05-08"   # alias for RR_LAST_UPDATED
 RR_VERSION = "1.19.0"
 RR_LAST_UPDATED = "2026-05-27"
 
-UWT_VERSION = "0.9.1"             # Track 4 — adopted operator's durable Excel-native v6 binary (full metadata.xml + webextensions + native comments/calcChain); carries B56 + Section-D rev2 fixes natively + 10 analyst-cell formula refinements (non-registry). No registry/writer change; closes the 2026-05-28 "re-drop Excel-resaved v6" carry-forward
-UWT_LAST_UPDATED = "2026-06-08"
+UWT_VERSION = "0.10.0"            # Track 4 — operator template v8 absorbed (registry 0.7.0, 196 concepts): RR Analysis paste grid re-anchored 211+ → 214+ (header 213; aggregates read $214:$613 — fixes stale-211 anchor dropping first beds from diagnostics), new derived NER col AV, T-12 Analysis layout unchanged vs v6 rev2. Bundled default v6 → v8.
+UWT_LAST_UPDATED = "2026-06-12"
 
 T12_VERSION = "0.2.1"
 T12_LAST_UPDATED = "2026-05-11"
@@ -112,14 +112,16 @@ BUNDLED_ANALYZER_PATH = Path(__file__).parent / "ALF_Financial_Analyzer_Only.xls
 
 # Bundled UW Template — loaded silently from assets/ by default. Mirrors the
 # Analyzer pattern: operator can override via the Advanced expander for a
-# session-specific template (e.g. v5 / v4 for a legacy deal). The bundled file
-# is the binding v6 default as of 2026-05-29 (UWT v0.8.0 — T-12 income
-# restructure). As of UWT v0.9.1 (2026-06-08) the committed v6 binary is the
-# operator's durable Excel-native save (full xl/metadata.xml + webextensions +
-# native comments/calcChain) — it carries the B56 monthly-header repoint and the
-# Section-D rev2 fix natively (no more programmatic patching of the asset).
-BUNDLED_UW_TEMPLATE_PATH = Path(__file__).parent / "assets" / "ALF_UW_Template_v6.xlsx"
-BUNDLED_UW_TEMPLATE_VERSION = "v6"
+# session-specific template (e.g. v6 / v5 / v4 for a legacy deal). The bundled
+# file is the binding v8 default as of 2026-06-12 (UWT v0.10.0): operator's
+# Excel-native v8 binary (self-stamped "Template Version 9.0", file named v8 —
+# registry keys on the filename). v8 re-anchors the Rent Roll Analysis paste
+# grid to header 213 / data 214+ (every RR aggregate reads $214:$613), adds
+# the derived NER $/mo column at AV, and rebuilds the Waterfall as IRR-hurdle —
+# T-12 Analysis layout is unchanged vs v6 rev2. v6 retained at
+# assets/ALF_UW_Template_v6.xlsx for override use.
+BUNDLED_UW_TEMPLATE_PATH = Path(__file__).parent / "assets" / "ALF_UW_Template_v8.xlsx"
+BUNDLED_UW_TEMPLATE_VERSION = "v8"
 
 # MF (multifamily) UW Model — committed reference template (Track 4-MF).
 BUNDLED_MF_MODEL_PATH = Path(__file__).parent / "assets" / "MF_UW_Model_v15.xlsx"
@@ -318,29 +320,38 @@ def _load_analyzer(uploaded_file) -> tuple[bytes, str, str]:
 def _detect_uw_template_version(template_bytes: bytes) -> str:
     """Best-effort UW Template version detection.
 
-    Two-stage probe:
+    Three-stage probe:
 
-    1. **v4 vs v5+** — v5 introduced a "Care Level Tier" column on Rent Roll
+    1. **v8** — v8 added the "NER $/mo (amort)" column at Rent Roll Analysis
+       AV (header carried at both 210 and 213). Either cell carrying "NER"
+       marks v8.
+    2. **v4 vs v5+** — v5 introduced a "Care Level Tier" column on Rent Roll
        Analysis row 210 that v4 lacks. The v5.1 column restructure moved it
        from AP → AO, so probe AO210 first (current position), AP210 as a
        pre-v5.1 fallback. Either carrying "Care Level Tier" marks v5+.
-    2. **v5 vs v6** — v6 rebuilt the T-12 Analysis INCOME section into an
-       actual-T12 build, moving EGI from row 69 (v5) to row 77 and adding an
-       Auto Expense row at 114. Rent Roll Analysis is unchanged between v5 and
-       v6, so the split is decided on T-12 Analysis. A77 == "EFFECTIVE GROSS
-       INCOME (EGI)" (or A114 == "Auto Expense") marks v6.
+    3. **v5 vs v6** — v6 rebuilt the T-12 Analysis INCOME section into an
+       actual-T12 build. v6 rev2 (canonical since 2026-06-03) carries EGI at
+       A80 and Auto Expense at A117; the pre-rev2 v6 had them at A77/A114 —
+       probe both pairs (the old A77/A114-only probe mis-detected rev2
+       uploads as v5). Any hit marks v6.
 
-    Falls back to "v6" (the binding default) if the file lacks the expected
+    Falls back to "v8" (the binding default) if the file lacks the expected
     sheets (rare — indicates a non-ALF template).
     """
     try:
         import io as _io
         import openpyxl as _openpyxl
         wb = _openpyxl.load_workbook(_io.BytesIO(template_bytes), data_only=False)
-        # Stage 1 — v4 vs v5+ (Care Level Tier at AO210 in v5.1+/v6, AP210 pre-v5.1)
+        ws_rr = wb["Rent Roll Analysis"] if "Rent Roll Analysis" in wb.sheetnames else None
+        # Stage 1 — v8 (NER column at AV)
+        if ws_rr is not None:
+            for addr in ("AV210", "AV213"):
+                v = ws_rr[addr].value
+                if isinstance(v, str) and "NER" in v:
+                    return "v8"
+        # Stage 2 — v4 vs v5+ (Care Level Tier at AO210 in v5.1+/v6, AP210 pre-v5.1)
         is_v5_plus = False
-        if "Rent Roll Analysis" in wb.sheetnames:
-            ws_rr = wb["Rent Roll Analysis"]
+        if ws_rr is not None:
             for addr in ("AO210", "AP210"):
                 v = ws_rr[addr].value
                 if isinstance(v, str) and "Care Level" in v and "Tier" in v:
@@ -348,31 +359,35 @@ def _detect_uw_template_version(template_bytes: bytes) -> str:
                     break
         if not is_v5_plus:
             return "v4"
-        # Stage 2 — v5 vs v6 (decided on T-12 Analysis income layout)
+        # Stage 3 — v5 vs v6 (decided on T-12 Analysis income layout; rev2
+        # rows first, pre-rev2 rows as fallback)
         if "T-12 Analysis" in wb.sheetnames:
             ws_t12 = wb["T-12 Analysis"]
-            a77 = ws_t12["A77"].value
-            if isinstance(a77, str) and "EFFECTIVE GROSS INCOME" in a77.upper():
-                return "v6"
-            a114 = ws_t12["A114"].value
-            if isinstance(a114, str) and "Auto Expense" in a114:
-                return "v6"
+            for addr, needle in (
+                ("A80", "EFFECTIVE GROSS INCOME"),
+                ("A117", "AUTO EXPENSE"),
+                ("A77", "EFFECTIVE GROSS INCOME"),
+                ("A114", "AUTO EXPENSE"),
+            ):
+                v = ws_t12[addr].value
+                if isinstance(v, str) and needle in v.upper():
+                    return "v6"
         return "v5"
     except Exception:
-        return "v6"  # default to v6 — the registry's binding template
+        return "v8"  # default to v8 — the registry's binding template
 
 
 def _load_uw_template(uploaded_file) -> tuple[bytes, str, str]:
     """Resolve the UW Template source — uploaded file wins over bundled default.
 
     Mirrors `_load_analyzer` so the operator gets the same load behavior:
-    bundled `assets/ALF_UW_Template_v6.xlsx` is used by default; an
+    bundled `assets/ALF_UW_Template_v8.xlsx` is used by default; an
     upload via Advanced → "UW Template override" replaces it for the session.
 
     Returns: (template_bytes, source_label, template_version)
       - template_bytes: raw .xlsx bytes
       - source_label: "uploaded: <filename>" or "bundled (assets/<file>)"
-      - template_version: "v4" / "v5" / "v6" (drives writer's targets.{v} block)
+      - template_version: "v4" / "v5" / "v6" / "v8" (drives writer's targets.{v} block)
 
     Raises FileNotFoundError if neither uploaded file nor bundled file exists.
     """

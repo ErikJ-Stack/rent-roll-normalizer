@@ -1,6 +1,6 @@
 # ALF UW Template — Mapping Tracker
 
-> Generated from `tools/uw_template/registry.json` on 2026-06-03 06:16 UTC.  **Do not edit by hand** — edit `registry.json` and re-run `python tools/uw_template/build_mapping_artifacts.py`.
+> Generated from `tools/uw_template/registry.json` on 2026-06-12 16:59 UTC.  **Do not edit by hand** — edit `registry.json` and re-run `python tools/uw_template/build_mapping_artifacts.py`.
 
 - Analyzer source: `ALF_Financial_Analyzer_Only.xlsx` (substrate `v0.2.14`)
 - Primary template: `v4` → `Sample Files/ALF_UW_Template_v4.xlsx`
@@ -24,19 +24,19 @@
 |---|---|
 | `mapped` | 117 |
 | `proposed` | 62 |
-| `derived` | 8 |
+| `derived` | 9 |
 | `gap_source` | 4 |
 | `gap_target` | 2 |
 | `header_only` | 1 |
 | `substrate_ready_parser_pending` | 1 |
-| **Total concepts** | **195** |
+| **Total concepts** | **196** |
 
 ## Status rollup by path
 
 | Path | Total | mapped | gap_target | gap_source | proposed | other |
 |---|---|---|---|---|---|---|
 | **t12** | 89 | 75 | 2 | 0 | 7 | 5 |
-| **rent_roll** | 38 | 30 | 0 | 0 | 3 | 5 |
+| **rent_roll** | 39 | 30 | 0 | 0 | 3 | 6 |
 | **ar** | 4 | 0 | 0 | 4 | 0 | 0 |
 
 ## Mappings by path & category
@@ -246,6 +246,12 @@
 | **Notes** <br/> `rr_notes` | `Rent Roll Input!Y7:Y606` | `Rent Roll Analysis!S211+` | `mapped` | Position shift Y→S. |
 | **ACH** <br/> `rr_ach` | `Rent Roll Input!AB7:AB606` | `Rent Roll Analysis!AP211+` | `mapped` | Position shift AB→AP. · v5: shifted from AP211+ to AS211+ per 2026-05-26 contract §16 (new AP/AQ/AR inserts pushed analyst-input cols right) |
 | **Deposit** <br/> `rr_deposit` | `Rent Roll Input!AI7:AI606` | `Rent Roll Analysis!M211+` | `substrate_ready_parser_pending` | Substrate slot ready at Rent Roll Input!AI (v0.2.14). Parser support deferred until a source rent roll with a Deposit column lands as a fixture. Once parsed, RR writer at COL_AI_INDEX=35 will populate. |
+
+#### rent_roll_derived (1)
+
+| Concept | Source | Target (`v4`) | Status | Notes |
+|---|---|---|---|---|
+| **NER $/mo (amortized concessions)** <br/> `rr_ner_amort` | `derived` | `—` | `derived` | New in v8. Template fill-down AV214:AV613 referencing the AC174 amort-term input (default 12 mo). Writer skips (derived) — never paste over it. Feeds the NET EFFECTIVE / CONCESSIONS block (AD177+ Avg NER/mo). |
 
 ### AR PATH · AR & COLLECTIONS → RENT ROLL ANALYSIS COLS N–Q
 

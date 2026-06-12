@@ -1,7 +1,7 @@
 {
   "schema": "uw-mapping/v1",
-  "registry_version": "0.6.0",
-  "generated_phase": "Track 4 v6 — T-12 Analysis income restructure to actual-T12 categories. templates.v6 (income_model=actual_t12); by-care Base Rent + LOC, 5 ancillary income lines, Auto Expense; GPR waterfall demoted to diagnostic. Default template stays v5 until the Excel-resaved v6 binary lands.",
+  "registry_version": "0.7.0",
+  "generated_phase": "Track 4 v8 — operator template v8 absorbed (2026-06-12). All 188 v6 targets verified identical; rent_roll paste grid re-anchored 211+ -> 214+ (header row 213; aggregates read $214:$613 — fixes the stale-211 anchor that dropped the first beds out of every RR Analysis diagnostic). New derived concept rr_ner_amort (AV214+). Default template v6 -> v8.",
   "analyzer": {
     "file": "ALF_Financial_Analyzer_Only.xlsx",
     "substrate_version": "v0.2.14",
@@ -348,6 +348,54 @@
       "income_model": "actual_t12",
       "income_block_note": "Layer 3 INCOME rebuilt to actual-T12 categories (rows 58-77); GPR waterfall demoted to DIAGNOSTIC sub-section (rows 79-83, does NOT feed EGI). EGI N77 = N61+N65+SUM(N66:N76). Auto Expense new at N114 inside TOTAL NON-LABOR (N126).",
       "binary_caveat": "assets/ALF_UW_Template_v6.xlsx as dropped is the pre-Excel-resave openpyxl version (39 zip parts, missing xl/metadata.xml + xl/webextensions). Operator must open in Excel + save to restore metadata.xml before populated outputs have working Section R/S dynamic-array spills. Default stays v5 until then."
+    },
+    "v8": {
+      "file": "assets/ALF_UW_Template_v8.xlsx",
+      "released": "2026-06-11",
+      "supersedes": "v6",
+      "self_stamp": "Cover!A3 = 'Template Version 9.0 - Updated 2026-06-11 (IRR-hurdle waterfall)' — registry keys on the v8 FILENAME per convention",
+      "intake_sheets": [
+        "Prop Info",
+        "T-12 Analysis",
+        "Rent Roll Analysis"
+      ],
+      "annual_total_column": "N",
+      "monthly_columns": [
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H",
+        "I",
+        "J",
+        "K",
+        "L",
+        "M"
+      ],
+      "monthly_header_row": 56,
+      "rent_roll_paste_anchor": "Rent Roll Analysis!A214",
+      "rent_roll_header_row": 213,
+      "rent_roll_data_end_row": 613,
+      "rent_roll_last_col": "AV",
+      "rent_roll_diagnostic_rows": "1-209 (formula-derived; aggregates read $214:$613) + legacy duplicate header at 210 (cosmetic leftover of the v0.9.0 fix #4 restore; the operator's live header is row 213)",
+      "rent_roll_template_formula_cols": "K L V W X Y AA AB AP AT AU AV — template-owned fill-downs inside the paste band; writer must never write them (AT/AU newly formula-driven in v8; were analyst-input)",
+      "sheet_count": 16,
+      "income_model": "actual_t12",
+      "t12_layout_note": "T-12 Analysis layout identical to v6 rev2 — EGI N80, Total Labor N102, EBITDARM N134, EBITDAR N135, EBITDA N136, Section I 141-190, Section J 194-196. New T-3/T-1 annualized diagnostics at row 9 (C9:G9, non-target).",
+      "new_in_v8": [
+        "Rent Roll Analysis col AV 'NER $/mo (amort)' — net effective rent, concessions amortized over AC174 months (default 12); fill-down AV214:AV613",
+        "Rent Roll Analysis rows 174-191: NET EFFECTIVE / CONCESSIONS block (AB175:AD191) + RECENT MOVE-INS — LAST 10 block (AF175:AN186, AP/AQ helper arrays)",
+        "AT (Conc Source) auto-derived via IFS; AU (Effective Conc $) formula — both were analyst-input in v5/v6",
+        "Scenarios col-F CHOOSE refactored to $B$4:$E$4 MATCH; col-G ratio denominators fixed; B141:E141 basis upgraded with Acquisition Costs linkage",
+        "Waterfall rebuilt as IRR-hurdle structure (121x16, was 101x14) — analyst-side",
+        "Cover A3 version stamp"
+      ],
+      "template_quirks": [
+        "K/L/V/W fill-downs cover only rows 214-389 (176 data rows — a working-file artifact); deals >176 beds lose Total LOC / Total Sched / PSF formulas on the overflow rows until the operator fills down. Flagged to operator 2026-06-12.",
+        "AA/AB fill-downs cover 345 rows (214-558)."
+      ]
     }
   },
   "status_legend": {
@@ -402,6 +450,10 @@
         "v6": {
           "sheet": "Prop Info",
           "address": "B4"
+        },
+        "v8": {
+          "sheet": "Prop Info",
+          "address": "B4"
         }
       },
       "status": "mapped",
@@ -429,6 +481,11 @@
           "label_at": "A5"
         },
         "v6": {
+          "sheet": "Rent Roll Analysis",
+          "address": "B5",
+          "label_at": "A5"
+        },
+        "v8": {
           "sheet": "Rent Roll Analysis",
           "address": "B5",
           "label_at": "A5"
@@ -498,6 +555,11 @@
           "sheet": "Prop Info",
           "address": "B16",
           "label_at": "A16"
+        },
+        "v8": {
+          "sheet": "Prop Info",
+          "address": "B16",
+          "label_at": "A16"
         }
       },
       "status": "mapped",
@@ -526,6 +588,11 @@
           "label_at": "A17"
         },
         "v6": {
+          "sheet": "Prop Info",
+          "address": "B17",
+          "label_at": "A17"
+        },
+        "v8": {
           "sheet": "Prop Info",
           "address": "B17",
           "label_at": "A17"
@@ -559,6 +626,11 @@
           "sheet": "Prop Info",
           "address": "B18",
           "label_at": "A18"
+        },
+        "v8": {
+          "sheet": "Prop Info",
+          "address": "B18",
+          "label_at": "A18"
         }
       },
       "status": "mapped",
@@ -587,6 +659,11 @@
           "sheet": "Prop Info",
           "address": "B15",
           "label_at": "A15"
+        },
+        "v8": {
+          "sheet": "Prop Info",
+          "address": "B15",
+          "label_at": "A15"
         }
       },
       "status": "mapped",
@@ -612,6 +689,12 @@
           "target_label": "Occupied Beds — IL"
         },
         "v6": {
+          "sheet": "Prop Info",
+          "address": "B21",
+          "label_at": "A21",
+          "target_label": "Occupied Beds — IL"
+        },
+        "v8": {
           "sheet": "Prop Info",
           "address": "B21",
           "label_at": "A21",
@@ -645,6 +728,12 @@
           "address": "B22",
           "label_at": "A22",
           "target_label": "Occupied Beds — AL"
+        },
+        "v8": {
+          "sheet": "Prop Info",
+          "address": "B22",
+          "label_at": "A22",
+          "target_label": "Occupied Beds — AL"
         }
       },
       "status": "mapped",
@@ -670,6 +759,12 @@
           "target_label": "Occupied Beds — MC"
         },
         "v6": {
+          "sheet": "Prop Info",
+          "address": "B23",
+          "label_at": "A23",
+          "target_label": "Occupied Beds — MC"
+        },
+        "v8": {
           "sheet": "Prop Info",
           "address": "B23",
           "label_at": "A23",
@@ -762,6 +857,11 @@
           "sheet": "T-12 Analysis",
           "address": "N69",
           "label_at": "A69"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N69",
+          "label_at": "A69"
         }
       },
       "status": "mapped",
@@ -789,6 +889,11 @@
           "label_at": "A61"
         },
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N78",
+          "label_at": "A78"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N78",
           "label_at": "A78"
@@ -823,6 +928,11 @@
           "sheet": "T-12 Analysis",
           "address": "N70",
           "label_at": "A70"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N70",
+          "label_at": "A70"
         }
       },
       "status": "mapped",
@@ -850,6 +960,11 @@
           "label_at": "A68"
         },
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N76",
+          "label_at": "A76"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N76",
           "label_at": "A76"
@@ -883,6 +998,11 @@
           "sheet": "T-12 Analysis",
           "address": "N80",
           "label_at": "A80"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N80",
+          "label_at": "A80"
         }
       },
       "status": "mapped",
@@ -908,6 +1028,11 @@
           "label_at": "A67"
         },
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N68",
+          "label_at": "A68"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N68",
           "label_at": "A68"
@@ -943,6 +1068,11 @@
           "sheet": "T-12 Analysis",
           "address": "N79",
           "label_at": "A79"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N79",
+          "label_at": "A79"
         }
       },
       "status": "proposed",
@@ -974,6 +1104,11 @@
           "sheet": "T-12 Analysis",
           "address": "N83",
           "label_at": "A83"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N83",
+          "label_at": "A83"
         }
       },
       "status": "mapped",
@@ -1001,6 +1136,11 @@
           "label_at": "A60"
         },
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N85",
+          "label_at": "A85"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N85",
           "label_at": "A85"
@@ -1052,6 +1192,11 @@
           "sheet": "T-12 Analysis",
           "address": "N84",
           "label_at": "A84"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N84",
+          "label_at": "A84"
         }
       },
       "status": "mapped",
@@ -1099,6 +1244,11 @@
           "sheet": "T-12 Analysis",
           "address": "N88",
           "label_at": "A88"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N88",
+          "label_at": "A88"
         }
       },
       "status": "mapped",
@@ -1126,6 +1276,11 @@
           "label_at": "A72"
         },
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N89",
+          "label_at": "A89"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N89",
           "label_at": "A89"
@@ -1159,6 +1314,11 @@
           "sheet": "T-12 Analysis",
           "address": "N90",
           "label_at": "A90"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N90",
+          "label_at": "A90"
         }
       },
       "status": "mapped",
@@ -1186,6 +1346,11 @@
           "label_at": "A74"
         },
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N91",
+          "label_at": "A91"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N91",
           "label_at": "A91"
@@ -1219,6 +1384,11 @@
           "sheet": "T-12 Analysis",
           "address": "N92",
           "label_at": "A92"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N92",
+          "label_at": "A92"
         }
       },
       "status": "mapped",
@@ -1246,6 +1416,11 @@
           "label_at": "A76"
         },
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N93",
+          "label_at": "A93"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N93",
           "label_at": "A93"
@@ -1279,6 +1454,11 @@
           "sheet": "T-12 Analysis",
           "address": "N94",
           "label_at": "A94"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N94",
+          "label_at": "A94"
         }
       },
       "status": "mapped",
@@ -1306,6 +1486,11 @@
           "label_at": "A78"
         },
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N95",
+          "label_at": "A95"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N95",
           "label_at": "A95"
@@ -1339,6 +1524,11 @@
           "sheet": "T-12 Analysis",
           "address": "N96",
           "label_at": "A96"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N96",
+          "label_at": "A96"
         }
       },
       "status": "mapped",
@@ -1366,6 +1556,11 @@
           "label_at": "A80"
         },
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N97",
+          "label_at": "A97"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N97",
           "label_at": "A97"
@@ -1399,6 +1594,11 @@
           "sheet": "T-12 Analysis",
           "address": "N98",
           "label_at": "A98"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N98",
+          "label_at": "A98"
         }
       },
       "status": "mapped",
@@ -1426,6 +1626,11 @@
           "label_at": "A82"
         },
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N99",
+          "label_at": "A99"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N99",
           "label_at": "A99"
@@ -1459,6 +1664,11 @@
           "sheet": "T-12 Analysis",
           "address": "N100",
           "label_at": "A100"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N100",
+          "label_at": "A100"
         }
       },
       "status": "mapped",
@@ -1489,6 +1699,11 @@
           "sheet": "T-12 Analysis",
           "address": "N101",
           "label_at": "A101"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N101",
+          "label_at": "A101"
         }
       },
       "status": "mapped",
@@ -1516,6 +1731,11 @@
           "label_at": "A85"
         },
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N102",
+          "label_at": "A102"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N102",
           "label_at": "A102"
@@ -1550,6 +1770,11 @@
           "sheet": "T-12 Analysis",
           "address": "N104",
           "label_at": "A104"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N104",
+          "label_at": "A104"
         }
       },
       "status": "mapped",
@@ -1577,6 +1802,11 @@
           "label_at": "A88"
         },
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N105",
+          "label_at": "A105"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N105",
           "label_at": "A105"
@@ -1610,6 +1840,11 @@
           "sheet": "T-12 Analysis",
           "address": "N106",
           "label_at": "A106"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N106",
+          "label_at": "A106"
         }
       },
       "status": "mapped",
@@ -1637,6 +1872,11 @@
           "label_at": "A90"
         },
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N107",
+          "label_at": "A107"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N107",
           "label_at": "A107"
@@ -1670,6 +1910,11 @@
           "sheet": "T-12 Analysis",
           "address": "N108",
           "label_at": "A108"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N108",
+          "label_at": "A108"
         }
       },
       "status": "mapped",
@@ -1697,6 +1942,11 @@
           "label_at": "A92"
         },
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N109",
+          "label_at": "A109"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N109",
           "label_at": "A109"
@@ -1730,6 +1980,11 @@
           "sheet": "T-12 Analysis",
           "address": "N110",
           "label_at": "A110"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N110",
+          "label_at": "A110"
         }
       },
       "status": "mapped",
@@ -1757,6 +2012,11 @@
           "label_at": "A94"
         },
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N111",
+          "label_at": "A111"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N111",
           "label_at": "A111"
@@ -1790,6 +2050,11 @@
           "sheet": "T-12 Analysis",
           "address": "N112",
           "label_at": "A112"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N112",
+          "label_at": "A112"
         }
       },
       "status": "mapped",
@@ -1817,6 +2082,11 @@
           "label_at": "A96"
         },
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N113",
+          "label_at": "A113"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N113",
           "label_at": "A113"
@@ -1850,6 +2120,11 @@
           "sheet": "T-12 Analysis",
           "address": "N114",
           "label_at": "A114"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N114",
+          "label_at": "A114"
         }
       },
       "status": "mapped",
@@ -1877,6 +2152,11 @@
           "label_at": "A98"
         },
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N115",
+          "label_at": "A115"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N115",
           "label_at": "A115"
@@ -1910,6 +2190,11 @@
           "sheet": "T-12 Analysis",
           "address": "N116",
           "label_at": "A116"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N116",
+          "label_at": "A116"
         }
       },
       "status": "mapped",
@@ -1937,6 +2222,11 @@
           "label_at": "A100"
         },
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N118",
+          "label_at": "A118"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N118",
           "label_at": "A118"
@@ -1970,6 +2260,11 @@
           "sheet": "T-12 Analysis",
           "address": "N119",
           "label_at": "A119"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N119",
+          "label_at": "A119"
         }
       },
       "status": "mapped",
@@ -1997,6 +2292,11 @@
           "label_at": "A102"
         },
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N120",
+          "label_at": "A120"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N120",
           "label_at": "A120"
@@ -2031,6 +2331,11 @@
           "sheet": "T-12 Analysis",
           "address": "N121",
           "label_at": "A121"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N121",
+          "label_at": "A121"
         }
       },
       "status": "mapped",
@@ -2058,6 +2363,11 @@
           "label_at": "A104"
         },
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N122",
+          "label_at": "A122"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N122",
           "label_at": "A122"
@@ -2091,6 +2401,11 @@
           "sheet": "T-12 Analysis",
           "address": "N123",
           "label_at": "A123"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N123",
+          "label_at": "A123"
         }
       },
       "status": "mapped",
@@ -2118,6 +2433,11 @@
           "label_at": "A106"
         },
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N124",
+          "label_at": "A124"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N124",
           "label_at": "A124"
@@ -2152,6 +2472,11 @@
           "sheet": "T-12 Analysis",
           "address": "N125",
           "label_at": "A125"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N125",
+          "label_at": "A125"
         }
       },
       "status": "mapped",
@@ -2179,6 +2504,11 @@
           "label_at": "A108"
         },
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N126",
+          "label_at": "A126"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N126",
           "label_at": "A126"
@@ -2212,6 +2542,11 @@
           "sheet": "T-12 Analysis",
           "address": "N127",
           "label_at": "A127"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N127",
+          "label_at": "A127"
         }
       },
       "status": "mapped",
@@ -2239,6 +2574,11 @@
           "label_at": "A110"
         },
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N128",
+          "label_at": "A128"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N128",
           "label_at": "A128"
@@ -2273,6 +2613,11 @@
           "sheet": "T-12 Analysis",
           "address": "N129",
           "label_at": "A129"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N129",
+          "label_at": "A129"
         }
       },
       "status": "mapped",
@@ -2297,6 +2642,11 @@
           "target_label": "Total Operating Expenses (excl. mgmt)"
         },
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N133",
+          "label_at": "A133"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N133",
           "label_at": "A133"
@@ -2331,6 +2681,11 @@
           "sheet": "T-12 Analysis",
           "address": "N131",
           "label_at": "A131"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N131",
+          "label_at": "A131"
         }
       },
       "status": "mapped",
@@ -2356,6 +2711,11 @@
           "label_at": "A114"
         },
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N132",
+          "label_at": "A132"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N132",
           "label_at": "A132"
@@ -2388,6 +2748,11 @@
           "target_label": "EBITDARM"
         },
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N134",
+          "label_at": "A134"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N134",
           "label_at": "A134"
@@ -2424,6 +2789,11 @@
           "sheet": "T-12 Analysis",
           "address": "N135",
           "label_at": "A135"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N135",
+          "label_at": "A135"
         }
       },
       "status": "mapped",
@@ -2449,6 +2819,11 @@
           "target_label": "EBITDA"
         },
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N136",
+          "label_at": "A136"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N136",
           "label_at": "A136"
@@ -2508,6 +2883,13 @@
           "label_at": "A210",
           "target_label": "Unit/Bed",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "A214+",
+          "label_at": "A210",
+          "target_label": "Unit/Bed",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "mapped",
@@ -2543,6 +2925,13 @@
         "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "B211+",
+          "label_at": "B210",
+          "target_label": "Bed",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "B214+",
           "label_at": "B210",
           "target_label": "Bed",
           "paste_anchor": "Rent Roll Analysis!A211"
@@ -2584,6 +2973,13 @@
           "label_at": "U210",
           "target_label": "Sq Ft (est)",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "U214+",
+          "label_at": "U210",
+          "target_label": "Sq Ft (est)",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "mapped",
@@ -2619,6 +3015,13 @@
         "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "C211+",
+          "label_at": "C210",
+          "target_label": "Care Level",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "C214+",
           "label_at": "C210",
           "target_label": "Care Level",
           "paste_anchor": "Rent Roll Analysis!A211"
@@ -2660,6 +3063,13 @@
           "label_at": "E210",
           "target_label": "Status",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "E214+",
+          "label_at": "E210",
+          "target_label": "Status",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "mapped",
@@ -2695,6 +3105,13 @@
         "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "D211+",
+          "label_at": "D210",
+          "target_label": "Apt Type",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "D214+",
           "label_at": "D210",
           "target_label": "Apt Type",
           "paste_anchor": "Rent Roll Analysis!A211"
@@ -2736,6 +3153,13 @@
           "label_at": "F210",
           "target_label": "Resident",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "F214+",
+          "label_at": "F210",
+          "target_label": "Resident",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "mapped",
@@ -2771,6 +3195,13 @@
         "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "G211+",
+          "label_at": "G210",
+          "target_label": "Move-In Date",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "G214+",
           "label_at": "G210",
           "target_label": "Move-In Date",
           "paste_anchor": "Rent Roll Analysis!A211"
@@ -2812,6 +3243,13 @@
           "label_at": "H210",
           "target_label": "Discharge Date",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "H214+",
+          "label_at": "H210",
+          "target_label": "Discharge Date",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "mapped",
@@ -2847,6 +3285,13 @@
         "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "AD211+",
+          "label_at": "AD210",
+          "target_label": "Concession End",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AD214+",
           "label_at": "AD210",
           "target_label": "Concession End",
           "paste_anchor": "Rent Roll Analysis!A211"
@@ -2888,6 +3333,13 @@
           "label_at": "I210",
           "target_label": "Market Rate",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "I214+",
+          "label_at": "I210",
+          "target_label": "Market Rate",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "mapped",
@@ -2923,6 +3375,13 @@
         "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "J211+",
+          "label_at": "J210",
+          "target_label": "Actual Charges",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "J214+",
           "label_at": "J210",
           "target_label": "Actual Charges",
           "paste_anchor": "Rent Roll Analysis!A211"
@@ -2964,6 +3423,13 @@
           "label_at": "AS210",
           "target_label": "Market PSF",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AS214+",
+          "label_at": "AS210",
+          "target_label": "Market PSF",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "mapped",
@@ -2999,6 +3465,13 @@
         "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "V211+",
+          "label_at": "V210",
+          "target_label": "$/SqFt/Mo",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "V214+",
           "label_at": "V210",
           "target_label": "$/SqFt/Mo",
           "paste_anchor": "Rent Roll Analysis!A211"
@@ -3040,6 +3513,13 @@
           "label_at": "AC210",
           "target_label": "Concession $",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AC214+",
+          "label_at": "AC210",
+          "target_label": "Concession $",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "mapped",
@@ -3075,6 +3555,13 @@
         "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "AI211+",
+          "label_at": "AI210",
+          "target_label": "2nd Person $",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AI214+",
           "label_at": "AI210",
           "target_label": "2nd Person $",
           "paste_anchor": "Rent Roll Analysis!A211"
@@ -3116,6 +3603,13 @@
           "label_at": "AE210",
           "target_label": "Care Level $",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AE214+",
+          "label_at": "AE210",
+          "target_label": "Care Level $",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "mapped",
@@ -3145,6 +3639,13 @@
         "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "AO211+",
+          "label_at": "AO210",
+          "target_label": "Care Level Tier",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AO214+",
           "label_at": "AO210",
           "target_label": "Care Level Tier",
           "paste_anchor": "Rent Roll Analysis!A211"
@@ -3186,6 +3687,13 @@
           "label_at": "AF210",
           "target_label": "Med Mgmt $",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AF214+",
+          "label_at": "AF210",
+          "target_label": "Med Mgmt $",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "mapped",
@@ -3221,6 +3729,13 @@
         "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "AG211+",
+          "label_at": "AG210",
+          "target_label": "Pharmacy $",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AG214+",
           "label_at": "AG210",
           "target_label": "Pharmacy $",
           "paste_anchor": "Rent Roll Analysis!A211"
@@ -3262,6 +3777,13 @@
           "label_at": "AH210",
           "target_label": "Other LOC $",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AH214+",
+          "label_at": "AH210",
+          "target_label": "Other LOC $",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "mapped",
@@ -3297,6 +3819,13 @@
         "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "AJ211+",
+          "label_at": "AJ210",
+          "target_label": "Meal Plan $",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AJ214+",
           "label_at": "AJ210",
           "target_label": "Meal Plan $",
           "paste_anchor": "Rent Roll Analysis!A211"
@@ -3338,6 +3867,13 @@
           "label_at": "AK210",
           "target_label": "Scooter $",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AK214+",
+          "label_at": "AK210",
+          "target_label": "Scooter $",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "mapped",
@@ -3373,6 +3909,13 @@
         "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "AL211+",
+          "label_at": "AL210",
+          "target_label": "Housekeeping $",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AL214+",
           "label_at": "AL210",
           "target_label": "Housekeeping $",
           "paste_anchor": "Rent Roll Analysis!A211"
@@ -3414,6 +3957,13 @@
           "label_at": "AM210",
           "target_label": "Laundry $",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AM214+",
+          "label_at": "AM210",
+          "target_label": "Laundry $",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "mapped",
@@ -3449,6 +3999,13 @@
         "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "AN211+",
+          "label_at": "AN210",
+          "target_label": "Pet $",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AN214+",
           "label_at": "AN210",
           "target_label": "Pet $",
           "paste_anchor": "Rent Roll Analysis!A211"
@@ -3490,6 +4047,13 @@
           "label_at": "K210",
           "target_label": "LOC Revenue",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "K214+",
+          "label_at": "K210",
+          "target_label": "LOC Revenue",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "derived",
@@ -3528,6 +4092,13 @@
           "label_at": "L210",
           "target_label": "Total Sched (Base+LOC)",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "L214+",
+          "label_at": "L210",
+          "target_label": "Total Sched (Base+LOC)",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "derived",
@@ -3558,6 +4129,14 @@
         "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "AP211+",
+          "label_at": "AP210",
+          "target_label": "Total Ancillary $",
+          "paste_anchor": "Rent Roll Analysis!A211",
+          "template_owned_formula": "=SUM(AK211:AO211)"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AP214+",
           "label_at": "AP210",
           "target_label": "Total Ancillary $",
           "paste_anchor": "Rent Roll Analysis!A211",
@@ -3600,6 +4179,13 @@
           "label_at": "S210",
           "target_label": "Payer Type",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "S214+",
+          "label_at": "S210",
+          "target_label": "Payer Type",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "mapped",
@@ -3635,6 +4221,13 @@
         "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "M211+",
+          "label_at": "M210",
+          "target_label": "AR Balance",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "M214+",
           "label_at": "M210",
           "target_label": "AR Balance",
           "paste_anchor": "Rent Roll Analysis!A211"
@@ -3676,6 +4269,13 @@
           "label_at": "T210",
           "target_label": "Notes",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "T214+",
+          "label_at": "T210",
+          "target_label": "Notes",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "mapped",
@@ -3714,6 +4314,13 @@
           "label_at": "AR210",
           "target_label": "ACH",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AR214+",
+          "label_at": "AR210",
+          "target_label": "ACH",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "mapped",
@@ -3746,6 +4353,13 @@
         "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "O211+",
+          "label_at": "O210",
+          "target_label": "0–30 Days",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "O214+",
           "label_at": "O210",
           "target_label": "0–30 Days",
           "paste_anchor": "Rent Roll Analysis!A211"
@@ -3784,6 +4398,13 @@
           "label_at": "P210",
           "target_label": "31–60",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "P214+",
+          "label_at": "P210",
+          "target_label": "31–60",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "gap_source",
@@ -3819,6 +4440,13 @@
           "label_at": "Q210",
           "target_label": "61–90",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "Q214+",
+          "label_at": "Q210",
+          "target_label": "61–90",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "gap_source",
@@ -3851,6 +4479,13 @@
         "v6": {
           "sheet": "Rent Roll Analysis",
           "address": "R211+",
+          "label_at": "R210",
+          "target_label": "90+",
+          "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "R214+",
           "label_at": "R210",
           "target_label": "90+",
           "paste_anchor": "Rent Roll Analysis!A211"
@@ -3893,6 +4528,13 @@
           "label_at": "N210",
           "target_label": "Deposit",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "N214+",
+          "label_at": "N210",
+          "target_label": "Deposit",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "substrate_ready_parser_pending",
@@ -3926,6 +4568,13 @@
           "label_at": "AQ210",
           "target_label": "Preleased Date",
           "paste_anchor": "Rent Roll Analysis!A211"
+        },
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AQ214+",
+          "label_at": "AQ210",
+          "target_label": "Preleased Date",
+          "paste_anchor": "Rent Roll Analysis!A211"
         }
       },
       "status": "mapped",
@@ -3952,6 +4601,10 @@
           "cascade_note": "Row 122 monthly headers; auto-cascades to `T-12 Analysis!C56` via existing formula `=C122` on row 56."
         },
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "C140"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "C140"
         }
@@ -3982,6 +4635,10 @@
         "v6": {
           "sheet": "T-12 Analysis",
           "address": "D140"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "D140"
         }
       },
       "status": "mapped",
@@ -4008,6 +4665,10 @@
           "cascade_note": "Row 122 monthly headers; auto-cascades to `T-12 Analysis!D56` via existing formula `=E122` on row 56."
         },
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "E140"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "E140"
         }
@@ -4038,6 +4699,10 @@
         "v6": {
           "sheet": "T-12 Analysis",
           "address": "F140"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "F140"
         }
       },
       "status": "mapped",
@@ -4064,6 +4729,10 @@
           "cascade_note": "Row 122 monthly headers; auto-cascades to `T-12 Analysis!F56` via existing formula `=G122` on row 56."
         },
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "G140"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "G140"
         }
@@ -4094,6 +4763,10 @@
         "v6": {
           "sheet": "T-12 Analysis",
           "address": "H140"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "H140"
         }
       },
       "status": "mapped",
@@ -4120,6 +4793,10 @@
           "cascade_note": "Row 122 monthly headers; auto-cascades to `T-12 Analysis!H56` via existing formula `=I122` on row 56."
         },
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "I140"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "I140"
         }
@@ -4150,6 +4827,10 @@
         "v6": {
           "sheet": "T-12 Analysis",
           "address": "J140"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "J140"
         }
       },
       "status": "mapped",
@@ -4176,6 +4857,10 @@
           "cascade_note": "Row 122 monthly headers; auto-cascades to `T-12 Analysis!J56` via existing formula `=K122` on row 56."
         },
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "K140"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "K140"
         }
@@ -4206,6 +4891,10 @@
         "v6": {
           "sheet": "T-12 Analysis",
           "address": "L140"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "L140"
         }
       },
       "status": "mapped",
@@ -4232,6 +4921,10 @@
           "cascade_note": "Row 122 monthly headers; auto-cascades to `T-12 Analysis!L56` via existing formula `=M122` on row 56."
         },
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "M140"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "M140"
         }
@@ -4262,6 +4955,10 @@
         "v6": {
           "sheet": "T-12 Analysis",
           "address": "N140"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N140"
         }
       },
       "status": "mapped",
@@ -4279,6 +4976,11 @@
       },
       "targets": {
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N58",
+          "label_at": "A58"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N58",
           "label_at": "A58"
@@ -4302,6 +5004,11 @@
           "sheet": "T-12 Analysis",
           "address": "N59",
           "label_at": "A59"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N59",
+          "label_at": "A59"
         }
       },
       "status": "mapped",
@@ -4322,6 +5029,11 @@
           "sheet": "T-12 Analysis",
           "address": "N60",
           "label_at": "A60"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N60",
+          "label_at": "A60"
         }
       },
       "status": "mapped",
@@ -4338,6 +5050,11 @@
       },
       "targets": {
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N62",
+          "label_at": "A62"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N62",
           "label_at": "A62"
@@ -4361,6 +5078,11 @@
           "sheet": "T-12 Analysis",
           "address": "N63",
           "label_at": "A63"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N63",
+          "label_at": "A63"
         }
       },
       "status": "mapped",
@@ -4378,6 +5100,11 @@
       },
       "targets": {
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N64",
+          "label_at": "A64"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N64",
           "label_at": "A64"
@@ -4401,6 +5128,11 @@
           "sheet": "T-12 Analysis",
           "address": "N65",
           "label_at": "A65"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N65",
+          "label_at": "A65"
         }
       },
       "status": "mapped",
@@ -4417,6 +5149,11 @@
       },
       "targets": {
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N67",
+          "label_at": "A67"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N67",
           "label_at": "A67"
@@ -4440,6 +5177,11 @@
           "sheet": "T-12 Analysis",
           "address": "N71",
           "label_at": "A71"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N71",
+          "label_at": "A71"
         }
       },
       "status": "mapped",
@@ -4457,6 +5199,11 @@
       },
       "targets": {
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N72",
+          "label_at": "A72"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N72",
           "label_at": "A72"
@@ -4480,6 +5227,11 @@
           "sheet": "T-12 Analysis",
           "address": "N73",
           "label_at": "A73"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N73",
+          "label_at": "A73"
         }
       },
       "status": "mapped",
@@ -4497,6 +5249,11 @@
       },
       "targets": {
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N74",
+          "label_at": "A74"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N74",
           "label_at": "A74"
@@ -4520,6 +5277,11 @@
           "sheet": "T-12 Analysis",
           "address": "N75",
           "label_at": "A75"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N75",
+          "label_at": "A75"
         }
       },
       "status": "mapped",
@@ -4537,6 +5299,11 @@
       },
       "targets": {
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N117",
+          "label_at": "A117"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N117",
           "label_at": "A117"
@@ -4558,6 +5325,11 @@
         "v4": null,
         "v5": null,
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N61",
+          "label_at": "A61"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N61",
           "label_at": "A61"
@@ -4583,6 +5355,11 @@
           "sheet": "T-12 Analysis",
           "address": "N66",
           "label_at": "A66"
+        },
+        "v8": {
+          "sheet": "T-12 Analysis",
+          "address": "N66",
+          "label_at": "A66"
         }
       },
       "status": "proposed",
@@ -4602,6 +5379,11 @@
         "v4": null,
         "v5": null,
         "v6": {
+          "sheet": "T-12 Analysis",
+          "address": "N77",
+          "label_at": "A77"
+        },
+        "v8": {
           "sheet": "T-12 Analysis",
           "address": "N77",
           "label_at": "A77"
@@ -4626,6 +5408,11 @@
           "sheet": "Prop Info",
           "address": "B6",
           "label_at": "A6"
+        },
+        "v8": {
+          "sheet": "Prop Info",
+          "address": "B6",
+          "label_at": "A6"
         }
       },
       "status": "proposed",
@@ -4647,6 +5434,11 @@
           "sheet": "Prop Info",
           "address": "B11",
           "label_at": "A11"
+        },
+        "v8": {
+          "sheet": "Prop Info",
+          "address": "B11",
+          "label_at": "A11"
         }
       },
       "status": "proposed",
@@ -4665,6 +5457,11 @@
         "v4": null,
         "v5": null,
         "v6": {
+          "sheet": "Prop Info",
+          "address": "B13",
+          "label_at": "A13"
+        },
+        "v8": {
           "sheet": "Prop Info",
           "address": "B13",
           "label_at": "A13"
@@ -4692,6 +5489,11 @@
           "sheet": "Scenarios",
           "address": "B81",
           "label_at": "A81"
+        },
+        "v8": {
+          "sheet": "Scenarios",
+          "address": "B81",
+          "label_at": "A81"
         }
       },
       "status": "proposed",
@@ -4713,6 +5515,11 @@
         "v4": null,
         "v5": null,
         "v6": {
+          "sheet": "Scenarios",
+          "address": "B82",
+          "label_at": "A82"
+        },
+        "v8": {
           "sheet": "Scenarios",
           "address": "B82",
           "label_at": "A82"
@@ -4740,6 +5547,11 @@
           "sheet": "Scenarios",
           "address": "B83",
           "label_at": "A83"
+        },
+        "v8": {
+          "sheet": "Scenarios",
+          "address": "B83",
+          "label_at": "A83"
         }
       },
       "status": "proposed",
@@ -4761,6 +5573,11 @@
         "v4": null,
         "v5": null,
         "v6": {
+          "sheet": "Scenarios",
+          "address": "B84",
+          "label_at": "A84"
+        },
+        "v8": {
           "sheet": "Scenarios",
           "address": "B84",
           "label_at": "A84"
@@ -4788,6 +5605,11 @@
           "sheet": "Scenarios",
           "address": "B85",
           "label_at": "A85"
+        },
+        "v8": {
+          "sheet": "Scenarios",
+          "address": "B85",
+          "label_at": "A85"
         }
       },
       "status": "proposed",
@@ -4809,6 +5631,11 @@
         "v4": null,
         "v5": null,
         "v6": {
+          "sheet": "Scenarios",
+          "address": "B86",
+          "label_at": "A86"
+        },
+        "v8": {
           "sheet": "Scenarios",
           "address": "B86",
           "label_at": "A86"
@@ -4836,6 +5663,11 @@
           "sheet": "Scenarios",
           "address": "B87",
           "label_at": "A87"
+        },
+        "v8": {
+          "sheet": "Scenarios",
+          "address": "B87",
+          "label_at": "A87"
         }
       },
       "status": "proposed",
@@ -4857,6 +5689,11 @@
         "v4": null,
         "v5": null,
         "v6": {
+          "sheet": "Scenarios",
+          "address": "B88",
+          "label_at": "A88"
+        },
+        "v8": {
           "sheet": "Scenarios",
           "address": "B88",
           "label_at": "A88"
@@ -4884,6 +5721,11 @@
           "sheet": "Scenarios",
           "address": "B91",
           "label_at": "A91"
+        },
+        "v8": {
+          "sheet": "Scenarios",
+          "address": "B91",
+          "label_at": "A91"
         }
       },
       "status": "proposed",
@@ -4905,6 +5747,11 @@
         "v4": null,
         "v5": null,
         "v6": {
+          "sheet": "Scenarios",
+          "address": "B92",
+          "label_at": "A92"
+        },
+        "v8": {
           "sheet": "Scenarios",
           "address": "B92",
           "label_at": "A92"
@@ -4932,6 +5779,11 @@
           "sheet": "Scenarios",
           "address": "B93",
           "label_at": "A93"
+        },
+        "v8": {
+          "sheet": "Scenarios",
+          "address": "B93",
+          "label_at": "A93"
         }
       },
       "status": "proposed",
@@ -4953,6 +5805,11 @@
         "v4": null,
         "v5": null,
         "v6": {
+          "sheet": "Scenarios",
+          "address": "B94",
+          "label_at": "A94"
+        },
+        "v8": {
           "sheet": "Scenarios",
           "address": "B94",
           "label_at": "A94"
@@ -4980,6 +5837,11 @@
           "sheet": "Scenarios",
           "address": "B95",
           "label_at": "A95"
+        },
+        "v8": {
+          "sheet": "Scenarios",
+          "address": "B95",
+          "label_at": "A95"
         }
       },
       "status": "proposed",
@@ -5001,6 +5863,11 @@
         "v4": null,
         "v5": null,
         "v6": {
+          "sheet": "Scenarios",
+          "address": "B96",
+          "label_at": "A96"
+        },
+        "v8": {
           "sheet": "Scenarios",
           "address": "B96",
           "label_at": "A96"
@@ -5028,6 +5895,11 @@
           "sheet": "Scenarios",
           "address": "B99",
           "label_at": "A99"
+        },
+        "v8": {
+          "sheet": "Scenarios",
+          "address": "B99",
+          "label_at": "A99"
         }
       },
       "status": "proposed",
@@ -5049,6 +5921,11 @@
         "v4": null,
         "v5": null,
         "v6": {
+          "sheet": "Scenarios",
+          "address": "B100",
+          "label_at": "A100"
+        },
+        "v8": {
           "sheet": "Scenarios",
           "address": "B100",
           "label_at": "A100"
@@ -5076,6 +5953,11 @@
           "sheet": "Scenarios",
           "address": "B101",
           "label_at": "A101"
+        },
+        "v8": {
+          "sheet": "Scenarios",
+          "address": "B101",
+          "label_at": "A101"
         }
       },
       "status": "proposed",
@@ -5097,6 +5979,11 @@
         "v4": null,
         "v5": null,
         "v6": {
+          "sheet": "Scenarios",
+          "address": "B102",
+          "label_at": "A102"
+        },
+        "v8": {
           "sheet": "Scenarios",
           "address": "B102",
           "label_at": "A102"
@@ -5124,6 +6011,11 @@
           "sheet": "Scenarios",
           "address": "B103",
           "label_at": "A103"
+        },
+        "v8": {
+          "sheet": "Scenarios",
+          "address": "B103",
+          "label_at": "A103"
         }
       },
       "status": "proposed",
@@ -5145,6 +6037,11 @@
         "v4": null,
         "v5": null,
         "v6": {
+          "sheet": "Scenarios",
+          "address": "B104",
+          "label_at": "A104"
+        },
+        "v8": {
           "sheet": "Scenarios",
           "address": "B104",
           "label_at": "A104"
@@ -5172,6 +6069,11 @@
           "sheet": "Scenarios",
           "address": "B105",
           "label_at": "A105"
+        },
+        "v8": {
+          "sheet": "Scenarios",
+          "address": "B105",
+          "label_at": "A105"
         }
       },
       "status": "proposed",
@@ -5193,6 +6095,11 @@
         "v4": null,
         "v5": null,
         "v6": {
+          "sheet": "Scenarios",
+          "address": "B106",
+          "label_at": "A106"
+        },
+        "v8": {
           "sheet": "Scenarios",
           "address": "B106",
           "label_at": "A106"
@@ -5220,6 +6127,11 @@
           "sheet": "Scenarios",
           "address": "B107",
           "label_at": "A107"
+        },
+        "v8": {
+          "sheet": "Scenarios",
+          "address": "B107",
+          "label_at": "A107"
         }
       },
       "status": "proposed",
@@ -5241,6 +6153,11 @@
         "v4": null,
         "v5": null,
         "v6": {
+          "sheet": "Scenarios",
+          "address": "B108",
+          "label_at": "A108"
+        },
+        "v8": {
           "sheet": "Scenarios",
           "address": "B108",
           "label_at": "A108"
@@ -5268,6 +6185,11 @@
           "sheet": "Scenarios",
           "address": "B109",
           "label_at": "A109"
+        },
+        "v8": {
+          "sheet": "Scenarios",
+          "address": "B109",
+          "label_at": "A109"
         }
       },
       "status": "proposed",
@@ -5289,6 +6211,11 @@
         "v4": null,
         "v5": null,
         "v6": {
+          "sheet": "Scenarios",
+          "address": "B110",
+          "label_at": "A110"
+        },
+        "v8": {
           "sheet": "Scenarios",
           "address": "B110",
           "label_at": "A110"
@@ -5316,6 +6243,11 @@
           "sheet": "Scenarios",
           "address": "B111",
           "label_at": "A111"
+        },
+        "v8": {
+          "sheet": "Scenarios",
+          "address": "B111",
+          "label_at": "A111"
         }
       },
       "status": "proposed",
@@ -5337,6 +6269,11 @@
         "v4": null,
         "v5": null,
         "v6": {
+          "sheet": "Scenarios",
+          "address": "B112",
+          "label_at": "A112"
+        },
+        "v8": {
           "sheet": "Scenarios",
           "address": "B112",
           "label_at": "A112"
@@ -5364,6 +6301,11 @@
           "sheet": "Scenarios",
           "address": "B113",
           "label_at": "A113"
+        },
+        "v8": {
+          "sheet": "Scenarios",
+          "address": "B113",
+          "label_at": "A113"
         }
       },
       "status": "proposed",
@@ -5385,6 +6327,11 @@
         "v4": null,
         "v5": null,
         "v6": {
+          "sheet": "Scenarios",
+          "address": "B114",
+          "label_at": "A114"
+        },
+        "v8": {
           "sheet": "Scenarios",
           "address": "B114",
           "label_at": "A114"
@@ -5412,6 +6359,11 @@
           "sheet": "Scenarios",
           "address": "B115",
           "label_at": "A115"
+        },
+        "v8": {
+          "sheet": "Scenarios",
+          "address": "B115",
+          "label_at": "A115"
         }
       },
       "status": "proposed",
@@ -5433,6 +6385,11 @@
         "v4": null,
         "v5": null,
         "v6": {
+          "sheet": "Scenarios",
+          "address": "B116",
+          "label_at": "A116"
+        },
+        "v8": {
           "sheet": "Scenarios",
           "address": "B116",
           "label_at": "A116"
@@ -5460,6 +6417,11 @@
           "sheet": "Scenarios",
           "address": "B117",
           "label_at": "A117"
+        },
+        "v8": {
+          "sheet": "Scenarios",
+          "address": "B117",
+          "label_at": "A117"
         }
       },
       "status": "proposed",
@@ -5481,6 +6443,11 @@
         "v4": null,
         "v5": null,
         "v6": {
+          "sheet": "Scenarios",
+          "address": "B118",
+          "label_at": "A118"
+        },
+        "v8": {
           "sheet": "Scenarios",
           "address": "B118",
           "label_at": "A118"
@@ -5508,6 +6475,11 @@
           "sheet": "Scenarios",
           "address": "B119",
           "label_at": "A119"
+        },
+        "v8": {
+          "sheet": "Scenarios",
+          "address": "B119",
+          "label_at": "A119"
         }
       },
       "status": "proposed",
@@ -5529,6 +6501,11 @@
         "v4": null,
         "v5": null,
         "v6": {
+          "sheet": "Scenarios",
+          "address": "B120",
+          "label_at": "A120"
+        },
+        "v8": {
           "sheet": "Scenarios",
           "address": "B120",
           "label_at": "A120"
@@ -5558,6 +6535,11 @@
           "sheet": "Scenarios",
           "address": "B121",
           "label_at": "A121"
+        },
+        "v8": {
+          "sheet": "Scenarios",
+          "address": "B121",
+          "label_at": "A121"
         }
       },
       "status": "proposed",
@@ -5579,6 +6561,11 @@
         "v4": null,
         "v5": null,
         "v6": {
+          "sheet": "Scenarios",
+          "address": "B123",
+          "label_at": "A123"
+        },
+        "v8": {
           "sheet": "Scenarios",
           "address": "B123",
           "label_at": "A123"
@@ -5604,6 +6591,11 @@
           "sheet": "Scenarios",
           "address": "B39",
           "label_at": "A39"
+        },
+        "v8": {
+          "sheet": "Scenarios",
+          "address": "B39",
+          "label_at": "A39"
         }
       },
       "status": "proposed",
@@ -5623,6 +6615,11 @@
         "v4": null,
         "v5": null,
         "v6": {
+          "sheet": "Scenarios",
+          "address": "B40",
+          "label_at": "A40"
+        },
+        "v8": {
           "sheet": "Scenarios",
           "address": "B40",
           "label_at": "A40"
@@ -5648,6 +6645,11 @@
           "sheet": "Scenarios",
           "address": "B42",
           "label_at": "A42"
+        },
+        "v8": {
+          "sheet": "Scenarios",
+          "address": "B42",
+          "label_at": "A42"
         }
       },
       "status": "proposed",
@@ -5667,6 +6669,11 @@
         "v4": null,
         "v5": null,
         "v6": {
+          "sheet": "Scenarios",
+          "address": "B45",
+          "label_at": "A45"
+        },
+        "v8": {
           "sheet": "Scenarios",
           "address": "B45",
           "label_at": "A45"
@@ -5692,6 +6699,11 @@
           "sheet": "Scenarios",
           "address": "B46",
           "label_at": "A46"
+        },
+        "v8": {
+          "sheet": "Scenarios",
+          "address": "B46",
+          "label_at": "A46"
         }
       },
       "status": "proposed",
@@ -5711,6 +6723,11 @@
         "v4": null,
         "v5": null,
         "v6": {
+          "sheet": "Scenarios",
+          "address": "B48",
+          "label_at": "A48"
+        },
+        "v8": {
           "sheet": "Scenarios",
           "address": "B48",
           "label_at": "A48"
@@ -5736,6 +6753,11 @@
           "sheet": "Scenarios",
           "address": "B51",
           "label_at": "A51"
+        },
+        "v8": {
+          "sheet": "Scenarios",
+          "address": "B51",
+          "label_at": "A51"
         }
       },
       "status": "proposed",
@@ -5755,6 +6777,11 @@
         "v4": null,
         "v5": null,
         "v6": {
+          "sheet": "Scenarios",
+          "address": "B52",
+          "label_at": "A52"
+        },
+        "v8": {
           "sheet": "Scenarios",
           "address": "B52",
           "label_at": "A52"
@@ -5780,6 +6807,11 @@
           "sheet": "Scenarios",
           "address": "B54",
           "label_at": "A54"
+        },
+        "v8": {
+          "sheet": "Scenarios",
+          "address": "B54",
+          "label_at": "A54"
         }
       },
       "status": "proposed",
@@ -5799,6 +6831,11 @@
         "v4": null,
         "v5": null,
         "v6": {
+          "sheet": "Scenarios",
+          "address": "B68",
+          "label_at": "A68"
+        },
+        "v8": {
           "sheet": "Scenarios",
           "address": "B68",
           "label_at": "A68"
@@ -5824,6 +6861,11 @@
           "sheet": "Scenarios",
           "address": "B70",
           "label_at": "A70"
+        },
+        "v8": {
+          "sheet": "Scenarios",
+          "address": "B70",
+          "label_at": "A70"
         }
       },
       "status": "proposed",
@@ -5843,6 +6885,11 @@
         "v4": null,
         "v5": null,
         "v6": {
+          "sheet": "Scenarios",
+          "address": "B72",
+          "label_at": "A72"
+        },
+        "v8": {
           "sheet": "Scenarios",
           "address": "B72",
           "label_at": "A72"
@@ -5868,6 +6915,11 @@
           "sheet": "Scenarios",
           "address": "B74",
           "label_at": "A74"
+        },
+        "v8": {
+          "sheet": "Scenarios",
+          "address": "B74",
+          "label_at": "A74"
         }
       },
       "status": "proposed",
@@ -5890,11 +6942,35 @@
           "sheet": "Scenarios",
           "address": "B75",
           "label_at": "A75"
+        },
+        "v8": {
+          "sheet": "Scenarios",
+          "address": "B75",
+          "label_at": "A75"
         }
       },
       "status": "proposed",
       "notes": "Scenarios col-B Actuals income input; writer-paste derived value, no template change.",
       "path": "scenarios"
+    },
+    {
+      "key": "rr_ner_amort",
+      "label": "NER $/mo (amortized concessions)",
+      "category": "rent_roll_derived",
+      "source": {
+        "system": "derived",
+        "name": "template_formula",
+        "resolves_to": "Template-owned: =J - amortized concession (AC over AC174 months); occupied rows only"
+      },
+      "targets": {
+        "v8": {
+          "sheet": "Rent Roll Analysis",
+          "address": "AV214+"
+        }
+      },
+      "status": "derived",
+      "notes": "New in v8. Template fill-down AV214:AV613 referencing the AC174 amort-term input (default 12 mo). Writer skips (derived) — never paste over it. Feeds the NET EFFECTIVE / CONCESSIONS block (AD177+ Avg NER/mo).",
+      "path": "rent_roll"
     }
   ],
   "intake_targets_unmapped": [
