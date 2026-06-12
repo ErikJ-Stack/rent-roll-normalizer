@@ -143,12 +143,26 @@ def inject_cockpit_landing_css() -> None:
             letter-spacing: 0.12em;
             color: {CK_DIM} !important;
         }}
+        /* Inputs pin their own colors — the in-app Light toggle flips
+           Streamlit's native theme PROCESS-WIDE, so a fresh login session can
+           inherit light-theme (white) inputs. Explicit bg + text + autofill
+           overrides keep the access panel dark-on-dark regardless. */
         [data-testid="stForm"] input {{
             font-family: {CK_MONO};
-            color: {CK_TEXT};
+            color: {CK_TEXT} !important;
+            -webkit-text-fill-color: {CK_TEXT} !important;
+            background-color: {CK_PANEL} !important;
+            caret-color: {CK_TEAL};
+        }}
+        [data-testid="stForm"] input:-webkit-autofill,
+        [data-testid="stForm"] input:-webkit-autofill:hover,
+        [data-testid="stForm"] input:-webkit-autofill:focus {{
+            -webkit-box-shadow: 0 0 0 1000px {CK_PANEL} inset !important;
+            -webkit-text-fill-color: {CK_TEXT} !important;
         }}
         [data-testid="stForm"] [data-testid="stTextInputRootElement"],
-        [data-testid="stForm"] [data-baseweb="input"] {{
+        [data-testid="stForm"] [data-baseweb="input"],
+        [data-testid="stForm"] [data-baseweb="base-input"] {{
             background: {CK_PANEL} !important;
             border-color: {CK_BORDER_2} !important;
         }}
@@ -205,16 +219,41 @@ def inject_cockpit_landing_css() -> None:
     )
 
 
+# Dark-canvas logo derivatives, generated from the committed light-canvas
+# brand assets by tools/make_cockpit_logos.py (gold lockup unmixed from the
+# navy plate; Fortis lion re-expressed as soft-white on transparent).
+LOGO_GOLD_PATH = Path(__file__).parent / "assets" / "pingkas_logo_gold.png"
+FORTIS_LIGHT_PATH = Path(__file__).parent / "assets" / "fortis_logo_light.png"
+
+
 def render_cockpit_login_header() -> None:
-    """Wordmark block above the cockpit login panel — UW//DECK brand, terminal
-    subtitle, and the two firms as text chrome (image lockups are light-canvas
-    artwork; see inject_cockpit_landing_css)."""
+    """Brand block above the cockpit login panel — Pingkas (gold) + Fortis
+    (soft white) dark-canvas lockups side by side, then the UW//DECK wordmark
+    and terminal subtitle. Falls back to a text firms line if the derived
+    logo assets are missing."""
+    imgs = []
+    if LOGO_GOLD_PATH.exists():
+        imgs.append((_logo_data_uri(str(LOGO_GOLD_PATH)), "Pingkas Capital", 96))
+    if FORTIS_LIGHT_PATH.exists():
+        imgs.append((_logo_data_uri(str(FORTIS_LIGHT_PATH)), "Fortis Capital", 88))
+    if imgs:
+        tags = "".join(
+            f'<img src="{uri}" alt="{alt}" '
+            f'style="height:{h}px; width:auto; max-width:44%;" />'
+            for uri, alt, h in imgs
+        )
+        firms = (
+            f'<div style="display:flex; justify-content:center; '
+            f'align-items:center; gap:2.2rem; margin-bottom:1.1rem;">{tags}</div>'
+        )
+    else:
+        firms = '<div class="ckl-firms">PINGKAS CAPITAL · FORTIS CAPITAL</div>'
     st.markdown(
-        """
+        f"""
         <div class="ckl-head">
+            {firms}
             <div class="ckl-brand">UW//DECK</div>
             <div class="ckl-sub">UNDERWRITING TERMINAL</div>
-            <div class="ckl-firms">PINGKAS CAPITAL · FORTIS CAPITAL</div>
         </div>
         """,
         unsafe_allow_html=True,

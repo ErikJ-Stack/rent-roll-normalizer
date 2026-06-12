@@ -39,6 +39,31 @@ The inset clip (`19.0, 100.1, 297.8, 378.9`) sits just inside the navy backgroun
 
 ## Changes
 
+### 2026-06-12 — Login fixes: input contrast + Pingkas/Fortis logos return
+
+Operator-reported: login input text unreadable (light text on white fields).
+**Root cause**: the in-app Light toggle flips Streamlit's native theme
+process-wide, so a fresh login session could inherit light-theme (white)
+inputs while the landing CSS forced near-white text. The access panel now
+pins its own colors with `!important` regardless of the native theme —
+explicit graphite input background, `#E6EDF5` text via both `color` and
+`-webkit-text-fill-color`, teal caret, and Chrome-autofill overrides
+(inset box-shadow trick). Verified 13.9:1 contrast (WCAG AA needs 4.5:1).
+
+Also restored the firm marks on the login page, re-derived for the dark
+canvas (the committed assets are light-canvas artwork):
+
+- `tools/make_cockpit_logos.py` (committed, re-runnable) generates:
+  - `assets/pingkas_logo_gold.png` — the gold lockup unmixed from the navy
+    plate of `pingkas_logo_navy.png` (per-pixel projection onto the
+    navy→gold line gives feathered anti-aliased edges on transparency).
+  - `assets/fortis_logo_light.png` — the Fortis lion from the SVG's embedded
+    PNG, re-expressed as soft white (`#E6EDF5`) with alpha = luminance.
+- `branding.render_cockpit_login_header()` shows both marks side by side
+  (96px / 88px artwork heights) above the UW//DECK wordmark; the
+  "PINGKAS CAPITAL · FORTIS CAPITAL" text line remains as a fallback if the
+  derived assets are missing.
+
 ### 2026-06-12 — Light/dark cockpit toggle in the top control row
 
 The cockpit now has a light variant, toggled by a **Light** switch beside the
