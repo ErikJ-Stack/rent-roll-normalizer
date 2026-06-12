@@ -8,6 +8,43 @@ opened (none yet — Phase 0 is the seed release).
 
 ---
 
+## v0.9.1 — adopt operator's durable Excel-native v6 binary (2026-06-08)
+
+**Operator goal**: "update and use this ALF Template as the most current
+template." Operator supplied a re-authored `ALF_UW_Template_v6.xlsx` from the
+Deals Templates folder (Jun 8, 257,925 bytes vs. the committed 221,604).
+
+**What it is**: the **durable Excel-native save** the 2026-05-28 v6 handoff was
+waiting for. The committed asset was last written by openpyxl (the 2026-06-05 B56
+patch), so it was a 37-part zip with openpyxl-style comments and no
+`webextensions/`. The new file is a 42-part Excel-native binary — full
+`xl/metadata.xml`, `xl/webextensions/` (Claude-for-Excel add-in), `xl/calcChain.xml`,
+`xl/sharedStrings.xml`, and native `comments1.xml`. This closes the long-standing
+"operator re-drops the Excel-resaved v6 binary" carry-forward (Section R/S
+dynamic-array spills now ship from a healthy source, not a Python-repaired one).
+
+**Verification (this is a binary refresh — no registry/writer change):**
+
+- **Sheets / order / defined names** — identical to the committed v6 (16 sheets,
+  same names, same defined names).
+- **Full cell-level value+formula diff** — only **10 cell diffs**, all benign
+  operator refinements on **analyst-driven** cells, **none a registry target**:
+  Scenarios `B13`/`G13`/`E79`/`C123:E123` (reference/constant tweaks) and Rent
+  Roll Analysis `F9:F12` (AVERAGEIFS now wrapped in `IFERROR`). T-12 Analysis and
+  the Rent Roll Analysis paste grid (rows 211/214+) are content-identical.
+- **All prior programmatic fixes are present natively** — B56:M56 monthly headers
+  `=C140..=N140` (N56 `T-12 Total`); Section-D rev2 refs `B22=N83`/`B23=N86`/
+  `B24=N80`; total chain N80 (EGI) / N134 (EBITDARM) / N135 (EBITDAR) / N136
+  (EBITDA) all correct.
+- **Writer suite green** — all 4 `test_uw_template_writer.py` tests pass with
+  identical outcomes to the prior binary (195 concepts; populated-Homestead e2e
+  89 written / 2,301 cells; `dynamic_arrays_restored: 1`; 176 RR rows from 211).
+
+**No registry change** (still v0.6.0, 195 concepts) and **no writer change**.
+Version constant + comment block in `app.py` bumped 0.9.0 → 0.9.1.
+
+---
+
 ## v0.9.0 — v6 rev2 absorbed (Other Care) + Prop Info & Scenarios col-B mapping (2026-06-03)
 
 **Operator goal**: "I want the raw datas to populate into this ALF UW Template …

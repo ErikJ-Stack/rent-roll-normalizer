@@ -85,8 +85,8 @@ APP_LAST_UPDATED = "2026-05-08"   # alias for RR_LAST_UPDATED
 RR_VERSION = "1.19.0"
 RR_LAST_UPDATED = "2026-05-27"
 
-UWT_VERSION = "0.9.0"             # Track 4 — v6 rev2 absorbed (operator Other-Care template): re-sync + Prop Info & Scenarios col-B mapping AND fills (registry 0.6.0); writer _T12_LAYOUT rev2 fix + Section-D repoint
-UWT_LAST_UPDATED = "2026-06-03"
+UWT_VERSION = "0.9.1"             # Track 4 — adopted operator's durable Excel-native v6 binary (full metadata.xml + webextensions + native comments/calcChain); carries B56 + Section-D rev2 fixes natively + 10 analyst-cell formula refinements (non-registry). No registry/writer change; closes the 2026-05-28 "re-drop Excel-resaved v6" carry-forward
+UWT_LAST_UPDATED = "2026-06-08"
 
 T12_VERSION = "0.2.1"
 T12_LAST_UPDATED = "2026-05-11"
@@ -114,8 +114,10 @@ BUNDLED_ANALYZER_PATH = Path(__file__).parent / "ALF_Financial_Analyzer_Only.xls
 # Analyzer pattern: operator can override via the Advanced expander for a
 # session-specific template (e.g. v5 / v4 for a legacy deal). The bundled file
 # is the binding v6 default as of 2026-05-29 (UWT v0.8.0 — T-12 income
-# restructure). The committed v6 binary is the repaired copy (UWT v0.7.1:
-# B56 headers repointed + metadata.xml / cm markers restored).
+# restructure). As of UWT v0.9.1 (2026-06-08) the committed v6 binary is the
+# operator's durable Excel-native save (full xl/metadata.xml + webextensions +
+# native comments/calcChain) — it carries the B56 monthly-header repoint and the
+# Section-D rev2 fix natively (no more programmatic patching of the asset).
 BUNDLED_UW_TEMPLATE_PATH = Path(__file__).parent / "assets" / "ALF_UW_Template_v6.xlsx"
 BUNDLED_UW_TEMPLATE_VERSION = "v6"
 

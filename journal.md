@@ -9,6 +9,55 @@ Newest at top.
 
 ---
 
+## 2026-06-08 — Adopt operator's durable Excel-native v6 template binary (Track 4)
+
+**Track:** Track 4 (UWT). Operator: "update and use this ALF Template as the most
+current template," pointing at a re-authored
+`…/Deals under review/Ai Underwriting/Templates/ALF_UW_Template_v6.xlsx` (Jun 8,
+257,925 bytes vs. the committed 221,604). UWT **v0.9.0 → v0.9.1**; registry and
+writer unchanged.
+
+**What it was.** The **Excel-native save** the 2026-05-28 v6 handoff follow-up (a)
+had been waiting for. The committed `assets/ALF_UW_Template_v6.xlsx` was last
+written by openpyxl (the 2026-06-05 B56 patch) → 37-part zip, openpyxl-style
+comments, no `webextensions/`. The new file is a **42-part Excel-native binary**:
+full `xl/metadata.xml`, `xl/webextensions/` (Claude-for-Excel add-in),
+`calcChain.xml`, `sharedStrings.xml`, native `comments1.xml`. So Section R/S
+dynamic-array spills now ship from a healthy source rather than a Python-repaired
+one.
+
+**Diligence before adopting (verify-canonical-source discipline).**
+1. **Preflight** — confirmed current state had moved well past CLAUDE.md's header:
+   UWT 0.9.0, registry 0.6.0 (195 concepts), v6 already the bundled default.
+2. **Zip-part inventory diff** (openpyxl quirk #6) — new file gains
+   metadata/webextensions/calcChain/sharedStrings + Excel-native comments; the
+   worksheet byte-size diffs are the expected Excel-vs-openpyxl serialization
+   (shared strings vs inlined), not structural.
+3. **Sheets / order / defined names** — identical (16 sheets).
+4. **Full cell-level value+formula diff across all sheets** — only **10 diffs**,
+   all benign operator refinements on **analyst-driven** cells, **none a registry
+   target** (checked against all 195 concepts): Scenarios `B13`/`G13`/`E79`/
+   `C123:E123` (reference/constant tweaks), Rent Roll Analysis `F9:F12`
+   (AVERAGEIFS now `IFERROR`-wrapped). T-12 Analysis and the RR paste grid are
+   content-identical.
+5. **Prior programmatic fixes present natively** — B56:M56 `=C140..=N140`
+   (N56 `T-12 Total`); Section-D rev2 `B22=N83`/`B23=N86`/`B24=N80`; total chain
+   N80 (EGI) / N134 (EBITDARM) / N135 (EBITDAR) / N136 (EBITDA).
+
+**Shipped.** Replaced `assets/ALF_UW_Template_v6.xlsx`; bumped `UWT_VERSION`
+0.9.0 → 0.9.1 + comment block in `app.py`; CHANGELOG-UWT v0.9.1 entry;
+HANDOFF_TRACKER top row (Verified) closing the "re-drop Excel-resaved v6 binary"
+carry-forward. **Writer suite green** — all 4 `test_uw_template_writer.py` tests,
+identical outcomes to the prior binary (195 concepts; populated-Homestead e2e
+89 written / 2,301 cells; `dynamic_arrays_restored: 1`; 176 RR rows from 211).
+
+**Note for future Track-4 chats.** The committed v6 asset is now an
+operator-authored Excel-native file — do **not** round-trip it through openpyxl
+for authoring (quirk #6 would drop webextensions again). Template-side changes
+still go through Excel/Cowork per the handoff protocol.
+
+---
+
 ## 2026-06-05 — Retire UW Output divergence whitelists + interim B56 repoint (Track 4 / test)
 
 **Track:** Track 4 (UWT) + test-fixture maintenance. Started as a state-review
