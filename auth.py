@@ -76,7 +76,9 @@ def require_login() -> str:
     user is not authenticated, renders a login form and calls st.stop().
     """
     if st.session_state.get("auth_user"):
-        _render_sidebar_status(st.session_state["auth_user"])
+        # Auth status renders in the page's top-right control row — app.py
+        # calls render_user_controls() there (2026-06-12 cockpit layout; the
+        # sidebar is gone in both ALF and MF modes).
         return st.session_state["auth_user"]
 
     users = _load_user_table()
@@ -117,26 +119,28 @@ def require_login() -> str:
     return ""  # unreachable
 
 
-def _render_sidebar_status(username: str) -> None:
-    # Compact one-row layout: username chip on the left (cockpit terminal
-    # styling — graphite panel, teal mono text) balancing the Sign-out button
-    # on the right. No divider — the next sidebar section (Intake) has its own
-    # section header which provides visual separation.
-    with st.sidebar:
-        c_user, c_btn = st.columns([3, 2], vertical_alignment="center")
-        c_user.markdown(
-            f"""
-            <div style="display:flex; align-items:center; line-height:1.2;">
-                <code class="ck-user">▸ {username}</code>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        if c_btn.button("Sign out", key="auth_logout_btn", use_container_width=True):
-            _log("logout", username)
-            for k in ("auth_user", "auth_username_input", "auth_password_input"):
-                st.session_state.pop(k, None)
-            st.rerun()
+def render_user_controls(username: str) -> None:
+    """Username chip + Sign-out button, rendered into the CURRENT container.
+
+    app.py calls this inside the top-right column of the page's control row
+    (cockpit layout, 2026-06-12) — there is no sidebar anymore. The chip uses
+    the themed `.ck-user` class from branding.inject_cockpit_css().
+    """
+    c_user, c_btn = st.columns([1, 1], vertical_alignment="center")
+    c_user.markdown(
+        f"""
+        <div style="display:flex; align-items:center; justify-content:flex-end;
+                    line-height:1.2;">
+            <code class="ck-user">▸ {username}</code>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    if c_btn.button("Sign out", key="auth_logout_btn", use_container_width=True):
+        _log("logout", username)
+        for k in ("auth_user", "auth_username_input", "auth_password_input"):
+            st.session_state.pop(k, None)
+        st.rerun()
 
 
 # ---------------------------------------------------------------------------

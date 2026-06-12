@@ -39,6 +39,36 @@ The inset clip (`19.0, 100.1, 297.8, 378.9`) sits just inside the navy backgroun
 
 ## Changes
 
+### 2026-06-12 — Unified ALF/MF layout: MF-style main-panel intake, no sidebar, auth top-right
+
+Operator: "I want both the ALF and MF selection and pages to be cohesive and
+look the same. Let's use the MF as the one that copy. The name and sign out
+should just be on the upper right corner of the page." The MF page's layout
+(everything in the main panel) is now the shared pattern:
+
+- **Sidebar removed entirely** (both modes — zero `st.sidebar` calls remain).
+  ALF's intake moved into the main panel MF-style: an `Intake` header, a
+  3-column uploader row (Rent Roll + period date | Raw T12 + annualize |
+  AR aging + as-of date), a 3-column underwriting controls row (UW scenario /
+  Purchase price / Care Type default), and the Advanced expander (sheet name +
+  the 3 override uploaders, 2-column) with the version caption inside. All
+  widget labels/keys unchanged so session state carries across.
+- **Auth top-right**: the shared top control row is now mode selector (left) ·
+  Light toggle · username chip · Sign out (upper-right corner). `auth.py`'s
+  sidebar status renderer replaced by `render_user_controls()` rendered into
+  app.py's top row; sign-out logic unchanged.
+- **MF page cockpit-ified**: emoji title/labels dropped; same `Intake` header;
+  and the MF page gets its own UW//DECK command bar (MF chip + deal readout +
+  RR/T12/AR/OM status chips + "MF UW MODEL v15" chrome) between intake and
+  results — mirroring ALF's bar, which gains a matching `ALF` mode chip.
+- Stale "sidebar" copy swept from a dozen user-facing strings/comments.
+
+Verified server-side via AppTest (both modes render exception-free; toggle /
+mode radio / sign-out / scenario radio / command bar all present) and in the
+browser at 1280px (mode radio top-left y≈90; user chip x≈965 and Sign out
+x≈1053 on the same row — upper-right corner; sidebar absent; intake uploaders
+in the main panel).
+
 ### 2026-06-12 — Login fixes: input contrast + Pingkas/Fortis logos return
 
 Operator-reported: login input text unreadable (light text on white fields).

@@ -16,7 +16,7 @@ Analyzer template loading (v1.12.0):
   - The bundled `ALF_Financial_Analyzer_Only.xlsx` from the repo root is
     loaded silently as the default destination workbook on every run.
   - Users can override via the "Advanced — override Analyzer template"
-    expander at the bottom of the sidebar; uploaded files win when present.
+    expander in the intake panel; uploaded files win when present.
   - The bundled file is the canonical source of `Description_Map` for
     UNMATCHED matching. Resolutions are baked into each download but do
     NOT propagate back to the repo; bundled-file edits go through git.
@@ -36,7 +36,7 @@ import openpyxl
 import pandas as pd
 import streamlit as st
 
-from auth import allowed_modes, require_login
+from auth import allowed_modes, render_user_controls, require_login
 from branding import inject_brand_css, inject_cockpit_css
 from mappings import MappingSet, load_mapping_workbook
 from normalizer import CONDENSED_COLUMNS, normalize_rent_roll
@@ -203,7 +203,7 @@ def _detect_substrate_version(analyzer_bytes: bytes) -> str:
         3. If nothing matches: `"pre-v0.1.4"`.
 
     Returns a string like `"v0.1.14"` or `"(unknown)"` on any read error.
-    Used for the sidebar caption only — never gates functionality.
+    Used for the version caption only — never gates functionality.
     """
     try:
         wb = openpyxl.load_workbook(pd.io.common.BytesIO(analyzer_bytes), data_only=True)
@@ -313,7 +313,7 @@ def _load_analyzer(uploaded_file) -> tuple[bytes, str, str]:
     raise FileNotFoundError(
         f"Bundled Analyzer not found at {BUNDLED_ANALYZER_PATH}. "
         "Either restore the file in the repo root or upload a custom Analyzer "
-        "via the Advanced expander in the sidebar."
+        "via the Advanced expander in the intake panel."
     )
 
 
@@ -401,7 +401,7 @@ def _load_uw_template(uploaded_file) -> tuple[bytes, str, str]:
     raise FileNotFoundError(
         f"Bundled UW Template not found at {BUNDLED_UW_TEMPLATE_PATH}. "
         "Either restore the file in the repo's assets/ folder or upload a "
-        "custom template via the Advanced expander in the sidebar."
+        "custom template via the Advanced expander in the intake panel."
     )
 
 
@@ -683,23 +683,28 @@ def _render_mf_result(res: dict) -> None:
         st.info("Upload a Rent Roll and/or a T-12 to populate the MF UW Model.")
 
 
+def _ck_chip(label: str, on: bool) -> str:
+    cls = "ok" if on else "off"
+    mark = "✓" if on else "—"
+    return f'<span class="ck-chip {cls}">{label} {mark}</span>'
+
+
 def _render_mf_intake() -> None:
-    """MF (multifamily) mode — RR / T-12 / AR intake → populate the MF UW Model."""
-    st.title("\U0001F3E2 Multifamily (MF) — Intake")
-    st.caption(
-        "Upload the operator docs below — each is auto-detected, normalized, and "
-        "mapped to the MF UW Model's `_StdCOA` buckets, then pasted into a "
-        "downloadable populated **MF UW Model**. RR / T-12 / AR / OM are live."
-    )
+    """MF (multifamily) mode — RR / T-12 / AR intake → populate the MF UW Model.
+
+    Cockpit layout (2026-06-12): same chrome as ALF — `Intake` header, 3-col
+    uploaders, Advanced expander, then the UW//DECK command bar with status
+    chips between intake and results."""
+    st.markdown("##### Intake")
 
     cu1, cu2, cu3 = st.columns(3)
-    rr_file = cu1.file_uploader("\U0001F4C4 Rent Roll (.xlsx/.xls)", type=["xlsx", "xlsm", "xls"], key="mf_rr_up")
-    t12_file = cu2.file_uploader("\U0001F4C4 T-12 (.xlsx)", type=["xlsx"], key="mf_t12_up")
-    ar_file = cu3.file_uploader("\U0001F4C4 AR aging (.xlsx)", type=["xlsx"], key="mf_ar_up")
+    rr_file = cu1.file_uploader("Rent Roll (.xlsx/.xls)", type=["xlsx", "xlsm", "xls"], key="mf_rr_up")
+    t12_file = cu2.file_uploader("T-12 (.xlsx)", type=["xlsx"], key="mf_t12_up")
+    ar_file = cu3.file_uploader("AR aging (.xlsx)", type=["xlsx"], key="mf_ar_up")
 
     # --- OM (Offering Memorandum PDF) → Prop Info + Rental Comps ---
     om_file = st.file_uploader(
-        "\U0001F4D5 Offering Memorandum (.pdf) — property facts, market data & rent comps",
+        "Offering Memorandum (.pdf) — property facts, market data & rent comps",
         type=["pdf"], key="mf_om_up")
     oc1, oc2 = st.columns([1, 2])
     om_engine = oc1.radio(
@@ -737,6 +742,29 @@ def _render_mf_intake() -> None:
                               _engine_ai, om_api_key, sig)
             st.session_state["mf_result"] = res
 
+    # Cockpit command bar — mirrors the ALF bar so both modes read as the
+    # same product: deal readout + intake status chips + version chrome.
+    _deal = (res or {}).get("prop_name") or ""
+    _deal_label = (
+        f"{_deal.upper()}" if _deal
+        else "NO DEAL LOADED — drop a rent roll or T-12 above"
+    )
+    st.markdown(
+        f"""
+        <div class="ck-bar">
+            <span class="ck-brand">UW//DECK</span>
+            <span class="ck-chip ok">MF</span>
+            <span class="ck-deal">{_deal_label}</span>
+            {_ck_chip("RR", rr_file is not None)}
+            {_ck_chip("T12", t12_file is not None)}
+            {_ck_chip("AR", ar_file is not None)}
+            {_ck_chip("OM", om_file is not None)}
+            <span class="ck-ver">MF UW MODEL v15</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     if res is None:
         st.info("Upload a Rent Roll and/or a T-12 to populate the MF UW Model.")
     else:
@@ -744,8 +772,7 @@ def _render_mf_intake() -> None:
 
     st.divider()
     st.caption(
-        "Coming next: \U0001F4C4 **OM** (Offering Memorandum — comps + property "
-        "info) and the redIQ Sortable-RR ancillary-fee breakouts (cols W–AK)."
+        "Coming next: redIQ Sortable-RR ancillary-fee breakouts (cols W–AK)."
     )
 
 
@@ -920,10 +947,11 @@ class _PipelineProgress:
 # change. The selected mode routes the whole pipeline; MF renders a placeholder
 # and stops before the ALF pipeline runs.
 _modes = allowed_modes(username)
-# Top control row: mode selector on the left, light/dark toggle on the right.
+# Top control row (shared by ALF + MF): mode selector on the left; light/dark
+# toggle + username chip + Sign out clustered in the upper-right corner.
 # The toggle's state is read ABOVE (before CSS injection) via session_state;
 # flipping it reruns the script, which re-injects the matching theme.
-_mode_col, _theme_col = st.columns([5, 1], vertical_alignment="center")
+_mode_col, _theme_col, _user_col = st.columns([4, 1, 2], vertical_alignment="center")
 with _theme_col:
     st.toggle(
         "Light",
@@ -931,6 +959,8 @@ with _theme_col:
         on_change=_on_theme_toggle,
         help="Switch the cockpit between the dark terminal and light paper themes.",
     )
+with _user_col:
+    render_user_controls(username)
 if len(_modes) == 1:
     app_mode = _modes[0]
 else:
@@ -944,6 +974,7 @@ else:
             }.get(m, m),
             horizontal=True,
             key="app_mode",
+            label_visibility="collapsed",
             help=(
                 "Switch between the senior-housing (ALF) normalizer and the "
                 "multifamily (MF) intake pipeline."
@@ -957,7 +988,7 @@ if app_mode == "MF":
 # --- ALF mode (default): the existing pipeline runs below, unchanged. ---
 
 # Cockpit command bar (replaces the old title row + version badge + caption).
-# Rendered AFTER the sidebar block below, where the upload widgets' state is
+# Rendered AFTER the intake panel below, where the upload widgets' state is
 # known — the bar's status chips reflect which intake files are loaded.
 
 
@@ -980,9 +1011,17 @@ def _parse_currency(raw: str) -> int:
         return 0
 
 
-with st.sidebar:
-    st.markdown("##### Intake")
+# ---------------------------------------------------------------------------
+# Intake panel — main area, MF-style (2026-06-12 cockpit layout; the sidebar
+# is gone — both modes render their uploaders in the page so ALF and MF read
+# as the same product). Widget labels/keys unchanged from the sidebar era so
+# session state carries across.
+# ---------------------------------------------------------------------------
+st.markdown("##### Intake")
 
+iu1, iu2, iu3 = st.columns(3)
+
+with iu1:
     rr_file = st.file_uploader(
         "Rent Roll (.xlsx / .xlsm / .xls) — required",
         type=["xlsx", "xlsm", "xls"],
@@ -1011,6 +1050,7 @@ with st.sidebar:
     elif rr_file is not None:
         st.caption("Could not auto-detect — set manually.")
 
+with iu2:
     raw_t12_file = st.file_uploader(
         "Raw T12 (.xlsx / .xlsm / .xls) — optional",
         type=["xlsx", "xlsm", "xls"],
@@ -1041,6 +1081,7 @@ with st.sidebar:
         ),
     )
 
+with iu3:
     ar_file = st.file_uploader(
         "AR Aging (.xlsx / .xlsm / .xls / .csv) — optional",
         type=["xlsx", "xlsm", "xls", "csv"],
@@ -1067,12 +1108,15 @@ with st.sidebar:
             ),
         )
 
-    # Track 4 / Phase 2.5 — UW Template scenario selector.
-    # The template file itself is bundled by default at
-    # `assets/ALF_UW_Template_v5.xlsx` (see _load_uw_template) and can be
+# ── Underwriting controls row ────────────────────────────────────────────────
+io1, io2, io3 = st.columns(3)
+
+with io1:
+    # Track 4 / Phase 2.5 — UW Template scenario selector. The template file
+    # itself is bundled by default (see _load_uw_template) and can be
     # overridden via the Advanced expander below. The scenario radio stays
-    # in the main sidebar because it's a per-deal underwriting choice, not
-    # an operational config.
+    # always-visible because it's a per-deal underwriting choice, not an
+    # operational config.
     uw_template_scenario = st.radio(
         "UW Template scenario",
         options=["normalized", "t12_actual"],
@@ -1088,8 +1132,7 @@ with st.sidebar:
         ),
     )
 
-    st.markdown("##### Underwriting")
-
+with io2:
     # Auto-format-on-blur pattern: the on_change callback fires when the user
     # presses Enter or tabs away, parses whatever they typed, and writes the
     # formatted value back into session_state. Streamlit re-reads the widget's
@@ -1121,6 +1164,7 @@ with st.sidebar:
     )
     purchase_price_input = _parse_currency(st.session_state.get("pp_input", ""))
 
+with io3:
     care_type_default = st.selectbox(
         "Care Type default",
         options=["(none — flag missing)", "IL", "AL", "MC"],
@@ -1136,7 +1180,9 @@ with st.sidebar:
     if care_type_default.startswith("("):
         care_type_default = ""
 
-    with st.expander("Advanced"):
+with st.expander("Advanced"):
+    av1, av2 = st.columns(2)
+    with av1:
         sheet_override = st.text_input(
             "RR sheet name (auto if blank)",
             value="",
@@ -1151,6 +1197,7 @@ with st.sidebar:
                 "Any sheet you omit falls back to built-in defaults."
             ),
         )
+    with av2:
         analyzer_override_file = st.file_uploader(
             "Analyzer template override (.xlsx)",
             type=["xlsx"],
@@ -1168,14 +1215,13 @@ with st.sidebar:
             key="uw_template_override_uploader",
             help=(
                 "By default the app uses the bundled UW Template "
-                "(`assets/ALF_UW_Template_v5.xlsx`). Upload to override "
+                "(`assets/ALF_UW_Template_v8.xlsx`). Upload to override "
                 "for this session only — e.g. to populate against a "
-                "legacy v4 template, or to test a v5.1 / v6 candidate. "
-                "Uploads do not modify the bundled file. The writer "
-                "auto-detects v4 vs v5 from the file's column structure."
+                "legacy v6 / v5 / v4 template. Uploads do not modify the "
+                "bundled file. The writer auto-detects the version from "
+                "the file's structure."
             ),
         )
-
     st.caption(
         f"RR v{RR_VERSION} · T12 v{T12_VERSION} · AR v{AR_VERSION} "
         f"· T5 v{T5_VERSION} · UWT v{UWT_VERSION}"
@@ -1190,20 +1236,15 @@ _deal_name = (
 _deal_label = (
     f"{_deal_name or 'DEAL'} · {period_date_input.strftime('%b %Y').upper()}"
     if rr_file is not None
-    else "NO DEAL LOADED — drop a rent roll in the intake rail"
+    else "NO DEAL LOADED — drop a rent roll above"
 )
 
-
-def _ck_chip(label: str, on: bool) -> str:
-    cls = "ok" if on else "off"
-    mark = "✓" if on else "—"
-    return f'<span class="ck-chip {cls}">{label} {mark}</span>'
-
-
+# ALF mode chip mirrors the MF bar so the two pages read identically.
 st.markdown(
     f"""
     <div class="ck-bar">
         <span class="ck-brand">UW//DECK</span>
+        <span class="ck-chip ok">ALF</span>
         <span class="ck-deal">{_deal_label}</span>
         {_ck_chip("RR", rr_file is not None)}
         {_ck_chip("T12", raw_t12_file is not None)}
@@ -1314,7 +1355,7 @@ with top_tab_workspace:
                   EBITDARM, opex line items) will be **BLANK**.
                   Workaround: (1) download Analyzer, (2) open in Excel,
                   let it compute, save, (3) upload as **"Analyzer
-                  template override"** in sidebar's Advanced expander,
+                  template override"** in the intake panel's Advanced expander,
                   (4) re-download UW Template — now fully populated.
                   An in-Python formula evaluator is on the roadmap to
                   eliminate this round-trip entirely.
@@ -1339,7 +1380,7 @@ with top_tab_workspace:
                 — or to feed a pre-Excel-cached Analyzer back through the
                 UW Template populate flow — expand
                 **"Advanced — override Analyzer template"** in the
-                sidebar.
+                intake panel.
                 """
             )
         st.stop()
@@ -1490,21 +1531,21 @@ with top_tab_workspace:
             )
 
             # Cluster B (B-2): partial-year detection. Surface as a warning when
-            # < 12 months are populated. Annualization (if requested in the sidebar)
+            # < 12 months are populated. Annualization (if requested via the checkbox)
             # has already been applied by parse_t12; the warning text reflects that.
             if t12_parse_result.populated_months < 12:
                 n = t12_parse_result.populated_months
                 if t12_parse_result.was_annualized:
                     st.warning(
                         f"⚠ T12 is partial-year ({n} months populated). Values were "
-                        f"scaled by 12/{n} per the sidebar checkbox. Ratios assume "
+                        f"scaled by 12/{n} per the annualize checkbox. Ratios assume "
                         f"flat seasonality — review against rent roll occupancy."
                     )
                 else:
                     st.warning(
                         f"⚠ T12 is partial-year ({n} months populated). Ratios will "
                         f"be misleading without annualization. Toggle "
-                        f"'Annualize partial-year T12' in the sidebar to scale "
+                        f"'Annualize partial-year T12' in the intake panel to scale "
                         f"values by 12/{n}, or proceed knowing downstream metrics "
                         f"reflect a {n}-month period."
                     )
@@ -2028,10 +2069,10 @@ with top_tab_workspace:
 # ---------------------------------------------------------------------------
 with top_tab_dashboard:
     if rr_file is None:
-        st.info("Upload a Rent Roll in the intake rail to populate the dashboard.")
+        st.info("Upload a Rent Roll in the Workspace tab's intake panel to populate the dashboard.")
     elif t12_parse_result is None:
         st.info(
-            "Rent Roll is parsed — upload a T12 in the intake rail "
+            "Rent Roll is parsed — upload a T12 in the intake panel "
             "to populate the financial metrics on the dashboard."
         )
     else:
