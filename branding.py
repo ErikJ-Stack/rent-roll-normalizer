@@ -14,11 +14,36 @@ from pathlib import Path
 
 import streamlit as st
 
-# Brand palette (hex) — keep in sync with .streamlit/config.toml [theme].
+# Brand palette (hex) — legacy navy/gold tokens (still used on the white
+# landing page button styling and kept for reference).
 NAVY = "#0E1D41"
 GOLD = "#BE8F3F"
 WHITE = "#FFFFFF"
 NAVY_LIGHT = "#16294D"
+
+# Cockpit terminal palette (2026-06-12 UI redesign) — keep in sync with
+# .streamlit/config.toml [theme]. Graphite surfaces + teal primary accent,
+# amber/red for warn/bad states. See COSMETIC-CHANGES.md.
+CK_BG = "#101418"        # main canvas
+CK_RAIL = "#14181E"      # sidebar / command bar
+CK_PANEL = "#1A2027"     # cards, inputs, tiles
+CK_BORDER = "#232A33"    # hairline dividers
+CK_BORDER_2 = "#2C3540"  # input/button borders
+CK_TEXT = "#E6EDF5"      # primary text / values
+CK_MUTED = "#9AA7B5"     # secondary text
+CK_DIM = "#5E6B7A"       # labels, hints
+CK_FAINT = "#3D4854"     # faintest chrome text
+CK_TEAL = "#5DCAA5"      # primary accent / ok
+CK_TEAL_DK = "#04342C"   # text on teal fills
+CK_TEAL_LT = "#9FE1CB"   # ok titles on dark
+CK_AMBER = "#EF9F27"     # warn
+CK_AMBER_LT = "#FAC775"
+CK_RED = "#E24B4A"       # bad
+CK_RED_LT = "#F09595"
+
+# Monospace stack for the terminal aesthetic (JetBrains Mono loaded via
+# Google Fonts @import inside inject_cockpit_css).
+CK_MONO = "'JetBrains Mono', ui-monospace, 'Cascadia Code', Consolas, 'SF Mono', monospace"
 
 # Gold-on-navy lockup; its background is brand navy so it blends seamlessly
 # into the dark theme canvas.
@@ -50,7 +75,10 @@ _FORTIS_ART_H = 1.000   # fortis_logo.svg (viewBox trimmed to artwork)
 
 
 def render_centered_logo(width_px: int = 260) -> None:
-    """Render the Pingkas + Fortis logos side by side on the WHITE landing page,
+    """LEGACY (pre-2026-06-12 white landing) — superseded by
+    render_cockpit_login_header(). Kept for easy revert; no longer called.
+
+    Render the Pingkas + Fortis logos side by side on the WHITE landing page,
     scaled so their artwork shares a common height (Pingkas box at ``width_px``,
     Fortis matched to it). Uses the navy-ink Pingkas lockup for the white canvas."""
     imgs = []
@@ -82,9 +110,123 @@ def render_centered_logo(width_px: int = 260) -> None:
     )
 
 
+def inject_cockpit_landing_css() -> None:
+    """Cockpit terminal theme for the login/landing page (2026-06-12 UI
+    redesign). Graphite canvas, centered access panel, mono inputs, teal
+    authenticate button. Replaces the white landing (`inject_landing_css`,
+    kept below as legacy) — the image lockups are navy-on-white artwork that
+    doesn't read on a dark canvas, so the firms render as text chrome via
+    `render_cockpit_login_header()` instead."""
+    st.markdown(
+        f"""
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap');
+
+        .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
+            background: {CK_BG} !important;
+        }}
+        .block-container, [data-testid="stMainBlockContainer"] {{
+            padding-top: 4.5rem !important;
+        }}
+
+        /* Access panel — the login form card. */
+        [data-testid="stForm"] {{
+            background: {CK_RAIL};
+            border: 1px solid {CK_BORDER} !important;
+            border-radius: 12px;
+            padding: 1.6rem 1.6rem 1.2rem;
+        }}
+        [data-testid="stForm"] label p {{
+            font-family: {CK_MONO} !important;
+            font-size: 0.68rem !important;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: {CK_DIM} !important;
+        }}
+        [data-testid="stForm"] input {{
+            font-family: {CK_MONO};
+            color: {CK_TEXT};
+        }}
+        [data-testid="stForm"] [data-testid="stTextInputRootElement"],
+        [data-testid="stForm"] [data-baseweb="input"] {{
+            background: {CK_PANEL} !important;
+            border-color: {CK_BORDER_2} !important;
+        }}
+        .stFormSubmitButton > button {{
+            width: 100%;
+            background-color: {CK_TEAL};
+            color: {CK_TEAL_DK};
+            border: 1px solid {CK_TEAL};
+            font-family: {CK_MONO};
+            font-weight: 700;
+            letter-spacing: 0.08em;
+        }}
+        .stFormSubmitButton > button:hover {{
+            background-color: {CK_TEAL_LT};
+            color: {CK_TEAL_DK};
+            border: 1px solid {CK_TEAL_LT};
+        }}
+
+        /* Wordmark header above the panel. */
+        .ckl-head {{
+            text-align: center;
+            font-family: {CK_MONO};
+            margin: 0 0 1.6rem;
+        }}
+        .ckl-brand {{
+            color: {CK_TEAL};
+            font-size: 1.7rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+        }}
+        .ckl-sub {{
+            color: {CK_MUTED};
+            font-size: 0.72rem;
+            letter-spacing: 0.34em;
+            margin-top: 0.5rem;
+        }}
+        .ckl-firms {{
+            color: {CK_DIM};
+            font-size: 0.66rem;
+            letter-spacing: 0.18em;
+            margin-top: 0.9rem;
+        }}
+        .ckl-foot {{
+            text-align: center;
+            font-family: {CK_MONO};
+            color: {CK_FAINT};
+            font-size: 0.62rem;
+            letter-spacing: 0.14em;
+            margin-top: 1rem;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_cockpit_login_header() -> None:
+    """Wordmark block above the cockpit login panel — UW//DECK brand, terminal
+    subtitle, and the two firms as text chrome (image lockups are light-canvas
+    artwork; see inject_cockpit_landing_css)."""
+    st.markdown(
+        """
+        <div class="ckl-head">
+            <div class="ckl-brand">UW//DECK</div>
+            <div class="ckl-sub">UNDERWRITING TERMINAL</div>
+            <div class="ckl-firms">PINGKAS CAPITAL · FORTIS CAPITAL</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def inject_landing_css() -> None:
-    """White-background theme for the login/landing page. Overrides the global
-    navy dark theme (set in .streamlit/config.toml) so the landing page reads as
+    """LEGACY (pre-2026-06-12 white landing) — superseded by
+    inject_cockpit_landing_css(). Kept for easy revert; no longer called.
+
+    White-background theme for the login/landing page. Overrides the global
+    dark theme (set in .streamlit/config.toml) so the landing page reads as
     a clean white canvas with navy text — the dark theme returns after login."""
     st.markdown(
         f"""
@@ -295,6 +437,249 @@ def inject_brand_css() -> None:
             transition: width 0.35s ease;
             box-shadow: 0 0 12px rgba(190, 143, 63, 0.5);
         }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def inject_cockpit_css() -> None:
+    """Cockpit terminal theme (2026-06-12 UI redesign) — layered AFTER
+    inject_brand_css() so its rules win. Graphite surfaces, teal accent,
+    monospace data chrome. Also restyles the shared loading overlay and
+    defines the command-bar (.ck-bar), status-chip (.ck-chip), live-ledger
+    (.ck-ledger), and risk-flag (.ck-flag) component classes used by app.py
+    and dashboard_ui.py."""
+    st.markdown(
+        f"""
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap');
+
+        /* ── Canvas ─────────────────────────────────────────────────── */
+        .stApp, [data-testid="stAppViewContainer"] {{
+            background: {CK_BG} !important;
+        }}
+        [data-testid="stHeader"] {{ background: {CK_BG} !important; }}
+        [data-testid="stSidebar"] {{
+            background: {CK_RAIL} !important;
+            border-right: 1px solid {CK_BORDER};
+        }}
+
+        /* ── Typography — terminal headings ─────────────────────────── */
+        h1 {{
+            font-family: {CK_MONO} !important;
+            color: {CK_TEXT} !important;
+            font-size: 1.3rem !important;
+            letter-spacing: 0.04em;
+            font-weight: 600 !important;
+        }}
+        h2, h3 {{
+            font-family: {CK_MONO} !important;
+            color: {CK_DIM} !important;
+            font-size: 0.78rem !important;
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+            font-weight: 600 !important;
+        }}
+        h5 {{
+            font-family: {CK_MONO} !important;
+            color: {CK_DIM} !important;
+            font-size: 0.72rem !important;
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            font-weight: 600 !important;
+        }}
+        a, a:visited {{ color: {CK_TEAL} !important; }}
+
+        /* ── Metric tiles ────────────────────────────────────────────── */
+        [data-testid="stMetric"] {{
+            background: {CK_PANEL};
+            border: 1px solid {CK_BORDER};
+            border-radius: 8px;
+            padding: 10px 14px;
+        }}
+        [data-testid="stMetricLabel"] p {{
+            font-family: {CK_MONO} !important;
+            font-size: 0.68rem !important;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: {CK_DIM} !important;
+        }}
+        [data-testid="stMetricValue"] {{
+            font-family: {CK_MONO} !important;
+            color: {CK_TEXT} !important;
+        }}
+
+        /* ── Tabs — terminal rail ───────────────────────────────────── */
+        .stTabs [data-baseweb="tab-list"] {{
+            gap: 4px;
+            border-bottom: 1px solid {CK_BORDER};
+        }}
+        .stTabs [data-baseweb="tab"] {{
+            font-family: {CK_MONO};
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: {CK_DIM};
+        }}
+        .stTabs [aria-selected="true"] {{ color: {CK_TEAL} !important; }}
+        .stTabs [data-baseweb="tab-highlight"] {{ background-color: {CK_TEAL} !important; }}
+
+        /* ── Buttons ────────────────────────────────────────────────── */
+        .stButton > button, .stFormSubmitButton > button {{
+            background-color: {CK_PANEL};
+            color: {CK_MUTED};
+            border: 1px solid {CK_BORDER_2};
+            font-family: {CK_MONO};
+            font-weight: 600;
+            letter-spacing: 0.04em;
+        }}
+        .stButton > button:hover, .stFormSubmitButton > button:hover {{
+            background-color: {CK_PANEL};
+            color: {CK_TEAL};
+            border: 1px solid {CK_TEAL};
+        }}
+        .stDownloadButton > button {{
+            background-color: {CK_TEAL};
+            color: {CK_TEAL_DK};
+            border: 1px solid {CK_TEAL};
+            font-family: {CK_MONO};
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }}
+        .stDownloadButton > button:hover {{
+            background-color: {CK_TEAL_LT};
+            color: {CK_TEAL_DK};
+            border: 1px solid {CK_TEAL_LT};
+        }}
+
+        /* ── Inputs / uploaders / expanders ─────────────────────────── */
+        [data-testid="stFileUploader"] section[data-testid="stFileUploaderDropzone"] {{
+            background: {CK_PANEL} !important;
+            border: 1px dashed {CK_BORDER_2} !important;
+        }}
+        [data-testid="stTextInput"] input,
+        [data-testid="stDateInput"] input,
+        [data-testid="stNumberInput"] input {{
+            font-family: {CK_MONO};
+        }}
+        [data-testid="stExpander"] details {{
+            background: {CK_RAIL};
+            border: 1px solid {CK_BORDER} !important;
+            border-radius: 8px;
+        }}
+        hr {{ border-color: {CK_BORDER} !important; }}
+
+        /* ── Loading overlay — re-skin brand navy/gold → graphite/teal ─ */
+        .t5-overlay {{ background: rgba(13, 17, 21, 0.88); }}
+        .t5-overlay-ring {{
+            border-top-color: {CK_TEAL};
+            box-shadow: 0 0 24px rgba(93, 202, 165, 0.25);
+        }}
+        .t5-overlay-label {{ font-family: {CK_MONO}; font-size: 1.05rem; }}
+        .t5-overlay-pct {{ color: {CK_TEAL}; font-family: {CK_MONO}; }}
+        .t5-overlay-bar-fill {{
+            background: {CK_TEAL};
+            box-shadow: 0 0 12px rgba(93, 202, 165, 0.5);
+        }}
+
+        /* ── Command bar ────────────────────────────────────────────── */
+        .ck-bar {{
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            background: {CK_RAIL};
+            border: 1px solid {CK_BORDER};
+            border-radius: 10px;
+            padding: 10px 16px;
+            margin: 0 0 12px;
+            font-family: {CK_MONO};
+        }}
+        .ck-brand {{
+            color: {CK_TEAL};
+            font-weight: 700;
+            font-size: 0.85rem;
+            letter-spacing: 0.08em;
+        }}
+        .ck-deal {{
+            color: {CK_TEXT};
+            font-size: 0.82rem;
+            letter-spacing: 0.05em;
+        }}
+        .ck-chip {{
+            font-size: 0.68rem;
+            letter-spacing: 0.06em;
+            padding: 3px 10px;
+            border-radius: 6px;
+            border: 1px solid {CK_BORDER_2};
+            white-space: nowrap;
+        }}
+        .ck-chip.ok {{
+            color: {CK_TEAL};
+            border-color: rgba(93, 202, 165, 0.45);
+            background: rgba(93, 202, 165, 0.08);
+        }}
+        .ck-chip.warn {{
+            color: {CK_AMBER};
+            border-color: rgba(239, 159, 39, 0.45);
+            background: rgba(239, 159, 39, 0.08);
+        }}
+        .ck-chip.off {{ color: {CK_DIM}; }}
+        .ck-ver {{
+            margin-left: auto;
+            color: {CK_FAINT};
+            font-size: 0.66rem;
+            letter-spacing: 0.05em;
+            text-align: right;
+        }}
+
+        /* ── Live ledger ────────────────────────────────────────────── */
+        .ck-ledger {{
+            width: 100%;
+            border-collapse: collapse;
+            font-family: {CK_MONO};
+            font-size: 0.85rem;
+        }}
+        .ck-ledger td {{ padding: 5px 0; }}
+        .ck-ledger .lbl {{ color: {CK_MUTED}; }}
+        .ck-ledger .val {{ color: {CK_TEXT}; text-align: right; }}
+        .ck-ledger .pct {{ color: {CK_DIM}; text-align: right; width: 84px; }}
+        .ck-ledger tr.total td {{ border-top: 1px solid {CK_BORDER}; }}
+        .ck-ledger tr.total .lbl {{ color: {CK_TEXT}; }}
+        .ck-ledger .neg {{ color: {CK_RED_LT}; }}
+        .ck-ledger .pos {{ color: {CK_TEAL}; font-weight: 600; }}
+        .ck-panel {{
+            background: {CK_PANEL};
+            border: 1px solid {CK_BORDER};
+            border-radius: 10px;
+            padding: 14px 16px;
+        }}
+        .ck-eyebrow {{
+            font-family: {CK_MONO};
+            font-size: 0.66rem;
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+            color: {CK_DIM};
+            margin: 0 0 8px;
+        }}
+
+        /* ── Risk flag cards ────────────────────────────────────────── */
+        .ck-flag {{
+            background: {CK_PANEL};
+            border-left: 3px solid {CK_FAINT};
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            font-family: {CK_MONO};
+        }}
+        .ck-flag .t {{ font-size: 0.78rem; font-weight: 600; color: {CK_MUTED}; }}
+        .ck-flag .d {{ font-size: 0.7rem; color: {CK_DIM}; margin-top: 2px; }}
+        .ck-flag.ok   {{ border-left-color: {CK_TEAL}; }}
+        .ck-flag.ok .t   {{ color: {CK_TEAL_LT}; }}
+        .ck-flag.warn {{ border-left-color: {CK_AMBER}; }}
+        .ck-flag.warn .t {{ color: {CK_AMBER_LT}; }}
+        .ck-flag.bad  {{ border-left-color: {CK_RED}; }}
+        .ck-flag.bad .t  {{ color: {CK_RED_LT}; }}
         </style>
         """,
         unsafe_allow_html=True,

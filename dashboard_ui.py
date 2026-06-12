@@ -88,52 +88,101 @@ def _render_headline(m: DashboardModel) -> None:
         .t5-headline-grid {{
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 0.75rem;
-            padding: 1.1rem 1.1rem 1.3rem;
-            border: 1px solid rgba(150, 160, 180, 0.25);
-            border-radius: 0.5rem;
+            gap: 0.6rem;
             margin: 0.5rem 0 1rem;
         }}
         .t5-headline-eyebrow {{
             grid-column: 1 / -1;
-            text-align: center;
-            font-size: 0.75rem;
+            font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+            font-size: 0.66rem;
             letter-spacing: 0.18em;
-            color: #7a8696;
+            color: #5E6B7A;
             font-weight: 600;
-            margin-bottom: 0.25rem;
         }}
         .t5-tile {{
-            padding: 0.35rem 0.25rem;
+            background: #1A2027;
+            border: 1px solid #232A33;
+            border-radius: 8px;
+            padding: 0.6rem 0.8rem;
             min-width: 0;
         }}
         .t5-tile-label {{
-            font-size: 0.85rem;
-            color: var(--text-color, #c9ced8);
-            opacity: 0.7;
+            font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+            font-size: 0.66rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #5E6B7A;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            margin-bottom: 0.15rem;
+            margin-bottom: 0.2rem;
         }}
         .t5-tile-value {{
-            font-size: 1.85rem;
+            font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+            font-size: 1.45rem;
             font-weight: 600;
-            color: var(--text-color, #ffffff);
+            color: #E6EDF5;
             line-height: 1.15;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }}
         @media (max-width: 480px) {{
-            .t5-tile-value {{ font-size: 1.45rem; }}
-            .t5-tile-label {{ font-size: 0.78rem; }}
-            .t5-headline-grid {{ padding: 0.85rem; gap: 0.6rem; }}
+            .t5-tile-value {{ font-size: 1.2rem; }}
+            .t5-headline-grid {{ gap: 0.5rem; }}
         }}
         </style>
         <div class="t5-headline-grid">
             <div class="t5-headline-eyebrow">HEADLINE</div>
             {tile_html}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _render_ledger(m: DashboardModel) -> None:
+    """Cockpit live ledger — the GPR → EBITDAR waterfall in monospace with a
+    % of EGI column. All inputs derive from fields the model already carries;
+    rows whose inputs are missing render as "—"."""
+    egi = m.egi
+    gpr = m.gpr
+    vac = (gpr - egi) if (gpr is not None and egi is not None) else None
+    labor = (m.total_labor_pct * egi) if (m.total_labor_pct is not None and egi) else None
+    opex_excl_mgmt = (egi - m.ebitdarm) if (egi is not None and m.ebitdarm is not None) else None
+    nonlabor = (opex_excl_mgmt - labor) if (opex_excl_mgmt is not None and labor is not None) else None
+    mgmt = (m.ebitdarm - m.ebitdar) if (m.ebitdarm is not None and m.ebitdar is not None) else None
+
+    def money(v: Optional[float], paren: bool = False) -> str:
+        if v is None:
+            return "—"
+        return f"({v:,.0f})" if paren else f"{v:,.0f}"
+
+    def pct(v: Optional[float]) -> str:
+        if v is None or not egi:
+            return ""
+        return f"{v / egi * 100:.1f}%"
+
+    rows = [
+        ("", "GPR", money(gpr), "", "val"),
+        ("", "Vacancy / LTL / contras", money(vac, paren=True), pct(vac), "neg"),
+        ("total", "EGI", money(egi), "100%" if egi else "", "val"),
+        ("", "Labor", money(labor, paren=True), pct(labor), "val"),
+        ("", "Non-labor opex", money(nonlabor, paren=True), pct(nonlabor), "val"),
+        ("total", "EBITDARM", money(m.ebitdarm), pct(m.ebitdarm), "pos"),
+        ("", "Mgmt fee", money(mgmt, paren=True), pct(mgmt), "val"),
+        ("total", "EBITDAR", money(m.ebitdar), pct(m.ebitdar), "pos"),
+    ]
+    body = "".join(
+        f'<tr class="{cls}"><td class="lbl">{lbl}</td>'
+        f'<td class="val {vcls}">{val}</td><td class="pct">{p}</td></tr>'
+        for cls, lbl, val, p, vcls in rows
+    )
+    st.markdown(
+        f"""
+        <div class="ck-panel">
+            <div class="ck-eyebrow">Live ledger — T12 basis</div>
+            <table class="ck-ledger">{body}</table>
         </div>
         """,
         unsafe_allow_html=True,
@@ -310,22 +359,24 @@ def _render_care_level_dist(m: DashboardModel) -> None:
         st.bar_chart(df.set_index("Care Level"))
 
 
-def _render_risk_flags(m: DashboardModel) -> None:
-    st.subheader("Risk flags & underwriting checks")
+def _render_risk_flags(m: DashboardModel, heading: bool = True) -> None:
+    # Cockpit flag cards — color-coded left border, monospace, compact.
+    if heading:
+        st.subheader("Risk flags & underwriting checks")
+    cards = []
     for flag in m.risk_flags:
         val_text = ""
         if flag.value is not None:
             # Use $ for $-shaped metrics, % for everything else (all current flags are %)
-            val_text = f" — {_fmt_pct(flag.value, digits=2)} (threshold: {flag.threshold_text})"
-        line = f"**{flag.label}**{val_text} — {flag.read_text}"
-        if flag.status == "ok":
-            st.success(line, icon="✅")
-        elif flag.status == "warn":
-            st.warning(line, icon="⚠️")
-        elif flag.status == "bad":
-            st.error(line, icon="❌")
-        else:
-            st.info(line, icon="⚪")
+            val_text = f" — {_fmt_pct(flag.value, digits=2)} (vs {flag.threshold_text})"
+        cls = flag.status if flag.status in ("ok", "warn", "bad") else "info"
+        cards.append(
+            f'<div class="ck-flag {cls}">'
+            f'<div class="t">{flag.label}{val_text}</div>'
+            f'<div class="d">{flag.read_text}</div>'
+            f'</div>'
+        )
+    st.markdown("".join(cards), unsafe_allow_html=True)
 
 
 def _render_ar(m: DashboardModel) -> None:
@@ -345,11 +396,19 @@ def render_dashboard(m: DashboardModel) -> None:
     Mobile-friendly single-scroll layout. Caller decides the container (tab,
     expander, dialog, etc.) — this function only writes Streamlit elements.
     """
-    st.title(f"📊 {m.property_name}")
+    st.title(m.property_name)
     st.caption(f"Period: {m.period_label}  ·  Basis: T12 actual")
-    st.divider()
 
     _render_headline(m)
+
+    # Cockpit center stage — live ledger beside the risk-flag column.
+    col_ledger, col_flags = st.columns([3, 2])
+    with col_ledger:
+        _render_ledger(m)
+    with col_flags:
+        st.markdown('<div class="ck-eyebrow">Risk flags</div>', unsafe_allow_html=True)
+        _render_risk_flags(m, heading=False)
+
     st.divider()
     _render_capacity(m)
     st.divider()
@@ -368,8 +427,6 @@ def render_dashboard(m: DashboardModel) -> None:
     _render_monthly_trend(m)
     st.divider()
     _render_care_level_dist(m)
-    st.divider()
-    _render_risk_flags(m)
     if m.ar_bad_debt_variance:
         st.divider()
         _render_ar(m)

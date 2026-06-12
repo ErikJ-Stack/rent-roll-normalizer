@@ -39,6 +39,71 @@ The inset clip (`19.0, 100.1, 297.8, 378.9`) sits just inside the navy backgroun
 
 ## Changes
 
+### 2026-06-12 — Cockpit login page (terminal access panel)
+
+Follow-up to the cockpit redesign below: the white landing/login page is
+replaced by a matching terminal gate. Graphite canvas, centered access panel
+(`UW//DECK` wordmark + "UNDERWRITING TERMINAL" + "PINGKAS CAPITAL · FORTIS
+CAPITAL" as text chrome), mono inputs, full-width teal **Authenticate**
+button, and a "SECURE CHANNEL · SHA-256 AUTH" footer line. The image lockups
+(`pingkas_logo_ink.png` / `fortis_logo.svg`) are light-canvas artwork that
+doesn't read on graphite, so the firms render as text — re-add a logo only if
+a dark-canvas lockup is produced. Auth behavior unchanged (same form keys,
+same SHA-256 verify, same logging).
+
+- `branding.py`: new `inject_cockpit_landing_css()` +
+  `render_cockpit_login_header()`; `inject_landing_css()` and
+  `render_centered_logo()` kept as documented LEGACY (uncalled) for easy
+  revert.
+- `auth.py`: `require_login()` swaps to the cockpit landing functions; submit
+  label `Sign in` → `Authenticate`; sidebar user status restyled from the 👤
+  emoji + navy chip to a cockpit chip (`▸ <user>` teal mono on graphite).
+- Verified locally end-to-end: cockpit login renders (graphite canvas, teal
+  mono wordmark, panel form), authentication succeeds, sidebar chip + sign-out
+  render, zero exceptions.
+
+### 2026-06-12 — "Cockpit" terminal UI redesign (graphite/teal, monospace chrome)
+
+Full post-login visual redesign chosen by the operator from three mockup
+directions ("Command deck" / "Glide" / "Cockpit" — Cockpit won). Terminal-luxe
+aesthetic: graphite surfaces, teal primary accent, JetBrains Mono data chrome,
+amber/red status colors. **Visual + layout only — zero pipeline behavior
+change** (all uploaders, the scenario radio, the UNMATCHED matcher, both
+downloads, and the UW Template populate flow are untouched). The white
+landing/login page is unchanged (its `inject_landing_css()` override still
+wins). Verified end-to-end locally: login → cockpit shell → populated
+dashboard against the Homestead regression fixture; all 27
+`tests/test_dashboard_model.py` cases still green.
+
+- `.streamlit/config.toml`: theme navy/gold → graphite/teal
+  (`#101418` canvas / `#1A2027` panels / `#5DCAA5` primary / `#E6EDF5` text).
+- `branding.py`: new `CK_*` palette constants + `inject_cockpit_css()`,
+  layered after `inject_brand_css()` so its rules win. Styles canvas, sidebar
+  rail, terminal headings (mono uppercase h2/h3/h5), metric tiles, tabs (teal
+  highlight), buttons (teal download CTAs), inputs/uploaders/expanders, and
+  re-skins the loading overlay (gold → teal). Defines component classes:
+  `.ck-bar` command bar, `.ck-chip` status chips (ok/warn/off), `.ck-panel` +
+  `.ck-ledger` live ledger, `.ck-flag` risk-flag cards, `.ck-eyebrow` labels.
+- `app.py`: title row + version badge + long caption replaced by the
+  **command bar** — `UW//DECK` brand, deal · period readout (auto-derived from
+  the RR filename), RR/T12/AR intake status chips, scenario chip, version
+  chrome right-aligned. Rendered after the sidebar so chip state is live.
+  Sidebar sections renamed `📁 Uploads`/`💵 Underwriting` → `Intake`/
+  `Underwriting` (styled as terminal section labels); `⚙️ Advanced` →
+  `Advanced`; mode radio labels → `ALF // senior housing` / `MF //
+  multifamily`; top tabs → `Dashboard` / `Workspace` (emoji dropped).
+- `dashboard_ui.py`: headline tiles restyled as cockpit panels (mono values);
+  new `_render_ledger()` — the GPR → vacancy → EGI → labor → non-labor →
+  EBITDARM → mgmt fee → EBITDAR waterfall as a monospace table with a
+  % -of-EGI column (derives only from fields the model already carries);
+  `_render_risk_flags()` swapped from st.success/warning/error banners to
+  compact color-coded `.ck-flag` cards; `render_dashboard()` now places the
+  live ledger beside the risk-flag column (3:2 split) directly under the
+  headline grid.
+- Local-dev note: a gitignored `.streamlit/secrets.toml` with a `dev` /
+  `cockpit-dev` login was added during verification (delete anytime; cloud
+  secrets unaffected). `.claude/launch.json` added for local preview runs.
+
 ### 2026-06-05 — MF loading overlay shows a determinate % (1→100)
 
 The MF loading overlay now shows a **gold percentage + a progress bar** instead

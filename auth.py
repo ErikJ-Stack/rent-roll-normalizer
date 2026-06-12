@@ -81,25 +81,28 @@ def require_login() -> str:
 
     users = _load_user_table()
 
-    # Brand the gate — white landing canvas + the Pingkas/Fortis logos, login
-    # form in a narrow centered column. Imported lazily to avoid a circular
-    # import at module load.
-    from branding import inject_landing_css, render_centered_logo
+    # Brand the gate — cockpit terminal canvas (2026-06-12 redesign): UW//DECK
+    # wordmark + firms as text chrome, mono access panel in a narrow centered
+    # column. Imported lazily to avoid a circular import at module load.
+    from branding import inject_cockpit_landing_css, render_cockpit_login_header
 
-    inject_landing_css()
-    render_centered_logo(width_px=260)
+    inject_cockpit_landing_css()
 
     _left, center, _right = st.columns([1, 2, 1])
     with center:
-        # Heading/caption intentionally omitted — leave blank space above the form.
-        st.markdown("<div style='height:2.5rem;'></div>", unsafe_allow_html=True)
+        render_cockpit_login_header()
 
         with st.form("login_form", clear_on_submit=False):
             username = st.text_input("Username", key="auth_username_input").strip()
             password = st.text_input(
                 "Password", type="password", key="auth_password_input"
             )
-            submitted = st.form_submit_button("Sign in")
+            submitted = st.form_submit_button("Authenticate")
+
+        st.markdown(
+            '<div class="ckl-foot">SECURE CHANNEL · SHA-256 AUTH</div>',
+            unsafe_allow_html=True,
+        )
 
         if submitted:
             if _verify(username, password, users):
@@ -115,21 +118,20 @@ def require_login() -> str:
 
 
 def _render_sidebar_status(username: str) -> None:
-    # Compact one-row layout: username on the left at a presence-level size
-    # that balances the gold Sign-out button on the right. No divider — the
-    # next sidebar section (📁 Uploads) has its own bold header which
-    # provides visual separation.
+    # Compact one-row layout: username chip on the left (cockpit terminal
+    # styling — graphite panel, teal mono text) balancing the Sign-out button
+    # on the right. No divider — the next sidebar section (Intake) has its own
+    # section header which provides visual separation.
     with st.sidebar:
         c_user, c_btn = st.columns([3, 2], vertical_alignment="center")
         c_user.markdown(
             f"""
-            <div style="display:flex; align-items:center; gap:0.55rem;
-                        line-height:1.2;">
-                <span style="font-size:1.7rem; opacity:0.85;">👤</span>
-                <code style="background:#16294D; padding:0.32rem 0.7rem;
-                             border-radius:6px; font-size:1.05rem;
-                             color:#9fcc9f; font-weight:500;
-                             letter-spacing:0.02em;">{username}</code>
+            <div style="display:flex; align-items:center; line-height:1.2;">
+                <code style="background:#1A2027; border:1px solid #2C3540;
+                             padding:0.32rem 0.7rem;
+                             border-radius:6px; font-size:0.95rem;
+                             color:#5DCAA5; font-weight:500;
+                             letter-spacing:0.04em;">▸ {username}</code>
             </div>
             """,
             unsafe_allow_html=True,

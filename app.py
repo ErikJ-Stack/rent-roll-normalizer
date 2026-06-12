@@ -37,7 +37,7 @@ import pandas as pd
 import streamlit as st
 
 from auth import allowed_modes, require_login
-from branding import inject_brand_css
+from branding import inject_brand_css, inject_cockpit_css
 from mappings import MappingSet, load_mapping_workbook
 from normalizer import CONDENSED_COLUMNS, normalize_rent_roll
 from period_date import detect_period_date
@@ -748,8 +748,10 @@ st.set_page_config(
 # require_login() calls st.stop() before we reach this line when unauthenticated.
 username = require_login()
 
-# Now authenticated — apply brand styling for the post-login navy app.
+# Now authenticated — apply brand styling, then layer the cockpit terminal
+# theme on top (2026-06-12 UI redesign — graphite/teal, monospace chrome).
 inject_brand_css()
+inject_cockpit_css()
 
 # ---------------------------------------------------------------------------
 # Loading overlay slot (Track 5 v0.1.8 — shared by ALF + MF)
@@ -855,8 +857,8 @@ else:
         "Property type",
         options=_modes,
         format_func=lambda m: {
-            "ALF": "🏥 Senior Housing (ALF)",
-            "MF": "🏢 Multifamily (MF)",
+            "ALF": "ALF // senior housing",
+            "MF": "MF // multifamily",
         }.get(m, m),
         horizontal=True,
         key="app_mode",
@@ -872,43 +874,9 @@ if app_mode == "MF":
 
 # --- ALF mode (default): the existing pipeline runs below, unchanged. ---
 
-# Title row with version badge on the right.
-title_col, version_col = st.columns([5, 1])
-with title_col:
-    st.title("Underwriting Intake")
-with version_col:
-    st.markdown(
-        f"""
-        <div style="text-align: right; padding-top: 1.2rem;">
-            <span style="
-                display: inline-block;
-                padding: 4px 12px;
-                background-color: #16294D;
-                color: #BE8F3F;
-                border: 1px solid #BE8F3F;
-                border-radius: 12px;
-                font-family: 'Calibri', sans-serif;
-                font-size: 13px;
-                font-weight: 600;
-                letter-spacing: 0.3px;
-            ">RR v{RR_VERSION} · T12 v{T12_VERSION} · Analyzer v{ANALYZER_SUBSTRATE_VERSION}</span>
-            <div style="
-                color: #C9CEDB;
-                font-size: 11px;
-                margin-top: 4px;
-                font-family: 'Calibri', sans-serif;
-            ">RR updated {RR_LAST_UPDATED} · T12 updated {T12_LAST_UPDATED} · Analyzer updated {ANALYZER_LAST_UPDATED}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-st.caption(
-    "Upload a senior-housing rent roll. The app detects the header, parses "
-    "the parent-apartment / child-bed structure, normalizes to one-row-per-bed, "
-    "and produces a 6-tab Excel workbook. Optionally upload a raw T12 to "
-    "receive a populated Analyzer with both data sets baked in."
-)
+# Cockpit command bar (replaces the old title row + version badge + caption).
+# Rendered AFTER the sidebar block below, where the upload widgets' state is
+# known — the bar's status chips reflect which intake files are loaded.
 
 
 # ---------------------------------------------------------------------------
@@ -931,7 +899,7 @@ def _parse_currency(raw: str) -> int:
 
 
 with st.sidebar:
-    st.markdown("##### 📁 Uploads")
+    st.markdown("##### Intake")
 
     rr_file = st.file_uploader(
         "Rent Roll (.xlsx / .xlsm / .xls) — required",
@@ -1038,7 +1006,7 @@ with st.sidebar:
         ),
     )
 
-    st.markdown("##### 💵 Underwriting")
+    st.markdown("##### Underwriting")
 
     # Auto-format-on-blur pattern: the on_change callback fires when the user
     # presses Enter or tabs away, parses whatever they typed, and writes the
@@ -1086,7 +1054,7 @@ with st.sidebar:
     if care_type_default.startswith("("):
         care_type_default = ""
 
-    with st.expander("⚙️ Advanced"):
+    with st.expander("Advanced"):
         sheet_override = st.text_input(
             "RR sheet name (auto if blank)",
             value="",
@@ -1132,9 +1100,43 @@ with st.sidebar:
     )
 
 # ---------------------------------------------------------------------------
+# Cockpit command bar — deal readout + intake status chips + version chrome
+# ---------------------------------------------------------------------------
+_deal_name = (
+    derive_property_name(getattr(rr_file, "name", "")) if rr_file is not None else ""
+)
+_deal_label = (
+    f"{_deal_name or 'DEAL'} · {period_date_input.strftime('%b %Y').upper()}"
+    if rr_file is not None
+    else "NO DEAL LOADED — drop a rent roll in the intake rail"
+)
+
+
+def _ck_chip(label: str, on: bool) -> str:
+    cls = "ok" if on else "off"
+    mark = "✓" if on else "—"
+    return f'<span class="ck-chip {cls}">{label} {mark}</span>'
+
+
+st.markdown(
+    f"""
+    <div class="ck-bar">
+        <span class="ck-brand">UW//DECK</span>
+        <span class="ck-deal">{_deal_label}</span>
+        {_ck_chip("RR", rr_file is not None)}
+        {_ck_chip("T12", raw_t12_file is not None)}
+        {_ck_chip("AR", ar_file is not None)}
+        <span class="ck-chip ok">{uw_template_scenario.replace("_", " ").upper()}</span>
+        <span class="ck-ver">RR {RR_VERSION} · T12 {T12_VERSION} · SUB {ANALYZER_SUBSTRATE_VERSION} · UWT {UWT_VERSION}</span>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+# ---------------------------------------------------------------------------
 # Top-level switch tabs — Dashboard (clean slate) vs Workspace (everything else)
 # ---------------------------------------------------------------------------
-top_tab_dashboard, top_tab_workspace = st.tabs(["📊 Dashboard", "🛠️ Workspace"])
+top_tab_dashboard, top_tab_workspace = st.tabs(["Dashboard", "Workspace"])
 
 with top_tab_workspace:
 
@@ -1243,7 +1245,7 @@ with top_tab_workspace:
 
                 **Dashboard tab** *(Track 5, T5 v0.1.10)*
 
-                Switch to the **📊 Dashboard** tab above for a mobile-
+                Switch to the **Dashboard** tab above for a mobile-
                 friendly view of the same headline KPIs the downloaded
                 Analyzer surfaces in its `Dashboard` sheet — occupancy,
                 EBITDARM margin, going-in cap, RevPOR, payer mix, care-
@@ -1944,10 +1946,10 @@ with top_tab_workspace:
 # ---------------------------------------------------------------------------
 with top_tab_dashboard:
     if rr_file is None:
-        st.info("👈 Upload a Rent Roll in the **Workspace** tab to populate the dashboard.")
+        st.info("Upload a Rent Roll in the intake rail to populate the dashboard.")
     elif t12_parse_result is None:
         st.info(
-            "📊 Rent Roll is parsed — upload a T12 in the **Workspace** tab "
+            "Rent Roll is parsed — upload a T12 in the intake rail "
             "to populate the financial metrics on the dashboard."
         )
     else:

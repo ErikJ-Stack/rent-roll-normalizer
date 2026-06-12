@@ -1,7 +1,10 @@
 [theme]
-# Pingkas Capital brand palette (see Pingkas_Capital_PDF.pdf / COSMETIC-CHANGES.md).
+# Cockpit terminal palette (2026-06-12 UI redesign — see COSMETIC-CHANGES.md).
+# Graphite canvas + teal accent; the white landing/login page overrides via
+# branding.inject_landing_css(), and branding.inject_cockpit_css() layers the
+# full terminal styling on top of these base tokens.
 base = "dark"
-primaryColor = "#BE8F3F"            # gold  — buttons, widgets, accents
-backgroundColor = "#0E1D41"         # navy  — main canvas
-secondaryBackgroundColor = "#16294D" # lighter navy — sidebar, widget fills
-textColor = "#FFFFFF"               # white — body text
+primaryColor = "#5DCAA5"             # teal — widgets, accents, focus rings
+backgroundColor = "#101418"          # graphite — main canvas
+secondaryBackgroundColor = "#1A2027" # panel graphite — sidebar, widget fills
+textColor = "#E6EDF5"                # near-white — body text
