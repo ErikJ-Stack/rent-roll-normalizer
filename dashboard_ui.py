@@ -91,17 +91,16 @@ def _render_headline(m: DashboardModel) -> None:
             gap: 0.6rem;
             margin: 0.5rem 0 1rem;
         }}
+        /* Colors (bg / border / text) live in branding.inject_cockpit_css()
+           so they follow the light/dark toggle — only layout here. */
         .t5-headline-eyebrow {{
             grid-column: 1 / -1;
             font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace;
             font-size: 0.66rem;
             letter-spacing: 0.18em;
-            color: #5E6B7A;
             font-weight: 600;
         }}
         .t5-tile {{
-            background: #1A2027;
-            border: 1px solid #232A33;
             border-radius: 8px;
             padding: 0.6rem 0.8rem;
             min-width: 0;
@@ -111,7 +110,6 @@ def _render_headline(m: DashboardModel) -> None:
             font-size: 0.66rem;
             text-transform: uppercase;
             letter-spacing: 0.08em;
-            color: #5E6B7A;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -121,7 +119,6 @@ def _render_headline(m: DashboardModel) -> None:
             font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace;
             font-size: 1.45rem;
             font-weight: 600;
-            color: #E6EDF5;
             line-height: 1.15;
             white-space: nowrap;
             overflow: hidden;

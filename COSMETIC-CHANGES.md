@@ -39,6 +39,38 @@ The inset clip (`19.0, 100.1, 297.8, 378.9`) sits just inside the navy backgroun
 
 ## Changes
 
+### 2026-06-12 — Light/dark cockpit toggle in the top control row
+
+The cockpit now has a light variant, toggled by a **Light** switch beside the
+property-type selector. The toggle drives two layers at once: (1) the cockpit
+CSS — `inject_cockpit_css(light=...)` carries a full light token set (paper
+canvas `#F2F4F6`, white panels, deep-teal accent `#0E8A63`, darkened
+amber/red statuses) alongside the dark graphite set; (2) Streamlit's NATIVE
+theme via `streamlit.config.set_option` so canvas-rendered surfaces
+(st.dataframe grids, Altair charts, widget internals) follow the flip — not
+just the custom chrome. The loading overlay stays dark in both modes (it
+dims the whole screen); the login page stays dark (pre-auth, no toggle).
+
+- `app.py`: `_set_native_theme()` + `_on_theme_toggle()`; the toggle's
+  `on_change` callback flips the native theme BEFORE the rerun's script
+  executes, so the new theme rides the next NewSession message. (First
+  attempt used an early `st.rerun()` — that reruns before the toggle widget
+  is re-instantiated, so Streamlit garbage-collects its pending state and
+  the switch snaps back. Documented in the docstring.) Native-theme call is
+  wrapped so a future API change degrades to CSS-only theming. Config is
+  process-wide, not per-session — acceptable for single-operator usage.
+- `branding.py`: `inject_cockpit_css(light: bool = False)` — token sets
+  selected per variant; component color tokens (.ck-bar/.ck-chip/.ck-ledger/
+  .ck-flag/.ck-user/.t5-tile) all live here now.
+- `dashboard_ui.py`: headline-tile styles reduced to layout-only — colors
+  moved to branding so tiles follow the toggle.
+- `auth.py`: sidebar user chip switched from inline hex styles to the themed
+  `.ck-user` class.
+- Verified via `streamlit.testing.v1.AppTest` (server-side widget
+  simulation): toggle ON → session state True, theme.base=light,
+  light CSS injected; toggle OFF → clean revert; zero exceptions. All 27
+  dashboard regression tests green.
+
 ### 2026-06-12 — Cockpit login page (terminal access panel)
 
 Follow-up to the cockpit redesign below: the white landing/login page is

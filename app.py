@@ -750,8 +750,63 @@ username = require_login()
 
 # Now authenticated — apply brand styling, then layer the cockpit terminal
 # theme on top (2026-06-12 UI redesign — graphite/teal, monospace chrome).
+# The Light toggle (rendered in the top control row below) drives both the
+# cockpit CSS variant and Streamlit's NATIVE theme — the latter so canvas-
+# rendered surfaces (st.dataframe grids, Altair charts, widget internals)
+# follow the flip, not just the custom chrome.
+
+
+def _set_native_theme(light: bool) -> None:
+    """Flip Streamlit's native theme to match the cockpit variant.
+
+    Uses the semi-private ``streamlit.config`` set_option — wrapped so a
+    future API change degrades gracefully to CSS-only theming (custom chrome
+    still flips; native widgets keep the server default). Called from the
+    Light toggle's on_change callback: callbacks run BEFORE the rerun's
+    script executes, so the new theme rides the very next NewSession message
+    — no explicit st.rerun() needed. (An early st.rerun() is also actively
+    harmful here: rerunning before the toggle widget is re-instantiated
+    makes Streamlit garbage-collect its pending state, snapping it back.)
+    NOTE: config is process-wide, not per-session — fine for this app's
+    single-operator usage; a second concurrent user would inherit the same
+    base theme on their next rerun.
+    """
+    desired = "light" if light else "dark"
+    tokens = {
+        "light": {
+            "backgroundColor": "#F2F4F6",
+            "secondaryBackgroundColor": "#FFFFFF",
+            "textColor": "#18202A",
+            "primaryColor": "#0E8A63",
+        },
+        "dark": {
+            "backgroundColor": "#101418",
+            "secondaryBackgroundColor": "#1A2027",
+            "textColor": "#E6EDF5",
+            "primaryColor": "#5DCAA5",
+        },
+    }[desired]
+    try:
+        from streamlit import config as _st_config
+
+        if _st_config.get_option("theme.base") != desired:
+            _st_config.set_option("theme.base", desired)
+            for _k, _v in tokens.items():
+                _st_config.set_option(f"theme.{_k}", _v)
+    except Exception:
+        pass  # degrade to CSS-only theming
+
+
+def _on_theme_toggle() -> None:
+    _set_native_theme(bool(st.session_state.get("ck_light_mode", False)))
+
+
+_ck_light = bool(st.session_state.get("ck_light_mode", False))
+# Re-assert on every run too — covers a fresh session joining a process whose
+# global theme was left in the other mode by a previous toggle.
+_set_native_theme(_ck_light)
 inject_brand_css()
-inject_cockpit_css()
+inject_cockpit_css(light=_ck_light)
 
 # ---------------------------------------------------------------------------
 # Loading overlay slot (Track 5 v0.1.8 — shared by ALF + MF)
@@ -850,23 +905,35 @@ class _PipelineProgress:
 # change. The selected mode routes the whole pipeline; MF renders a placeholder
 # and stops before the ALF pipeline runs.
 _modes = allowed_modes(username)
+# Top control row: mode selector on the left, light/dark toggle on the right.
+# The toggle's state is read ABOVE (before CSS injection) via session_state;
+# flipping it reruns the script, which re-injects the matching theme.
+_mode_col, _theme_col = st.columns([5, 1], vertical_alignment="center")
+with _theme_col:
+    st.toggle(
+        "Light",
+        key="ck_light_mode",
+        on_change=_on_theme_toggle,
+        help="Switch the cockpit between the dark terminal and light paper themes.",
+    )
 if len(_modes) == 1:
     app_mode = _modes[0]
 else:
-    app_mode = st.radio(
-        "Property type",
-        options=_modes,
-        format_func=lambda m: {
-            "ALF": "ALF // senior housing",
-            "MF": "MF // multifamily",
-        }.get(m, m),
-        horizontal=True,
-        key="app_mode",
-        help=(
-            "Switch between the senior-housing (ALF) normalizer and the "
-            "multifamily (MF) intake pipeline."
-        ),
-    )
+    with _mode_col:
+        app_mode = st.radio(
+            "Property type",
+            options=_modes,
+            format_func=lambda m: {
+                "ALF": "ALF // senior housing",
+                "MF": "MF // multifamily",
+            }.get(m, m),
+            horizontal=True,
+            key="app_mode",
+            help=(
+                "Switch between the senior-housing (ALF) normalizer and the "
+                "multifamily (MF) intake pipeline."
+            ),
+        )
 
 if app_mode == "MF":
     _render_mf_intake()

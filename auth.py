@@ -127,11 +127,7 @@ def _render_sidebar_status(username: str) -> None:
         c_user.markdown(
             f"""
             <div style="display:flex; align-items:center; line-height:1.2;">
-                <code style="background:#1A2027; border:1px solid #2C3540;
-                             padding:0.32rem 0.7rem;
-                             border-radius:6px; font-size:0.95rem;
-                             color:#5DCAA5; font-weight:500;
-                             letter-spacing:0.04em;">▸ {username}</code>
+                <code class="ck-user">▸ {username}</code>
             </div>
             """,
             unsafe_allow_html=True,

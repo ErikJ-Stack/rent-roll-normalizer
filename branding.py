@@ -443,13 +443,39 @@ def inject_brand_css() -> None:
     )
 
 
-def inject_cockpit_css() -> None:
+def inject_cockpit_css(light: bool = False) -> None:
     """Cockpit terminal theme (2026-06-12 UI redesign) — layered AFTER
-    inject_brand_css() so its rules win. Graphite surfaces, teal accent,
-    monospace data chrome. Also restyles the shared loading overlay and
-    defines the command-bar (.ck-bar), status-chip (.ck-chip), live-ledger
-    (.ck-ledger), and risk-flag (.ck-flag) component classes used by app.py
-    and dashboard_ui.py."""
+    inject_brand_css() so its rules win. Dark variant: graphite surfaces,
+    teal accent, monospace data chrome. ``light=True`` swaps to the
+    light-cockpit token set (paper canvas, white panels, deep-teal accent)
+    with identical layout chrome — driven by the Light toggle in app.py's
+    top control row. The shared loading overlay stays dark in both modes
+    (it dims the whole screen). Defines the command-bar (.ck-bar),
+    status-chip (.ck-chip), live-ledger (.ck-ledger), risk-flag (.ck-flag),
+    user-chip (.ck-user) and headline-tile (.t5-tile) component classes
+    used by app.py, auth.py and dashboard_ui.py — color tokens for those
+    live HERE (both variants), layout lives at the call sites."""
+    if light:
+        bg, rail, panel = "#F2F4F6", "#FFFFFF", "#FFFFFF"
+        border, border2 = "#DCE2E8", "#C9D2DA"
+        text, muted, dim, faint = "#18202A", "#45515C", "#66727E", "#9AA4AE"
+        acc, acc_on, acc_hov = "#0E8A63", "#FFFFFF", "#0B6E50"
+        ok_title = "#0E8A63"
+        amber, amber_title = "#B98208", "#8A5E05"
+        red, red_title = "#C8423B", "#B3362F"
+        chip_ok_bg, chip_ok_bd = "rgba(14, 138, 99, 0.08)", "rgba(14, 138, 99, 0.45)"
+        chip_warn_bg, chip_warn_bd = "rgba(185, 130, 8, 0.10)", "rgba(185, 130, 8, 0.45)"
+    else:
+        bg, rail, panel = CK_BG, CK_RAIL, CK_PANEL
+        border, border2 = CK_BORDER, CK_BORDER_2
+        text, muted, dim, faint = CK_TEXT, CK_MUTED, CK_DIM, CK_FAINT
+        acc, acc_on, acc_hov = CK_TEAL, CK_TEAL_DK, CK_TEAL_LT
+        ok_title = CK_TEAL_LT
+        amber, amber_title = CK_AMBER, CK_AMBER_LT
+        red, red_title = CK_RED, CK_RED_LT
+        chip_ok_bg, chip_ok_bd = "rgba(93, 202, 165, 0.08)", "rgba(93, 202, 165, 0.45)"
+        chip_warn_bg, chip_warn_bd = "rgba(239, 159, 39, 0.08)", "rgba(239, 159, 39, 0.45)"
+
     st.markdown(
         f"""
         <style>
@@ -457,9 +483,13 @@ def inject_cockpit_css() -> None:
 
         /* ── Canvas ─────────────────────────────────────────────────── */
         .stApp, [data-testid="stAppViewContainer"] {{
-            background: {CK_BG} !important;
+            background: {bg} !important;
         }}
-        [data-testid="stHeader"] {{ background: {CK_BG} !important; }}
+        [data-testid="stHeader"] {{ background: {bg} !important; }}
+        [data-testid="stSidebar"] {{
+            background: {rail} !important;
+            border-right: 1px solid {border};
+        }}
 
         /* Clear Streamlit's floating header. inject_brand_css() pulls the
            main container up to 1.2rem (right for the old big-title layout),
@@ -468,22 +498,18 @@ def inject_cockpit_css() -> None:
         .block-container, [data-testid="stMainBlockContainer"] {{
             padding-top: 3.6rem !important;
         }}
-        [data-testid="stSidebar"] {{
-            background: {CK_RAIL} !important;
-            border-right: 1px solid {CK_BORDER};
-        }}
 
         /* ── Typography — terminal headings ─────────────────────────── */
         h1 {{
             font-family: {CK_MONO} !important;
-            color: {CK_TEXT} !important;
+            color: {text} !important;
             font-size: 1.3rem !important;
             letter-spacing: 0.04em;
             font-weight: 600 !important;
         }}
         h2, h3 {{
             font-family: {CK_MONO} !important;
-            color: {CK_DIM} !important;
+            color: {dim} !important;
             font-size: 0.78rem !important;
             text-transform: uppercase;
             letter-spacing: 0.16em;
@@ -491,18 +517,18 @@ def inject_cockpit_css() -> None:
         }}
         h5 {{
             font-family: {CK_MONO} !important;
-            color: {CK_DIM} !important;
+            color: {dim} !important;
             font-size: 0.72rem !important;
             text-transform: uppercase;
             letter-spacing: 0.14em;
             font-weight: 600 !important;
         }}
-        a, a:visited {{ color: {CK_TEAL} !important; }}
+        a, a:visited {{ color: {acc} !important; }}
 
         /* ── Metric tiles ────────────────────────────────────────────── */
         [data-testid="stMetric"] {{
-            background: {CK_PANEL};
-            border: 1px solid {CK_BORDER};
+            background: {panel};
+            border: 1px solid {border};
             border-radius: 8px;
             padding: 10px 14px;
         }}
@@ -511,60 +537,60 @@ def inject_cockpit_css() -> None:
             font-size: 0.68rem !important;
             text-transform: uppercase;
             letter-spacing: 0.1em;
-            color: {CK_DIM} !important;
+            color: {dim} !important;
         }}
         [data-testid="stMetricValue"] {{
             font-family: {CK_MONO} !important;
-            color: {CK_TEXT} !important;
+            color: {text} !important;
         }}
 
         /* ── Tabs — terminal rail ───────────────────────────────────── */
         .stTabs [data-baseweb="tab-list"] {{
             gap: 4px;
-            border-bottom: 1px solid {CK_BORDER};
+            border-bottom: 1px solid {border};
         }}
         .stTabs [data-baseweb="tab"] {{
             font-family: {CK_MONO};
             font-size: 0.78rem;
             text-transform: uppercase;
             letter-spacing: 0.1em;
-            color: {CK_DIM};
+            color: {dim};
         }}
-        .stTabs [aria-selected="true"] {{ color: {CK_TEAL} !important; }}
-        .stTabs [data-baseweb="tab-highlight"] {{ background-color: {CK_TEAL} !important; }}
+        .stTabs [aria-selected="true"] {{ color: {acc} !important; }}
+        .stTabs [data-baseweb="tab-highlight"] {{ background-color: {acc} !important; }}
 
         /* ── Buttons ────────────────────────────────────────────────── */
         .stButton > button, .stFormSubmitButton > button {{
-            background-color: {CK_PANEL};
-            color: {CK_MUTED};
-            border: 1px solid {CK_BORDER_2};
+            background-color: {panel};
+            color: {muted};
+            border: 1px solid {border2};
             font-family: {CK_MONO};
             font-weight: 600;
             letter-spacing: 0.04em;
         }}
         .stButton > button:hover, .stFormSubmitButton > button:hover {{
-            background-color: {CK_PANEL};
-            color: {CK_TEAL};
-            border: 1px solid {CK_TEAL};
+            background-color: {panel};
+            color: {acc};
+            border: 1px solid {acc};
         }}
         .stDownloadButton > button {{
-            background-color: {CK_TEAL};
-            color: {CK_TEAL_DK};
-            border: 1px solid {CK_TEAL};
+            background-color: {acc};
+            color: {acc_on};
+            border: 1px solid {acc};
             font-family: {CK_MONO};
             font-weight: 700;
             letter-spacing: 0.05em;
         }}
         .stDownloadButton > button:hover {{
-            background-color: {CK_TEAL_LT};
-            color: {CK_TEAL_DK};
-            border: 1px solid {CK_TEAL_LT};
+            background-color: {acc_hov};
+            color: {acc_on};
+            border: 1px solid {acc_hov};
         }}
 
         /* ── Inputs / uploaders / expanders ─────────────────────────── */
         [data-testid="stFileUploader"] section[data-testid="stFileUploaderDropzone"] {{
-            background: {CK_PANEL} !important;
-            border: 1px dashed {CK_BORDER_2} !important;
+            background: {panel} !important;
+            border: 1px dashed {border2} !important;
         }}
         [data-testid="stTextInput"] input,
         [data-testid="stDateInput"] input,
@@ -572,22 +598,22 @@ def inject_cockpit_css() -> None:
             font-family: {CK_MONO};
         }}
         [data-testid="stExpander"] details {{
-            background: {CK_RAIL};
-            border: 1px solid {CK_BORDER} !important;
+            background: {rail};
+            border: 1px solid {border} !important;
             border-radius: 8px;
         }}
-        hr {{ border-color: {CK_BORDER} !important; }}
+        hr {{ border-color: {border} !important; }}
 
-        /* ── Loading overlay — re-skin brand navy/gold → graphite/teal ─ */
+        /* ── Loading overlay — always dark (it dims the screen) ─────── */
         .t5-overlay {{ background: rgba(13, 17, 21, 0.88); }}
         .t5-overlay-ring {{
-            border-top-color: {CK_TEAL};
+            border-top-color: #5DCAA5;
             box-shadow: 0 0 24px rgba(93, 202, 165, 0.25);
         }}
         .t5-overlay-label {{ font-family: {CK_MONO}; font-size: 1.05rem; }}
-        .t5-overlay-pct {{ color: {CK_TEAL}; font-family: {CK_MONO}; }}
+        .t5-overlay-pct {{ color: #5DCAA5; font-family: {CK_MONO}; }}
         .t5-overlay-bar-fill {{
-            background: {CK_TEAL};
+            background: #5DCAA5;
             box-shadow: 0 0 12px rgba(93, 202, 165, 0.5);
         }}
 
@@ -597,21 +623,21 @@ def inject_cockpit_css() -> None:
             align-items: center;
             gap: 12px;
             flex-wrap: wrap;
-            background: {CK_RAIL};
-            border: 1px solid {CK_BORDER};
+            background: {rail};
+            border: 1px solid {border};
             border-radius: 10px;
             padding: 10px 16px;
             margin: 0 0 12px;
             font-family: {CK_MONO};
         }}
         .ck-brand {{
-            color: {CK_TEAL};
+            color: {acc};
             font-weight: 700;
             font-size: 0.85rem;
             letter-spacing: 0.08em;
         }}
         .ck-deal {{
-            color: {CK_TEXT};
+            color: {text};
             font-size: 0.82rem;
             letter-spacing: 0.05em;
             flex: 0 1 auto;
@@ -625,26 +651,39 @@ def inject_cockpit_css() -> None:
             letter-spacing: 0.06em;
             padding: 3px 10px;
             border-radius: 6px;
-            border: 1px solid {CK_BORDER_2};
+            border: 1px solid {border2};
             white-space: nowrap;
         }}
         .ck-chip.ok {{
-            color: {CK_TEAL};
-            border-color: rgba(93, 202, 165, 0.45);
-            background: rgba(93, 202, 165, 0.08);
+            color: {acc};
+            border-color: {chip_ok_bd};
+            background: {chip_ok_bg};
         }}
         .ck-chip.warn {{
-            color: {CK_AMBER};
-            border-color: rgba(239, 159, 39, 0.45);
-            background: rgba(239, 159, 39, 0.08);
+            color: {amber};
+            border-color: {chip_warn_bd};
+            background: {chip_warn_bg};
         }}
-        .ck-chip.off {{ color: {CK_DIM}; }}
+        .ck-chip.off {{ color: {dim}; }}
         .ck-ver {{
             margin-left: auto;
-            color: {CK_FAINT};
+            color: {faint};
             font-size: 0.66rem;
             letter-spacing: 0.05em;
             text-align: right;
+        }}
+
+        /* ── User chip (sidebar auth status) ────────────────────────── */
+        .ck-user {{
+            background: {panel};
+            border: 1px solid {border2};
+            padding: 0.32rem 0.7rem;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            color: {acc};
+            font-weight: 500;
+            letter-spacing: 0.04em;
+            font-family: {CK_MONO};
         }}
 
         /* ── Live ledger ────────────────────────────────────────────── */
@@ -655,16 +694,16 @@ def inject_cockpit_css() -> None:
             font-size: 0.85rem;
         }}
         .ck-ledger td {{ padding: 5px 0; }}
-        .ck-ledger .lbl {{ color: {CK_MUTED}; }}
-        .ck-ledger .val {{ color: {CK_TEXT}; text-align: right; }}
-        .ck-ledger .pct {{ color: {CK_DIM}; text-align: right; width: 84px; }}
-        .ck-ledger tr.total td {{ border-top: 1px solid {CK_BORDER}; }}
-        .ck-ledger tr.total .lbl {{ color: {CK_TEXT}; }}
-        .ck-ledger .neg {{ color: {CK_RED_LT}; }}
-        .ck-ledger .pos {{ color: {CK_TEAL}; font-weight: 600; }}
+        .ck-ledger .lbl {{ color: {muted}; }}
+        .ck-ledger .val {{ color: {text}; text-align: right; }}
+        .ck-ledger .pct {{ color: {dim}; text-align: right; width: 84px; }}
+        .ck-ledger tr.total td {{ border-top: 1px solid {border}; }}
+        .ck-ledger tr.total .lbl {{ color: {text}; }}
+        .ck-ledger .neg {{ color: {red_title}; }}
+        .ck-ledger .pos {{ color: {acc}; font-weight: 600; }}
         .ck-panel {{
-            background: {CK_PANEL};
-            border: 1px solid {CK_BORDER};
+            background: {panel};
+            border: 1px solid {border};
             border-radius: 10px;
             padding: 14px 16px;
         }}
@@ -673,26 +712,35 @@ def inject_cockpit_css() -> None:
             font-size: 0.66rem;
             text-transform: uppercase;
             letter-spacing: 0.16em;
-            color: {CK_DIM};
+            color: {dim};
             margin: 0 0 8px;
         }}
 
         /* ── Risk flag cards ────────────────────────────────────────── */
         .ck-flag {{
-            background: {CK_PANEL};
-            border-left: 3px solid {CK_FAINT};
+            background: {panel};
+            border-left: 3px solid {faint};
             padding: 8px 12px;
             margin-bottom: 8px;
             font-family: {CK_MONO};
         }}
-        .ck-flag .t {{ font-size: 0.78rem; font-weight: 600; color: {CK_MUTED}; }}
-        .ck-flag .d {{ font-size: 0.7rem; color: {CK_DIM}; margin-top: 2px; }}
-        .ck-flag.ok   {{ border-left-color: {CK_TEAL}; }}
-        .ck-flag.ok .t   {{ color: {CK_TEAL_LT}; }}
-        .ck-flag.warn {{ border-left-color: {CK_AMBER}; }}
-        .ck-flag.warn .t {{ color: {CK_AMBER_LT}; }}
-        .ck-flag.bad  {{ border-left-color: {CK_RED}; }}
-        .ck-flag.bad .t  {{ color: {CK_RED_LT}; }}
+        .ck-flag .t {{ font-size: 0.78rem; font-weight: 600; color: {muted}; }}
+        .ck-flag .d {{ font-size: 0.7rem; color: {dim}; margin-top: 2px; }}
+        .ck-flag.ok   {{ border-left-color: {acc}; }}
+        .ck-flag.ok .t   {{ color: {ok_title}; }}
+        .ck-flag.warn {{ border-left-color: {amber}; }}
+        .ck-flag.warn .t {{ color: {amber_title}; }}
+        .ck-flag.bad  {{ border-left-color: {red}; }}
+        .ck-flag.bad .t  {{ color: {red_title}; }}
+
+        /* ── Dashboard headline tiles (layout lives in dashboard_ui) ── */
+        .t5-headline-eyebrow {{ color: {dim}; }}
+        .t5-tile {{
+            background: {panel};
+            border: 1px solid {border};
+        }}
+        .t5-tile-label {{ color: {dim}; }}
+        .t5-tile-value {{ color: {text}; }}
         </style>
         """,
         unsafe_allow_html=True,
