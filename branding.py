@@ -460,6 +460,14 @@ def inject_cockpit_css() -> None:
             background: {CK_BG} !important;
         }}
         [data-testid="stHeader"] {{ background: {CK_BG} !important; }}
+
+        /* Clear Streamlit's floating header. inject_brand_css() pulls the
+           main container up to 1.2rem (right for the old big-title layout),
+           but the cockpit's first element is the compact mode selector —
+           at 1.2rem it slides under the header toolbar and gets clipped. */
+        .block-container, [data-testid="stMainBlockContainer"] {{
+            padding-top: 3.6rem !important;
+        }}
         [data-testid="stSidebar"] {{
             background: {CK_RAIL} !important;
             border-right: 1px solid {CK_BORDER};
@@ -606,6 +614,11 @@ def inject_cockpit_css() -> None:
             color: {CK_TEXT};
             font-size: 0.82rem;
             letter-spacing: 0.05em;
+            flex: 0 1 auto;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }}
         .ck-chip {{
             font-size: 0.68rem;
