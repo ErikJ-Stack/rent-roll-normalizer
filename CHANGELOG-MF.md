@@ -7,6 +7,54 @@ and the `mf_` naming convention.
 
 ---
 
+## MF v0.6.0 — 2026-06-12 — MF Dashboard: institutional first-look screen
+
+**Operator goal**: "Add a MF Dashboard. Pull from institutional underwriters
+to see what they typically want to see upfront when underwriting a deal."
+
+New module **`mf_dashboard.py`** (`compute_mf_dashboard(rr, t12, *,
+purchase_price, …) → MFDashboardModel` + `render_mf_dashboard(model)`) — the
+MF counterpart of Track 5's webapp dashboard, rendered as the first tab of MF
+mode (tabs now mirror ALF: **Dashboard | Workspace**). Metric set follows the
+institutional screening canon — T-12 NOI as the in-place truth, T-3
+annualized revenue for trajectory, economic vs physical occupancy,
+loss-to-lease, per-unit expense loads:
+
+- **Headline strip**: units · physical occ · economic occ · in-place rent/mo ·
+  T-12 NOI · NOI margin · going-in cap · price/unit.
+- **Income waterfall ledger** (cockpit `.ck-ledger`): GPR → loss-to-lease →
+  vacancy → concessions → bad debt → employee/down units → net rental →
+  other income → EGI → OpEx → NOI, with % of GPR / % of EGI columns.
+- **T-3 vs T-12 trajectory**: trailing-3 annualized revenue vs the full
+  trailing-12 (acceleration / rollover read).
+- **Unit mix & rents** (count / avg SF / market vs in-place / $/SF / LTL%) and
+  **OpEx table** in $/unit/yr + % of EGI.
+- **Monthly revenue trend** (12-bar chart).
+- **Valuation at the ask** (new optional MF Purchase price input, mirrors the
+  ALF one): going-in cap, price/unit, price/SF, GRM.
+- **Risk flags** (cockpit `.ck-flag` cards): occupancy thresholds (90%/85%),
+  economic-vs-physical drag >5%, LTL >8% (or rents ABOVE market), concessions
+  >2% GPR, bad debt >1%/2%, opex ratio too high (>55%) **and too low (<32% —
+  the understated-books tell)**, management fee <2.5% floor, RE-tax
+  reassessment reminder, T-3 divergence ±3%, delinquency (RR balances + AR
+  60+), NOI-ties-to-statement check.
+
+**Aggregation follows the statement SECTION** (income vs expense), matching
+`mf_t12_normalizer.computed` — utility-rebill contras in the expense section
+reduce opex rather than inflating income, so the OpEx table sums exactly to
+`computed["expense"]` and the waterfall reconciles to EGI to the penny.
+
+**Verified on Hidden Lakes** (143u): NOI ties as-reported penny-exact
+($98,969); waterfall sums to EGI ($696,770); unit mix covers all 143 units;
+the distressed fixture trips the right flags (46.2% occ bad, 18.8% bad debt
+bad, 85.8% opex warn, $167K AR 60+ warn). New regression test
+`tests/test_mf_dashboard.py` (15 checks; skips when fixtures absent).
+
+Also this release (cohesion, logged in COSMETIC-CHANGES.md): `.ck-user` chip
+height matched to the Sign-out button in the top-right control row.
+
+---
+
 ## MF v0.5.2 — 2026-06-06 — T-12: Yardi numeric-date headers + combined-acct cells (Verona at Silver Hill)
 
 A new operator deal — **Verona at Silver Hill** (Suitland, MD; 214 units; Yardi

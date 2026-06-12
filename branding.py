@@ -712,17 +712,24 @@ def inject_cockpit_css(light: bool = False) -> None:
             text-align: right;
         }}
 
-        /* ── User chip (sidebar auth status) ────────────────────────── */
+        /* ── User chip (top-right auth status) ──────────────────────── */
+        /* Sized to match Streamlit's button height (~38px) and rendered as
+           an inline-flex box so the chip and the Sign-out button sit on the
+           same optical line in the top control row. */
         .ck-user {{
             background: {panel};
             border: 1px solid {border2};
-            padding: 0.32rem 0.7rem;
+            padding: 0 0.7rem;
             border-radius: 6px;
             font-size: 0.95rem;
             color: {acc};
             font-weight: 500;
             letter-spacing: 0.04em;
             font-family: {CK_MONO};
+            height: 38.4px;
+            box-sizing: border-box;
+            display: inline-flex;
+            align-items: center;
         }}
 
         /* ── Live ledger ────────────────────────────────────────────── */

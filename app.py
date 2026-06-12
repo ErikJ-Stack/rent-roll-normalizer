@@ -60,6 +60,7 @@ from mf_normalizer import parse_mf_rr
 from mf_ar_parser import join_ar_to_units, parse_mf_ar
 from mf_om_extractor import MFOMExtractorError, parse_mf_om
 from mf_uw_model_writer import populate_mf_model
+from mf_dashboard import compute_mf_dashboard, render_mf_dashboard
 from ar_writer import AROutputError, populate_ar_collections
 from dashboard_model import compute_dashboard
 from dashboard_ui import render_dashboard
@@ -465,6 +466,22 @@ def _render_mf_t12_detail(res) -> None:
     )
 
 
+def _parse_currency(raw: str) -> int:
+    """Parse '$18,000,000' / '18000000' / '18M' → int. Returns 0 if blank/invalid."""
+    if not raw:
+        return 0
+    s = raw.replace("$", "").replace(",", "").strip().upper()
+    mult = 1
+    if s.endswith("M"):
+        s, mult = s[:-1], 1_000_000
+    elif s.endswith("K"):
+        s, mult = s[:-1], 1_000
+    try:
+        return int(float(s) * mult)
+    except ValueError:
+        return 0
+
+
 def _mf_file_token(f) -> str:
     """Stable per-upload token for cache keying. Streamlit's UploadedFile carries
     a `file_id` that persists across reruns (e.g. a download-button click) and
@@ -720,6 +737,31 @@ def _render_mf_intake() -> None:
             help="Used only for this extraction; not stored. Or add ANTHROPIC_API_KEY "
                  "to Streamlit secrets. Switch to Basic to skip.")
 
+    # ── Underwriting controls (mirrors the ALF row) ─────────────────────────
+    mo1, _mo2, _mo3 = st.columns(3)
+    with mo1:
+        if "mf_pp_input" not in st.session_state:
+            st.session_state["mf_pp_input"] = ""
+
+        def _reformat_mf_pp() -> None:
+            n = _parse_currency(st.session_state["mf_pp_input"])
+            if n > 0:
+                st.session_state["mf_pp_input"] = f"${n:,}"
+
+        st.text_input(
+            "Purchase price",
+            key="mf_pp_input",
+            on_change=_reformat_mf_pp,
+            placeholder="$20,000,000",
+            help=(
+                "Drives the Going-in cap, Price/unit, Price/SF and GRM tiles "
+                "on the MF Dashboard. Accepts `$20,000,000`, `20M`, `20000000`. "
+                "Leave blank to skip — the dashboard still renders everything "
+                "that doesn't need a price."
+            ),
+        )
+    mf_purchase_price = _parse_currency(st.session_state.get("mf_pp_input", ""))
+
     with st.expander("Advanced — override MF UW Model template"):
         model_override = st.file_uploader("MF UW Model (.xlsx)", type=["xlsx"], key="mf_model_up")
 
@@ -765,15 +807,42 @@ def _render_mf_intake() -> None:
         unsafe_allow_html=True,
     )
 
-    if res is None:
-        st.info("Upload a Rent Roll and/or a T-12 to populate the MF UW Model.")
-    else:
-        _render_mf_result(res)
+    # Top-level tabs — mirror ALF (Dashboard first, Workspace = populate flow).
+    mf_tab_dashboard, mf_tab_workspace = st.tabs(["Dashboard", "Workspace"])
 
-    st.divider()
-    st.caption(
-        "Coming next: redIQ Sortable-RR ancillary-fee breakouts (cols W–AK)."
-    )
+    with mf_tab_workspace:
+        if res is None:
+            st.info("Upload a Rent Roll and/or a T-12 to populate the MF UW Model.")
+        else:
+            _render_mf_result(res)
+
+        st.divider()
+        st.caption(
+            "Coming next: redIQ Sortable-RR ancillary-fee breakouts (cols W–AK)."
+        )
+
+    with mf_tab_dashboard:
+        _rr_ok = res is not None and res.get("rr") is not None
+        _t12_ok = res is not None and res.get("t12") is not None
+        if not (_rr_ok or _t12_ok):
+            st.info(
+                "Upload a Rent Roll and/or a T-12 in the intake panel to "
+                "populate the MF dashboard."
+            )
+        else:
+            try:
+                _mf_model = compute_mf_dashboard(
+                    res.get("rr"), res.get("t12"),
+                    purchase_price=mf_purchase_price or None,
+                    property_name=res.get("prop_name") or "MF deal",
+                    period_label=(
+                        (res.get("t12").period if _t12_ok else "")
+                        or (res.get("rr").period_hint if _rr_ok else "")
+                    ),
+                )
+                render_mf_dashboard(_mf_model)
+            except Exception as exc:  # noqa: BLE001
+                st.error(f"MF dashboard failed to render: {exc}")
 
 
 # ---------------------------------------------------------------------------
@@ -995,20 +1064,6 @@ if app_mode == "MF":
 # ---------------------------------------------------------------------------
 # Sidebar
 # ---------------------------------------------------------------------------
-def _parse_currency(raw: str) -> int:
-    """Parse '$18,000,000' / '18000000' / '18M' → int. Returns 0 if blank/invalid."""
-    if not raw:
-        return 0
-    s = raw.replace("$", "").replace(",", "").strip().upper()
-    mult = 1
-    if s.endswith("M"):
-        s, mult = s[:-1], 1_000_000
-    elif s.endswith("K"):
-        s, mult = s[:-1], 1_000
-    try:
-        return int(float(s) * mult)
-    except ValueError:
-        return 0
 
 
 # ---------------------------------------------------------------------------

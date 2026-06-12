@@ -39,6 +39,14 @@ The inset clip (`19.0, 100.1, 297.8, 378.9`) sits just inside the navy backgroun
 
 ## Changes
 
+### 2026-06-12 — Top-right user chip aligned with the Sign-out button
+
+Operator-reported: the `▸ erik` chip sat lower than the Sign out button in
+the top-right control row. `.ck-user` is now an inline-flex box sized to
+Streamlit's button height (38.4px, border-box) with vertical centering, so
+the chip and button share the same optical line. (The MF Dashboard shipped
+in the same session — that's functional, logged in CHANGELOG-MF v0.6.0.)
+
 ### 2026-06-12 — Unified ALF/MF layout: MF-style main-panel intake, no sidebar, auth top-right
 
 Operator: "I want both the ALF and MF selection and pages to be cohesive and
