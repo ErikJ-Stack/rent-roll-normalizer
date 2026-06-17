@@ -77,7 +77,7 @@ The repo runs four parallel tracks. They share an Analyzer / UW pipeline but are
 | Migration scripts | `tools/migration/migrate_to_v01N.py` (one per substrate version) |
 | Verification harness | `tools/verify_t12_v020.py` (parser-side; runs all four reference fixtures) |
 | Current code version | T12 v0.2.1 |
-| Current substrate version | v0.2.16 bundled (chain through v0.2.16; bundled forward-applied v0.2.4 → v0.2.10 → v0.2.11 → v0.2.12 → v0.2.13 → v0.2.14 → v0.2.15 → v0.2.16 — skips intermediate v0.2.5-v0.2.9 substrate features; v0.2.16 = BL-0028 Auto Expense non-labor row) |
+| Current substrate version | v0.3.0 bundled (2026-06-16, operator-authored wholesale replacement per BL-0021 — NOT a migration; UW Output +1 row (Bad debt @72), T-12 Analytics +Other Care (OTH) col @E, Description_Map 424→579 GL descriptions, UW Export +1 row. Write-target sheets layout-compatible; clean (no residual deal data). Prior chain v0.2.4→v0.2.16 retained for history) |
 | AR module code version | AR v0.1.0 (`ar_normalizer.py` + `ar_writer.py` — built against synthetic fixture, live operator sample pending) |
 
 **Module naming gotcha (updated 2026-05-15 after BL-0011 — Track 1 disambiguation now fully complete at file + function + class level).** Four modules historically shared a `t12_` prefix because the destination workbook was originally a standalone T12 intake template — the prefix meant "operates on the T12-shaped destination workbook," not "operates on T12 data." Once the bundled Analyzer flow shipped (RR v1.12.0) the prefix became misleading. The two Track 1 modules have now been renamed; the remaining `t12_*` files are the legitimate T12-data modules. All four are imported by `app.py` and serve distinct roles:
@@ -117,11 +117,11 @@ Wiring the Analyzer's `UW Output` / `UW Export` surface into the downstream **AL
 | Handoff tracker (index) | `tools/uw_template/HANDOFF_TRACKER.md` |
 | Handoff brief template | `tools/uw_template/HANDOFF_TEMPLATE.md` |
 | Per-handoff briefs | `tools/uw_template/handoffs/YYYY-MM-DD-<slug>.md` |
-| Template source file | `assets/ALF_UW_Template_v8.xlsx` (committed blank reference, binding from 2026-06-12; self-stamps "Template Version 9.0" — registry keys on the filename). v6/v5 retained at `assets/` for override; v4 at `Sample Files/` (gitignored). |
-| Current code version | UWT v0.10.0 (v8 absorbed: RR paste grid re-anchored header 213 / data 214+ — writer derives anchor from registry templates block; new derived NER col AV; registry 0.7.0, 196 concepts) |
+| Template source file | `assets/ALF_UW_Template_v11.xlsx` (committed blank reference, binding from 2026-06-16). v8/v6/v5 retained at `assets/` for override; v4 at `Sample Files/` (gitignored). |
+| Current code version | UWT v0.11.0 (v11 absorbed: RR paste grid re-anchored header 223 / data 224+ — new Section S concessions-audit block; full-band fill-downs fix the v8 >176-bed quirk; registry 0.8.0, 196 concepts. Paired with Analyzer substrate v0.3.0) |
 | Evaluator module | `uw_output_model.py` — `compute_uw_output_values()` → annual `{concept_key: value}` + `compute_uw_output_monthly()` → `{concept_key: [12 floats]}`; reuses `dashboard_model` aggregation; passed to writer as `computed_values=` / `computed_monthly=` |
 | Dynamic-array repair | `uw_template_writer._restore_dynamic_arrays(output_bytes, template_bytes)` — pure zipfile+re; restores metadata.xml + per-cell `cm` markers post-save (openpyxl quirk #6) |
-| Mapped against template | `v8` default (v6/v5/v4 still supported via `template_version=`) |
+| Mapped against template | `v11` default (v8/v6/v5/v4 still supported via `template_version=`) |
 | Mapped against substrate | v0.2.14 — unchanged; v5 didn't move the substrate, only template-side rows/cols. Deposit slot reserved at `Rent Roll Input!AI` (clear-only, no parser support yet); Preleased Date at AJ; `RR_Input_Data` widened to `$A$7:$AJ$606`. |
 | Paste paths | (1) UW Output → T-12 Analysis · (2) Rent Roll Input rows 7+ → Rent Roll Analysis rows 211+ · (3) AR & Collections → Rent Roll Analysis cols N–Q (gap_source, gated on resident-key join) |
 | Authoritative handoff doc | `Deals/Acquisition/_Template/ALF Templates/Documentation & Maps/2026-05-25-UW-OUTPUT-HANDOFF-CONTRACT.md` (external — maintained outside repo) |

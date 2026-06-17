@@ -44,10 +44,16 @@ TEMPLATE_V4 = ROOT / "Sample Files" / "ALF_UW_Template_v4.xlsx"
 # as an explicit-version regression.
 TEMPLATE_V5 = ROOT / "assets" / "ALF_UW_Template_v5.xlsx"
 TEMPLATE_V6 = ROOT / "assets" / "ALF_UW_Template_v6.xlsx"
-# v8 (operator template 2026-06-11) is the binding default as of 2026-06-12
-# (UWT v0.10.0): RR Analysis paste grid re-anchored to header 213 / data 214+,
-# new derived NER col AV; T-12 Analysis layout unchanged vs v6 rev2.
+# v8 (operator template 2026-06-11): RR Analysis paste grid re-anchored to
+# header 213 / data 214+, new derived NER col AV; T-12 Analysis layout
+# unchanged vs v6 rev2.
 TEMPLATE_V8 = ROOT / "assets" / "ALF_UW_Template_v8.xlsx"
+# v11 (operator template 2026-06-16) is the binding default as of 2026-06-16
+# (UWT v0.11.0): RR Analysis paste grid re-anchored to header 223 / data 224+
+# (new Section S concessions-audit block pushed the grid down 10 rows; full-band
+# fill-downs fix the v8 >176-bed quirk); T-12 Analysis layout unchanged vs v8.
+# Paired with the v0.3.0 bundled Analyzer.
+TEMPLATE_V11 = ROOT / "assets" / "ALF_UW_Template_v11.xlsx"
 TEMPLATE = TEMPLATE_V5  # v5 regression tests below pin template_version="v5"
 POPULATED_ANALYZER = (
     ROOT / "Sample Files"
@@ -138,13 +144,16 @@ def test_empty_analyzer_smoke() -> None:
         f"v5 unexpectedly emitted A210-blank warning: {report.warnings}",
     )
 
-    # Bundled Analyzer is empty — t12-path concepts read None from UW Output,
-    # so the writer should mostly emit no_source. A small number of concepts
-    # may write if Cover!B5 has been auto-filled (it's a formula in v0.2.8+;
-    # resolves to "" when both A3 and A10 are empty — that's _is_blank,
-    # so writer skips).
+    # Bundled Analyzer is empty (no deal data) — most t12-path concepts read
+    # None/0 from UW Output → no_source. NOTE: the v0.3.0 substrate (2026-06-16)
+    # ships UW Output formula scaffolding that caches ZEROS (SUM of empty = 0)
+    # where the old v0.2.x substrate left blanks, so a handful of concepts now
+    # "write" a harmless 0 instead of reporting no_source. The count dropped
+    # from >60 to ~45 on the v5 template — recalibrated lower bound. The
+    # meaningful guard (no real deal data leaks) holds: the written values are
+    # structural zeros (licensed/occupied beds = 0), never rents.
     no_source_count = len(by.get("no_source", []))
-    _check(no_source_count > 50, f"expected most concepts to be no_source on empty analyzer, got {no_source_count}")
+    _check(no_source_count >= 40, f"expected most concepts to be no_source on empty analyzer, got {no_source_count}")
 
     print(f"  ✓ {len(report.results)} concepts processed")
     print(f"  ✓ {summary.get('cells_written', 0)} cells written on empty Analyzer")
@@ -384,21 +393,21 @@ def test_populated_analyzer_e2e_v6() -> None:
     print(f"  ✓ Summary: {dict(report.summary)}")
 
 
-# ── test 5: v8 empty-Analyzer smoke (new default) ─────────────────────────────
+# ── test 5: v8 empty-Analyzer smoke (pinned regression) ───────────────────────
 
 def test_empty_analyzer_smoke_v8() -> None:
-    _section("test_empty_analyzer_smoke_v8 (v8 — new default)")
+    _section("test_empty_analyzer_smoke_v8 (v8 — pinned regression)")
 
     _check(BUNDLED_ANALYZER.exists(), f"missing bundled Analyzer: {BUNDLED_ANALYZER}")
     _check(TEMPLATE_V8.exists(), f"missing v8 template: {TEMPLATE_V8}")
 
     populated, report = populate_uw_template(
         BUNDLED_ANALYZER.read_bytes(), TEMPLATE_V8.read_bytes(),
-        # template_version omitted → exercises the new v8 default
+        template_version="v8",  # pinned — default is now v11
         scenario="normalized",
     )
 
-    _check(report.template_version == "v8", f"expected v8 default, got {report.template_version!r}")
+    _check(report.template_version == "v8", f"expected v8, got {report.template_version!r}")
     _check(report.summary["total_concepts"] == 196, f"expected 196 concepts, got {report.summary['total_concepts']}")
 
     wb = openpyxl.load_workbook(io.BytesIO(populated), data_only=False)
@@ -438,6 +447,7 @@ def test_populated_analyzer_e2e_v8() -> None:
 
     populated, report = populate_uw_template(
         POPULATED_ANALYZER.read_bytes(), TEMPLATE_V8.read_bytes(),
+        template_version="v8",  # pinned — default is now v11
         scenario="normalized",
     )
     _check(report.template_version == "v8", f"expected v8, got {report.template_version!r}")
@@ -485,6 +495,101 @@ def test_populated_analyzer_e2e_v8() -> None:
     print(f"  ✓ Summary: {dict(report.summary)}")
 
 
+# ── test 7: v11 empty-Analyzer smoke (new default) ────────────────────────────
+
+def test_empty_analyzer_smoke_v11() -> None:
+    _section("test_empty_analyzer_smoke_v11 (v11 — new default)")
+
+    _check(BUNDLED_ANALYZER.exists(), f"missing bundled Analyzer: {BUNDLED_ANALYZER}")
+    _check(TEMPLATE_V11.exists(), f"missing v11 template: {TEMPLATE_V11}")
+
+    populated, report = populate_uw_template(
+        BUNDLED_ANALYZER.read_bytes(), TEMPLATE_V11.read_bytes(),
+        # template_version omitted → exercises the new v11 default
+        scenario="normalized",
+    )
+
+    _check(report.template_version == "v11", f"expected v11 default, got {report.template_version!r}")
+    _check(report.summary["total_concepts"] == 196, f"expected 196 concepts, got {report.summary['total_concepts']}")
+
+    wb = openpyxl.load_workbook(io.BytesIO(populated), data_only=False)
+    _check(len(wb.sheetnames) == 16, f"expected 16 sheets (v11), got {len(wb.sheetnames)}")
+    ws = wb["T-12 Analysis"]
+    # T-12 layout identical to v8/v6 rev2: EGI N80 / EBITDAR N135 / EBITDA N136.
+    for addr in ("N80", "N135", "N136"):
+        v = ws[addr].value
+        _check(isinstance(v, str) and v.startswith("="), f"v11 {addr} should be a formula, got {v!r}")
+
+    # The v11 grid header moved to row 223; the NER fill-down at AV224 must
+    # survive (derived concept — writer must never touch it).
+    ws_rr = wb["Rent Roll Analysis"]
+    _check(ws_rr["A223"].value == "Unit/Bed", f"v11 header A223 should be 'Unit/Bed', got {ws_rr['A223'].value!r}")
+    av224 = ws_rr["AV224"].value
+    from openpyxl.worksheet.formula import ArrayFormula
+    is_f = (isinstance(av224, str) and av224.startswith("=")) or isinstance(av224, ArrayFormula)
+    _check(is_f, f"AV224 (NER) should hold the template formula, got {av224!r}")
+    # No header-blank warning expected — v11 carries A223.
+    hdr_warn = any("is blank" in w and "Rent Roll Analysis" in w for w in report.warnings)
+    _check(not hdr_warn, f"v11 unexpectedly emitted header-blank warning: {report.warnings}")
+
+    print(f"  ✓ v11 default: {report.summary['total_concepts']} concepts, {len(wb.sheetnames)} sheets")
+    print(f"  ✓ header A223 intact; AV224 NER formula preserved")
+    print(f"  ✓ outcomes: {dict(report.summary)}")
+
+
+# ── test 8: v11 populated-Analyzer end-to-end ─────────────────────────────────
+
+def test_populated_analyzer_e2e_v11() -> None:
+    _section("test_populated_analyzer_e2e_v11")
+
+    if not POPULATED_ANALYZER.exists():
+        print(f"  SKIP: populated fixture not found at {POPULATED_ANALYZER}")
+        return
+
+    populated, report = populate_uw_template(
+        POPULATED_ANALYZER.read_bytes(), TEMPLATE_V11.read_bytes(),
+        # default → v11
+        scenario="normalized",
+    )
+    _check(report.template_version == "v11", f"expected v11, got {report.template_version!r}")
+
+    wb_out = openpyxl.load_workbook(io.BytesIO(populated), data_only=False)
+    ws_t12 = wb_out["T-12 Analysis"]
+    for addr, label in (("N80", "EGI"), ("N134", "EBITDARM"), ("N135", "EBITDAR"), ("N136", "EBITDA")):
+        v = ws_t12[addr].value
+        print(f"  T-12 Analysis!{addr} ({label}) = {v!r}")
+        _check(isinstance(v, str) and v.startswith("="), f"v11 {label} at {addr} should be a formula, got {v!r}")
+
+    # v11 paste grid: data anchored at 224 (header 223); rows 221-222 spacer
+    # and the 223 header must remain untouched.
+    ws_rr = wb_out["Rent Roll Analysis"]
+    print("  Rent Roll Analysis row 224 sample (v11 anchor):")
+    for col in ("A", "B", "C", "D", "E"):
+        print(f"    {col}224 = {ws_rr[f'{col}224'].value!r}")
+    _check(ws_rr["A223"].value == "Unit/Bed", f"header A223 clobbered: {ws_rr['A223'].value!r}")
+    _check(ws_rr["A222"].value is None, f"spacer A222 should stay empty, got {ws_rr['A222'].value!r}")
+    _check(
+        ws_rr["D224"].value == "1 Bedroom",
+        f"D224 should = '1 Bedroom' (first bed at the v11 anchor); got {ws_rr['D224'].value!r}",
+    )
+    _check(
+        ws_rr["E224"].value == "Occupied",
+        f"E224 should = 'Occupied'; got {ws_rr['E224'].value!r}",
+    )
+    populated_rows = sum(1 for r in range(224, 624) if ws_rr[f"A{r}"].value is not None)
+    print(f"  Rent Roll Analysis populated rows from 224: {populated_rows}")
+    _check(populated_rows > 0, "rent roll target has no populated rows at the v11 anchor")
+
+    # Template-owned fill-downs must survive: AP (=SUM), AT (Conc Source), AV (NER).
+    from openpyxl.worksheet.formula import ArrayFormula
+    for col, label in (("AP", "Total Ancillary"), ("AT", "Conc Source"), ("AV", "NER amort")):
+        v = ws_rr[f"{col}224"].value
+        is_formula = (isinstance(v, str) and v.startswith("=")) or isinstance(v, ArrayFormula)
+        _check(is_formula, f"{col}224 ({label}) should keep its template formula, got {v!r}")
+
+    print(f"  ✓ Summary: {dict(report.summary)}")
+
+
 # ── runner ────────────────────────────────────────────────────────────────────
 
 def main() -> int:
@@ -496,6 +601,8 @@ def main() -> int:
         test_populated_analyzer_e2e_v6,
         test_empty_analyzer_smoke_v8,
         test_populated_analyzer_e2e_v8,
+        test_empty_analyzer_smoke_v11,
+        test_populated_analyzer_e2e_v11,
     ):
         try:
             fn()

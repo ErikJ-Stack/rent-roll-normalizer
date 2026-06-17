@@ -8,6 +8,42 @@ When making a code change in a T12-related chat, add an entry here in the same c
 
 ---
 
+## v0.3.0 — 2026-06-16 — Substrate v0.3.0: operator-authored Analyzer (wholesale replacement)
+
+**Track 3 (substrate) — operator-managed artifact (BL-0021 pattern).** The
+operator dropped a new `ALF_Financial_Analyzer_Only.xlsx` (authored externally
+in Excel, alongside the v11 UW Template) which **replaces the bundled file
+wholesale** — no migration script. `Cover!B8` stamps **v0.3.0**. Diffed
+cell-by-cell against the committed v0.2.16 bundled analyzer:
+
+- **UW Output +1 row**: a new "Bad debt / write-offs" line appended at row 72
+  (bottom). Rows 1-71 are unchanged, so every Track-4 registry `uw_output`
+  source row stays correct.
+- **T-12 Analytics +1 col**: a new "Other Care (OTH)" column inserted at E
+  (Total shifts E→F; the `T12_Period_Date` named range auto-moves E2→F2). This
+  extends the substrate's care-type model to the 4th "Other Care" type the v6
+  rev2 template already supported. No Python code reads T-12 Analytics by
+  column (the dashboard + UW Output evaluator compute from parse results), so
+  nothing downstream breaks. UW Export +1 row mirrors UW Output.
+- **Description_Map 424 → 579 GL descriptions** (+155): a substantial expansion
+  of the GL-description → Label dictionary that drives T12 parsing. The
+  `DescMap_Description` / `DescMap_Label` named ranges use `INDEX(...)` dynamic
+  endpoints, so they auto-extend — no formula change. Net effect: better T12
+  description coverage (Homestead March 2026 T12 now parses with **0 unmatched**
+  GL rows).
+- Write-target sheets (Rent Roll Input, T12 Input, AR & Collections) and the
+  `RR_Input_Data` / `T12_Input_Data` named ranges are layout-compatible — the
+  RR/T12/AR writers and T12 parser run unchanged. Verified the new file ships
+  **clean** (no residual deal data): empty RR/T12 data rows, zero cached UW
+  Output deal values; the only "populated" Rent Roll Input rows are formula
+  scaffolding in the 3 computed columns (T/U/AH).
+
+`app.py` `ANALYZER_SUBSTRATE_VERSION` 0.2.16 → 0.3.0. **No migration script**
+(operator-authored, per BL-0021). Paired with UW Template v11 — see
+CHANGELOG-UWT v0.11.0.
+
+---
+
 ## v0.2.16 — 2026-05-30 — Substrate v0.2.16: T12 Analytics "Auto Expense" non-labor row (BL-0028)
 
 **Track 3 (substrate).** Closes UW-BACKLOG **BL-0028**. `T12 Raw Data!B63` carries the GL label `"Auto Expense"` (Description_Map routes `Auto Expenses` / `Auto and Mileage Expense` / `Bus/Shuttle Service` / `General & Administrative | Motor Vehicles` → `Auto Expense`), so the dollars aggregate into the raw sheet — but `T12 Analytics` Section 3's non-labor block (`A79:A102`, summed at `E103=SUM(E79:E102)`) had **no Auto Expense line** (only `Auto insurance` at A91). The dollars fell out of the non-labor total, so EBITDARM/EBITDAR/EBITDA (and the UW Output / UW Export / Dashboard layers that mirror them) **overstated NOI** by exactly the Auto Expense amount. The Python engine (`dashboard_model._LABELS_NON_LABOR`, UWT v0.7.0) already folded Auto Expense in; this migration brings the Excel substrate into agreement so the two stop disagreeing.

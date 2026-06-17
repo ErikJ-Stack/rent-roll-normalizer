@@ -5,7 +5,17 @@
 > **ALF UW Template** workbook as the last step of the ALF underwriting
 > pipeline.
 >
-> **UWT v0.10.0 (2026-06-12) — CURRENT:** operator template **v8** absorbed
+> **UWT v0.11.0 (2026-06-16) — CURRENT:** operator template **v11** + Analyzer
+> substrate **v0.3.0** absorbed together. Template: RR Analysis paste grid
+> re-anchored to **header 223 / data 224-623** (new Section S concessions-audit
+> block pushed the grid down 10 rows; aggregates read `$224:$623`); 40 rent_roll
+> targets re-anchored `…214+` → `…224+`; full-band fill-downs fix the v8
+> >176-bed quirk; registry 0.7.0 → 0.8.0; bundled default `assets/ALF_UW_Template_v11.xlsx`.
+> Analyzer v0.3.0 (operator-authored wholesale replacement): UW Output +1 row
+> (bottom), T-12 Analytics +Other Care col, Description_Map +155 GL descriptions
+> — a drop-in (no registry-source or writer change). See CHANGELOG-UWT v0.11.0.
+>
+> **UWT v0.10.0 (2026-06-12):** operator template **v8** absorbed
 > (registry 0.7.0, 196 concepts; bundled default `assets/ALF_UW_Template_v8.xlsx`).
 > Rent Roll Analysis paste grid re-anchored to **header 213 / data 214–613**
 > (all RR aggregates read `$214:$613` — the v6-era 211 anchor was stale and

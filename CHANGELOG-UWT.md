@@ -8,6 +8,74 @@ opened (none yet — Phase 0 is the seed release).
 
 ---
 
+## v0.11.0 — operator template v11 + Analyzer substrate v0.3.0 (2026-06-16)
+
+**Operator goal**: "this is the updated ALF UW Template and analyzer. update as
+needed." Two binaries dropped together — `ALF_UW_Template_v11.xlsx` and a new
+`ALF_Financial_Analyzer_Only.xlsx` (substrate v0.2.16 → v0.3.0). Both absorbed
+after a full binary diff against the committed v8 template / bundled analyzer.
+
+### Template v11 (registry 0.7.0 → 0.8.0; bundled default v8 → v11)
+
+- **All 189 registry v8 targets verified IDENTICAL in v11** — T-12 Analysis,
+  Scenarios, and Prop Info (rows ≤24) target cells did not move.
+- **The substantive change: RR Analysis paste grid re-anchored 214 → 224.**
+  v11 inserted a new "S. CONCESSIONS AUDIT" taxonomy block at rows ~205-211,
+  pushing the header 213 → **223** and the data band 214-613 → **224-623**.
+  Every RR aggregate now reads `$224:$623` (confirmed: E9
+  `AVERAGEIFS($L$224:$L$623,...)`). Registry-only change — the writer already
+  derives the anchor from the templates block (same pattern as v8's 211→214).
+  `_absorb_v11.py` re-anchors 40 rent_roll targets `…214+` → `…224+`.
+- **The v8 >176-bed fill-down quirk is FIXED**: K/L/V/W (+ AA/AB) fill-downs
+  now cover the FULL band 224-623, not 176 rows. No quirk carried forward.
+- **Prop Info 53 → 57 rows** (manual MARKET DATA zone, rows 30+): split
+  Population Growth → MSA + City, Competitor Occupancy → per-segment
+  IL/AL/MC/Other. All manual analyst inputs — NO writer targets.
+- **metadata.xml absent but NOT needed**: v11 uses 573 legacy CSE array
+  formulas and ZERO dynamic-array spill functions (no SORT/UNIQUE/FILTER), so
+  the writer's `_restore_dynamic_arrays` correctly no-ops. Self-contained.
+- T-12 Analysis layout unchanged vs v8/v6 (197×20). `_T12_LAYOUT["v11"]` = v8.
+  No new concepts (Section S + Prop Info expansion are analyst/formula-driven).
+- `_detect_uw_template_version`: new v11 stage (RR Analysis A223 "Unit/Bed" or
+  A205 "CONCESSION") ahead of the v8 NER stage; default fallback v8 → v11.
+
+### Analyzer substrate v0.3.0 (bundled file replaced; ANALYZER_SUBSTRATE_VERSION
+0.2.16 → 0.3.0) — essentially a drop-in:
+
+- **UW Output +1 row** = a new "Bad debt / write-offs" line appended at row 72
+  (bottom). Rows 1-71 unchanged → every registry `uw_output` source row still
+  correct → no registry change.
+- **T-12 Analytics +1 col** = a new "Other Care (OTH)" column inserted at E
+  (Total shifted E→F; T12_Period_Date named range auto-moved E2→F2). No code
+  reads T-12 Analytics by column (the in-Python evaluator + dashboard compute
+  from parse results) → no change.
+- **Description_Map 424 → 579 GL descriptions** (+155) — strictly better T12
+  mapping; DescMap named ranges auto-extend via INDEX (no formula change).
+- Write-target sheets (Rent Roll Input, T12 Input, AR & Collections) verified
+  layout-compatible; `RR_Input_Data` / `T12_Input_Data` ranges unchanged. The
+  new analyzer ships **clean** (no residual deal data — confirmed: empty RR/T12
+  data rows, zero cached UW Output deal values; the 600 "non-empty" Rent Roll
+  Input rows are formula scaffolding in the 3 computed cols T/U/AH that cache 0).
+
+### Verification
+
+Full pipeline e2e on Homestead RR v2 + March 2026 T12 against the **new v0.3.0
+analyzer → v11 template**: RR 176 beds, T12 101 GL rows / **0 unmatched** (the
+expanded Description_Map covered everything), paste landed at **224** (header
+A223 intact, spacers 221-222 empty), first bed D224='1 Bedroom' / E224='Occupied'
+/ C224='IL', 176 rows populated, AV224 NER + AP224 Total-Ancillary formulas
+preserved, N80 EGI / N134 EBITDARM / N135 EBITDAR formula chain intact, **121
+concepts computed in-Python** (the evaluator fallback handles the fresh analyzer),
+156 written / 2,368 cells / dynamic_arrays_restored 1 / 16 sheets. Tests: +2
+(v11 smoke + e2e — paste at 224, header A223 + spacers untouched, AP/AT/AV
+formulas survive); v8 tests pinned to "v8"; the empty-analyzer no_source
+threshold recalibrated for the v0.3.0 scaffolding (caches structural zeros).
+**All 8 writer tests + uw_output_model + dashboard + mf_dashboard green.**
+
+`UWT_VERSION` 0.10.0 → 0.11.0. `_absorb_v11.py` retained as audit trail.
+
+---
+
 ## v0.10.0 — operator template v8 absorbed; RR paste grid re-anchored 211→214 (2026-06-12)
 
 **Operator goal**: "use this as the new updated version template for ALF UW

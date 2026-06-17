@@ -9,6 +9,50 @@ Newest at top.
 
 ---
 
+## 2026-06-16 — Track 4 + Track 2: UWT v0.11.0 — operator template v11 + Analyzer substrate v0.3.0 (cross-track)
+
+**Scope.** Operator dropped two binaries together — `ALF_UW_Template_v11.xlsx`
+and a new `ALF_Financial_Analyzer_Only.xlsx` (substrate v0.3.0) — "update as
+needed." No handoff brief; both absorbed after a full binary diff against the
+committed v8 template / v0.2.16 bundled analyzer. (Model: opus-4-8.)
+
+**Template v11 (registry 0.7.0 → 0.8.0, bundled default v8 → v11):** all 189 v8
+targets verified label-identical; the substantive change is the RR Analysis
+paste grid re-anchored **214 → 224** (header 213 → 223) — a new "S. CONCESSIONS
+AUDIT" block at rows ~205-211 pushed the grid down 10 rows, and every aggregate
+now reads `$224:$623`. `_absorb_v11.py` re-anchors 40 rent_roll targets; the
+writer already derives the anchor from the templates block (no writer-logic
+edit — same pattern as v8's 211→214). The **v8 >176-bed fill-down quirk is
+fixed** (K/L/V/W cover the full band now). Prop Info +4 rows are all manual
+market-data (no writer targets). metadata.xml absent but unneeded (573 legacy
+CSE arrays, zero spill functions). `_T12_LAYOUT["v11"]` = v8 (T-12 unchanged).
+Detection: new v11 stage (A223 "Unit/Bed" / A205 "CONCESSION") ahead of v8.
+
+**Analyzer v0.3.0 (operator-authored wholesale replacement, BL-0021 pattern —
+no migration):** a drop-in. UW Output +1 row ("Bad debt" at row 72, bottom —
+rows 1-71 unchanged → registry uw_output sources stay correct); T-12 Analytics
++1 col ("Other Care (OTH)" at E — no code reads it by column); Description_Map
+424 → 579 GL descriptions (better T12 mapping; named ranges auto-extend).
+Write-target sheets layout-compatible; the file ships clean (the 600 "non-empty"
+Rent Roll Input rows are formula scaffolding in cols T/U/AH, not deal data).
+`ANALYZER_SUBSTRATE_VERSION` 0.2.16 → 0.3.0.
+
+**Verification.** Full pipeline e2e (Homestead RR v2 + March 2026 T12) against
+the **new v0.3.0 analyzer → v11 template**: T12 parsed 101 GL rows / **0
+unmatched** (expanded Description_Map), paste at **224** (header A223 intact,
+spacers empty), 176 beds, NER/Total-Ancillary/EGI/EBITDARM/EBITDAR formulas
+preserved, **121 concepts computed in-Python** (evaluator fallback handles the
+fresh analyzer), 16 sheets. Tests: +2 (v11 smoke + e2e); v8 tests pinned to
+"v8"; empty-analyzer no_source threshold recalibrated for the v0.3.0 scaffolding
+(caches structural zeros). **All 8 writer tests + uw_output_model + dashboard +
+mf_dashboard green.** (MF pytest suites need pytest — pre-existing, unrelated.)
+
+**Commits.** UWT_VERSION 0.10.0 → 0.11.0. `_absorb_v11.py` retained as audit
+trail. Carry-forward: the duplicate legacy header at row 210 (v8 lineage) may
+persist in v11 — cosmetic, operator may delete in a future pass.
+
+---
+
 ## 2026-06-12 — Track 4: UWT v0.10.0 — operator template v8 absorbed; paste grid re-anchored 211→214 (+ same session: cockpit UI redesign, cross-track)
 
 **Scope.** Operator: "use this as the new updated version template for ALF UW

@@ -169,6 +169,19 @@ _T12_LAYOUT: dict[str, dict] = {
         "section_i_start": 141, "section_i_end": 190,
         "section_j_rev": 194, "section_j_opex": 195, "section_j_ebitdar": 196,
     },
+    # v11 (operator template 2026-06-16, absorbed 2026-06-16): T-12 Analysis
+    # layout verified cell-identical to v8 (197×20, all anchor rows checked) —
+    # same entry. v11's changes live on Rent Roll Analysis (paste grid
+    # re-anchored to header 223 / data 224+, new Section S concessions-audit
+    # block, fill-downs extended to the full band) and Prop Info market-data.
+    "v11": {
+        "net_rent_row": None,
+        "ebitdar_row": 135, "ebitdar_formula": "=N134-N131",
+        "ebitda_row": 136,  "ebitda_formula": "=N135-N128",
+        "mirror_rows": (62, 67, 80, 102, 129, 132, 133, 134, 135, 136),
+        "section_i_start": 141, "section_i_end": 190,
+        "section_j_rev": 194, "section_j_opex": 195, "section_j_ebitdar": 196,
+    },
 }
 
 # Status colours mirror the generator — duplicated here so the writer can
@@ -785,7 +798,7 @@ def populate_uw_template(
     analyzer_bytes: bytes,
     template_bytes: bytes,
     *,
-    template_version: str = "v8",
+    template_version: str = "v11",
     scenario: str = "normalized",
     registry_path: str | Path | None = None,
     include_statuses: frozenset[str] | None = None,
@@ -1154,7 +1167,7 @@ if __name__ == "__main__":
         "--scenario", default="normalized",
         choices=("normalized", "t12_actual"),
     )
-    ap.add_argument("--template-version", default="v8")
+    ap.add_argument("--template-version", default="v11")
     ap.add_argument("--registry", default=None)
     args = ap.parse_args()
 
