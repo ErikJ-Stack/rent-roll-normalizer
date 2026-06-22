@@ -28,6 +28,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 REGISTRY = ROOT / "registry.json"
 
+
+def _primary_template(reg: dict) -> str:
+    """The binding/primary template = highest numeric version (e.g. v20 > v15).
+    Honors an explicit `primary_template` registry key when present."""
+    if reg.get("primary_template") in reg.get("templates", {}):
+        return reg["primary_template"]
+    return max(reg["templates"], key=lambda v: int("".join(filter(str.isdigit, v)) or 0))
+
 STATUS_COLOR = {
     "mapped": "#1f6b52",
     "proposed": "#c78a18",
@@ -127,7 +135,7 @@ def write_csv(reg: dict, path: Path) -> None:
 
 def write_markdown(reg: dict, path: Path) -> None:
     template_versions = sorted(reg["templates"].keys())
-    tv_primary = template_versions[0]
+    tv_primary = _primary_template(reg)
 
     lines: list[str] = []
     lines.append("# MF UW Model — Mapping Tracker")
@@ -235,7 +243,7 @@ def write_markdown(reg: dict, path: Path) -> None:
 
 def write_html(reg: dict, path: Path) -> None:
     template_versions = sorted(reg["templates"].keys())
-    tv_primary = template_versions[0]
+    tv_primary = _primary_template(reg)
     registry_inline = json.dumps(reg, ensure_ascii=False)
 
     counts: dict[str, int] = {}

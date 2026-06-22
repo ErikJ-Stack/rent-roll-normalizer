@@ -9,6 +9,44 @@ Newest at top.
 
 ---
 
+## 2026-06-21 — Track 4-MF: MF UW Model v20 absorption (MF v0.7.0)
+
+**Scope.** Operator dropped `MF_UW_Model_v20.xlsx` ("Update the MF template use.
+review the mapping also."), jumping the bundled MF model v15 → v20.
+
+**What shipped.** Verified the new file cell-by-cell against the binary (not a
+handoff note). **All four writer target sheets are layout-identical to v15** —
+T-12 Analysis Layer 1 @106 (A–P), Rent Roll Analysis grid @273 (A–AK, data
+273–1772, diagnostic anchors G5/I5/N5/Q5/T5 → `273:1772`, footer @1775), Prop
+Info col B (rows 4–47), Rental Comps SUBJECT @7 / anchor @8 — so **no concept
+target moved** and the writer needed **no logic change**. v20's deltas are all
+display/formula-only: **+`Dashboard` sheet** (idx 1; sheet_count 23→24),
+**+ per-row chart-helper formula cols AL–AP** on Rent Roll Analysis (outside the
+writer's A–AK / cols-1–37 clear band → preserved), and **+ `xl/metadata.xml`**
+(Excel-365 dynamic arrays, 7 `cm` cells; v15 had none). The writer's
+`_restore_dynamic_arrays` — a documented no-op on v15 — is now **active** and
+preserves them (verified 7→7 `cm` markers; metadata.xml present in output).
+
+Changes: `assets/MF_UW_Model_v20.xlsx` committed (v15 retained for
+override/history); `app.py` `BUNDLED_MF_MODEL_PATH` → v20 + new
+`BUNDLED_MF_MODEL_VERSION = "v20"`; `mf_uw_model_writer.py` docstring repointed +
+the stale "metadata.xml absent → restore is a no-op" note corrected; registry
+0.2.0 → 0.3.0 via `tools/mf_uw_template/_absorb_v20.py` (templates.v20 +
+`targets.v20` verbatim-inherit ×90; v20 now primary); artifacts regenerated;
+`tests/test_mf_uw_model_writer.py` repointed to v20 + new
+`test_dynamic_arrays_preserved`. Handoff
+`tools/mf_uw_template/handoffs/2026-06-21-mf-uwt-v20-absorption.md` (**Verified**).
+
+**Verification.** MF writer + RR/AR suites 10/10 green (with `xlrd` installed —
+the only initial failures were the missing module + a gitignored .xls fixture,
+both environmental); T-12 + OM suites unaffected; `app.py` parses; end-to-end
+populate against v20 yields a 24-sheet, reloadable workbook with `Dashboard`.
+
+**Carry-forwards.** None blocking. v15 stays committed as the override path. Not
+yet committed — `git add` + commit pending (clean tree at session start).
+
+---
+
 ## 2026-06-16 — Track 4 + Track 2: UWT v0.11.0 — operator template v11 + Analyzer substrate v0.3.0 (cross-track)
 
 **Scope.** Operator dropped two binaries together — `ALF_UW_Template_v11.xlsx`
