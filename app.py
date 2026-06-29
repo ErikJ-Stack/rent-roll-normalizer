@@ -125,8 +125,8 @@ BUNDLED_UW_TEMPLATE_PATH = Path(__file__).parent / "assets" / "ALF_UW_Template_v
 BUNDLED_UW_TEMPLATE_VERSION = "v11"
 
 # MF (multifamily) UW Model — committed reference template (Track 4-MF).
-BUNDLED_MF_MODEL_PATH = Path(__file__).parent / "assets" / "MF_UW_Model_v20.xlsx"
-BUNDLED_MF_MODEL_VERSION = "v20"
+BUNDLED_MF_MODEL_PATH = Path(__file__).parent / "assets" / "MF_UW_Model_v25.xlsx"
+BUNDLED_MF_MODEL_VERSION = "v25"
 
 
 # ---------------------------------------------------------------------------

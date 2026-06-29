@@ -9,6 +9,49 @@ Newest at top.
 
 ---
 
+## 2026-06-29 — Track 4-MF: MF UW Model v25 absorption (MF v0.8.0)
+
+**Scope.** Operator dropped `MF_UW_Model_v25.xlsx` ("update the template for the
+mf side"), superseding the v20 absorbed 8 days earlier (PR #63, still open).
+Continued on the same `mf-v20-model-absorption` branch.
+
+**What shipped.** Diffed v25 against the v20 baseline cell-by-cell. **All four
+writer target sheets are anchor-identical to v20/v15** (T-12 Analysis @106 A–P,
+Rent Roll Analysis @273 A–AK / data 273–1772 / footer 1775, Prop Info col A
+labels + col B values rows 4–47, Rental Comps @7/8) → **no concept target moved,
+no writer logic change.** v25's deltas are on non-target sheets + display layers:
+`Dashboard`→`Dash` rename, `Data Refresh` removed (24→23 sheets, several
+reordered), RR helper cols trimmed to AL-only (v20's blank AM–AP dropped; AL is
+outside the writer's A–AK clear band → preserved), Prop Info trailing cols E/F
+dropped. `xl/metadata.xml` preserved (7→7 `cm` via `_restore_dynamic_arrays`).
+
+**New finding (cosmetic):** v25 carries 2 extended (x14) data-validation
+dropdowns on `Rent Roll Analysis` that openpyxl can't model and drops on save.
+The writer fills those Status/Type cells with real values regardless, so it's an
+analyst data-entry aid only — surfaced in the writer's report warning (alongside
+comments/add-in/doc-props) and the handoff "notes for operator" (Excel re-save
+to recover). No `_restore_data_validations` repair built — proportionate to a
+2-dropdown loss; flagged to the user as an offer.
+
+Changes: `assets/MF_UW_Model_v25.xlsx` committed (v15 + v20 retained); `app.py`
+`BUNDLED_MF_MODEL_PATH`/`_VERSION` → v25; `mf_uw_model_writer.py` docstring +
+report warning repointed; registry 0.3.0 → 0.4.0 via
+`tools/mf_uw_template/_absorb_v25.py` (templates.v25 + `targets.v25`
+verbatim-inherit ×90 + `primary_template="v25"`); artifacts regenerated (v25
+primary); `tests/test_mf_uw_model_writer.py` repointed to v25. Handoff
+`tools/mf_uw_template/handoffs/2026-06-29-mf-uwt-v25-absorption.md` (**Verified**).
+
+**Verification.** MF writer + RR/AR suites 10/10 green; `app.py` parses;
+end-to-end populate against v25 yields a 23-sheet, reloadable workbook with
+`Dash`. The openpyxl DV-extension warning on load is the expected (documented)
+x14 DV drop.
+
+**Carry-forwards.** PR #63 (opened for v20) now also carries v25 — retitle/update
+to cover v15 → v25. Optional future work: `_restore_data_validations` repair if
+the populated model's Status/Type dropdowns matter downstream.
+
+---
+
 ## 2026-06-21 — Track 4-MF: MF UW Model v20 absorption (MF v0.7.0)
 
 **Scope.** Operator dropped `MF_UW_Model_v20.xlsx` ("Update the MF template use.

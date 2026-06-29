@@ -1,7 +1,7 @@
 """
 Tests for `mf_uw_model_writer.populate_mf_model`.
 
-The MF UW Model is committed at `assets/MF_UW_Model_v20.xlsx`, so these run in
+The MF UW Model is committed at `assets/MF_UW_Model_v25.xlsx`, so these run in
 CI with synthetic in-memory RR/T-12 inputs (no gitignored deps). They assert the
 writer pastes into the right cells, leaves the model's formulas intact, and
 produces a valid, reloadable workbook.
@@ -18,7 +18,7 @@ from mf_normalizer import MFRRResult, MFUnit
 from mf_t12_normalizer import MFT12Line, MFT12Result
 from mf_uw_model_writer import populate_mf_model
 
-MODEL = "assets/MF_UW_Model_v20.xlsx"
+MODEL = "assets/MF_UW_Model_v25.xlsx"
 pytestmark = pytest.mark.skipif(not os.path.exists(MODEL), reason="committed MF model absent")
 
 

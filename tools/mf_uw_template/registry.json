@@ -1,8 +1,8 @@
 {
  "schema": "mf-uw-mapping/v1",
- "registry_version": "0.3.0",
+ "registry_version": "0.4.0",
  "product_line": "MF",
- "generated_phase": "MF Track 4 — Phase 0. Inspection + mapping registry only (no writer). Maps the MF operator intake docs (rent roll, T-12, AR aging) to the two paste targets in MF_UW_Model_v20.xlsx: (1) Rent Roll Analysis grid rows 273+, and (2) T-12 Analysis Layer 1 rows 106+. No mf_* parser code exists yet — the source side is the raw operator exports in MF Docs/ (Hidden Lakes: redIQ / PSI / Yardi-CIM). Concepts the future parser must supply but no doc currently exposes cleanly are flagged gap_source.",
+ "generated_phase": "MF Track 4 — Phase 0. Inspection + mapping registry only (no writer). Maps the MF operator intake docs (rent roll, T-12, AR aging) to the two paste targets in MF_UW_Model_v25.xlsx: (1) Rent Roll Analysis grid rows 273+, and (2) T-12 Analysis Layer 1 rows 106+. No mf_* parser code exists yet — the source side is the raw operator exports in MF Docs/ (Hidden Lakes: redIQ / PSI / Yardi-CIM). Concepts the future parser must supply but no doc currently exposes cleanly are flagged gap_source.",
  "source_docs": {
   "note": "MF has no Analyzer substrate (ALF has ALF_Financial_Analyzer_Only.xlsx; MF P1-P4 unbuilt). For Phase 0 the 'source' is the raw operator files in MF Docs/ (gitignored). Sample property: Hidden Lakes Apartments, 143 units, Atlanta MSA. A future mf_* normalizer will standardize these into the same column shapes.",
   "rent_roll": {
@@ -237,6 +237,97 @@
     "T-12 Analysis Layer 1 (105/106/255, A-P), Prop Info (col B rows 4-47), and Rental Comps (SUBJECT row 7, anchor 8) all identical to v15.",
     "NEW xl/metadata.xml (Excel-365 dynamic arrays, 7 cm-marked cells). The writer's _restore_dynamic_arrays call is now active (no-op on v15) and preserves them on save (verified 7->7 cm markers)."
    ]
+  },
+  "v25": {
+   "file": "assets/MF_UW_Model_v25.xlsx",
+   "external_source": "Deals/Acquisition/_Template/MF Templates/MF_UW_Model_v25.xlsx (operator-authored in Excel; dropped 2026-06-29)",
+   "released": "2026-06-29 (absorbed 2026-06-29)",
+   "sheet_count": 23,
+   "std_coa_sheet": "_StdCOA",
+   "intake_sheets": [
+    "Rent Roll Analysis",
+    "T-12 Analysis"
+   ],
+   "rent_roll_grid": {
+    "sheet": "Rent Roll Analysis",
+    "header_row": 272,
+    "paste_anchor": "Rent Roll Analysis!A273",
+    "data_start_row": 273,
+    "data_end_row": 1772,
+    "capacity_units": 1500,
+    "diagnostic_rows": "1-271 (formula-derived from the paste grid; writer must not overwrite). Summary anchors: I5=COUNTA units, G5=Prop Info units, N5=Total AR, Q5=legal count, T5=occupied count.",
+    "columns": {
+     "A": "Bldg",
+     "B": "Unit #",
+     "C": "Type",
+     "D": "SF",
+     "E": "Status",
+     "F": "Resident",
+     "G": "Legal",
+     "H": "Move-In",
+     "I": "Lease Start",
+     "J": "Lease End",
+     "K": "Exp Move-Out",
+     "L": "Mkt Rent",
+     "M": "Actual Chgs",
+     "N": "Sched Chgs",
+     "O": "Balance",
+     "P": "Deposit",
+     "Q": "0-30 Days",
+     "R": "31-60",
+     "S": "61-90",
+     "T": "90+",
+     "U": "Status Flag",
+     "V": "Notes",
+     "W": "MTM Fees",
+     "X": "Application Fees",
+     "Y": "Late Fees",
+     "Z": "Utility Reimbursement",
+     "AA": "Pet Fees",
+     "AB": "Parking Income",
+     "AC": "Amenity Fees",
+     "AD": "Admin Fees",
+     "AE": "Insurance Pass-Thru",
+     "AF": "Misc Other Income",
+     "AG": "Storage / Common Bins",
+     "AH": "Package Service / Lockers",
+     "AI": "Lease Lock Fee",
+     "AJ": "Valet Trash",
+     "AK": "Lease Break Fee"
+    },
+    "helper_formula_columns": {
+     "AL": "Template-owned per-row recent-lease chart-helper formula (v20's blank AM-AP dropped). Formula-derived; the writer must not overwrite (it clears only A-AK / cols 1-37)."
+    }
+   },
+   "t12_layer1": {
+    "sheet": "T-12 Analysis",
+    "header_row": 105,
+    "paste_anchor": "T-12 Analysis!A106",
+    "data_start_row": 106,
+    "data_end_row": 255,
+    "columns": {
+     "A": "Acct #",
+     "B": "Account Name (raw)",
+     "C-N": "12 monthly columns (Apr-25 .. Mar-26)",
+     "O": "T-12 Total (template formula =SUM(C:N))",
+     "P": "→ MAPPING (_StdCOA bucket; drives all Layer-3 SUMIFS)"
+    },
+    "layer3_aggregation_rows": "56-101 (standardized bucket SUMIFS over Layer 1 by col P; writer must not overwrite)",
+    "diagnostic_rows": "1-54 (reconciliation, T-3/T-12 trend, econ-vs-physical occupancy, bad-debt layering, tax/insurance accrual checks; derived; writer must not overwrite)"
+   },
+   "structural_deltas_vs_v15": [
+    "+1 sheet: Dashboard inserted at index 1 (formula-derived first-look screen; not a writer target).",
+    "Rent Roll Analysis: header 272 / anchor A273 / data 273-1772 / cols A-AK all identical to v15. New per-row chart-helper formula columns AL-AP appended (outside the writer's A-AK clear band -> preserved).",
+    "T-12 Analysis Layer 1 (105/106/255, A-P), Prop Info (col B rows 4-47), and Rental Comps (SUBJECT row 7, anchor 8) all identical to v15.",
+    "NEW xl/metadata.xml (Excel-365 dynamic arrays, 7 cm-marked cells). The writer's _restore_dynamic_arrays call is now active (no-op on v15) and preserves them on save (verified 7->7 cm markers)."
+   ],
+   "structural_deltas_vs_v20": [
+    "Sheet count 24 -> 23: `Dashboard` renamed `Dash`; `Data Refresh` removed; some sheets reordered. None are writer targets (writer keys off names; all four target sheets present).",
+    "Rent Roll Analysis: header 272 / anchor A273 / data 273-1772 / cols A-AK identical to v20. v20's blank helper cols AM-AP dropped; only AL (recent-lease chart helper formula) remains, outside the writer's A-AK clear band -> preserved.",
+    "T-12 Analysis Layer 1 (105/106/255, A-P), Prop Info (col A labels / col B values, rows 4-47; trailing cols E/F dropped), and Rental Comps (SUBJECT row 7, anchor 8) all identical to v20.",
+    "xl/metadata.xml present (7 cm cells), preserved on round-trip (7->7).",
+    "NEW: 2 extended (x14) data-validation dropdowns on Rent Roll Analysis are dropped by openpyxl on save (cosmetic — writer fills those cells with real values; recover via Excel re-save). Not a mapping concern."
+   ]
   }
  },
  "std_coa_buckets": {
@@ -343,6 +434,12 @@
      "address": "B4",
      "label_at": "A4",
      "target_label": "Property Name"
+    },
+    "v25": {
+     "sheet": "Prop Info",
+     "address": "B4",
+     "label_at": "A4",
+     "target_label": "Property Name"
     }
    },
    "status": "mapped",
@@ -365,6 +462,12 @@
      "target_label": "# Units"
     },
     "v20": {
+     "sheet": "Prop Info",
+     "address": "B6",
+     "label_at": "A6",
+     "target_label": "# Units"
+    },
+    "v25": {
      "sheet": "Prop Info",
      "address": "B6",
      "label_at": "A6",
@@ -397,6 +500,12 @@
      "address": "A5",
      "label_at": "A5",
      "target_label": "Date:"
+    },
+    "v25": {
+     "sheet": "Rent Roll Analysis",
+     "address": "A5",
+     "label_at": "A5",
+     "target_label": "Date:"
     }
    },
    "status": "proposed",
@@ -421,6 +530,12 @@
      "target_label": "monthly header start"
     },
     "v20": {
+     "sheet": "T-12 Analysis",
+     "address": "C105",
+     "label_at": "C105",
+     "target_label": "monthly header start"
+    },
+    "v25": {
      "sheet": "T-12 Analysis",
      "address": "C105",
      "label_at": "C105",
@@ -450,6 +565,13 @@
      "paste_anchor": "Rent Roll Analysis!A273"
     },
     "v20": {
+     "sheet": "Rent Roll Analysis",
+     "address": "A273+",
+     "label_at": "A272",
+     "target_label": "Bldg",
+     "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
      "sheet": "Rent Roll Analysis",
      "address": "A273+",
      "label_at": "A272",
@@ -485,6 +607,13 @@
      "label_at": "B272",
      "target_label": "Unit #",
      "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
+     "sheet": "Rent Roll Analysis",
+     "address": "B273+",
+     "label_at": "B272",
+     "target_label": "Unit #",
+     "paste_anchor": "Rent Roll Analysis!A273"
     }
    },
    "status": "mapped",
@@ -510,6 +639,13 @@
      "paste_anchor": "Rent Roll Analysis!A273"
     },
     "v20": {
+     "sheet": "Rent Roll Analysis",
+     "address": "C273+",
+     "label_at": "C272",
+     "target_label": "Type",
+     "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
      "sheet": "Rent Roll Analysis",
      "address": "C273+",
      "label_at": "C272",
@@ -545,6 +681,13 @@
      "label_at": "D272",
      "target_label": "SF",
      "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
+     "sheet": "Rent Roll Analysis",
+     "address": "D273+",
+     "label_at": "D272",
+     "target_label": "SF",
+     "paste_anchor": "Rent Roll Analysis!A273"
     }
    },
    "status": "mapped",
@@ -570,6 +713,13 @@
      "paste_anchor": "Rent Roll Analysis!A273"
     },
     "v20": {
+     "sheet": "Rent Roll Analysis",
+     "address": "E273+",
+     "label_at": "E272",
+     "target_label": "Status",
+     "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
      "sheet": "Rent Roll Analysis",
      "address": "E273+",
      "label_at": "E272",
@@ -605,6 +755,13 @@
      "label_at": "F272",
      "target_label": "Resident",
      "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
+     "sheet": "Rent Roll Analysis",
+     "address": "F273+",
+     "label_at": "F272",
+     "target_label": "Resident",
+     "paste_anchor": "Rent Roll Analysis!A273"
     }
    },
    "status": "mapped",
@@ -628,6 +785,13 @@
      "paste_anchor": "Rent Roll Analysis!A273"
     },
     "v20": {
+     "sheet": "Rent Roll Analysis",
+     "address": "G273+",
+     "label_at": "G272",
+     "target_label": "Legal",
+     "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
      "sheet": "Rent Roll Analysis",
      "address": "G273+",
      "label_at": "G272",
@@ -663,6 +827,13 @@
      "label_at": "H272",
      "target_label": "Move-In",
      "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
+     "sheet": "Rent Roll Analysis",
+     "address": "H273+",
+     "label_at": "H272",
+     "target_label": "Move-In",
+     "paste_anchor": "Rent Roll Analysis!A273"
     }
    },
    "status": "mapped",
@@ -688,6 +859,13 @@
      "paste_anchor": "Rent Roll Analysis!A273"
     },
     "v20": {
+     "sheet": "Rent Roll Analysis",
+     "address": "I273+",
+     "label_at": "I272",
+     "target_label": "Lease Start",
+     "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
      "sheet": "Rent Roll Analysis",
      "address": "I273+",
      "label_at": "I272",
@@ -723,6 +901,13 @@
      "label_at": "J272",
      "target_label": "Lease End",
      "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
+     "sheet": "Rent Roll Analysis",
+     "address": "J273+",
+     "label_at": "J272",
+     "target_label": "Lease End",
+     "paste_anchor": "Rent Roll Analysis!A273"
     }
    },
    "status": "mapped",
@@ -748,6 +933,13 @@
      "paste_anchor": "Rent Roll Analysis!A273"
     },
     "v20": {
+     "sheet": "Rent Roll Analysis",
+     "address": "K273+",
+     "label_at": "K272",
+     "target_label": "Exp Move-Out",
+     "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
      "sheet": "Rent Roll Analysis",
      "address": "K273+",
      "label_at": "K272",
@@ -783,6 +975,13 @@
      "label_at": "L272",
      "target_label": "Mkt Rent",
      "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
+     "sheet": "Rent Roll Analysis",
+     "address": "L273+",
+     "label_at": "L272",
+     "target_label": "Mkt Rent",
+     "paste_anchor": "Rent Roll Analysis!A273"
     }
    },
    "status": "mapped",
@@ -808,6 +1007,13 @@
      "paste_anchor": "Rent Roll Analysis!A273"
     },
     "v20": {
+     "sheet": "Rent Roll Analysis",
+     "address": "M273+",
+     "label_at": "M272",
+     "target_label": "Actual Chgs",
+     "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
      "sheet": "Rent Roll Analysis",
      "address": "M273+",
      "label_at": "M272",
@@ -843,6 +1049,13 @@
      "label_at": "N272",
      "target_label": "Sched Chgs",
      "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
+     "sheet": "Rent Roll Analysis",
+     "address": "N273+",
+     "label_at": "N272",
+     "target_label": "Sched Chgs",
+     "paste_anchor": "Rent Roll Analysis!A273"
     }
    },
    "status": "mapped",
@@ -873,6 +1086,13 @@
      "label_at": "O272",
      "target_label": "Balance",
      "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
+     "sheet": "Rent Roll Analysis",
+     "address": "O273+",
+     "label_at": "O272",
+     "target_label": "Balance",
+     "paste_anchor": "Rent Roll Analysis!A273"
     }
    },
    "status": "mapped",
@@ -898,6 +1118,13 @@
      "paste_anchor": "Rent Roll Analysis!A273"
     },
     "v20": {
+     "sheet": "Rent Roll Analysis",
+     "address": "P273+",
+     "label_at": "P272",
+     "target_label": "Deposit",
+     "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
      "sheet": "Rent Roll Analysis",
      "address": "P273+",
      "label_at": "P272",
@@ -934,6 +1161,13 @@
      "label_at": "Q272",
      "target_label": "0-30 Days",
      "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
+     "sheet": "Rent Roll Analysis",
+     "address": "Q273+",
+     "label_at": "Q272",
+     "target_label": "0-30 Days",
+     "paste_anchor": "Rent Roll Analysis!A273"
     }
    },
    "status": "gap_source",
@@ -960,6 +1194,13 @@
      "paste_anchor": "Rent Roll Analysis!A273"
     },
     "v20": {
+     "sheet": "Rent Roll Analysis",
+     "address": "R273+",
+     "label_at": "R272",
+     "target_label": "31-60",
+     "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
      "sheet": "Rent Roll Analysis",
      "address": "R273+",
      "label_at": "R272",
@@ -996,6 +1237,13 @@
      "label_at": "S272",
      "target_label": "61-90",
      "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
+     "sheet": "Rent Roll Analysis",
+     "address": "S273+",
+     "label_at": "S272",
+     "target_label": "61-90",
+     "paste_anchor": "Rent Roll Analysis!A273"
     }
    },
    "status": "gap_source",
@@ -1027,6 +1275,13 @@
      "label_at": "T272",
      "target_label": "90+",
      "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
+     "sheet": "Rent Roll Analysis",
+     "address": "T273+",
+     "label_at": "T272",
+     "target_label": "90+",
+     "paste_anchor": "Rent Roll Analysis!A273"
     }
    },
    "status": "gap_source",
@@ -1050,6 +1305,13 @@
      "paste_anchor": "Rent Roll Analysis!A273"
     },
     "v20": {
+     "sheet": "Rent Roll Analysis",
+     "address": "U273+",
+     "label_at": "U272",
+     "target_label": "Status Flag",
+     "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
      "sheet": "Rent Roll Analysis",
      "address": "U273+",
      "label_at": "U272",
@@ -1085,6 +1347,13 @@
      "label_at": "V272",
      "target_label": "Notes",
      "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
+     "sheet": "Rent Roll Analysis",
+     "address": "V273+",
+     "label_at": "V272",
+     "target_label": "Notes",
+     "paste_anchor": "Rent Roll Analysis!A273"
     }
    },
    "status": "proposed",
@@ -1110,6 +1379,13 @@
      "paste_anchor": "Rent Roll Analysis!A273"
     },
     "v20": {
+     "sheet": "Rent Roll Analysis",
+     "address": "W273+",
+     "label_at": "W272",
+     "target_label": "MTM Fees",
+     "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
      "sheet": "Rent Roll Analysis",
      "address": "W273+",
      "label_at": "W272",
@@ -1145,6 +1421,13 @@
      "label_at": "X272",
      "target_label": "Application Fees",
      "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
+     "sheet": "Rent Roll Analysis",
+     "address": "X273+",
+     "label_at": "X272",
+     "target_label": "Application Fees",
+     "paste_anchor": "Rent Roll Analysis!A273"
     }
    },
    "status": "gap_source",
@@ -1170,6 +1453,13 @@
      "paste_anchor": "Rent Roll Analysis!A273"
     },
     "v20": {
+     "sheet": "Rent Roll Analysis",
+     "address": "Y273+",
+     "label_at": "Y272",
+     "target_label": "Late Fees",
+     "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
      "sheet": "Rent Roll Analysis",
      "address": "Y273+",
      "label_at": "Y272",
@@ -1205,6 +1495,13 @@
      "label_at": "Z272",
      "target_label": "Utility Reimbursement",
      "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
+     "sheet": "Rent Roll Analysis",
+     "address": "Z273+",
+     "label_at": "Z272",
+     "target_label": "Utility Reimbursement",
+     "paste_anchor": "Rent Roll Analysis!A273"
     }
    },
    "status": "gap_source",
@@ -1230,6 +1527,13 @@
      "paste_anchor": "Rent Roll Analysis!A273"
     },
     "v20": {
+     "sheet": "Rent Roll Analysis",
+     "address": "AA273+",
+     "label_at": "AA272",
+     "target_label": "Pet Fees",
+     "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
      "sheet": "Rent Roll Analysis",
      "address": "AA273+",
      "label_at": "AA272",
@@ -1265,6 +1569,13 @@
      "label_at": "AB272",
      "target_label": "Parking Income",
      "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
+     "sheet": "Rent Roll Analysis",
+     "address": "AB273+",
+     "label_at": "AB272",
+     "target_label": "Parking Income",
+     "paste_anchor": "Rent Roll Analysis!A273"
     }
    },
    "status": "gap_source",
@@ -1290,6 +1601,13 @@
      "paste_anchor": "Rent Roll Analysis!A273"
     },
     "v20": {
+     "sheet": "Rent Roll Analysis",
+     "address": "AC273+",
+     "label_at": "AC272",
+     "target_label": "Amenity Fees",
+     "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
      "sheet": "Rent Roll Analysis",
      "address": "AC273+",
      "label_at": "AC272",
@@ -1325,6 +1643,13 @@
      "label_at": "AD272",
      "target_label": "Admin Fees",
      "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
+     "sheet": "Rent Roll Analysis",
+     "address": "AD273+",
+     "label_at": "AD272",
+     "target_label": "Admin Fees",
+     "paste_anchor": "Rent Roll Analysis!A273"
     }
    },
    "status": "gap_source",
@@ -1350,6 +1675,13 @@
      "paste_anchor": "Rent Roll Analysis!A273"
     },
     "v20": {
+     "sheet": "Rent Roll Analysis",
+     "address": "AE273+",
+     "label_at": "AE272",
+     "target_label": "Insurance Pass-Thru",
+     "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
      "sheet": "Rent Roll Analysis",
      "address": "AE273+",
      "label_at": "AE272",
@@ -1385,6 +1717,13 @@
      "label_at": "AF272",
      "target_label": "Misc Other Income",
      "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
+     "sheet": "Rent Roll Analysis",
+     "address": "AF273+",
+     "label_at": "AF272",
+     "target_label": "Misc Other Income",
+     "paste_anchor": "Rent Roll Analysis!A273"
     }
    },
    "status": "gap_source",
@@ -1410,6 +1749,13 @@
      "paste_anchor": "Rent Roll Analysis!A273"
     },
     "v20": {
+     "sheet": "Rent Roll Analysis",
+     "address": "AG273+",
+     "label_at": "AG272",
+     "target_label": "Storage / Common Bins",
+     "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
      "sheet": "Rent Roll Analysis",
      "address": "AG273+",
      "label_at": "AG272",
@@ -1445,6 +1791,13 @@
      "label_at": "AH272",
      "target_label": "Package Service / Lockers",
      "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
+     "sheet": "Rent Roll Analysis",
+     "address": "AH273+",
+     "label_at": "AH272",
+     "target_label": "Package Service / Lockers",
+     "paste_anchor": "Rent Roll Analysis!A273"
     }
    },
    "status": "gap_source",
@@ -1470,6 +1823,13 @@
      "paste_anchor": "Rent Roll Analysis!A273"
     },
     "v20": {
+     "sheet": "Rent Roll Analysis",
+     "address": "AI273+",
+     "label_at": "AI272",
+     "target_label": "Lease Lock Fee",
+     "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
      "sheet": "Rent Roll Analysis",
      "address": "AI273+",
      "label_at": "AI272",
@@ -1505,6 +1865,13 @@
      "label_at": "AJ272",
      "target_label": "Valet Trash",
      "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
+     "sheet": "Rent Roll Analysis",
+     "address": "AJ273+",
+     "label_at": "AJ272",
+     "target_label": "Valet Trash",
+     "paste_anchor": "Rent Roll Analysis!A273"
     }
    },
    "status": "gap_source",
@@ -1530,6 +1897,13 @@
      "paste_anchor": "Rent Roll Analysis!A273"
     },
     "v20": {
+     "sheet": "Rent Roll Analysis",
+     "address": "AK273+",
+     "label_at": "AK272",
+     "target_label": "Lease Break Fee",
+     "paste_anchor": "Rent Roll Analysis!A273"
+    },
+    "v25": {
      "sheet": "Rent Roll Analysis",
      "address": "AK273+",
      "label_at": "AK272",
@@ -1565,6 +1939,13 @@
      "label_at": "A105",
      "target_label": "Acct #",
      "paste_anchor": "T-12 Analysis!A106"
+    },
+    "v25": {
+     "sheet": "T-12 Analysis",
+     "address": "A106+",
+     "label_at": "A105",
+     "target_label": "Acct #",
+     "paste_anchor": "T-12 Analysis!A106"
     }
    },
    "status": "mapped",
@@ -1590,6 +1971,13 @@
      "paste_anchor": "T-12 Analysis!A106"
     },
     "v20": {
+     "sheet": "T-12 Analysis",
+     "address": "B106+",
+     "label_at": "B105",
+     "target_label": "Account Name (raw)",
+     "paste_anchor": "T-12 Analysis!A106"
+    },
+    "v25": {
      "sheet": "T-12 Analysis",
      "address": "B106+",
      "label_at": "B105",
@@ -1625,6 +2013,13 @@
      "label_at": "C105",
      "target_label": "monthly block (12 cols)",
      "paste_anchor": "T-12 Analysis!A106"
+    },
+    "v25": {
+     "sheet": "T-12 Analysis",
+     "address": "C106:N255",
+     "label_at": "C105",
+     "target_label": "monthly block (12 cols)",
+     "paste_anchor": "T-12 Analysis!A106"
     }
    },
    "status": "mapped",
@@ -1647,6 +2042,12 @@
      "target_label": "T-12 Total"
     },
     "v20": {
+     "sheet": "T-12 Analysis",
+     "address": "O106+",
+     "label_at": "O105",
+     "target_label": "T-12 Total"
+    },
+    "v25": {
      "sheet": "T-12 Analysis",
      "address": "O106+",
      "label_at": "O105",
@@ -1674,6 +2075,13 @@
      "paste_anchor": "T-12 Analysis!A106"
     },
     "v20": {
+     "sheet": "T-12 Analysis",
+     "address": "P106+",
+     "label_at": "P105",
+     "target_label": "→ MAPPING",
+     "paste_anchor": "T-12 Analysis!A106"
+    },
+    "v25": {
      "sheet": "T-12 Analysis",
      "address": "P106+",
      "label_at": "P105",
@@ -1707,6 +2115,12 @@
      "address": "B5",
      "label_at": "A5",
      "target_label": "Location / Address"
+    },
+    "v25": {
+     "sheet": "Prop Info",
+     "address": "B5",
+     "label_at": "A5",
+     "target_label": "Location / Address"
     }
    },
    "status": "mapped",
@@ -1731,6 +2145,12 @@
      "target_label": "# Buildings"
     },
     "v20": {
+     "sheet": "Prop Info",
+     "address": "B7",
+     "label_at": "A7",
+     "target_label": "# Buildings"
+    },
+    "v25": {
      "sheet": "Prop Info",
      "address": "B7",
      "label_at": "A7",
@@ -1763,6 +2183,12 @@
      "address": "B8",
      "label_at": "A8",
      "target_label": "Height (stories)"
+    },
+    "v25": {
+     "sheet": "Prop Info",
+     "address": "B8",
+     "label_at": "A8",
+     "target_label": "Height (stories)"
     }
    },
    "status": "mapped",
@@ -1787,6 +2213,12 @@
      "target_label": "Year Built"
     },
     "v20": {
+     "sheet": "Prop Info",
+     "address": "B9",
+     "label_at": "A9",
+     "target_label": "Year Built"
+    },
+    "v25": {
      "sheet": "Prop Info",
      "address": "B9",
      "label_at": "A9",
@@ -1819,6 +2251,12 @@
      "address": "B10",
      "label_at": "A10",
      "target_label": "Lot Size (acres)"
+    },
+    "v25": {
+     "sheet": "Prop Info",
+     "address": "B10",
+     "label_at": "A10",
+     "target_label": "Lot Size (acres)"
     }
    },
    "status": "mapped",
@@ -1843,6 +2281,12 @@
      "target_label": "Gross Sq Ft"
     },
     "v20": {
+     "sheet": "Prop Info",
+     "address": "B11",
+     "label_at": "A11",
+     "target_label": "Gross Sq Ft"
+    },
+    "v25": {
      "sheet": "Prop Info",
      "address": "B11",
      "label_at": "A11",
@@ -1875,6 +2319,12 @@
      "address": "B12",
      "label_at": "A12",
      "target_label": "Parking Spaces"
+    },
+    "v25": {
+     "sheet": "Prop Info",
+     "address": "B12",
+     "label_at": "A12",
+     "target_label": "Parking Spaces"
     }
    },
    "status": "mapped",
@@ -1899,6 +2349,12 @@
      "target_label": "Building Class (A/B/C)"
     },
     "v20": {
+     "sheet": "Prop Info",
+     "address": "B13",
+     "label_at": "A13",
+     "target_label": "Building Class (A/B/C)"
+    },
+    "v25": {
      "sheet": "Prop Info",
      "address": "B13",
      "label_at": "A13",
@@ -1931,6 +2387,12 @@
      "address": "B14",
      "label_at": "A14",
      "target_label": "Amenity Tier (Standard / Mid / Luxury)"
+    },
+    "v25": {
+     "sheet": "Prop Info",
+     "address": "B14",
+     "label_at": "A14",
+     "target_label": "Amenity Tier (Standard / Mid / Luxury)"
     }
    },
    "status": "mapped",
@@ -1955,6 +2417,12 @@
      "target_label": "Total Rentable SF"
     },
     "v20": {
+     "sheet": "Prop Info",
+     "address": "B15",
+     "label_at": "A15",
+     "target_label": "Total Rentable SF"
+    },
+    "v25": {
      "sheet": "Prop Info",
      "address": "B15",
      "label_at": "A15",
@@ -1987,6 +2455,12 @@
      "address": "B16",
      "label_at": "A16",
      "target_label": "Studio Units"
+    },
+    "v25": {
+     "sheet": "Prop Info",
+     "address": "B16",
+     "label_at": "A16",
+     "target_label": "Studio Units"
     }
    },
    "status": "mapped",
@@ -2011,6 +2485,12 @@
      "target_label": "1BR Units"
     },
     "v20": {
+     "sheet": "Prop Info",
+     "address": "B17",
+     "label_at": "A17",
+     "target_label": "1BR Units"
+    },
+    "v25": {
      "sheet": "Prop Info",
      "address": "B17",
      "label_at": "A17",
@@ -2043,6 +2523,12 @@
      "address": "B18",
      "label_at": "A18",
      "target_label": "2BR Units"
+    },
+    "v25": {
+     "sheet": "Prop Info",
+     "address": "B18",
+     "label_at": "A18",
+     "target_label": "2BR Units"
     }
    },
    "status": "mapped",
@@ -2067,6 +2553,12 @@
      "target_label": "3BR Units"
     },
     "v20": {
+     "sheet": "Prop Info",
+     "address": "B31",
+     "label_at": "A31",
+     "target_label": "3BR Units"
+    },
+    "v25": {
      "sheet": "Prop Info",
      "address": "B31",
      "label_at": "A31",
@@ -2099,6 +2591,12 @@
      "address": "B20",
      "label_at": "A20",
      "target_label": "City / Market"
+    },
+    "v25": {
+     "sheet": "Prop Info",
+     "address": "B20",
+     "label_at": "A20",
+     "target_label": "City / Market"
     }
    },
    "status": "mapped",
@@ -2123,6 +2621,12 @@
      "target_label": "MSA Name"
     },
     "v20": {
+     "sheet": "Prop Info",
+     "address": "B21",
+     "label_at": "A21",
+     "target_label": "MSA Name"
+    },
+    "v25": {
      "sheet": "Prop Info",
      "address": "B21",
      "label_at": "A21",
@@ -2155,6 +2659,12 @@
      "address": "B22",
      "label_at": "A22",
      "target_label": "MSA Population"
+    },
+    "v25": {
+     "sheet": "Prop Info",
+     "address": "B22",
+     "label_at": "A22",
+     "target_label": "MSA Population"
     }
    },
    "status": "mapped",
@@ -2179,6 +2689,12 @@
      "target_label": "City Population"
     },
     "v20": {
+     "sheet": "Prop Info",
+     "address": "B23",
+     "label_at": "A23",
+     "target_label": "City Population"
+    },
+    "v25": {
      "sheet": "Prop Info",
      "address": "B23",
      "label_at": "A23",
@@ -2211,6 +2727,12 @@
      "address": "B24",
      "label_at": "A24",
      "target_label": "Population Growth Rate"
+    },
+    "v25": {
+     "sheet": "Prop Info",
+     "address": "B24",
+     "label_at": "A24",
+     "target_label": "Population Growth Rate"
     }
    },
    "status": "mapped",
@@ -2235,6 +2757,12 @@
      "target_label": "Avg Household Income"
     },
     "v20": {
+     "sheet": "Prop Info",
+     "address": "B27",
+     "label_at": "A27",
+     "target_label": "Avg Household Income"
+    },
+    "v25": {
      "sheet": "Prop Info",
      "address": "B27",
      "label_at": "A27",
@@ -2267,6 +2795,12 @@
      "address": "B28",
      "label_at": "A28",
      "target_label": "Median Income"
+    },
+    "v25": {
+     "sheet": "Prop Info",
+     "address": "B28",
+     "label_at": "A28",
+     "target_label": "Median Income"
     }
    },
    "status": "mapped",
@@ -2291,6 +2825,12 @@
      "target_label": "School District Rating (1-10)"
     },
     "v20": {
+     "sheet": "Prop Info",
+     "address": "B29",
+     "label_at": "A29",
+     "target_label": "School District Rating (1-10)"
+    },
+    "v25": {
      "sheet": "Prop Info",
      "address": "B29",
      "label_at": "A29",
@@ -2323,6 +2863,12 @@
      "address": "B32",
      "label_at": "A32",
      "target_label": "Blended Avg Monthly Rent"
+    },
+    "v25": {
+     "sheet": "Prop Info",
+     "address": "B32",
+     "label_at": "A32",
+     "target_label": "Blended Avg Monthly Rent"
     }
    },
    "status": "mapped",
@@ -2347,6 +2893,12 @@
      "target_label": "Avg Unit SF"
     },
     "v20": {
+     "sheet": "Prop Info",
+     "address": "B33",
+     "label_at": "A33",
+     "target_label": "Avg Unit SF"
+    },
+    "v25": {
      "sheet": "Prop Info",
      "address": "B33",
      "label_at": "A33",
@@ -2379,6 +2931,12 @@
      "address": "B34",
      "label_at": "A34",
      "target_label": "Market Vacancy Rate"
+    },
+    "v25": {
+     "sheet": "Prop Info",
+     "address": "B34",
+     "label_at": "A34",
+     "target_label": "Market Vacancy Rate"
     }
    },
    "status": "mapped",
@@ -2403,6 +2961,12 @@
      "target_label": "Market Rent Growth (Annual)"
     },
     "v20": {
+     "sheet": "Prop Info",
+     "address": "B35",
+     "label_at": "A35",
+     "target_label": "Market Rent Growth (Annual)"
+    },
+    "v25": {
      "sheet": "Prop Info",
      "address": "B35",
      "label_at": "A35",
@@ -2435,6 +2999,12 @@
      "address": "B36",
      "label_at": "A36",
      "target_label": "New Supply — Units Under Construction"
+    },
+    "v25": {
+     "sheet": "Prop Info",
+     "address": "B36",
+     "label_at": "A36",
+     "target_label": "New Supply — Units Under Construction"
     }
    },
    "status": "mapped",
@@ -2459,6 +3029,12 @@
      "target_label": "Renter Household % of Population"
     },
     "v20": {
+     "sheet": "Prop Info",
+     "address": "B37",
+     "label_at": "A37",
+     "target_label": "Renter Household % of Population"
+    },
+    "v25": {
      "sheet": "Prop Info",
      "address": "B37",
      "label_at": "A37",
@@ -2491,6 +3067,12 @@
      "address": "B39",
      "label_at": "A39",
      "target_label": "Electric Meter"
+    },
+    "v25": {
+     "sheet": "Prop Info",
+     "address": "B39",
+     "label_at": "A39",
+     "target_label": "Electric Meter"
     }
    },
    "status": "mapped",
@@ -2515,6 +3097,12 @@
      "target_label": "Water Meter"
     },
     "v20": {
+     "sheet": "Prop Info",
+     "address": "B40",
+     "label_at": "A40",
+     "target_label": "Water Meter"
+    },
+    "v25": {
      "sheet": "Prop Info",
      "address": "B40",
      "label_at": "A40",
@@ -2547,6 +3135,12 @@
      "address": "B41",
      "label_at": "A41",
      "target_label": "Gas"
+    },
+    "v25": {
+     "sheet": "Prop Info",
+     "address": "B41",
+     "label_at": "A41",
+     "target_label": "Gas"
     }
    },
    "status": "mapped",
@@ -2571,6 +3165,12 @@
      "target_label": "Trash"
     },
     "v20": {
+     "sheet": "Prop Info",
+     "address": "B42",
+     "label_at": "A42",
+     "target_label": "Trash"
+    },
+    "v25": {
      "sheet": "Prop Info",
      "address": "B42",
      "label_at": "A42",
@@ -2603,6 +3203,12 @@
      "address": "B47",
      "label_at": "A47",
      "target_label": "Value-Add Thesis"
+    },
+    "v25": {
+     "sheet": "Prop Info",
+     "address": "B47",
+     "label_at": "A47",
+     "target_label": "Value-Add Thesis"
     }
    },
    "status": "mapped",
@@ -2627,6 +3233,12 @@
      "target_label": "Comp Distance (mi)"
     },
     "v20": {
+     "sheet": "Rental Comps",
+     "address": "Q8+",
+     "label_at": "Q6",
+     "target_label": "Comp Distance (mi)"
+    },
+    "v25": {
      "sheet": "Rental Comps",
      "address": "Q8+",
      "label_at": "Q6",
@@ -2659,6 +3271,12 @@
      "address": "R8+",
      "label_at": "R6",
      "target_label": "Comp Property"
+    },
+    "v25": {
+     "sheet": "Rental Comps",
+     "address": "R8+",
+     "label_at": "R6",
+     "target_label": "Comp Property"
     }
    },
    "status": "mapped",
@@ -2683,6 +3301,12 @@
      "target_label": "Comp Class (A/B/C)"
     },
     "v20": {
+     "sheet": "Rental Comps",
+     "address": "S8+",
+     "label_at": "S6",
+     "target_label": "Comp Class (A/B/C)"
+    },
+    "v25": {
      "sheet": "Rental Comps",
      "address": "S8+",
      "label_at": "S6",
@@ -2715,6 +3339,12 @@
      "address": "T8+",
      "label_at": "T6",
      "target_label": "Comp Vintage"
+    },
+    "v25": {
+     "sheet": "Rental Comps",
+     "address": "T8+",
+     "label_at": "T6",
+     "target_label": "Comp Vintage"
     }
    },
    "status": "mapped",
@@ -2739,6 +3369,12 @@
      "target_label": "Comp # Units"
     },
     "v20": {
+     "sheet": "Rental Comps",
+     "address": "U8+",
+     "label_at": "U6",
+     "target_label": "Comp # Units"
+    },
+    "v25": {
      "sheet": "Rental Comps",
      "address": "U8+",
      "label_at": "U6",
@@ -2771,6 +3407,12 @@
      "address": "V8+",
      "label_at": "V6",
      "target_label": "Comp Unit Type"
+    },
+    "v25": {
+     "sheet": "Rental Comps",
+     "address": "V8+",
+     "label_at": "V6",
+     "target_label": "Comp Unit Type"
     }
    },
    "status": "mapped",
@@ -2795,6 +3437,12 @@
      "target_label": "Comp Avg SF"
     },
     "v20": {
+     "sheet": "Rental Comps",
+     "address": "W8+",
+     "label_at": "W6",
+     "target_label": "Comp Avg SF"
+    },
+    "v25": {
      "sheet": "Rental Comps",
      "address": "W8+",
      "label_at": "W6",
@@ -2827,6 +3475,12 @@
      "address": "X8+",
      "label_at": "X6",
      "target_label": "Comp Asking Rent /mo"
+    },
+    "v25": {
+     "sheet": "Rental Comps",
+     "address": "X8+",
+     "label_at": "X6",
+     "target_label": "Comp Asking Rent /mo"
     }
    },
    "status": "mapped",
@@ -2851,6 +3505,12 @@
      "target_label": "Comp Concession (wks)"
     },
     "v20": {
+     "sheet": "Rental Comps",
+     "address": "Y8+",
+     "label_at": "Y6",
+     "target_label": "Comp Concession (wks)"
+    },
+    "v25": {
      "sheet": "Rental Comps",
      "address": "Y8+",
      "label_at": "Y6",
@@ -2883,6 +3543,12 @@
      "address": "AB8+",
      "label_at": "AB6",
      "target_label": "Comp Occupancy %"
+    },
+    "v25": {
+     "sheet": "Rental Comps",
+     "address": "AB8+",
+     "label_at": "AB6",
+     "target_label": "Comp Occupancy %"
     }
    },
    "status": "mapped",
@@ -2907,6 +3573,12 @@
      "target_label": "Comp Comment"
     },
     "v20": {
+     "sheet": "Rental Comps",
+     "address": "AD8+",
+     "label_at": "AD6",
+     "target_label": "Comp Comment"
+    },
+    "v25": {
      "sheet": "Rental Comps",
      "address": "AD8+",
      "label_at": "AD6",
@@ -2948,5 +3620,6 @@
   "Column U 'Status Flag' (Rent Roll Analysis) — semantics still unconfirmed (analyst-input vs derived); deferred to whenever it matters (SPEC-MF §2.7).",
   "RESOLVED by the parser build (MF v0.2.0-v0.4.4, 2026-06-03), retained for traceability: (a) T-12 COA->_StdCOA dictionary -> coa_seed.csv + mf_mappings.classify_t12_account (5 formats, 100% coverage, penny-exact reconciliation); (b) AR Bldg-Unit join + period handling -> mf_ar_parser.join_ar_to_units (49/49 on Avana, >45-day warning, two-way unmatched report); (c) status taxonomy -> mf_mappings.normalize_status; (d) W-AK ancillary breakout for itemized RRs -> mf_mappings.classify_charge_code + writer; (e) template versioning -> reuse the v15 filename, refresh the committed asset via verbatim byte-copy after an anchor pre-flight diff (MF v0.4.4); (f) Subsidy Rent stays folded in scheduled charges -> GPR (operator-confirmed, no dedicated column).",
   "Reference — FIVE MF T-12 formats catalogued (the format detector handles all): PSI flat (Hidden Lakes), QuickBooks nested P&L (Blairstone), Yardi numbered (Avana), Yardi/YSI (Ascend), Tzadik/AppFolio name-only (Copeland). Avana + Ascend share the identical Yardi standard chart (41000 Market Rent, 41100 Vacancy, 51010 Mgmt Salaries, 61030 Mgmt Fee, 62xxx Taxes, 63xxx Insurance, 70000-89999 below-the-line). Two RR row shapes handled: one-row-per-unit + itemized 'charge codes' (multi-row). Each new operator format may still need the parser to learn it (broadens with samples)."
- ]
+ ],
+ "primary_template": "v25"
 }

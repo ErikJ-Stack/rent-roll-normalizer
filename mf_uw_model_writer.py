@@ -1,5 +1,5 @@
 """
-MF UW Model writer — paste normalized RR / AR / T-12 into MF_UW_Model_v20.xlsx.
+MF UW Model writer — paste normalized RR / AR / T-12 into MF_UW_Model_v25.xlsx.
 
 Writes only the two intake grids (the diagnostic/analytic layers are formula-
 driven and left untouched):
@@ -7,20 +7,27 @@ driven and left untouched):
     O=SUM formula / P=`_StdCOA` bucket.
   - RR (+joined AR) → `Rent Roll Analysis` grid (anchor A273, cols A–T core).
 
-All four write-target sheets are layout-identical between v15 and v20 (T-12
+All four write-target sheets are layout-identical across v15 / v20 / v25 (T-12
 Analysis Layer 1 @106, Rent Roll Analysis grid @273 cols A–AK / data 273–1772,
-Prop Info col B, Rental Comps @8), so the same anchors drive both —
-`template_version` is informational only. v20 adds a `Dashboard` sheet, per-row
-chart-helper formula columns AL–AP on `Rent Roll Analysis` (outside the
-writer's A–AK clear band, so preserved), and — unlike v15 — an
-`xl/metadata.xml` part for Excel-365 dynamic-array semantics (7 `cm`-marked
-cells). The `_restore_dynamic_arrays` call below — a harmless no-op on v15 — is
-therefore **active** on v20: it re-injects `metadata.xml` + the `cm` markers
-after openpyxl's save, which would otherwise drop them (openpyxl quirk #6).
-Verified 7→7 `cm` markers preserved. openpyxl still drops auxiliary parts on
-save — **cell comments + their indicators, the Claude-for-Excel add-in, and
-custom doc properties** (no data/formulas/charts) — surfaced in the report as a
-warning; open + re-save in Excel only if you need those annotations back.
+Prop Info col A label + col B value, Rental Comps @8), so the same anchors drive
+every version — `template_version` is informational only. v25 reshuffled the
+non-target sheets (`Dashboard` renamed `Dash`, `Data Refresh` removed → 23
+sheets) and trimmed the now-blank `Rent Roll Analysis` helper columns to a
+single AL (chart helper, still outside the writer's A–AK clear band → preserved)
+and Prop Info to cols A–D; none of that touches the write anchors.
+
+Like v20 (but unlike v15), v25 carries an `xl/metadata.xml` part for Excel-365
+dynamic-array semantics (7 `cm`-marked cells). The `_restore_dynamic_arrays`
+call below — a no-op on v15 — re-injects `metadata.xml` + the `cm` markers after
+openpyxl's save, which would otherwise drop them (openpyxl quirk #6). Verified
+7→7 `cm` markers preserved.
+
+openpyxl still drops auxiliary parts on save — **cell comments + their
+indicators, the Claude-for-Excel add-in, custom doc properties, and (new in
+v25) the extended (x14) data-validation dropdowns on `Rent Roll Analysis`** (no
+data/formulas/charts affected; the writer fills those cells with real values
+regardless) — surfaced in the report as a warning; open + re-save in Excel only
+if you need those annotations / dropdowns back.
 
 Public API:
     populate_mf_model(model_bytes, *, t12=None, rr=None, property_name=None,
@@ -311,7 +318,8 @@ def populate_mf_model(model_bytes: bytes, *, t12=None, rr=None, om=None,
     out = _restore_dynamic_arrays(out, model_bytes)   # no-op on v15 (no metadata.xml)
     _p(1.0)    # workbook saved
     report["warnings"].append(
-        "Cell comments, the Claude-for-Excel add-in, and custom doc properties "
-        "are dropped by the Excel writer (no data/formulas/charts affected) — "
-        "open + re-save in Excel if you need those annotations back.")
+        "Cell comments, the Claude-for-Excel add-in, custom doc properties, and "
+        "the extended (x14) data-validation dropdowns on Rent Roll Analysis are "
+        "dropped by the Excel writer (no data/formulas/charts affected) — open + "
+        "re-save in Excel if you need those annotations / dropdowns back.")
     return out, report
