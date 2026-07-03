@@ -9,6 +9,100 @@ Newest at top.
 
 ---
 
+## 2026-07-03 — Cross-track: whole-app efficiency pass (session-cache the ALF pipeline)
+
+**Scope.** User-requested full-codebase review + efficiency improvements
+("easy to use interface for underwriting"). Cross-cutting by explicit request.
+
+**What shipped (uncommitted at session end — user to commit).**
+
+- **ALF pipeline session cache (`app.py`) — the headline fix.** The ALF path
+  re-ran the ENTIRE pipeline on every Streamlit rerun: RR re-parse, T12
+  re-parse (with TWO full openpyxl loads of the 16-sheet Analyzer for the
+  Description_Map), `write_output` rebuild, the 3-step combined-Analyzer
+  build (3 chained openpyxl load/save round-trips), and the UW Template
+  populate. The MF side already had signature-based caching (`_mf_sig`);
+  ALF never got it. New `_session_cache(key, sig, compute)` helper +
+  signatures over every input (upload `file_id` tokens, parse options,
+  period date, scenario, UNMATCHED-resolutions hash). Verified via a new
+  AppTest end-to-end smoke (patched `st.file_uploader` injecting the
+  Homestead RR + T12 fixtures): first run ~5s, cached rerun **0.1s**, all
+  3 downloads produced, no errors, both with and without T12.
+- **Single descmap load:** the T12 branch loaded the Analyzer workbook twice
+  back-to-back (`read_descmap_descriptions` + `_read_descmap_labels`); now
+  one load serves both. `_read_descmap_labels` deleted (dead).
+- **Dashboard tab empty-state bug:** `st.stop()` inside the Workspace tab
+  halted the script before the Dashboard tab rendered, so it showed BLANK
+  when no RR was uploaded (the `if rr_file is None` branch there was
+  unreachable). Empty-state/parse-failure messages now written via
+  `top_tab_dashboard.info/.warning` before each stop.
+- **`dashboard_model.load_description_map`:** cache now keyed by resolved
+  path (was a single slot that ignored the `analyzer_path` arg — latent
+  stale-cache bug) + `try/finally` around `wb.close()`.
+- **`uw_template_writer._load_registry`:** cached on (path, mtime) —
+  registry.json no longer re-parsed per populate call. Verified read-only
+  downstream (no mutation of the shared dict).
+- **MF stale labels:** cockpit chip hardcoded "MF UW MODEL v15" →
+  `BUNDLED_MF_MODEL_VERSION`; `model_src` caption hardcoded v15 →
+  bundled-file name. `_mf_file_token` renamed `_file_token` (now shared).
+- Unused `CONDENSED_COLUMNS` import dropped from app.py.
+
+**Verification.** Full pytest suite 88 passed / 1 skipped; pyflakes clean
+(pre-existing nits only); AppTest empty-state smoke (both modes) + e2e smoke
+(RR-only and RR+T12) green.
+
+**Phase 2 (same session, user-approved "go ahead"): deal-package flow +
+mapping memory.**
+
+- **Deal package row (app.py).** The old "Export" section put the Analyzer
+  download AND the whole UW Template populate flow (report, expander,
+  statuses) inside the right half of a 2-column split. Restructured: both
+  builds now run up front (session-cached, outside any column), then a
+  single 3-column row presents **1 · Normalized RR · 2 · Populated
+  Analyzer · 3 · Populated UW Template** side by side, each with its gate
+  reason or error in place when unavailable. New **deal-package zip**
+  download (all three files, ZIP_STORED since xlsx are already zip
+  containers) appears when everything is ready; the UW populate report
+  moved below the row at full width. Widget keys unchanged (`dl_rr` /
+  `dl_combined` / `dl_uw_template` / `dl_combined_disabled`; new
+  `dl_uw_disabled`, `dl_zip`). Error scoping improved: Analyzer-build
+  exceptions (capacity/AR/ValueError) land in col 2, UW-writer exceptions
+  in col 3 — previously one try wrapped both.
+- **T12 mapping memory (app.py + .gitignore).** UNMATCHED matcher
+  resolutions now persist across sessions in `t12_mapping_memory.json`
+  (repo root, gitignored — real GL descriptions; ephemeral on Streamlit
+  Cloud redeploys, durable locally). On T12 parse, remembered descriptions
+  auto-resolve (surfaced as "🧠 N auto-mapped from memory"), flow into
+  `new_descmap_entries` as usual, and the matcher form only shows genuinely
+  new descriptions. Saves merge on form submit; load/save are best-effort
+  (corrupt/missing file → empty memory, write failure never blocks).
+- **Mapping-memory viewer (Advanced expander).** Only place to inspect or
+  reset the memory — matters on Streamlit Cloud where there's no shell
+  access to the JSON file. Checkbox reveals the remembered-mappings table;
+  "Clear memory" deletes the file (does not un-apply this session's
+  resolutions). AppTest-verified: renders when memory exists, table shows
+  on tick, Clear deletes the file and the controls disappear.
+
+**Verification (phase 2).** Mapping-memory helpers round-trip tested
+(merge, invalid-entry drop, corrupt-file recovery); AppTest e2e re-run:
+4 download buttons (3 files + zip), zip verified to contain exactly the
+three workbooks, cached rerun still 0.1s; empty-state smoke both modes;
+full pytest suite 88 passed / 1 skipped.
+
+**Carry-forwards / suggestions surfaced to user (not applied).** Parser-level
+micro-optimizations (double `iterrows()` in normalizer/pre_cleaner — now
+moot per-rerun since parses are cached); bare-except narrowing in
+ar_normalizer/mappings (intentional-looking fallbacks, needs a decision);
+`use_container_width` deprecation (removed after 2025-12-31 per Streamlit
+warning — sweep when the Cloud runtime version is confirmed); session-state
+now holds output bytes (~tens of MB/session — fine for single-operator);
+ALF/MF status-taxonomy duplication (deferred until the planned `alf/`+`mf/`
+package split); mapping-memory has no in-app viewer/editor yet (delete the
+JSON file to reset); a true cross-deploy persistence layer for the memory
+would need external storage (gist/S3/DB) — flagged, not built.
+
+---
+
 ## 2026-06-29 — Track 4-MF: MF UW Model v25 absorption (MF v0.8.0)
 
 **Scope.** Operator dropped `MF_UW_Model_v25.xlsx` ("update the template for the

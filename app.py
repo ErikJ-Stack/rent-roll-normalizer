@@ -29,7 +29,10 @@ from __future__ import annotations
 
 import datetime as dt
 import hashlib
+import io
+import json
 import os
+import zipfile
 from pathlib import Path
 
 import openpyxl
@@ -39,7 +42,7 @@ import streamlit as st
 from auth import allowed_modes, render_user_controls, require_login
 from branding import inject_brand_css, inject_cockpit_css
 from mappings import MappingSet, load_mapping_workbook
-from normalizer import CONDENSED_COLUMNS, normalize_rent_roll
+from normalizer import normalize_rent_roll
 from period_date import detect_period_date
 from property_name import derive_property_name
 from reports import build_by_type, build_exceptions, build_summary
@@ -159,21 +162,47 @@ def _build_output_name(source_filename: str) -> str:
     return f"{stem} Normalized {today}.xlsx"
 
 
-def _read_descmap_labels(analyzer_bytes: bytes) -> list[str]:
-    """Pull the existing Labels from the Analyzer's Description_Map for the
-    matcher's Label combobox. Falls back to an empty list on any read error.
+# ---------------------------------------------------------------------------
+# T12 mapping memory — UNMATCHED resolutions persisted across sessions
+# ---------------------------------------------------------------------------
+# When an analyst maps an UNMATCHED T12 description in the matcher form, the
+# resolution is saved here and auto-applied the next time the same
+# description shows up (typically the same operator's next deal). The file
+# lives beside the app: on a local install it persists indefinitely; on
+# Streamlit Cloud the container filesystem is ephemeral, so memory persists
+# across sessions within a deployment and resets on redeploy/reboot.
+MAPPING_MEMORY_PATH = Path(__file__).parent / "t12_mapping_memory.json"
+
+
+def _load_mapping_memory() -> dict[str, dict]:
+    """Previously-resolved UNMATCHED descriptions, keyed by description.
+
+    Best-effort: a missing or corrupt file is just an empty memory. Entries
+    without a label+section (the required fields) are dropped defensively.
     """
     try:
-        wb = openpyxl.load_workbook(pd.io.common.BytesIO(analyzer_bytes), data_only=True)
-        ws = wb["Description_Map"]
-        labels: set[str] = set()
-        for r in range(5, ws.max_row + 1):
-            v = ws.cell(r, 2).value  # col B = Label
-            if v and str(v).strip():
-                labels.add(str(v).strip())
-        return sorted(labels)
+        with MAPPING_MEMORY_PATH.open(encoding="utf-8") as f:
+            data = json.load(f)
+        return {
+            str(k): v for k, v in data.items()
+            if isinstance(v, dict) and v.get("label") and v.get("section")
+        }
     except Exception:
-        return []
+        return {}
+
+
+def _save_mapping_memory(new_entries: dict[str, dict]) -> None:
+    """Merge new resolutions into the on-disk memory. Best-effort — a write
+    failure (read-only filesystem, permissions) must never block the flow."""
+    try:
+        memory = _load_mapping_memory()
+        memory.update(new_entries)
+        MAPPING_MEMORY_PATH.write_text(
+            json.dumps(memory, indent=2, ensure_ascii=False, sort_keys=True),
+            encoding="utf-8",
+        )
+    except Exception:
+        pass
 
 
 def _detect_substrate_version(analyzer_bytes: bytes) -> str:
@@ -495,7 +524,7 @@ def _parse_currency(raw: str) -> int:
         return 0
 
 
-def _mf_file_token(f) -> str:
+def _file_token(f) -> str:
     """Stable per-upload token for cache keying. Streamlit's UploadedFile carries
     a `file_id` that persists across reruns (e.g. a download-button click) and
     changes only when a new file is chosen — far cheaper than hashing the bytes."""
@@ -507,12 +536,28 @@ def _mf_file_token(f) -> str:
     return "h:" + hashlib.sha256(f.getvalue()).hexdigest()
 
 
+def _session_cache(key: str, sig: str, compute):
+    """Session-scoped memo: reuse the stored value while `sig` is unchanged.
+
+    Streamlit reruns the whole script on every widget interaction; anything
+    heavy (file parsing, openpyxl workbook round-trips) must be keyed on its
+    inputs so a rerun that didn't change them skips the work entirely.
+    Exceptions from `compute` propagate uncached, so a failed parse retries
+    on the next rerun instead of poisoning the cache."""
+    entry = st.session_state.get(key)
+    if entry is not None and entry.get("sig") == sig:
+        return entry["value"]
+    value = compute()
+    st.session_state[key] = {"sig": sig, "value": value}
+    return value
+
+
 def _mf_sig(rr_file, t12_file, ar_file, om_file, model_override, engine_ai, om_api_key) -> str | None:
     """Signature of all MF inputs. None when nothing is uploaded. Changing any
     file (or the OM engine/key) changes the signature → triggers a recompute."""
-    tokens = [_mf_file_token(f) for f in
+    tokens = [_file_token(f) for f in
               (rr_file, t12_file, ar_file, model_override)]
-    om_tok = _mf_file_token(om_file)
+    om_tok = _file_token(om_file)
     if all(t == "none" for t in tokens) and om_tok == "none":
         return None
     extra = ""
@@ -597,7 +642,7 @@ def _compute_mf(rr_file, t12_file, ar_file, om_file, model_override,
                 res["model_src"] = "uploaded override"
             else:
                 model_bytes = BUNDLED_MF_MODEL_PATH.read_bytes()
-                res["model_src"] = "bundled MF_UW_Model_v15.xlsx"
+                res["model_src"] = f"bundled {BUNDLED_MF_MODEL_PATH.name}"
             with pp.stage() as sub:
                 out, report = populate_mf_model(
                     model_bytes, t12=res["t12"], rr=res["rr"], om=res["om"],
@@ -814,7 +859,7 @@ def _render_mf_intake() -> None:
             {_ck_chip("T12", t12_file is not None)}
             {_ck_chip("AR", ar_file is not None)}
             {_ck_chip("OM", om_file is not None)}
-            <span class="ck-ver">MF UW MODEL v15</span>
+            <span class="ck-ver">MF UW MODEL {BUNDLED_MF_MODEL_VERSION.upper()}</span>
         </div>
         """,
         unsafe_allow_html=True,
@@ -1290,6 +1335,43 @@ with st.expander("Advanced"):
                 "the file's structure."
             ),
         )
+    # ── Mapping memory management ───────────────────────────────────────
+    # Remembered UNMATCHED T12 resolutions auto-apply on future uploads;
+    # this is the only place to inspect or reset them (matters on Streamlit
+    # Cloud, where there's no shell access to delete the file).
+    _mapping_memory_view = _load_mapping_memory()
+    if _mapping_memory_view:
+        mm1, mm2 = st.columns([3, 1], vertical_alignment="center")
+        show_memory = mm1.checkbox(
+            f"🧠 Mapping memory — {len(_mapping_memory_view)} remembered "
+            f"T12 description(s)",
+            key="show_mapping_memory",
+            help=(
+                "Descriptions you mapped in the UNMATCHED matcher are "
+                "remembered and auto-applied when the same description "
+                "shows up again. Tick to review; Clear to forget all "
+                "(does not affect mappings already applied this session)."
+            ),
+        )
+        if mm2.button("Clear memory", key="clear_mapping_memory",
+                      use_container_width=True):
+            MAPPING_MEMORY_PATH.unlink(missing_ok=True)
+            st.rerun()
+        if show_memory:
+            st.dataframe(
+                pd.DataFrame([
+                    {
+                        "Description": k,
+                        "Label": v.get("label"),
+                        "Section": v.get("section"),
+                        "Care": v.get("caretype"),
+                        "Flag": v.get("flag"),
+                    }
+                    for k, v in sorted(_mapping_memory_view.items())
+                ]),
+                hide_index=True,
+                use_container_width=True,
+            )
     st.caption(
         f"RR v{RR_VERSION} · T12 v{T12_VERSION} · AR v{AR_VERSION} "
         f"· T5 v{T5_VERSION} · UWT v{UWT_VERSION}"
@@ -1333,11 +1415,15 @@ with top_tab_workspace:
 
 
     # ---------------------------------------------------------------------------
-    # Resolve Analyzer source — bundled by default, override wins when present
+    # Resolve Analyzer source — bundled by default, override wins when present.
+    # Session-cached: substrate-version detection loads the whole 16-sheet
+    # workbook via openpyxl, far too heavy to repeat on every Streamlit rerun.
     # ---------------------------------------------------------------------------
+    _analyzer_sig = _file_token(analyzer_override_file)
     try:
-        analyzer_bytes_cached, analyzer_source_label, analyzer_substrate_ver = _load_analyzer(
-            analyzer_override_file
+        analyzer_bytes_cached, analyzer_source_label, analyzer_substrate_ver = _session_cache(
+            "alf_analyzer", _analyzer_sig,
+            lambda: _load_analyzer(analyzer_override_file),
         )
     except FileNotFoundError as e:
         st.error(str(e))
@@ -1451,23 +1537,44 @@ with top_tab_workspace:
                 intake panel.
                 """
             )
+        # st.stop() halts the whole script, so the Dashboard tab would render
+        # blank — write its empty-state message into the tab first.
+        top_tab_dashboard.info(
+            "Upload a Rent Roll in the Workspace tab's intake panel to "
+            "populate the dashboard."
+        )
         st.stop()
 
 
     # ---------------------------------------------------------------------------
-    # Process — Rent Roll
+    # Process — Rent Roll. Session-cached on the upload + parse options so a
+    # rerun (download click, purchase-price edit, theme toggle, …) reuses the
+    # parsed result instead of re-reading the file.
     # ---------------------------------------------------------------------------
-    try:
+    _rr_sig = "|".join([
+        _file_token(rr_file),
+        _file_token(mapping_file),
+        sheet_override.strip(),
+        care_type_default,
+    ])
+
+    def _parse_rr():
         with _show_loading("Parsing rent roll…"):
             mappings = load_mapping_workbook(mapping_file) if mapping_file else MappingSet()
-            result = normalize_rent_roll(
+            return normalize_rent_roll(
                 rr_file,
                 sheet_name=sheet_override.strip() or None,
                 mappings=mappings,
                 property_care_type_default=care_type_default or None,
             )
+
+    try:
+        result = _session_cache("alf_rr_result", _rr_sig, _parse_rr)
     except Exception as e:
         st.error(f"Failed to process rent roll: {e}")
+        top_tab_dashboard.warning(
+            "Rent roll could not be parsed — see the Workspace tab for details."
+        )
         st.stop()
 
     n = result.normalized
@@ -1478,6 +1585,9 @@ with top_tab_workspace:
             "No bed rows detected. Check that the file has a parent-apartment / "
             "child-bed layout and that 'Bed' (or a similar column) identifies "
             "child rows."
+        )
+        top_tab_dashboard.warning(
+            "No bed rows detected in the rent roll — see the Workspace tab."
         )
         st.stop()
 
@@ -1497,18 +1607,37 @@ with top_tab_workspace:
     descmap_labels_cached: list[str] = []
 
     if raw_t12_file is not None:
-        try:
-            analyzer_wb_for_descmap = openpyxl.load_workbook(
+        _t12_sig = "|".join([
+            _file_token(raw_t12_file),
+            _analyzer_sig,
+            str(bool(annualize_partial_year)),
+        ])
+
+        def _parse_t12_and_labels():
+            # One workbook load serves both the descmap read and the Label
+            # combobox options (previously two full loads of the Analyzer).
+            wb = openpyxl.load_workbook(
                 pd.io.common.BytesIO(analyzer_bytes_cached), data_only=True
             )
-            descmap = read_descmap_descriptions(analyzer_wb_for_descmap)
-            descmap_labels_cached = _read_descmap_labels(analyzer_bytes_cached)
+            descmap = read_descmap_descriptions(wb)
+            ws = wb["Description_Map"]
+            labels = sorted({
+                str(ws.cell(r, 2).value).strip()
+                for r in range(5, ws.max_row + 1)
+                if ws.cell(r, 2).value and str(ws.cell(r, 2).value).strip()
+            })
             with _show_loading("Parsing T12…"):
-                t12_parse_result = parse_t12(
+                parsed = parse_t12(
                     raw_t12_file.getvalue(),
                     descmap,
                     annualize_partial_year=annualize_partial_year,
                 )
+            return parsed, labels
+
+        try:
+            t12_parse_result, descmap_labels_cached = _session_cache(
+                "alf_t12_result", _t12_sig, _parse_t12_and_labels
+            )
         except UnknownT12FormatError as e:
             t12_parse_error = (
                 f"T12 format not recognized: {e}\n\n"
@@ -1524,10 +1653,23 @@ with top_tab_workspace:
 
 
     # ---------------------------------------------------------------------------
-    # UNMATCHED matcher form — session-state driven
+    # UNMATCHED matcher form — session-state driven, seeded from mapping memory
     # ---------------------------------------------------------------------------
     if "t12_resolutions" not in st.session_state:
         st.session_state.t12_resolutions = {}
+
+    # Auto-apply mapping memory: descriptions the analyst resolved in a
+    # previous session resolve themselves. Applied entries flow into
+    # `new_descmap_entries` like any session resolution, so they're appended
+    # to the downloaded Analyzer's Description_Map as usual.
+    mem_applied_count = 0
+    if t12_parse_result is not None and t12_parse_result.unmatched:
+        _mapping_memory = _load_mapping_memory()
+        for _desc in t12_parse_result.unmatched:
+            if (_desc in _mapping_memory
+                    and _desc not in st.session_state.t12_resolutions):
+                st.session_state.t12_resolutions[_desc] = _mapping_memory[_desc]
+                mem_applied_count += 1
 
     unresolved_descriptions: list[str] = []
     if t12_parse_result is not None:
@@ -1623,6 +1765,12 @@ with top_tab_workspace:
             for warning in t12_parse_result.sign_warnings:
                 st.warning(warning)
 
+            if mem_applied_count:
+                st.caption(
+                    f"🧠 {mem_applied_count} description(s) auto-mapped from "
+                    f"mapping memory (resolved in a previous session)."
+                )
+
             if t12_parse_result.unmatched:
                 n_resolved = len(t12_parse_result.unmatched) - len(unresolved_descriptions)
                 if unresolved_descriptions:
@@ -1635,8 +1783,9 @@ with top_tab_workspace:
                     with st.form("unmatched_matcher", clear_on_submit=False):
                         st.markdown(
                             "**Map these descriptions before download.** Mappings "
-                            "will be appended to your Analyzer's Description_Map "
-                            "and persist for future uploads of the same operator."
+                            "are appended to your Analyzer's Description_Map AND "
+                            "remembered across sessions — the same description "
+                            "auto-resolves on future uploads."
                         )
                         new_resolutions: dict[str, dict] = {}
 
@@ -1699,6 +1848,7 @@ with top_tab_workspace:
                                 )
                             else:
                                 st.session_state.t12_resolutions.update(new_resolutions)
+                                _save_mapping_memory(new_resolutions)
                                 st.rerun()
                 else:
                     st.success(
@@ -1774,10 +1924,12 @@ with top_tab_workspace:
 
 
     # ---------------------------------------------------------------------------
-    # Export downloads (Track 1 standalone + Track 2/3 combined Analyzer)
+    # Deal package — the three deliverables built once (session-cached) and
+    # presented side by side: Normalized RR · populated Analyzer · populated
+    # UW Template, plus a bundle zip when everything is ready.
     # ---------------------------------------------------------------------------
     st.divider()
-    st.subheader("Export")
+    st.subheader("Deal package")
 
     run_meta = {
         "RR Version":          RR_VERSION,
@@ -1799,73 +1951,64 @@ with top_tab_workspace:
         "T12 GL Rows":         len(t12_parse_result.gl_rows) if t12_parse_result else 0,
     }
 
-    xlsx_bytes = write_output(
-        condensed=c,
-        normalized=n,
-        mapping_audit=result.mapping_audit,
-        summary=summary,
-        by_type=by_type,
-        exceptions=exceptions,
-        run_metadata=run_meta,
+    # Session-cached: rebuilding the 7-tab styled workbook on every rerun is
+    # wasted work when neither the RR nor the T12 changed.
+    _export_sig = "|".join([
+        _rr_sig, _analyzer_sig, _file_token(raw_t12_file),
+        str(bool(annualize_partial_year)),
+    ])
+    xlsx_bytes = _session_cache(
+        "alf_rr_export", _export_sig,
+        lambda: write_output(
+            condensed=c,
+            normalized=n,
+            mapping_audit=result.mapping_audit,
+            summary=summary,
+            by_type=by_type,
+            exceptions=exceptions,
+            run_metadata=run_meta,
+        ),
     )
 
     out_name = _build_output_name(getattr(rr_file, "name", "rent_roll.xlsx"))
 
-    dl_col1, dl_col2 = st.columns(2)
+    # Gating: rent roll always required. T12 is optional. If T12 is uploaded,
+    # all UNMATCHED descriptions must be resolved before the Analyzer builds.
+    has_t12 = raw_t12_file is not None
+    t12_parsed_ok = t12_parse_result is not None
+    t12_unmatched_remaining = (
+        len([
+            d for d in t12_parse_result.unmatched
+            if d not in st.session_state.t12_resolutions
+        ]) if t12_parsed_ok else 0
+    )
+    t12_blocking = has_t12 and (not t12_parsed_ok or t12_unmatched_remaining > 0)
+    can_download = rr_file is not None and not t12_blocking
 
-    # --- Download 1: Standalone Normalized Rent Roll (always available) ---
-    with dl_col1:
-        st.markdown("**Normalized Rent Roll**")
-        st.caption("6-tab analyst workbook with formatting.")
-        st.download_button(
-            label=f"⬇️ Download {out_name}",
-            data=xlsx_bytes,
-            file_name=out_name,
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True,
-            key="dl_rr",
-        )
+    # ---- Build 2/3: combined Analyzer (session-cached) ---------------------
+    # Built up front (outside any column) so the download row below can show
+    # the whole deal package side by side. A cache hit costs nothing.
+    final_bytes = None
+    combined_out_name = ""
+    combined_error = None
+    if can_download:
+        try:
+            # Signature over every input that shapes the combined Analyzer.
+            # Cache hit → no openpyxl round-trips at all on this rerun.
+            _resolutions_repr = repr(sorted(
+                (k, tuple(sorted(v.items()))) for k, v in
+                st.session_state.t12_resolutions.items()
+            ))
+            _combined_sig = "|".join([
+                _rr_sig, _analyzer_sig,
+                _file_token(raw_t12_file), _file_token(ar_file),
+                str(bool(annualize_partial_year)),
+                period_date_input.isoformat(),
+                ar_as_of_override.isoformat() if ar_as_of_override else "none",
+                hashlib.sha256(_resolutions_repr.encode()).hexdigest()[:16],
+            ])
 
-    # --- Download 2: Combined Analyzer (RR + optional T12) ---
-    with dl_col2:
-        st.markdown("**Analyzer with data**")
-
-        # Gating: rent roll always required. T12 is optional. If T12 is uploaded,
-        # all UNMATCHED descriptions must be resolved before download.
-        has_t12 = raw_t12_file is not None
-        t12_parsed_ok = t12_parse_result is not None
-        t12_unmatched_remaining = (
-            len([
-                d for d in t12_parse_result.unmatched
-                if d not in st.session_state.t12_resolutions
-            ]) if t12_parsed_ok else 0
-        )
-        t12_blocking = has_t12 and (not t12_parsed_ok or t12_unmatched_remaining > 0)
-
-        can_download = rr_file is not None and not t12_blocking
-
-        if t12_blocking:
-            if not t12_parsed_ok:
-                st.caption("T12 parse failed — see error above.")
-            else:
-                st.caption(f"Resolve {t12_unmatched_remaining} UNMATCHED description(s) above to enable.")
-        else:
-            t12_caption = (
-                f"T12 data → `T12 Input!A12+`. " if has_t12 else ""
-            )
-            ar_caption = (
-                f"AR data → `AR & Collections` (revealed). "
-                if ar_file is not None else ""
-            )
-            st.caption(
-                f"RR data → `Rent Roll Input!A7+`. "
-                f"{t12_caption}"
-                f"{ar_caption}"
-                f"Period {period_date_input.isoformat()} written to RR col S."
-            )
-
-        if can_download:
-            try:
+            def _build_combined() -> bytes:
                 with _show_loading("Building populated Analyzer…"):
                     # Step 1: Write RR data into the resolved Analyzer.
                     translated = translate_for_t12(c)
@@ -1880,7 +2023,7 @@ with top_tab_workspace:
                     # resolutions and write GL detail on top of the RR-populated Analyzer.
                     if has_t12 and t12_parse_result is not None:
                         new_descmap_entries = list(st.session_state.t12_resolutions.values())
-                        final_bytes = populate_t12_input(
+                        out = populate_t12_input(
                             populated_after_rr,
                             t12_parse_result,
                             new_descmap_entries=new_descmap_entries,
@@ -1889,7 +2032,7 @@ with top_tab_workspace:
                             t12_last_updated=T12_LAST_UPDATED,
                         )
                     else:
-                        final_bytes = populated_after_rr
+                        out = populated_after_rr
 
                     # Step 3: If AR was uploaded, parse it and write to the
                     # AR & Collections sheet on top of the RR(+T12) result.
@@ -1900,235 +2043,330 @@ with top_tab_workspace:
                             if ar_as_of_override is not None
                             else None
                         )
-                        final_bytes = populate_ar_collections(
-                            final_bytes,
+                        out = populate_ar_collections(
+                            out,
                             ar_result,
                             as_of_date=as_of_str,
                             source_filename=getattr(ar_file, "name", "ar_aging.xlsx"),
                             ar_version=AR_VERSION,
                         )
+                    return out
 
-                rr_stem = Path(getattr(rr_file, "name", "rent_roll.xlsx")).stem
-                name_parts = [rr_stem]
-                if has_t12:
-                    name_parts.append(Path(getattr(raw_t12_file, "name", "raw_t12.xlsx")).stem)
-                if ar_file is not None:
-                    name_parts.append("AR")
-                combined_out_name = (
-                    f"Analyzer with {' + '.join(name_parts)} "
-                    f"{period_date_input.isoformat()}.xlsx"
+            final_bytes = _session_cache(
+                "alf_combined", _combined_sig, _build_combined
+            )
+
+            rr_stem = Path(getattr(rr_file, "name", "rent_roll.xlsx")).stem
+            name_parts = [rr_stem]
+            if has_t12:
+                name_parts.append(Path(getattr(raw_t12_file, "name", "raw_t12.xlsx")).stem)
+            if ar_file is not None:
+                name_parts.append("AR")
+            combined_out_name = (
+                f"Analyzer with {' + '.join(name_parts)} "
+                f"{period_date_input.isoformat()}.xlsx"
+            )
+        except AnalyzerRRCapacityError as e:
+            combined_error = f"Rent Roll exceeds Analyzer capacity: {e}"
+        except T12NormalizerCapacityError as e:
+            combined_error = f"T12 exceeds Analyzer capacity: {e}"
+        except AROutputError as e:
+            combined_error = (
+                f"Analyzer override is missing the 'AR & Collections' sheet "
+                f"(substrate v0.2.10+ required to use AR upload). {e}"
+            )
+        except ValueError as e:
+            combined_error = f"Analyzer / T12 / AR error: {e}"
+        except Exception as e:
+            combined_error = f"Could not produce combined output: {e}"
+
+    # ---- Build 3/3: populated UW Template (session-cached) -----------------
+    # Track 4 / Phase 2.5 — mirrors the Analyzer pattern: bundled template by
+    # default, Advanced → "UW Template override" for a session-specific one.
+    # Fires on every successful Analyzer build — no upload required. The
+    # in-Python UW Output evaluator below closes the openpyxl-doesn't-
+    # compute-formulas cache caveat.
+    populated_uw = None
+    uw_report = None
+    uw_error = None
+    uw_out_name = ""
+    uw_template_source = ""
+    uw_template_version = ""
+    safe_property = "Property"
+    if final_bytes is not None:
+        try:
+            # Session-cached: version detection on an uploaded template
+            # loads the whole workbook — do it once per distinct upload.
+            _uwt_src_sig = _file_token(uw_template_override_file)
+            uw_template_bytes, uw_template_source, uw_template_version = (
+                _session_cache(
+                    "alf_uw_template_src", _uwt_src_sig,
+                    lambda: _load_uw_template(uw_template_override_file),
                 )
+            )
 
-                st.download_button(
-                    label=f"⬇️ Download {combined_out_name[:60]}{'…' if len(combined_out_name) > 60 else ''}",
-                    data=final_bytes,
-                    file_name=combined_out_name,
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True,
-                    key="dl_combined",
+            # Per-deal filename: <Property>_UW_Template_<period>_<scenario>.xlsx
+            property_name = (
+                derive_property_name(getattr(rr_file, "name", ""))
+                or "Property"
+            )
+
+            # In-Python UW Output evaluator (kills the cache caveat).
+            # The Analyzer the app just built via openpyxl has formula
+            # *text* but no cached values, so the writer's reads of
+            # `UW Output!{col}{row}` would all come back blank. We
+            # compute those values directly from the parsed RR + T12
+            # (mirroring T12 Analytics) and hand them to the writer as
+            # a fallback. Property name + period date are added here
+            # too (the app already has them; their Analyzer source
+            # cells are formula/blank on a fresh build).
+            # Session-cached alongside the populate itself — a rerun
+            # with unchanged inputs reuses the populated bytes+report.
+            _uwt_sig = "|".join([
+                _combined_sig, uw_template_scenario, _uwt_src_sig,
+            ])
+
+            def _build_uw_template():
+                uw_computed = compute_uw_output_values(
+                    result,
+                    t12_parse_result,
+                    scenario=uw_template_scenario,
                 )
-
-                # ─── Track 4 / Phase 2.5 — populated UW Template download ───
-                # Mirrors the Analyzer pattern: bundled template loads by
-                # default from `assets/ALF_UW_Template_v5.xlsx`; operator
-                # can override via Advanced → "UW Template override". The
-                # populate flow fires unconditionally on every successful
-                # Analyzer build — no upload required.
-                #
-                # The writer reads cached formula values from the Analyzer,
-                # so the bytes we just generated (via openpyxl, which DOES
-                # NOT compute formulas) won't have UW Output values cached.
-                # Workaround: warn the user — the populated UW Template will
-                # be sparse unless the Analyzer is round-tripped through
-                # Excel first. Future enhancement: invoke a formula engine
-                # (pycel / formulas) to compute Analyzer values in-Python
-                # before the writer reads them.
-                st.markdown("---")
-                st.markdown("##### 📋 Populate UW Template")
-                try:
-                    uw_template_bytes, uw_template_source, uw_template_version = (
-                        _load_uw_template(uw_template_override_file)
-                    )
-                    st.caption(
-                        f"Using UW Template: **{uw_template_source}** "
-                        f"(`{uw_template_version}`)."
-                    )
-
-                    # Per-deal filename: <Property>_UW_Template_<period>_<scenario>.xlsx
-                    property_name = (
-                        derive_property_name(getattr(rr_file, "name", ""))
-                        or "Property"
-                    )
-
-                    # In-Python UW Output evaluator (kills the cache caveat).
-                    # The Analyzer the app just built via openpyxl has formula
-                    # *text* but no cached values, so the writer's reads of
-                    # `UW Output!{col}{row}` would all come back blank. We
-                    # compute those values directly from the parsed RR + T12
-                    # (mirroring T12 Analytics) and hand them to the writer as
-                    # a fallback. Property name + period date are added here
-                    # too (the app already has them; their Analyzer source
-                    # cells are formula/blank on a fresh build).
-                    uw_computed = compute_uw_output_values(
-                        result,
-                        t12_parse_result,
+                uw_computed.setdefault("property_name", property_name)
+                uw_computed.setdefault("rr_period_date", period_date_input)
+                # Monthly breakdown for the T-12 Analysis Layer-3 grid
+                # (cols B–M). Empty when no T12 — those rows stay blank.
+                uw_monthly = compute_uw_output_monthly(result, t12_parse_result)
+                # Summarized raw T-12 (by label) for Section I / Layer 1.
+                uw_raw_lines = compute_t12_raw_lines(t12_parse_result)
+                with _show_loading("Populating UW Template…"):
+                    return populate_uw_template(
+                        final_bytes,
+                        uw_template_bytes,
                         scenario=uw_template_scenario,
+                        template_version=uw_template_version,
+                        computed_values=uw_computed,
+                        computed_monthly=uw_monthly,
+                        raw_t12_lines=uw_raw_lines,
                     )
-                    uw_computed.setdefault("property_name", property_name)
-                    uw_computed.setdefault("rr_period_date", period_date_input)
-                    # Monthly breakdown for the T-12 Analysis Layer-3 grid
-                    # (cols B–M). Empty when no T12 — those rows stay blank.
-                    uw_monthly = compute_uw_output_monthly(result, t12_parse_result)
-                    # Summarized raw T-12 (by label) for Section I / Layer 1.
-                    uw_raw_lines = compute_t12_raw_lines(t12_parse_result)
 
-                    with _show_loading("Populating UW Template…"):
-                        populated_uw, uw_report = populate_uw_template(
-                            final_bytes,
-                            uw_template_bytes,
-                            scenario=uw_template_scenario,
-                            template_version=uw_template_version,
-                            computed_values=uw_computed,
-                            computed_monthly=uw_monthly,
-                            raw_t12_lines=uw_raw_lines,
-                        )
-                        # Sanitize for filename
-                        safe_property = "".join(
-                            c if c.isalnum() or c in " -_" else "_"
-                            for c in property_name
-                        ).strip().replace(" ", "_")
-                        uw_out_name = (
-                            f"{safe_property}_UW_Template_"
-                            f"{period_date_input.isoformat()}_"
-                            f"{uw_template_scenario}.xlsx"
-                        )
+            populated_uw, uw_report = _session_cache(
+                "alf_uw_template", _uwt_sig, _build_uw_template
+            )
 
-                        # Inline summary
-                        n_written = uw_report.summary.get("written", 0)
-                        n_cells = uw_report.summary.get("cells_written", 0)
-                        n_total = uw_report.summary.get("total_concepts", 0)
-                        n_computed = uw_report.summary.get("computed_in_python", 0)
-                        n_warn = len(uw_report.warnings)
-                        st.caption(
-                            f"Writer populated **{n_written} of {n_total}** "
-                            f"concepts ({n_cells:,} cells). "
-                            f"Scenario: `{uw_template_scenario}`. "
-                            + (f"⚠️ {n_warn} warning(s)." if n_warn else "")
-                        )
+            # Sanitize for filename
+            safe_property = "".join(
+                ch if ch.isalnum() or ch in " -_" else "_"
+                for ch in property_name
+            ).strip().replace(" ", "_")
+            uw_out_name = (
+                f"{safe_property}_UW_Template_"
+                f"{period_date_input.isoformat()}_"
+                f"{uw_template_scenario}.xlsx"
+            )
+        except UWTemplateWriterError as e:
+            uw_error = f"UW Template populate failed: {e}"
+        except Exception as e:
+            uw_error = f"Could not populate UW Template: {e}"
 
-                        # Drill-in expander with the full PopulateReport
-                        with st.expander(
-                            "🔍 Populate report (details)",
-                            expanded=(n_warn > 0),
-                        ):
-                            if uw_report.warnings:
-                                st.markdown("**Warnings:**")
-                                for w in uw_report.warnings:
-                                    st.markdown(f"- {w}")
+    # ---- Download row: the three deliverables side by side -----------------
+    pk1, pk2, pk3 = st.columns(3)
 
-                            by_outcome = uw_report.by_outcome()
-                            outcome_lines = []
-                            for outcome in (
-                                "written", "no_source", "skipped",
-                                "no_target", "error",
-                            ):
-                                items = by_outcome.get(outcome, [])
-                                if items:
-                                    outcome_lines.append(
-                                        f"- **{outcome}** — {len(items)} concept(s)"
-                                    )
-                            if outcome_lines:
-                                st.markdown(
-                                    "**Outcomes by category:**\n"
-                                    + "\n".join(outcome_lines)
-                                )
+    with pk1:
+        st.markdown("**1 · Normalized Rent Roll**")
+        st.caption("6-tab analyst workbook with formatting.")
+        st.download_button(
+            label=f"⬇️ Download {out_name}",
+            data=xlsx_bytes,
+            file_name=out_name,
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+            key="dl_rr",
+        )
 
-                            errors = by_outcome.get("error", [])
-                            if errors:
-                                st.markdown("**Errors:**")
-                                for r in errors:
-                                    st.markdown(
-                                        f"- `{r.key}` → `{r.target_address}` — {r.notes}"
-                                    )
-
-                        st.download_button(
-                            label=(
-                                f"⬇️ Download {uw_out_name[:60]}"
-                                f"{'…' if len(uw_out_name) > 60 else ''}"
-                            ),
-                            data=populated_uw,
-                            file_name=uw_out_name,
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            use_container_width=True,
-                            key="dl_uw_template",
-                        )
-
-                        # In-Python evaluator status. The cache caveat is now
-                        # handled: the writer's UW-Output reads on a freshly
-                        # built (openpyxl, no cached values) Analyzer fall back
-                        # to values computed directly from the parsed RR + T12.
-                        # No Excel round-trip needed. Surface a success line
-                        # when the fallback did the work; only warn if T-12
-                        # values still came through blank (e.g. no T12
-                        # uploaded, or an analyst-override Analyzer with an
-                        # unexpectedly empty UW Output).
-                        n_monthly = uw_report.summary.get("monthly_cells_written", 0)
-                        if n_computed > 0:
-                            monthly_note = (
-                                f" Plus **{n_monthly} monthly cells** across the "
-                                f"T-12 Analysis Apr→Mar grid."
-                                if n_monthly else ""
-                            )
-                            st.success(
-                                f"✅ **{n_computed} UW Output value(s) computed "
-                                f"in-Python** (EGI, EBITDARM, EBITDA, opex line "
-                                f"items, bed counts, …) — the T-12 Analysis tab "
-                                f"is populated directly from the parsed RR + "
-                                f"T12. No Excel round-trip required." + monthly_note
-                            )
-                        t12_no_source = [
-                            r for r in uw_report.results
-                            if r.outcome == "no_source" and r.path == "t12"
-                        ]
-                        if t12_no_source and not has_t12:
-                            st.info(
-                                f"ℹ️ {len(t12_no_source)} T-12 Analysis value(s) "
-                                f"are blank because no Raw T12 was uploaded. "
-                                f"Upload a T12 to populate EGI / EBITDARM / opex "
-                                f"line items."
-                            )
-                        elif t12_no_source:
-                            st.info(
-                                f"ℹ️ {len(t12_no_source)} T-12 value(s) came "
-                                f"through blank. If you uploaded an Analyzer "
-                                f"override, its `UW Output` cells may be empty — "
-                                f"the in-Python evaluator only fills gaps when "
-                                f"the parsed RR + T12 are available."
-                            )
-
-                except UWTemplateWriterError as e:
-                    st.error(f"UW Template populate failed: {e}")
-                except Exception as e:
-                    st.error(f"Could not populate UW Template: {e}")
-            except AnalyzerRRCapacityError as e:
-                st.error(f"Rent Roll exceeds Analyzer capacity: {e}")
-            except T12NormalizerCapacityError as e:
-                st.error(f"T12 exceeds Analyzer capacity: {e}")
-            except AROutputError as e:
-                st.error(
-                    f"Analyzer override is missing the 'AR & Collections' sheet "
-                    f"(substrate v0.2.10+ required to use AR upload). {e}"
-                )
-            except ValueError as e:
-                st.error(f"Analyzer / T12 / AR error: {e}")
-            except Exception as e:
-                st.error(f"Could not produce combined output: {e}")
+    with pk2:
+        st.markdown("**2 · Populated Analyzer**")
+        if final_bytes is not None:
+            t12_caption = "T12 data → `T12 Input!A12+`. " if has_t12 else ""
+            ar_caption = (
+                "AR data → `AR & Collections` (revealed). "
+                if ar_file is not None else ""
+            )
+            st.caption(
+                f"RR data → `Rent Roll Input!A7+`. "
+                f"{t12_caption}"
+                f"{ar_caption}"
+                f"Period {period_date_input.isoformat()} written to RR col S."
+            )
+            st.download_button(
+                label=f"⬇️ Download {combined_out_name[:60]}{'…' if len(combined_out_name) > 60 else ''}",
+                data=final_bytes,
+                file_name=combined_out_name,
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True,
+                key="dl_combined",
+            )
         else:
+            if combined_error:
+                st.error(combined_error)
+            elif has_t12 and not t12_parsed_ok:
+                st.caption("T12 parse failed — see the error above.")
+            elif t12_unmatched_remaining:
+                st.caption(
+                    f"Resolve {t12_unmatched_remaining} UNMATCHED "
+                    f"description(s) in the T12 panel above to enable."
+                )
             st.button(
                 "⬇️ Combined download not yet available",
                 disabled=True,
                 use_container_width=True,
                 key="dl_combined_disabled",
+            )
+
+    with pk3:
+        st.markdown("**3 · Populated UW Template**")
+        if populated_uw is not None:
+            st.caption(
+                f"Using UW Template: **{uw_template_source}** "
+                f"(`{uw_template_version}`), scenario `{uw_template_scenario}`."
+            )
+            st.download_button(
+                label=(
+                    f"⬇️ Download {uw_out_name[:60]}"
+                    f"{'…' if len(uw_out_name) > 60 else ''}"
+                ),
+                data=populated_uw,
+                file_name=uw_out_name,
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True,
+                key="dl_uw_template",
+            )
+        else:
+            if uw_error:
+                st.error(uw_error)
+            else:
+                st.caption("Builds automatically once the Analyzer is ready.")
+            st.button(
+                "⬇️ UW Template not yet available",
+                disabled=True,
+                use_container_width=True,
+                key="dl_uw_disabled",
+            )
+
+    # ---- Bundle zip: the whole deal package in one click --------------------
+    if final_bytes is not None and populated_uw is not None:
+        _zip_sig = "|".join([_export_sig, _combined_sig, _uwt_sig])
+
+        def _build_zip() -> bytes:
+            buf = io.BytesIO()
+            # xlsx files are already zip containers — store, don't re-deflate.
+            with zipfile.ZipFile(buf, "w", zipfile.ZIP_STORED) as z:
+                z.writestr(out_name, xlsx_bytes)
+                z.writestr(combined_out_name, final_bytes)
+                z.writestr(uw_out_name, populated_uw)
+            return buf.getvalue()
+
+        zip_bytes = _session_cache("alf_zip", _zip_sig, _build_zip)
+        st.download_button(
+            label="📦 Download deal package (all three files, .zip)",
+            data=zip_bytes,
+            file_name=(
+                f"{safe_property}_deal_package_"
+                f"{period_date_input.isoformat()}.zip"
+            ),
+            mime="application/zip",
+            use_container_width=True,
+            key="dl_zip",
+        )
+
+    # ---- UW Template populate report (full width, below the row) -----------
+    if uw_report is not None:
+        n_written = uw_report.summary.get("written", 0)
+        n_cells = uw_report.summary.get("cells_written", 0)
+        n_total = uw_report.summary.get("total_concepts", 0)
+        n_computed = uw_report.summary.get("computed_in_python", 0)
+        n_warn = len(uw_report.warnings)
+        st.caption(
+            f"UW Template writer populated **{n_written} of {n_total}** "
+            f"concepts ({n_cells:,} cells). "
+            f"Scenario: `{uw_template_scenario}`. "
+            + (f"⚠️ {n_warn} warning(s)." if n_warn else "")
+        )
+
+        # Drill-in expander with the full PopulateReport
+        with st.expander(
+            "🔍 Populate report (details)",
+            expanded=(n_warn > 0),
+        ):
+            if uw_report.warnings:
+                st.markdown("**Warnings:**")
+                for w in uw_report.warnings:
+                    st.markdown(f"- {w}")
+
+            by_outcome = uw_report.by_outcome()
+            outcome_lines = []
+            for outcome in (
+                "written", "no_source", "skipped",
+                "no_target", "error",
+            ):
+                items = by_outcome.get(outcome, [])
+                if items:
+                    outcome_lines.append(
+                        f"- **{outcome}** — {len(items)} concept(s)"
+                    )
+            if outcome_lines:
+                st.markdown(
+                    "**Outcomes by category:**\n"
+                    + "\n".join(outcome_lines)
+                )
+
+            errors = by_outcome.get("error", [])
+            if errors:
+                st.markdown("**Errors:**")
+                for r in errors:
+                    st.markdown(
+                        f"- `{r.key}` → `{r.target_address}` — {r.notes}"
+                    )
+
+        # In-Python evaluator status. The cache caveat is handled: the
+        # writer's UW-Output reads on a freshly built (openpyxl, no cached
+        # values) Analyzer fall back to values computed directly from the
+        # parsed RR + T12 — no Excel round-trip needed. Surface a success
+        # line when the fallback did the work; only inform if T-12 values
+        # still came through blank (no T12 uploaded, or an analyst-override
+        # Analyzer with an unexpectedly empty UW Output).
+        n_monthly = uw_report.summary.get("monthly_cells_written", 0)
+        if n_computed > 0:
+            monthly_note = (
+                f" Plus **{n_monthly} monthly cells** across the "
+                f"T-12 Analysis Apr→Mar grid."
+                if n_monthly else ""
+            )
+            st.success(
+                f"✅ **{n_computed} UW Output value(s) computed "
+                f"in-Python** (EGI, EBITDARM, EBITDA, opex line "
+                f"items, bed counts, …) — the T-12 Analysis tab "
+                f"is populated directly from the parsed RR + "
+                f"T12. No Excel round-trip required." + monthly_note
+            )
+        t12_no_source = [
+            r for r in uw_report.results
+            if r.outcome == "no_source" and r.path == "t12"
+        ]
+        if t12_no_source and not has_t12:
+            st.info(
+                f"ℹ️ {len(t12_no_source)} T-12 Analysis value(s) "
+                f"are blank because no Raw T12 was uploaded. "
+                f"Upload a T12 to populate EGI / EBITDARM / opex "
+                f"line items."
+            )
+        elif t12_no_source:
+            st.info(
+                f"ℹ️ {len(t12_no_source)} T-12 value(s) came "
+                f"through blank. If you uploaded an Analyzer "
+                f"override, its `UW Output` cells may be empty — "
+                f"the in-Python evaluator only fills gaps when "
+                f"the parsed RR + T12 are available."
             )
 
 
