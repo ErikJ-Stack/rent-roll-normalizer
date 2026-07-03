@@ -7,6 +7,115 @@ and the `mf_` naming convention.
 
 ---
 
+## MF v0.8.0 — 2026-06-29 — Absorb operator MF UW Model v25
+
+**Operator goal**: dropped `MF_UW_Model_v25.xlsx` ("update the template for the
+mf side") — superseding the v20 absorbed 8 days earlier.
+
+**Structural diff (verified cell-by-cell against the binary).** All **four
+writer target sheets are anchor-identical to v20 (and v15)**, so no concept
+target moved and the writer needed **no logic change**:
+
+- `T-12 Analysis` Layer 1 — header 105 / anchor 106 / data 106–255 / cols A–P.
+- `Rent Roll Analysis` — header 272 / anchor A273 / data 273–1772 / cols A–AK;
+  diagnostic anchors G5/I5/N5/Q5/T5 → `273:1772`; footer @1775.
+- `Prop Info` — col-A labels rows 4–47 + col-B values.
+- `Rental Comps` — SUBJECT row 7, comp anchor 8.
+
+**v25 deltas (all on non-target sheets / display layers):**
+
+1. **Sheet count 24 → 23** — `Dashboard` renamed **`Dash`**, **`Data Refresh`
+   removed**, several sheets reordered (P&L / Exit Strategy moved up). The writer
+   keys off sheet names and all four targets remain, so this is harmless to it.
+2. **RR helper columns trimmed to AL-only** — v20's blank AM–AP (cols 39–42)
+   dropped; only AL (recent-lease chart-helper formula) remains, outside the
+   writer's A–AK (1–37) clear band → preserved.
+3. **Prop Info trailing cols E/F dropped** (max col 6 → 4) — writer uses A + B.
+4. **`xl/metadata.xml`** preserved (7 → 7 `cm` markers) via the writer's
+   `_restore_dynamic_arrays`, same as v20.
+5. **NEW cosmetic drop** — 2 extended (x14) data-validation dropdowns on
+   `Rent Roll Analysis` that openpyxl can't model and drops on save. The writer
+   fills those cells (Status/Type) with real values regardless, so it's an
+   analyst data-entry aid only. Surfaced in the report warning alongside
+   comments/add-in/doc-props; recover via an Excel re-save. No DV-restore repair
+   built (proportionate to a 2-dropdown cosmetic loss).
+
+**Code:**
+- `assets/MF_UW_Model_v25.xlsx` committed (v15 + v20 retained for override/history).
+- `app.py`: `BUNDLED_MF_MODEL_PATH` → v25; `BUNDLED_MF_MODEL_VERSION = "v25"`.
+- `mf_uw_model_writer.py`: docstring repointed v20 → v25; report warning extended
+  to name the dropped x14 DV dropdowns. **No logic change** — anchors unchanged.
+
+**Registry (`registry_version` 0.3.0 → 0.4.0):** `tools/mf_uw_template/_absorb_v25.py`
+(idempotent) adds `templates.v25` (mirrors v20 with `sheet_count: 23`, a
+`structural_deltas_vs_v20` list, an AL-only `helper_formula_columns` note) and
+`targets.v25` as a verbatim inherit of `targets.v20` (→ v15) on all 90 concepts;
+sets `primary_template = "v25"`. Status rollup unchanged: 63 mapped / 21
+gap_source / 5 proposed / 1 derived. Artifacts regenerated (v25 primary).
+
+**Tests:** `tests/test_mf_uw_model_writer.py` repointed to v25; all MF suites
+green (writer + RR/AR 10/10). The openpyxl "Data Validation extension … will be
+removed" warning on load is expected (the documented x14 DV drop).
+
+**Handoff:** `tools/mf_uw_template/handoffs/2026-06-29-mf-uwt-v25-absorption.md`
+(**Verified** — operator-authored, absorbed same session).
+
+---
+
+## MF v0.7.0 — 2026-06-21 — Absorb operator MF UW Model v20
+
+**Operator goal**: dropped `MF_UW_Model_v20.xlsx` with "Update the MF template
+use. review the mapping also." — jumping the bundled model from v15 to v20.
+
+**Structural diff (verified cell-by-cell against the binary, not a handoff
+note).** All **four writer target sheets are layout-identical to v15**, so the
+writer's anchors are unchanged and **no concept target moved**:
+
+- `T-12 Analysis` Layer 1 — header 105 / anchor 106 / data 106–255 / cols A–P.
+- `Rent Roll Analysis` — header 272 / anchor A273 / data 273–1772 / cols A–AK;
+  diagnostic summary anchors G5/I5/N5/Q5/T5 still reference `273:1772`; the
+  below-grid recapture tie-out section still at row 1775.
+- `Prop Info` — col-B label rows 4–47 (incl. Renter-Age rows 25/26).
+- `Rental Comps` — SUBJECT row 7, comp anchor 8.
+
+**v20 deltas are all display/formula-only:**
+
+1. **+`Dashboard` sheet** at index 1 (sheet_count 23 → 24) — formula-derived
+   institutional first-look screen; not a writer target, no new intake concept.
+2. **+ per-row chart-helper formula columns AL–AP** on `Rent Roll Analysis`
+   (AL = recent-lease selection key). These sit **outside** the writer's A–AK
+   (cols 1–37) clear band, so they survive the round-trip untouched.
+3. **+ `xl/metadata.xml`** (Excel-365 dynamic arrays, 7 `cm`-marked cells; v15
+   had none). The writer's `_restore_dynamic_arrays(out, model_bytes)` call —
+   a documented no-op on v15 — is now **active**: it re-injects `metadata.xml`
+   + the `cm` markers after openpyxl's save (openpyxl quirk #6). Verified
+   **7 → 7** `cm` markers preserved; `metadata.xml` present in output.
+
+**Code:**
+- `assets/MF_UW_Model_v20.xlsx` committed (v15 retained for override/history).
+- `app.py`: `BUNDLED_MF_MODEL_PATH` → v20; new `BUNDLED_MF_MODEL_VERSION = "v20"`.
+- `mf_uw_model_writer.py`: docstring repointed v15 → v20; the stale "no
+  `metadata.xml` → `_restore_dynamic_arrays` is a no-op" note corrected to
+  document the now-active dynamic-array repair. **No logic change** — anchors
+  unchanged.
+
+**Registry (`registry_version` 0.2.0 → 0.3.0):** `tools/mf_uw_template/_absorb_v20.py`
+(idempotent) adds `templates.v20` (mirrors v15 with `sheet_count: 24`, a
+`structural_deltas_vs_v15` list, and an AL–AP `helper_formula_columns` note) and
+`targets.v20` as a verbatim inherit of `targets.v15` on all 90 concepts. v20 is
+now the primary template the artifacts render against. Status rollup unchanged:
+63 mapped / 21 gap_source / 5 proposed / 1 derived. Artifacts regenerated.
+
+**Tests:** `tests/test_mf_uw_model_writer.py` repointed to v20 + new
+`test_dynamic_arrays_preserved` (asserts `metadata.xml` survives + `cm` count
+preserved) + an AL273 helper-formula-survives assertion. All MF suites green
+(writer + RR/AR 10/10 with `xlrd` present; T-12 + OM unaffected).
+
+**Handoff:** `tools/mf_uw_template/handoffs/2026-06-21-mf-uwt-v20-absorption.md`
+(**Verified** — operator-authored, absorbed same session, no follow-up).
+
+---
+
 ## MF v0.6.0 — 2026-06-12 — MF Dashboard: institutional first-look screen
 
 **Operator goal**: "Add a MF Dashboard. Pull from institutional underwriters

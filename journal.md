@@ -9,6 +9,181 @@ Newest at top.
 
 ---
 
+## 2026-07-03 — Cross-track: whole-app efficiency pass (session-cache the ALF pipeline)
+
+**Scope.** User-requested full-codebase review + efficiency improvements
+("easy to use interface for underwriting"). Cross-cutting by explicit request.
+
+**What shipped (uncommitted at session end — user to commit).**
+
+- **ALF pipeline session cache (`app.py`) — the headline fix.** The ALF path
+  re-ran the ENTIRE pipeline on every Streamlit rerun: RR re-parse, T12
+  re-parse (with TWO full openpyxl loads of the 16-sheet Analyzer for the
+  Description_Map), `write_output` rebuild, the 3-step combined-Analyzer
+  build (3 chained openpyxl load/save round-trips), and the UW Template
+  populate. The MF side already had signature-based caching (`_mf_sig`);
+  ALF never got it. New `_session_cache(key, sig, compute)` helper +
+  signatures over every input (upload `file_id` tokens, parse options,
+  period date, scenario, UNMATCHED-resolutions hash). Verified via a new
+  AppTest end-to-end smoke (patched `st.file_uploader` injecting the
+  Homestead RR + T12 fixtures): first run ~5s, cached rerun **0.1s**, all
+  3 downloads produced, no errors, both with and without T12.
+- **Single descmap load:** the T12 branch loaded the Analyzer workbook twice
+  back-to-back (`read_descmap_descriptions` + `_read_descmap_labels`); now
+  one load serves both. `_read_descmap_labels` deleted (dead).
+- **Dashboard tab empty-state bug:** `st.stop()` inside the Workspace tab
+  halted the script before the Dashboard tab rendered, so it showed BLANK
+  when no RR was uploaded (the `if rr_file is None` branch there was
+  unreachable). Empty-state/parse-failure messages now written via
+  `top_tab_dashboard.info/.warning` before each stop.
+- **`dashboard_model.load_description_map`:** cache now keyed by resolved
+  path (was a single slot that ignored the `analyzer_path` arg — latent
+  stale-cache bug) + `try/finally` around `wb.close()`.
+- **`uw_template_writer._load_registry`:** cached on (path, mtime) —
+  registry.json no longer re-parsed per populate call. Verified read-only
+  downstream (no mutation of the shared dict).
+- **MF stale labels:** cockpit chip hardcoded "MF UW MODEL v15" →
+  `BUNDLED_MF_MODEL_VERSION`; `model_src` caption hardcoded v15 →
+  bundled-file name. `_mf_file_token` renamed `_file_token` (now shared).
+- Unused `CONDENSED_COLUMNS` import dropped from app.py.
+
+**Verification.** Full pytest suite 88 passed / 1 skipped; pyflakes clean
+(pre-existing nits only); AppTest empty-state smoke (both modes) + e2e smoke
+(RR-only and RR+T12) green.
+
+**Phase 2 (same session, user-approved "go ahead"): deal-package flow +
+mapping memory.**
+
+- **Deal package row (app.py).** The old "Export" section put the Analyzer
+  download AND the whole UW Template populate flow (report, expander,
+  statuses) inside the right half of a 2-column split. Restructured: both
+  builds now run up front (session-cached, outside any column), then a
+  single 3-column row presents **1 · Normalized RR · 2 · Populated
+  Analyzer · 3 · Populated UW Template** side by side, each with its gate
+  reason or error in place when unavailable. New **deal-package zip**
+  download (all three files, ZIP_STORED since xlsx are already zip
+  containers) appears when everything is ready; the UW populate report
+  moved below the row at full width. Widget keys unchanged (`dl_rr` /
+  `dl_combined` / `dl_uw_template` / `dl_combined_disabled`; new
+  `dl_uw_disabled`, `dl_zip`). Error scoping improved: Analyzer-build
+  exceptions (capacity/AR/ValueError) land in col 2, UW-writer exceptions
+  in col 3 — previously one try wrapped both.
+- **T12 mapping memory (app.py + .gitignore).** UNMATCHED matcher
+  resolutions now persist across sessions in `t12_mapping_memory.json`
+  (repo root, gitignored — real GL descriptions; ephemeral on Streamlit
+  Cloud redeploys, durable locally). On T12 parse, remembered descriptions
+  auto-resolve (surfaced as "🧠 N auto-mapped from memory"), flow into
+  `new_descmap_entries` as usual, and the matcher form only shows genuinely
+  new descriptions. Saves merge on form submit; load/save are best-effort
+  (corrupt/missing file → empty memory, write failure never blocks).
+- **Mapping-memory viewer (Advanced expander).** Only place to inspect or
+  reset the memory — matters on Streamlit Cloud where there's no shell
+  access to the JSON file. Checkbox reveals the remembered-mappings table;
+  "Clear memory" deletes the file (does not un-apply this session's
+  resolutions). AppTest-verified: renders when memory exists, table shows
+  on tick, Clear deletes the file and the controls disappear.
+
+**Verification (phase 2).** Mapping-memory helpers round-trip tested
+(merge, invalid-entry drop, corrupt-file recovery); AppTest e2e re-run:
+4 download buttons (3 files + zip), zip verified to contain exactly the
+three workbooks, cached rerun still 0.1s; empty-state smoke both modes;
+full pytest suite 88 passed / 1 skipped.
+
+**Carry-forwards / suggestions surfaced to user (not applied).** Parser-level
+micro-optimizations (double `iterrows()` in normalizer/pre_cleaner — now
+moot per-rerun since parses are cached); bare-except narrowing in
+ar_normalizer/mappings (intentional-looking fallbacks, needs a decision);
+`use_container_width` deprecation (removed after 2025-12-31 per Streamlit
+warning — sweep when the Cloud runtime version is confirmed); session-state
+now holds output bytes (~tens of MB/session — fine for single-operator);
+ALF/MF status-taxonomy duplication (deferred until the planned `alf/`+`mf/`
+package split); mapping-memory has no in-app viewer/editor yet (delete the
+JSON file to reset); a true cross-deploy persistence layer for the memory
+would need external storage (gist/S3/DB) — flagged, not built.
+
+---
+
+## 2026-06-29 — Track 4-MF: MF UW Model v25 absorption (MF v0.8.0)
+
+**Scope.** Operator dropped `MF_UW_Model_v25.xlsx` ("update the template for the
+mf side"), superseding the v20 absorbed 8 days earlier (PR #63, still open).
+Continued on the same `mf-v20-model-absorption` branch.
+
+**What shipped.** Diffed v25 against the v20 baseline cell-by-cell. **All four
+writer target sheets are anchor-identical to v20/v15** (T-12 Analysis @106 A–P,
+Rent Roll Analysis @273 A–AK / data 273–1772 / footer 1775, Prop Info col A
+labels + col B values rows 4–47, Rental Comps @7/8) → **no concept target moved,
+no writer logic change.** v25's deltas are on non-target sheets + display layers:
+`Dashboard`→`Dash` rename, `Data Refresh` removed (24→23 sheets, several
+reordered), RR helper cols trimmed to AL-only (v20's blank AM–AP dropped; AL is
+outside the writer's A–AK clear band → preserved), Prop Info trailing cols E/F
+dropped. `xl/metadata.xml` preserved (7→7 `cm` via `_restore_dynamic_arrays`).
+
+**New finding (cosmetic):** v25 carries 2 extended (x14) data-validation
+dropdowns on `Rent Roll Analysis` that openpyxl can't model and drops on save.
+The writer fills those Status/Type cells with real values regardless, so it's an
+analyst data-entry aid only — surfaced in the writer's report warning (alongside
+comments/add-in/doc-props) and the handoff "notes for operator" (Excel re-save
+to recover). No `_restore_data_validations` repair built — proportionate to a
+2-dropdown loss; flagged to the user as an offer.
+
+Changes: `assets/MF_UW_Model_v25.xlsx` committed (v15 + v20 retained); `app.py`
+`BUNDLED_MF_MODEL_PATH`/`_VERSION` → v25; `mf_uw_model_writer.py` docstring +
+report warning repointed; registry 0.3.0 → 0.4.0 via
+`tools/mf_uw_template/_absorb_v25.py` (templates.v25 + `targets.v25`
+verbatim-inherit ×90 + `primary_template="v25"`); artifacts regenerated (v25
+primary); `tests/test_mf_uw_model_writer.py` repointed to v25. Handoff
+`tools/mf_uw_template/handoffs/2026-06-29-mf-uwt-v25-absorption.md` (**Verified**).
+
+**Verification.** MF writer + RR/AR suites 10/10 green; `app.py` parses;
+end-to-end populate against v25 yields a 23-sheet, reloadable workbook with
+`Dash`. The openpyxl DV-extension warning on load is the expected (documented)
+x14 DV drop.
+
+**Carry-forwards.** PR #63 (opened for v20) now also carries v25 — retitle/update
+to cover v15 → v25. Optional future work: `_restore_data_validations` repair if
+the populated model's Status/Type dropdowns matter downstream.
+
+---
+
+## 2026-06-21 — Track 4-MF: MF UW Model v20 absorption (MF v0.7.0)
+
+**Scope.** Operator dropped `MF_UW_Model_v20.xlsx` ("Update the MF template use.
+review the mapping also."), jumping the bundled MF model v15 → v20.
+
+**What shipped.** Verified the new file cell-by-cell against the binary (not a
+handoff note). **All four writer target sheets are layout-identical to v15** —
+T-12 Analysis Layer 1 @106 (A–P), Rent Roll Analysis grid @273 (A–AK, data
+273–1772, diagnostic anchors G5/I5/N5/Q5/T5 → `273:1772`, footer @1775), Prop
+Info col B (rows 4–47), Rental Comps SUBJECT @7 / anchor @8 — so **no concept
+target moved** and the writer needed **no logic change**. v20's deltas are all
+display/formula-only: **+`Dashboard` sheet** (idx 1; sheet_count 23→24),
+**+ per-row chart-helper formula cols AL–AP** on Rent Roll Analysis (outside the
+writer's A–AK / cols-1–37 clear band → preserved), and **+ `xl/metadata.xml`**
+(Excel-365 dynamic arrays, 7 `cm` cells; v15 had none). The writer's
+`_restore_dynamic_arrays` — a documented no-op on v15 — is now **active** and
+preserves them (verified 7→7 `cm` markers; metadata.xml present in output).
+
+Changes: `assets/MF_UW_Model_v20.xlsx` committed (v15 retained for
+override/history); `app.py` `BUNDLED_MF_MODEL_PATH` → v20 + new
+`BUNDLED_MF_MODEL_VERSION = "v20"`; `mf_uw_model_writer.py` docstring repointed +
+the stale "metadata.xml absent → restore is a no-op" note corrected; registry
+0.2.0 → 0.3.0 via `tools/mf_uw_template/_absorb_v20.py` (templates.v20 +
+`targets.v20` verbatim-inherit ×90; v20 now primary); artifacts regenerated;
+`tests/test_mf_uw_model_writer.py` repointed to v20 + new
+`test_dynamic_arrays_preserved`. Handoff
+`tools/mf_uw_template/handoffs/2026-06-21-mf-uwt-v20-absorption.md` (**Verified**).
+
+**Verification.** MF writer + RR/AR suites 10/10 green (with `xlrd` installed —
+the only initial failures were the missing module + a gitignored .xls fixture,
+both environmental); T-12 + OM suites unaffected; `app.py` parses; end-to-end
+populate against v20 yields a 24-sheet, reloadable workbook with `Dashboard`.
+
+**Carry-forwards.** None blocking. v15 stays committed as the override path. Not
+yet committed — `git add` + commit pending (clean tree at session start).
+
+---
+
 ## 2026-06-16 — Track 4 + Track 2: UWT v0.11.0 — operator template v11 + Analyzer substrate v0.3.0 (cross-track)
 
 **Scope.** Operator dropped two binaries together — `ALF_UW_Template_v11.xlsx`

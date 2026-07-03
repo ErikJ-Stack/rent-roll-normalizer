@@ -1,9 +1,9 @@
 # MF UW Model — Mapping Tracker
 
-> Generated from `tools/mf_uw_template/registry.json` on 2026-06-04 23:09 UTC.  **Do not edit by hand** — edit `registry.json` and re-run `python tools/mf_uw_template/build_mapping_artifacts.py`.
+> Generated from `tools/mf_uw_template/registry.json` on 2026-06-29 14:44 UTC.  **Do not edit by hand** — edit `registry.json` and re-run `python tools/mf_uw_template/build_mapping_artifacts.py`.
 
 - Product line: **MF** (multifamily). No Analyzer substrate — source is the raw operator docs in `MF Docs/`.
-- Primary template: `v15` → `assets/MF_UW_Model_v15.xlsx`
+- Primary template: `v25` → `assets/MF_UW_Model_v25.xlsx`
 - Intake sheets: `Rent Roll Analysis`, `T-12 Analysis`
 
 ## Status legend
@@ -40,7 +40,7 @@
 
 #### metadata (4)
 
-| Concept | Source | Target (`v15`) | Status | Notes |
+| Concept | Source | Target (`v25`) | Status | Notes |
 |---|---|---|---|---|
 | **Property Name** <br/> `property_name` | `RR!A3` | `Prop Info!B4` | `mapped` | Drives Cover!B5, every sheet title (=IF('Prop Info'!B4=""...)), and the Rent Roll Analysis / T-12 Analysis health checks. Present in all four operator doc header blocks. |
 | **Total Units** <br/> `units_total` | `derived` | `Prop Info!B6` | `mapped` | Prop Info!B6 is the denominator for occupancy %, PUPM, and the Rent Roll Analysis G5 reconciliation (RR count I5 must equal B6). |
@@ -51,7 +51,7 @@
 
 #### rr_identity (5)
 
-| Concept | Source | Target (`v15`) | Status | Notes |
+| Concept | Source | Target (`v25`) | Status | Notes |
 |---|---|---|---|---|
 | **Building** <br/> `rr_bldg` | `RR!A` | `Rent Roll Analysis!A273+` | `mapped` | Source 'Bldg-Unit' (e.g. 'A1') splits: building prefix -> A, unit -> B. Hidden Lakes uses single-letter building + unit number. |
 | **Unit #** <br/> `rr_unit` | `RR!A` | `Rent Roll Analysis!B273+` | `mapped` | Unit portion of 'Bldg-Unit'. |
@@ -61,14 +61,14 @@
 
 #### rr_status (2)
 
-| Concept | Source | Target (`v15`) | Status | Notes |
+| Concept | Source | Target (`v25`) | Status | Notes |
 |---|---|---|---|---|
 | **Unit Status** <br/> `rr_status` | `RR!D` | `Rent Roll Analysis!E273+` | `proposed` | Template's status taxonomy is matched by COUNTIF wildcards: 'Occupied*', 'Vacant Unrented Ready', 'Vacant Unrented Not Ready', 'Down*', 'Vacant*Leased*'/'Vacant Rented*', 'Model'/'Employee'/'Office', 'Occupied No Notice'. Operator 'Unit Status' values (e.g. 'Occupied No Notice', 'Vacant Unrented Not Ready') already align closely; a future normalizer should confirm/standardize the closed vocab. proposed until the status-string map is locked. |
 | **Legal / Eviction flag** <br/> `rr_legal` | `derived` | `Rent Roll Analysis!G273+` | `proposed` | Template col G is a boolean used by Section C (legal/eviction cohort), Q5 legal count, and B113/D113 (units flagged + AR exposure). Derive from the '**' name prefix; the Eviction Status Report / bankruptcy disclosures in the DD checklist may refine. 9 active evictions + 1 bankruptcy known on Hidden Lakes. |
 
 #### rr_dates (4)
 
-| Concept | Source | Target (`v15`) | Status | Notes |
+| Concept | Source | Target (`v25`) | Status | Notes |
 |---|---|---|---|---|
 | **Move-In Date** <br/> `rr_move_in` | `RR!F` | `Rent Roll Analysis!H273+` | `mapped` | Drives the Resident Tenure Cohort analysis (Section G uses TODAY()-H). |
 | **Lease Start** <br/> `rr_lease_start` | `RR!G` | `Rent Roll Analysis!I273+` | `mapped` |  |
@@ -77,7 +77,7 @@
 
 #### rr_rates (4)
 
-| Concept | Source | Target (`v15`) | Status | Notes |
+| Concept | Source | Target (`v25`) | Status | Notes |
 |---|---|---|---|---|
 | **Market Rent** <br/> `rr_market_rent` | `RR!J` | `Rent Roll Analysis!L273+` | `mapped` | Drives Market GPR (Section D B26), loss-to-lease, and vacancy loss. |
 | **Actual Charges** <br/> `rr_actual_charges` | `RR!K` | `Rent Roll Analysis!M273+` | `mapped` | Total billed charges incl. ancillaries. Cross-check against Sched Chgs + the W-AK breakouts. |
@@ -86,7 +86,7 @@
 
 #### rr_ar (5)
 
-| Concept | Source | Target (`v15`) | Status | Notes |
+| Concept | Source | Target (`v25`) | Status | Notes |
 |---|---|---|---|---|
 | **Balance (AR)** <br/> `rr_balance` | `RR!M` | `Rent Roll Analysis!O273+` | `mapped` | Total AR balance per unit. Drives N5 Total AR, the delinquency tiers (<500 / >=500), and Top-10 delinquent list. Also present (and should reconcile) in the AR doc col J. |
 | **AR Aging — 0-30 Days** <br/> `rr_ar_0_30` | `AR!E` | `Rent Roll Analysis!Q273+` | `gap_source` | Aging lives in a SEPARATE AR doc and must be joined to the RR grid on Bldg-Unit. Template note (A88) says 'paste from separate aging report into cols Q-T'. Requires the resident-key join the future mf_ar parser will own. The AR doc is dated Mar 2026 vs RR Apr 2026 — period-mismatch caveat. |
@@ -96,7 +96,7 @@
 
 #### rr_ancillary (15)
 
-| Concept | Source | Target (`v15`) | Status | Notes |
+| Concept | Source | Target (`v25`) | Status | Notes |
 |---|---|---|---|---|
 | **MTM Fees (per unit)** <br/> `rr_anc_mtm_fees` | `Sortable-RR/Source Data` | `Rent Roll Analysis!W273+` | `gap_source` | Per-unit other-income breakout mirroring _StdCOA. Not in the basic RR doc; only the Sortable-RR 'Source Data' charge-code grid carries per-fee detail. Future mf_ parser must map charge codes -> buckets. |
 | **Application Fees (per unit)** <br/> `rr_anc_application_fees` | `Sortable-RR/Source Data` | `Rent Roll Analysis!X273+` | `gap_source` | See rr_anc_mtm_fees — ancillary breakout gap. |
@@ -116,7 +116,7 @@
 
 #### rr_other (2)
 
-| Concept | Source | Target (`v15`) | Status | Notes |
+| Concept | Source | Target (`v25`) | Status | Notes |
 |---|---|---|---|---|
 | **Status Flag** <br/> `rr_status_flag` | `—  (no operator source)` | `Rent Roll Analysis!U273+` | `gap_source` | Column U semantics unconfirmed; not in the operator RR. Defer until the writer pass clarifies whether it is analyst-input or derived. |
 | **Notes** <br/> `rr_notes` | `AR!K` | `Rent Roll Analysis!V273+` | `proposed` | Best source is the AR doc's 'Last Delinquency Note' (joined on Bldg-Unit). Optional / informational column. |
@@ -125,7 +125,7 @@
 
 #### t12_raw (3)
 
-| Concept | Source | Target (`v15`) | Status | Notes |
+| Concept | Source | Target (`v25`) | Status | Notes |
 |---|---|---|---|---|
 | **Account #** <br/> `t12_acct` | `T-12!A` | `T-12 Analysis!A106+` | `mapped` | PSI account number. Direct paste into Layer 1 col A. 101 GL lines on Hidden Lakes. |
 | **Account Name (raw)** <br/> `t12_acct_name` | `T-12!B` | `T-12 Analysis!B106+` | `mapped` | Raw PSI account name. Direct paste into Layer 1 col B. |
@@ -133,13 +133,13 @@
 
 #### t12_mapping (1)
 
-| Concept | Source | Target (`v15`) | Status | Notes |
+| Concept | Source | Target (`v25`) | Status | Notes |
 |---|---|---|---|---|
 | **→ MAPPING (_StdCOA bucket per line)** <br/> `t12_mapping` | `—  (no operator source)` | `T-12 Analysis!P106+` | `gap_source` | THE intelligence layer of the T-12 path — the MF equivalent of ALF's Description_Map. Every Layer-3 SUMIFS keys on this string. A future mf_t12 normalizer must classify each raw line into a _StdCOA bucket. Pre-filled example mappings exist on rows 106-185 for Hidden Lakes (analyst-authored), demonstrating the target vocabulary. |
 
 #### t12_derived (1)
 
-| Concept | Source | Target (`v15`) | Status | Notes |
+| Concept | Source | Target (`v25`) | Status | Notes |
 |---|---|---|---|---|
 | **T-12 Total (per line)** <br/> `t12_total` | `derived` | `T-12 Analysis!O106+` | `derived` | Self-derives from the pasted monthly block. The operator T-12 has its own Total in col O; the template recomputes to stay internally consistent. |
 

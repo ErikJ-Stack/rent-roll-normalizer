@@ -18,3 +18,6 @@ MF Docs/
 # ALF_Financial_Analyzer_Only.xlsx — duplicates are working copies).
 ALF_Financial_Analyzer_Only - Copy*.xlsx
 ALF_Financial_Analyzer_Only - Backup*.xlsx
+
+# T12 mapping memory (contains real operator GL descriptions; machine-local)
+t12_mapping_memory.json

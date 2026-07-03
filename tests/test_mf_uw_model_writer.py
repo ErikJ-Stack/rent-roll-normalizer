@@ -1,13 +1,15 @@
 """
 Tests for `mf_uw_model_writer.populate_mf_model`.
 
-The MF UW Model is committed at `assets/MF_UW_Model_v15.xlsx`, so these run in
+The MF UW Model is committed at `assets/MF_UW_Model_v25.xlsx`, so these run in
 CI with synthetic in-memory RR/T-12 inputs (no gitignored deps). They assert the
 writer pastes into the right cells, leaves the model's formulas intact, and
 produces a valid, reloadable workbook.
 """
 import io
 import os
+import re
+import zipfile
 
 import openpyxl
 import pytest
@@ -16,7 +18,7 @@ from mf_normalizer import MFRRResult, MFUnit
 from mf_t12_normalizer import MFT12Line, MFT12Result
 from mf_uw_model_writer import populate_mf_model
 
-MODEL = "assets/MF_UW_Model_v15.xlsx"
+MODEL = "assets/MF_UW_Model_v25.xlsx"
 pytestmark = pytest.mark.skipif(not os.path.exists(MODEL), reason="committed MF model absent")
 
 
@@ -86,3 +88,27 @@ def test_model_formulas_survive():
     assert wb["T-12 Analysis"]["N80"].value == "=N67+N79"           # EGI
     assert wb["Rent Roll Analysis"]["I5"].value == "=COUNTA(B273:B1772)"
     assert wb["T-12 Analysis"]["B58"].value.startswith("=SUMIFS")    # bucket aggregation
+    # v20 per-row chart-helper formula columns AL–AP sit outside the writer's
+    # A–AK clear band and must survive intact.
+    assert str(wb["Rent Roll Analysis"]["AL273"].value or "").startswith("=IF(")
+
+
+def _cm_count(data: bytes) -> int:
+    n = 0
+    with zipfile.ZipFile(io.BytesIO(data)) as z:
+        for nm in z.namelist():
+            if nm.startswith("xl/worksheets/sheet") and nm.endswith(".xml"):
+                n += len(re.findall(r'cm="\d+"', z.read(nm).decode("utf-8", "ignore")))
+    return n
+
+
+def test_dynamic_arrays_preserved():
+    """v20 ships xl/metadata.xml (Excel-365 dynamic arrays); the writer's
+    _restore_dynamic_arrays repair must re-inject it + the cm markers after the
+    openpyxl save (openpyxl quirk #6)."""
+    rr, t12 = _synthetic()
+    model = open(MODEL, "rb").read()
+    out, _ = populate_mf_model(model, t12=t12, rr=rr)
+    with zipfile.ZipFile(io.BytesIO(out)) as z:
+        assert "xl/metadata.xml" in z.namelist()       # restored, not dropped
+    assert _cm_count(out) == _cm_count(model)           # every cm marker preserved

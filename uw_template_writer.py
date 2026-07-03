@@ -613,12 +613,24 @@ def _write_column_stride(
 # Main entry
 # ──────────────────────────────────────────────────────────────────────────────
 
+_REGISTRY_CACHE: dict = {}
+
+
 def _load_registry(path: str | Path | None) -> dict:
     p = Path(path) if path else DEFAULT_REGISTRY
     if not p.exists():
         raise UWTemplateWriterError(f"Registry not found: {p}")
-    with p.open(encoding="utf-8") as f:
-        return json.load(f)
+    # Cache keyed on (path, mtime): the registry is constant across populate
+    # calls within a session, but an edited registry.json (dev workflow)
+    # still reloads without a process restart.
+    key = (str(p.resolve()), p.stat().st_mtime_ns)
+    cached = _REGISTRY_CACHE.get(key)
+    if cached is None:
+        with p.open(encoding="utf-8") as f:
+            cached = json.load(f)
+        _REGISTRY_CACHE.clear()  # keep at most one registry resident
+        _REGISTRY_CACHE[key] = cached
+    return cached
 
 
 # ──────────────────────────────────────────────────────────────────────────────

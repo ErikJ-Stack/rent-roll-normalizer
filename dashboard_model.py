@@ -51,27 +51,32 @@ from t12_normalizer import T12ParseResult
 # Description_Map cache — loaded once from the bundled Analyzer
 # ---------------------------------------------------------------------------
 
-_DESCMAP_CACHE: Optional[Dict[str, str]] = None
+_DESCMAP_CACHE: Dict[str, Dict[str, str]] = {}
 
 
 def load_description_map(analyzer_path: Path) -> Dict[str, str]:
     """Return a {Description → Label} dict from the Analyzer's Description_Map.
 
-    Cached per-process — the bundled map is constant across runs.
+    Cached per-process, keyed by path — the bundled map is constant across
+    runs, but a caller passing a different Analyzer must not get the bundled
+    map back (the previous single-slot cache ignored the path).
     """
-    global _DESCMAP_CACHE
-    if _DESCMAP_CACHE is not None:
-        return _DESCMAP_CACHE
+    key = str(Path(analyzer_path).resolve())
+    cached = _DESCMAP_CACHE.get(key)
+    if cached is not None:
+        return cached
 
     wb = openpyxl.load_workbook(analyzer_path, data_only=False, read_only=True)
-    ws = wb["Description_Map"]
-    out: Dict[str, str] = {}
-    for row in ws.iter_rows(min_row=5, max_col=2, values_only=True):
-        desc, label = row[0], row[1]
-        if desc and label:
-            out[str(desc).strip()] = str(label).strip()
-    wb.close()
-    _DESCMAP_CACHE = out
+    try:
+        ws = wb["Description_Map"]
+        out: Dict[str, str] = {}
+        for row in ws.iter_rows(min_row=5, max_col=2, values_only=True):
+            desc, label = row[0], row[1]
+            if desc and label:
+                out[str(desc).strip()] = str(label).strip()
+    finally:
+        wb.close()
+    _DESCMAP_CACHE[key] = out
     return out
 
 
